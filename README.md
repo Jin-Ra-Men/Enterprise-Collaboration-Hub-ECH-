@@ -102,8 +102,15 @@ graph LR
 - `PUT /api/admin/org-sync/users/{employeeNo}/status`
 - `GET /api/admin/error-logs?from=&to=&errorCode=&path=&limit=`
 
+### 로그인 / JWT 인증
+- `POST /api/auth/login` — 사원번호 또는 이메일 + 비밀번호로 JWT 발급
+- `GET /api/auth/me` — 현재 로그인 사용자 정보 반환
+- `AuthProvider` 인터페이스 — 현재 `TestAuthProvider`(로컬 BCrypt), 향후 `GroupwareAuthProvider` 추가 가능
+- 서버 기동 시 비밀번호 미설정 계정에 기본값 `Test1234!` 자동 적용 (`DataInitializer`)
+- 프론트엔드: sessionStorage에 JWT 저장, 모든 API 호출에 `Authorization: Bearer` 자동 첨부
+
 ### RBAC(현재)
-- 헤더 `X-User-Role` 기준 최소 권한 체크 (`MEMBER`/`MANAGER`/`ADMIN`)
+- JWT 검증 후 SecurityContext에서 역할 조회 (폴백: `X-User-Role` 헤더)
 - `ADMIN`: `/api/admin/org-sync/**`
 - `MANAGER+`: 사용자 검색, 채널 생성/멤버 추가, 칸반 변경 API
 - 상세 매트릭스: `docs/RBAC_MATRIX.md`

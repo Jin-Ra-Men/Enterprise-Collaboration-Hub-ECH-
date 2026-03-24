@@ -34,6 +34,10 @@ public class User {
     @Column(nullable = false, length = 20)
     private String status = "ACTIVE";
 
+    /** BCrypt 해시 저장. 그룹웨어 연동 시 외부 인증을 사용하므로 NULL 허용. */
+    @Column(name = "password_hash", length = 255)
+    private String passwordHash;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
@@ -66,5 +70,13 @@ public class User {
 
     public String getStatus() {
         return status;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
     }
 }

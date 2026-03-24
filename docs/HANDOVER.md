@@ -142,6 +142,22 @@
 - `GROUPWARE` 소스는 의도적으로 미구현 예외를 반환합니다. 실제 연동 시 `GROUPWARE` 제공자 클래스만 추가하면 API는 유지됩니다.
 - 계정 활성/비활성은 `PUT /api/admin/org-sync/users/{employeeNo}/status`로 사번 기준 반영합니다.
 
+### 인증(JWT) 인수인계 메모
+- **방식**: JWT Stateless 인증. 로그인 성공 시 액세스 토큰(기본 8시간) 발급.
+- **엔드포인트**
+  - `POST /api/auth/login` — loginId(사원번호 또는 이메일) + password → JWT + 사용자 정보
+  - `GET /api/auth/me` — JWT 검증 후 현재 사용자 반환
+- **테스트 계정 기본 비밀번호**: `Test1234!` (서버 기동 시 `DataInitializer`가 자동 설정)
+- **확장 포인트**: `AuthProvider` 인터페이스를 구현한 `GroupwareAuthProvider`를 추가하면 그룹웨어 SSO/OAuth2 전환 가능. `AuthService`는 등록된 Provider를 순서대로 시도.
+- **보안 주의**:
+  - `JWT_SECRET` 환경변수는 운영에서 반드시 32자 이상 무작위 값으로 교체 (`openssl rand -base64 32`)
+  - `DataInitializer`는 그룹웨어 연동 전환 후 비활성화 또는 삭제 권장
+  - 현재 리프레시 토큰 미구현. 필요 시 Phase 4에서 추가.
+- **구현 파일**:
+  - `backend/src/main/java/com/ech/backend/common/security/` (SecurityConfig, JwtUtil, JwtAuthFilter, UserPrincipal)
+  - `backend/src/main/java/com/ech/backend/api/auth/` (AuthProvider, TestAuthProvider, AuthService, AuthController, dto/)
+  - `backend/src/main/java/com/ech/backend/api/init/DataInitializer.java`
+
 ### RBAC 인수인계 메모
 - 현재 RBAC은 `X-User-Role` 헤더 기반 임시 모델입니다 (`MEMBER|MANAGER|ADMIN`).
 - 권한 체크는 `@RequireRole` + `RoleGuardInterceptor`로 수행됩니다.

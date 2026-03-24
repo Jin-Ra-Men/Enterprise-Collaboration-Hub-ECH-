@@ -16,3 +16,9 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: false
+
+jwt:
+  # 운영 환경에서는 반드시 32자 이상의 무작위 값으로 교체할 것
+  secret: ${JWT_SECRET:ECH-dev-jwt-secret-key-change-in-prod}
+  # 기본 8시간 (28800000 ms)
+  expiration-ms: ${JWT_EXPIRATION_MS:28800000}
