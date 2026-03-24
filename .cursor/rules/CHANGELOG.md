@@ -22,10 +22,17 @@
 - Realtime Presence 소켓 단위 추적·전원 연결 종료 시 OFFLINE 정리, 메시지 본문 길이 상한·Socket 버퍼 상한, `pg` Pool 타임아웃 옵션
 - Frontend 데모 메시지 DOM 상한(200건), Backend Hikari 풀 환경변수 연동
 - 칸반 보드 도메인(`kanban_*` 테이블, `/api/kanban/*` CRUD·담당·이력 API)
+- 메시지 기반 업무 항목(`work_items`, `POST/GET /api/messages/{id}/work-items`, `GET /api/work-items/{id}`)
+- 로컬 테스트용 사용자·부서 시드 SQL(`docs/sql/seed_test_users.sql`, 관리자·다양한 부서/역할/INACTIVE·부서NULL 포함) 및 `ENVIRONMENT_SETUP` 안내
+- 조직 동기화 인터페이스 API(`OrgUserProvider`, `TEST` 제공자, `GET/POST /api/admin/org-sync/users*`, 사용자 상태 변경 API) 추가
+- RBAC 어노테이션/인터셉터(`@RequireRole`, `RoleGuardInterceptor`) 및 `docs/RBAC_MATRIX.md` 추가
+- 운영 오류 로그(`error_logs` 테이블, 전역 예외 저장, 관리자 조회 API `/api/admin/error-logs`) 추가
 
 ### Changed
 - `core-rules.mdc` 커밋 규칙 보강: 커밋 직후 한글 깨짐 검증, PowerShell `-m`/`commit -F` 인코딩 위험, UTF-8 파일+Git Bash·`tools/rewrite-head-commit-message.sh` 안내, `i18n.commitEncoding` 권장
 - `tools/rewrite-head-commit-message.sh` 추가(Git Bash에서 HEAD 메시지를 UTF-8 파일로 안전히 재작성)
+- `tools/rebuild-head-with-staged.sh` 추가(스테이징된 트리로 HEAD 커밋만 UTF-8 메시지와 함께 재구성)
+- `docs/HANDOVER.md`에서 Git 커밋 전용 절 제거, 개발자·운영 관점 빠른 이해(2-1)로 정리
 - `README.md`를 Docker 미사용 기준으로 정리
 - 빠른 시작 가이드를 OS별(Spring 실행)로 명확화
 - 실시간 서버에서 `Express`/`cors` 의존성 제거, `http + socket.io` 구조로 단순화
@@ -71,6 +78,10 @@
 - 로드맵 Phase 2 항목 `2-2`, `2-2-1` 완료 처리(`[v]`), 기능명세/인수인계/README 동기화
 - 로드맵 Phase 2 항목 `2-3`, `2-3-1`, `2-3-2` 완료 처리(`[v]`), 문서/환경 예시 동기화
 - 로드맵 Phase 2 항목 `2-4`, `2-4-1`, `2-4-2` 완료 처리(`[v]`), 기능명세/인수인계/README/스키마 초안 동기화
+- 로드맵 Phase 2 항목 `2-5`, `2-5-1`, `2-5-2` 완료 처리(`[v]`), 기능명세/인수인계/README/스키마 초안 동기화
+- 로드맵 Phase 3 항목 `3-1`, `3-1-1`, `3-1-2` 완료 처리(`[v]`), 테스트 조직 우선 연동/추후 그룹웨어 전환 기준 문서화
+- 로드맵 Phase 3 항목 `3-2`, `3-2-1`, `3-2-2` 완료 처리(`[v]`), 역할-권한 매트릭스 및 API 단 권한 체크 반영
+- 로드맵 Phase 3 항목 `3-3-0`(오류 로그 기반) 완료 처리(`[v]`), 3-3-1/3-3-2는 후속
 
 ### Removed
 - Docker 기반 실행 파일 제거 (`docker-compose.yml`)

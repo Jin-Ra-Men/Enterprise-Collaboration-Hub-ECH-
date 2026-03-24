@@ -8,6 +8,10 @@ spring:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:ech}
     username: ${DB_USER:ech_user}
     password: ${DB_PASSWORD:ech_password}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:10}
+      connection-timeout: ${DB_POOL_CONNECT_TIMEOUT_MS:30000}
+      idle-timeout: 600000
   jpa:
     hibernate:
       ddl-auto: update
