@@ -50,6 +50,13 @@ ECH는 Slack, Flow, Teams를 모티브로 한 사내 협업 플랫폼이며, 구
 - 보존 정책(예: N개월 보관 후 아카이빙)
 - 관리자 감사 조회 화면/API 제공
 
+## 4.4 운영/배포 관리 (Admin)
+- 관리자 페이지에서 신규 버전 배포 파일 업로드 지원 (WAR 우선, 추후 확장 가능)
+- 업로드된 버전 목록/메타데이터(버전명, 업로더, 업로드 시각, 상태) 조회
+- 버전 전환(활성화) 및 배포 이력 관리
+- 이전 안정 버전으로 롤백 기능 제공
+- 업그레이드/롤백 작업에 대한 감사 로그 기록
+
 ## 5) 비기능 요구사항
 
 ### 성능
@@ -86,6 +93,11 @@ ECH는 Slack, Flow, Teams를 모티브로 한 사내 협업 플랫폼이며, 구
 - `GET /api/channels/{channelId}`
 - `POST /api/channels/{channelId}/messages`
 - `GET /api/search?q=...`
+- `GET /api/users/search?q=...&department=...` (조직도/부서 기반 사용자 검색)
+- `POST /api/admin/releases` (버전 파일 업로드)
+- `GET /api/admin/releases` (버전 목록 조회)
+- `POST /api/admin/releases/{releaseId}/activate` (버전 전환)
+- `POST /api/admin/releases/{releaseId}/rollback` (롤백)
 
 ### Socket 이벤트 (초안)
 - `channel:join`
@@ -93,14 +105,16 @@ ECH는 Slack, Flow, Teams를 모티브로 한 사내 협업 플랫폼이며, 구
 - `message:send`
 - `message:new`
 - `presence:update`
+- `presence:set`
 
 ## 8) 개발 원칙
 - 작은 단위로 기능을 나눠 구현하고 즉시 테스트
 - 변경 시 반드시 `.cursor/rules/CHANGELOG.md` 기록
 - 에러 발생 및 대응 내용은 `.cursor/rules/ERRORS.md` 기록
 - IA/UX/기능 용어는 Slack, Flow, Teams 모티브에 맞게 일관성 있게 설계
-- 로드맵 완료 항목은 `docs/ROADMAP.md`에서 취소선(`~~항목~~`)으로 표시
+- 로드맵 완료 항목은 `docs/ROADMAP.md`에서 체크박스(`[v]`)로 표시
 - 개발 완료 후 기능명세서(`docs/FEATURE_SPEC.md`)와 인수인계서(`docs/HANDOVER.md`)를 반드시 상세 업데이트
+- 새 기능 추가 시 `README.md`의 해당 섹션도 함께 업데이트
 - 본 문서와 다른 방향의 구현이 필요하면 먼저 문서 업데이트 후 진행
 
 ## 9) 완료 기준(Definition of Done)
