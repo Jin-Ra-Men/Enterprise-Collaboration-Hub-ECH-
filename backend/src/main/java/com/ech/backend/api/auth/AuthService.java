@@ -2,6 +2,7 @@ package com.ech.backend.api.auth;
 
 import com.ech.backend.api.auth.dto.LoginRequest;
 import com.ech.backend.api.auth.dto.LoginResponse;
+import com.ech.backend.common.exception.UnauthorizedException;
 import com.ech.backend.common.rbac.AppRole;
 import com.ech.backend.common.security.JwtUtil;
 import com.ech.backend.common.security.UserPrincipal;
@@ -35,7 +36,7 @@ public class AuthService {
             }
         }
         if (user == null) {
-            throw new IllegalArgumentException("사원번호/이메일 또는 비밀번호가 올바르지 않습니다.");
+            throw new UnauthorizedException("사원번호/이메일 또는 비밀번호가 올바르지 않습니다.");
         }
 
         AppRole role = AppRole.parse(user.getRole());
