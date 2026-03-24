@@ -5,14 +5,20 @@ import com.ech.backend.api.file.dto.CreateChannelFileMetadataRequest;
 import com.ech.backend.api.file.dto.FileDownloadInfoResponse;
 import com.ech.backend.common.api.ApiResponse;
 import jakarta.validation.Valid;
+import java.io.IOException;
 import java.util.List;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/channels/{channelId}/files")
@@ -32,6 +38,33 @@ public class ChannelFileController {
         return ApiResponse.success(channelFileService.listFiles(channelId, userId));
     }
 
+    /**
+     * 실제 파일을 업로드한다 (multipart/form-data).
+     * 파일은 현재 설정된 스토리지 경로에 channels/{channelId}/{YYYY}/{MM}/{UUID}_{filename} 구조로 저장된다.
+     */
+    @PostMapping(value = "/upload", consumes = "multipart/form-data")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<ChannelFileResponse> upload(
+            @PathVariable Long channelId,
+            @RequestParam Long userId,
+            @RequestParam MultipartFile file
+    ) throws IOException {
+        return ApiResponse.success(channelFileService.uploadFile(channelId, userId, file));
+    }
+
+    /**
+     * 파일을 실제로 다운로드한다.
+     */
+    @GetMapping("/{fileId}/download")
+    public ResponseEntity<Resource> download(
+            @PathVariable Long channelId,
+            @PathVariable Long fileId,
+            @RequestParam Long userId
+    ) throws IOException {
+        return channelFileService.downloadFile(channelId, fileId, userId);
+    }
+
+    /** 메타데이터만 등록 (하위 호환용). */
     @PostMapping
     public ApiResponse<ChannelFileResponse> register(
             @PathVariable Long channelId,

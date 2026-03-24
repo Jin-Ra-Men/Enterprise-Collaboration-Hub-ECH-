@@ -73,6 +73,7 @@
       <nav class="app-tabs">
         <button class="tab-btn active" data-tab="chat">💬 채팅</button>
         <button class="tab-btn admin-only hidden" data-tab="releases">🚀 배포 관리</button>
+        <button class="tab-btn admin-only hidden" data-tab="settings">⚙️ 설정</button>
       </nav>
 
       <!-- 본문 -->
@@ -88,6 +89,20 @@
               <input id="messageInput" type="text" placeholder="메시지 입력 후 Enter" />
               <button type="submit" class="btn-primary">보내기</button>
             </form>
+          </div>
+
+          <!-- 파일 업로드 -->
+          <div class="app-card">
+            <h2>📎 파일 업로드</h2>
+            <form id="fileUploadForm" class="file-upload-form">
+              <div class="form-row">
+                <input id="fileChannelId" type="number" placeholder="채널 ID" value="1" min="1" />
+                <input id="fileInput" type="file" />
+                <button type="submit" class="btn-primary">업로드</button>
+              </div>
+              <p id="fileUploadStatus" class="upload-status"></p>
+            </form>
+            <div id="fileList" class="file-list"></div>
           </div>
         </div>
 
@@ -123,6 +138,18 @@
               <tbody id="releaseTableBody"></tbody>
             </table>
           </div>
+
+        <!-- 설정 탭 (관리자 전용) -->
+        <div id="tab-settings" class="tab-panel hidden">
+          <div class="app-card">
+            <div class="release-header">
+              <h2>⚙️ 앱 설정</h2>
+              <button id="refreshSettingsBtn" class="btn-secondary">새로고침</button>
+            </div>
+            <p class="settings-desc">변경 사항은 즉시 반영됩니다. 서버 재기동이 필요하지 않습니다.</p>
+            <div id="settingsList"></div>
+          </div>
+        </div>
 
           <!-- 배포 이력 -->
           <div class="app-card">

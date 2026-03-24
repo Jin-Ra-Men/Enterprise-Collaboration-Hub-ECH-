@@ -326,6 +326,7 @@ function initTabs() {
       btn.classList.add("active");
       document.getElementById(`tab-${tabName}`).classList.remove("hidden");
       if (tabName === "releases") loadReleases();
+      if (tabName === "settings") loadSettings();
     });
   });
 }
@@ -424,6 +425,105 @@ async function loadReleases() {
 }
 
 document.getElementById("refreshReleasesBtn").addEventListener("click", loadReleases);
+
+/* ─────────────────────────────────────────
+ * 채널 파일 업로드 / 목록
+ * ───────────────────────────────────────── */
+document.getElementById("fileUploadForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const user = getUser();
+  const channelId = document.getElementById("fileChannelId").value.trim();
+  const fileEl = document.getElementById("fileInput").files[0];
+  const statusEl = document.getElementById("fileUploadStatus");
+  if (!channelId || !fileEl) { statusEl.textContent = "채널 ID와 파일을 선택하세요."; return; }
+  const formData = new FormData();
+  formData.append("file", fileEl);
+  statusEl.textContent = "업로드 중...";
+  try {
+    const uid = user ? user.userId : "";
+    const res = await fetch(`${API_BASE}/api/channels/${channelId}/files/upload?userId=${uid}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${getToken()}` },
+      body: formData,
+    });
+    const json = await res.json();
+    if (res.ok) {
+      statusEl.textContent = "완료: " + (json.data ? json.data.originalFilename : "") + " 업로드 성공";
+      document.getElementById("fileInput").value = "";
+      loadFileList(channelId);
+    } else {
+      statusEl.textContent = "실패: " + (json.error ? json.error.message : "오류");
+    }
+  } catch (err) { statusEl.textContent = "서버 연결 오류"; }
+});
+
+async function loadFileList(channelId) {
+  const user = getUser();
+  if (!user) return;
+  try {
+    const res = await apiFetch(`/api/channels/${channelId}/files?userId=${user.userId}`);
+    const json = await res.json();
+    const listEl = document.getElementById("fileList");
+    if (!listEl) return;
+    listEl.innerHTML = "";
+    (json.data || []).forEach((f) => {
+      const div = document.createElement("div");
+      div.className = "file-item";
+      div.innerHTML = `
+        <span class="file-icon">📎</span>
+        <span class="file-name">${escapeHtml(f.originalFilename)}</span>
+        <span class="file-size">${fmtSize(f.sizeBytes)}</span>
+        <span class="file-date">${fmtDate(f.createdAt)}</span>
+        <a class="btn-sm btn-activate" href="${API_BASE}/api/channels/${channelId}/files/${f.id}/download?userId=${user.userId}" target="_blank">다운로드</a>`;
+      listEl.appendChild(div);
+    });
+  } catch (err) { console.error("파일 목록 로드 실패", err); }
+}
+
+/* ─────────────────────────────────────────
+ * 관리자 설정 탭
+ * ───────────────────────────────────────── */
+document.getElementById("refreshSettingsBtn").addEventListener("click", loadSettings);
+
+async function loadSettings() {
+  const settingsList = document.getElementById("settingsList");
+  if (!settingsList) return;
+  settingsList.innerHTML = "";
+  try {
+    const res = await apiFetch("/api/admin/settings");
+    const json = await res.json();
+    (json.data || []).forEach((s) => {
+      const div = document.createElement("div");
+      div.className = "setting-item";
+      div.innerHTML = `
+        <div class="setting-info">
+          <span class="setting-key">${escapeHtml(s.key)}</span>
+          <p class="setting-desc">${escapeHtml(s.description || "")}</p>
+          <span class="setting-meta">최종 수정: ${fmtDate(s.updatedAt)}</span>
+        </div>
+        <div class="setting-edit">
+          <input class="setting-value-input" type="text" value="${escapeHtml(s.value || "")}" data-key="${escapeHtml(s.key)}" />
+          <button class="btn-sm btn-activate btn-save-setting" data-key="${escapeHtml(s.key)}">저장</button>
+        </div>`;
+      settingsList.appendChild(div);
+    });
+    settingsList.querySelectorAll(".btn-save-setting").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const key = btn.dataset.key;
+        const input = settingsList.querySelector(".setting-value-input[data-key='" + key + "']");
+        const value = input ? input.value.trim() : "";
+        const user = getUser();
+        const r = await apiFetch("/api/admin/settings/" + encodeURIComponent(key), {
+          method: "PUT",
+          body: JSON.stringify({ value: value, updatedBy: user ? user.userId : null }),
+        });
+        const j = await r.json();
+        if (r.ok) { alert('"' + key + '" 설정이 저장되었습니다.'); }
+        else { alert("저장 실패: " + (j.error ? j.error.message : "오류")); }
+      });
+    });
+  } catch (err) { settingsList.innerHTML = '<p class="search-empty">설정 로드 실패</p>'; }
+}
 
 document.getElementById("releaseUploadForm").addEventListener("submit", async (e) => {
   e.preventDefault();

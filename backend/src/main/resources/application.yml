@@ -31,3 +31,5 @@ jwt:
 app:
   # 릴리즈 파일 저장 디렉토리 (운영 환경에서 절대 경로 지정 권장)
   releases-dir: ${APP_RELEASES_DIR:./releases}
+  # 첨부파일 저장 기본 경로 (DB app_settings 에서 덮어쓸 수 있음)
+  file-storage-dir: ${FILE_STORAGE_DIR:D:/testStorage}

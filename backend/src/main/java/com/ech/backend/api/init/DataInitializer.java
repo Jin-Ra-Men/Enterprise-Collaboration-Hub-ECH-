@@ -3,11 +3,15 @@ package com.ech.backend.api.init;
 import com.ech.backend.domain.retention.RetentionPolicy;
 import com.ech.backend.domain.retention.RetentionPolicyRepository;
 import com.ech.backend.domain.retention.RetentionResourceType;
+import com.ech.backend.domain.settings.AppSetting;
+import com.ech.backend.domain.settings.AppSettingKey;
+import com.ech.backend.domain.settings.AppSettingRepository;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -31,18 +35,24 @@ public class DataInitializer implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
     private static final String DEFAULT_PASSWORD = "Test1234!";
 
+    @Value("${app.file-storage-dir:D:/testStorage}")
+    private String defaultFileStorageDir;
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RetentionPolicyRepository retentionPolicyRepository;
+    private final AppSettingRepository appSettingRepository;
 
     public DataInitializer(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            RetentionPolicyRepository retentionPolicyRepository
+            RetentionPolicyRepository retentionPolicyRepository,
+            AppSettingRepository appSettingRepository
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.retentionPolicyRepository = retentionPolicyRepository;
+        this.appSettingRepository = appSettingRepository;
     }
 
     @Override
@@ -50,6 +60,7 @@ public class DataInitializer implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         initDefaultPasswords();
         initDefaultRetentionPolicies();
+        initDefaultAppSettings();
     }
 
     private void initDefaultPasswords() {
@@ -81,6 +92,23 @@ public class DataInitializer implements ApplicationRunner {
                 "감사 이벤트 로그 보존 정책. 만료 시 물리 삭제.");
         seedPolicy(RetentionResourceType.ERROR_LOGS, 90, false,
                 "운영 오류 로그 보존 정책. 만료 시 물리 삭제.");
+    }
+
+    /**
+     * 앱 전역 설정 기본값을 시드한다. 이미 존재하는 설정은 덮어쓰지 않는다.
+     */
+    private void initDefaultAppSettings() {
+        seedSetting(AppSettingKey.FILE_STORAGE_DIR, defaultFileStorageDir,
+                "첨부파일 저장 기본 경로. 변경 즉시 반영(재기동 불필요). 절대 경로 권장.");
+        seedSetting(AppSettingKey.FILE_MAX_SIZE_MB, "100",
+                "단일 첨부파일 최대 업로드 크기(MB).");
+    }
+
+    private void seedSetting(String key, String value, String description) {
+        if (appSettingRepository.findByKey(key).isEmpty()) {
+            appSettingRepository.save(new AppSetting(key, value, description));
+            log.info("[DataInitializer] 앱 설정 기본값 생성: {} = {}", key, value);
+        }
     }
 
     private void seedPolicy(RetentionResourceType type, int retentionDays,
