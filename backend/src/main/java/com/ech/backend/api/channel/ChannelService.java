@@ -1,6 +1,7 @@
 package com.ech.backend.api.channel;
 
 import com.ech.backend.api.auditlog.AuditLogService;
+import com.ech.backend.common.exception.NotFoundException;
 import com.ech.backend.api.channel.dto.ChannelMemberResponse;
 import com.ech.backend.api.channel.dto.ChannelResponse;
 import com.ech.backend.api.channel.dto.CreateChannelRequest;
@@ -74,7 +75,7 @@ public class ChannelService {
 
     public ChannelResponse getChannel(Long channelId) {
         Channel channel = channelRepository.findById(channelId)
-                .orElseThrow(() -> new IllegalArgumentException("채널을 찾을 수 없습니다."));
+                .orElseThrow(() -> new NotFoundException("채널을 찾을 수 없습니다. id=" + channelId));
         List<ChannelMember> members = channelMemberRepository.findByChannelId(channelId);
         return toResponse(channel, members);
     }

@@ -22,7 +22,7 @@ class ChannelApiTest extends BaseIntegrationTest {
                 {
                   "name": "테스트채널",
                   "workspaceKey": "WS_TEST",
-                  "type": "PUBLIC",
+                  "channelType": "PUBLIC",
                   "createdByUserId": %d
                 }
                 """.formatted(adminUserId);
@@ -44,7 +44,7 @@ class ChannelApiTest extends BaseIntegrationTest {
                 {
                   "name": "멤버채널",
                   "workspaceKey": "WS_TEST",
-                  "type": "PUBLIC",
+                  "channelType": "PUBLIC",
                   "createdByUserId": %d
                 }
                 """.formatted(normalUserId);
@@ -64,7 +64,7 @@ class ChannelApiTest extends BaseIntegrationTest {
                 {
                   "name": "조회테스트채널",
                   "workspaceKey": "WS_GET",
-                  "type": "PUBLIC",
+                  "channelType": "PUBLIC",
                   "createdByUserId": %d
                 }
                 """.formatted(adminUserId);

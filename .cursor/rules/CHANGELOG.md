@@ -2,6 +2,15 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-03-24 (2차)
+
+### Fixed
+- `UnauthorizedException` 추가 및 `AuthService` 로그인 실패 시 401 반환 처리
+- `NotFoundException` 추가 및 `ChannelService.getChannel()` 채널 미존재 시 404 반환 처리
+- `GlobalExceptionHandler`에 401/404 핸들러 추가
+- `SecurityConfig`에 `authenticationEntryPoint(HttpStatusEntryPoint(UNAUTHORIZED))` 추가 — JWT 미제공/만료 시 403 대신 401 반환
+- `ChannelApiTest` JSON 필드명 오타 수정 (`"type"` → `"channelType"`)
+
 ## 2026-03-24
 
 ### Added

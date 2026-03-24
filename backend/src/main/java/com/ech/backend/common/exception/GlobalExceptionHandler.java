@@ -18,12 +18,30 @@ public class GlobalExceptionHandler {
         this.errorLogService = errorLogService;
     }
 
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnauthorized(UnauthorizedException exception,
+                                                                  HttpServletRequest request) {
+        safeLog("UNAUTHORIZED", exception, request);
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.fail("UNAUTHORIZED", exception.getMessage()));
+    }
+
     @ExceptionHandler(ForbiddenException.class)
     public ResponseEntity<ApiResponse<Void>> handleForbidden(ForbiddenException exception, HttpServletRequest request) {
         safeLog("FORBIDDEN", exception, request);
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .body(ApiResponse.fail("FORBIDDEN", exception.getMessage()));
+    }
+
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotFound(NotFoundException exception,
+                                                             HttpServletRequest request) {
+        safeLog("NOT_FOUND", exception, request);
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail("NOT_FOUND", exception.getMessage()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
