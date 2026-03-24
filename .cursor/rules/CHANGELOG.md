@@ -90,6 +90,15 @@
 - 관리자 감사 로그 조회 API(`GET /api/admin/audit-logs`, 기간/행위자/이벤트유형/리소스/워크스페이스 필터) 추가
 - `ChannelService`, `MessageService`, `ChannelFileService`, `WorkItemService`, `KanbanService`에 감사 로그 연동(`safeRecord` 호출)
 - 로드맵 Phase 3 항목 `3-3-1`, `3-3-2` 완료 처리(`[v]`)
+- JWT 기반 로그인 인증 구현 (Phase 3-0 신규 추가 및 완료)
+  - `SecurityConfig` (Spring Security 정책: Stateless JWT, CORS 허용)
+  - `JwtUtil` (토큰 발급/검증), `JwtAuthFilter` (OncePerRequestFilter), `UserPrincipal` (인증 주체)
+  - `AuthProvider` 인터페이스 + `TestAuthProvider` (로컬 BCrypt 검증, 그룹웨어 전환 대비)
+  - `AuthService`, `AuthController` (`POST /api/auth/login`, `GET /api/auth/me`)
+  - `DataInitializer`: 기동 시 비밀번호 미설정 사용자에게 `Test1234!` 자동 적용
+  - `User` 엔티티에 `password_hash` 컬럼 추가, `users` DB 스키마 반영
+  - `RoleGuardInterceptor` SecurityContext 우선 + X-User-Role 헤더 폴백
+  - 프론트엔드: 로그인 화면, JWT sessionStorage 저장, 자동 Authorization 헤더 첨부, 로그아웃
 
 ### Removed
 - Docker 기반 실행 파일 제거 (`docker-compose.yml`)

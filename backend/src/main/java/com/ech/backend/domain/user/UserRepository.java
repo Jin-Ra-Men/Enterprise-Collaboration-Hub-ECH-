@@ -26,6 +26,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByEmployeeNo(String employeeNo);
 
+    Optional<User> findByEmail(String email);
+
+    @Query("SELECT u FROM User u WHERE u.passwordHash IS NULL")
+    List<User> findUsersWithoutPassword();
+
     @Modifying
     @Query(value = """
             INSERT INTO users (employee_no, email, name, department, role, status, created_at, updated_at)

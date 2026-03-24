@@ -9,9 +9,13 @@ CREATE TABLE IF NOT EXISTS users (
     department VARCHAR(100),
     role VARCHAR(30) NOT NULL DEFAULT 'MEMBER',
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    -- BCrypt 해시. 그룹웨어 연동 시 외부 인증 사용 → NULL 허용
+    password_hash VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- 기존 테이블에 컬럼 추가 (재실행 시 오류 무시)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
 
 CREATE TABLE IF NOT EXISTS channels (
     id BIGSERIAL PRIMARY KEY,
