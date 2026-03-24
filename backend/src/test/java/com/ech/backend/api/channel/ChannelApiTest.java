@@ -33,7 +33,7 @@ class ChannelApiTest extends BaseIntegrationTest {
                         .content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.name").value("테스트채널"))
-                .andExpect(jsonPath("$.data.id", notNullValue()))
+                .andExpect(jsonPath("$.data.channelId", notNullValue()))
                 .andExpect(jsonPath("$.error", nullValue()));
     }
 
@@ -76,12 +76,12 @@ class ChannelApiTest extends BaseIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        Long channelId = objectMapper.readTree(createResp).path("data").path("id").asLong();
+        Long channelId = objectMapper.readTree(createResp).path("data").path("channelId").asLong();
 
         mockMvc.perform(get("/api/channels/" + channelId)
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.id").value(channelId));
+                .andExpect(jsonPath("$.data.channelId").value(channelId));
     }
 
     @Test
