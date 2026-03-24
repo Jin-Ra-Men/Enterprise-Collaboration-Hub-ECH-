@@ -110,6 +110,14 @@
   - `application.yml` 멀티파트 파일 크기 설정(기본 500MB), `app.releases-dir` 추가
   - 프론트엔드: 탭 네비게이션 + 배포 관리 화면(목록/업로드/활성화/이력)
   - 로드맵 Phase 3-5 완료 처리(`[v]`)
+- 통합 검색 기능 구현 (Phase 3-6 완료)
+  - PostgreSQL `pg_trgm` 확장 + GIN 인덱스 SQL 추가 (성능 튜닝 기준)
+  - `SearchType` Enum(ALL/MESSAGES/FILES/WORK_ITEMS/KANBAN_CARDS), `SearchResultItem`, `SearchResponse` DTO
+  - `MessageRepository`, `ChannelFileRepository` 채널 멤버십 기반 검색 쿼리 추가
+  - `WorkItemRepository`, `KanbanCardRepository` 키워드 검색 쿼리 추가
+  - `SearchService`, `SearchController` (GET /api/search, JWT 인증 필요)
+  - 프론트엔드: 헤더 검색바 + 결과 모달(타입 필터, 타입별 배지 색상)
+  - 로드맵 Phase 3-6 완료 처리(`[v]`)
 - JWT 기반 로그인 인증 구현 (Phase 3-0 신규 추가 및 완료)
   - `SecurityConfig` (Spring Security 정책: Stateless JWT, CORS 허용)
   - `JwtUtil` (토큰 발급/검증), `JwtAuthFilter` (OncePerRequestFilter), `UserPrincipal` (인증 주체)

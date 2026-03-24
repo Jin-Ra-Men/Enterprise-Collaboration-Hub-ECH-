@@ -239,6 +239,82 @@ messageForm.addEventListener("submit", (e) => {
 });
 
 /* ─────────────────────────────────────────
+ * 통합 검색
+ * ───────────────────────────────────────── */
+const TYPE_ICON = { MESSAGE: "💬", FILE: "📎", WORK_ITEM: "✅", KANBAN_CARD: "📋" };
+const TYPE_LABEL = { MESSAGE: "메시지", FILE: "파일", WORK_ITEM: "업무", KANBAN_CARD: "칸반" };
+
+const searchModal = document.getElementById("searchModal");
+const searchResults = document.getElementById("searchResults");
+const searchModalTitle = document.getElementById("searchModalTitle");
+const searchTypeSelect = document.getElementById("searchTypeSelect");
+
+document.getElementById("searchModalClose").addEventListener("click", closeSearchModal);
+document.getElementById("searchBackdrop").addEventListener("click", closeSearchModal);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSearchModal(); });
+
+function openSearchModal() { searchModal.classList.remove("hidden"); }
+function closeSearchModal() { searchModal.classList.add("hidden"); }
+
+searchTypeSelect.addEventListener("change", () => {
+  const q = document.getElementById("searchInput").value.trim();
+  if (q.length >= 2) runSearch(q, searchTypeSelect.value);
+});
+
+document.getElementById("searchForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const q = document.getElementById("searchInput").value.trim();
+  if (q.length < 2) return;
+  searchTypeSelect.value = "ALL";
+  await runSearch(q, "ALL");
+  openSearchModal();
+});
+
+async function runSearch(q, type) {
+  searchResults.innerHTML = '<p class="search-loading">검색 중...</p>';
+  openSearchModal();
+  searchModalTitle.textContent = `"${q}" 검색 결과`;
+
+  try {
+    const res = await apiFetch(`/api/search?q=${encodeURIComponent(q)}&type=${type}&limit=30`);
+    const json = await res.json();
+
+    if (!res.ok) {
+      searchResults.innerHTML = `<p class="search-empty">${json.error?.message || "검색 오류"}</p>`;
+      return;
+    }
+
+    const items = json.data?.items || [];
+    if (items.length === 0) {
+      searchResults.innerHTML = '<p class="search-empty">검색 결과가 없습니다.</p>';
+      return;
+    }
+
+    searchResults.innerHTML = "";
+    items.forEach((item) => {
+      const div = document.createElement("div");
+      div.className = "search-item";
+      div.innerHTML = `
+        <div class="search-item-type">
+          <span class="search-type-badge type-${item.type.toLowerCase()}">${TYPE_ICON[item.type] || ""} ${TYPE_LABEL[item.type] || item.type}</span>
+        </div>
+        <div class="search-item-body">
+          <p class="search-item-title">${escapeHtml(item.title || "")}</p>
+          ${item.preview ? `<p class="search-item-preview">${escapeHtml(item.preview)}</p>` : ""}
+          <p class="search-item-meta">${item.contextName || ""} · ${fmtDate(item.createdAt)}</p>
+        </div>`;
+      searchResults.appendChild(div);
+    });
+  } catch (err) {
+    searchResults.innerHTML = '<p class="search-empty">서버 연결 오류</p>';
+  }
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/* ─────────────────────────────────────────
  * 탭 전환
  * ───────────────────────────────────────── */
 function initTabs() {

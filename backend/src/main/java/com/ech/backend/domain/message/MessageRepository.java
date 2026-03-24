@@ -1,8 +1,10 @@
 package com.ech.backend.domain.message;
 
+import com.ech.backend.domain.channel.ChannelMember;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -20,6 +22,27 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     List<Message> findByParentMessageIdOrderByCreatedAtAsc(@Param("parentMessageId") Long parentMessageId);
 
     Optional<Message> findByIdAndChannel_Id(Long id, Long channelId);
+
+    /**
+     * 통합 검색: 사용자가 속한 채널의 메시지 본문을 키워드로 검색.
+     * 아카이브/삭제 메시지는 제외된다.
+     */
+    @Query("""
+            SELECT m FROM Message m
+            JOIN FETCH m.channel ch
+            WHERE LOWER(m.body) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              AND m.archivedAt IS NULL
+              AND m.isDeleted = false
+              AND EXISTS (
+                SELECT cm FROM ChannelMember cm
+                WHERE cm.channel.id = ch.id
+                  AND cm.user.id = :userId
+              )
+            ORDER BY m.createdAt DESC
+            """)
+    List<Message> searchInJoinedChannels(@Param("keyword") String keyword,
+                                         @Param("userId") Long userId,
+                                         Pageable pageable);
 
     /**
      * 보존 정책 적용: 지정 기간 이전의 메시지를 아카이브 처리 (soft delete).
