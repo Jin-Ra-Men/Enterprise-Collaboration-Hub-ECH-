@@ -1,0 +1,10 @@
+.idea/
+.vscode/
+node_modules/
+dist/
+build/
+out/
+.gradle/
+*.log
+.env
+.DS_Store
