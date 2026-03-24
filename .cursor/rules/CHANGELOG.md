@@ -110,6 +110,9 @@
   - `application.yml` 멀티파트 파일 크기 설정(기본 500MB), `app.releases-dir` 추가
   - 프론트엔드: 탭 네비게이션 + 배포 관리 화면(목록/업로드/활성화/이력)
   - 로드맵 Phase 3-5 완료 처리(`[v]`)
+- docs/DB_SCHEMA.md: 전체 DB 구조 상세 명세서 신규 작성
+  - DB 기본 정보, 확장 모듈, 전체 18개 테이블 상세 명세
+  - 인덱스 전체 목록 (28개), Enum 값 정의, ERD 텍스트, 보존 정책, 시드 데이터, 운영 주의사항
 - Phase 4 안정화 및 품질 완료
   - 4-1-1: Spring Boot 통합 테스트 (H2 인메모리, AuthApiTest/ChannelApiTest/SearchApiTest/JwtUtilTest)
   - 4-1-2: GitHub Actions CI 파이프라인 (.github/workflows/ci.yml)
