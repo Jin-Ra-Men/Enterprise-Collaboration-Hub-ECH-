@@ -190,6 +190,22 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_event_type ON audit_logs(event_type);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_actor_user_id ON audit_logs(actor_user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
 
+-- ============================================================
+-- 통합 검색 성능 튜닝 (Phase 3-6-2)
+-- pg_trgm 확장을 통한 ILIKE 검색 GIN 인덱스 적용
+-- 실행 전 pg_trgm 확장 활성화 필요: CREATE EXTENSION IF NOT EXISTS pg_trgm;
+-- ============================================================
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- 메시지 본문 검색 (아카이브/삭제 제외)
+CREATE INDEX IF NOT EXISTS idx_messages_body_trgm ON messages USING GIN (body gin_trgm_ops) WHERE archived_at IS NULL AND is_deleted = FALSE;
+-- 파일명 검색
+CREATE INDEX IF NOT EXISTS idx_channel_files_filename_trgm ON channel_files USING GIN (original_filename gin_trgm_ops);
+-- 업무 항목 검색
+CREATE INDEX IF NOT EXISTS idx_work_items_title_trgm ON work_items USING GIN (title gin_trgm_ops);
+-- 칸반 카드 검색
+CREATE INDEX IF NOT EXISTS idx_kanban_cards_title_trgm ON kanban_cards USING GIN (title gin_trgm_ops);
+
 -- 보존 정책 (resource_type 별 자동 아카이빙/삭제 설정)
 CREATE TABLE IF NOT EXISTS retention_policies (
     id BIGSERIAL PRIMARY KEY,

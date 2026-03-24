@@ -169,6 +169,17 @@
 - 저장 목적은 운영 추적이며, 메시지 본문/파일 원문/토큰 등 민감 데이터는 저장하지 않습니다.
 - 조회 API는 `ADMIN` 전용이며 기간/코드/경로 기준 필터가 가능합니다.
 
+### 통합 검색 인수인계 메모
+- **API**: `GET /api/search?q={keyword}&type={SearchType}&limit={1~50}` (JWT 인증 필요)
+- **검색 범위**:
+  - MESSAGES: 본인이 속한 채널의 메시지 본문 (아카이브/삭제 제외)
+  - FILES: 본인이 속한 채널의 파일명
+  - WORK_ITEMS: 업무 제목/설명 (워크스페이스 전체)
+  - KANBAN_CARDS: 칸반 카드 제목/설명 (워크스페이스 전체)
+- **성능**: `docs/sql/postgresql_schema_draft.sql`의 `CREATE EXTENSION pg_trgm` + GIN 인덱스 적용 권장
+- **한계**: 현재 ILIKE 기반, 대규모 데이터셋에서는 전용 검색엔진(Elasticsearch 등) 도입 고려
+- **구현 파일**: `backend/.../api/search/` (SearchService, SearchController, dto/)
+
 ### 관리자 배포 관리 인수인계 메모
 - **목적**: 백엔드 WAR/JAR 파일을 웹 UI에서 업로드하고, 버전 전환(활성화) 및 롤백을 관리한다.
 - **파일 저장 위치**: `APP_RELEASES_DIR` 환경 변수(기본 `./releases`). 실제 배포 시 절대 경로 지정 권장.
