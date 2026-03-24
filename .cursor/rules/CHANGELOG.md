@@ -85,6 +85,11 @@
 - 로드맵 Phase 3 항목 `3-1`, `3-1-1`, `3-1-2` 완료 처리(`[v]`), 테스트 조직 우선 연동/추후 그룹웨어 전환 기준 문서화
 - 로드맵 Phase 3 항목 `3-2`, `3-2-1`, `3-2-2` 완료 처리(`[v]`), 역할-권한 매트릭스 및 API 단 권한 체크 반영
 - 로드맵 Phase 3 항목 `3-3-0`(오류 로그 기반) 완료 처리(`[v]`), 3-3-1/3-3-2는 후속
+- 감사 이벤트 로그 도메인(`audit_logs` 테이블, `AuditEventType` Enum, `AuditLog` 엔티티/리포지토리) 추가
+- `AuditLogService`(이벤트 기록·REQUIRES_NEW 트랜잭션·`safeRecord` 래퍼·검색) 구현
+- 관리자 감사 로그 조회 API(`GET /api/admin/audit-logs`, 기간/행위자/이벤트유형/리소스/워크스페이스 필터) 추가
+- `ChannelService`, `MessageService`, `ChannelFileService`, `WorkItemService`, `KanbanService`에 감사 로그 연동(`safeRecord` 호출)
+- 로드맵 Phase 3 항목 `3-3-1`, `3-3-2` 완료 처리(`[v]`)
 
 ### Removed
 - Docker 기반 실행 파일 제거 (`docker-compose.yml`)

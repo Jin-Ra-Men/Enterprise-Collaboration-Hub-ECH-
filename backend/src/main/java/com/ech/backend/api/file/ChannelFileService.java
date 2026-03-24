@@ -1,8 +1,10 @@
 package com.ech.backend.api.file;
 
+import com.ech.backend.api.auditlog.AuditLogService;
 import com.ech.backend.api.file.dto.ChannelFileResponse;
 import com.ech.backend.api.file.dto.CreateChannelFileMetadataRequest;
 import com.ech.backend.api.file.dto.FileDownloadInfoResponse;
+import com.ech.backend.domain.audit.AuditEventType;
 import com.ech.backend.domain.channel.Channel;
 import com.ech.backend.domain.channel.ChannelMemberRepository;
 import com.ech.backend.domain.channel.ChannelRepository;
@@ -27,17 +29,20 @@ public class ChannelFileService {
     private final ChannelMemberRepository channelMemberRepository;
     private final UserRepository userRepository;
     private final ChannelFileRepository channelFileRepository;
+    private final AuditLogService auditLogService;
 
     public ChannelFileService(
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
             UserRepository userRepository,
-            ChannelFileRepository channelFileRepository
+            ChannelFileRepository channelFileRepository,
+            AuditLogService auditLogService
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
         this.userRepository = userRepository;
         this.channelFileRepository = channelFileRepository;
+        this.auditLogService = auditLogService;
     }
 
     public List<ChannelFileResponse> listFiles(Long channelId, Long requesterUserId) {
@@ -54,6 +59,16 @@ public class ChannelFileService {
         ChannelFile file = channelFileRepository
                 .findByIdAndChannel_Id(fileId, channelId)
                 .orElseThrow(() -> new IllegalArgumentException("파일을 찾을 수 없습니다."));
+        auditLogService.safeRecord(
+                AuditEventType.FILE_DOWNLOAD_INFO_ACCESSED,
+                requesterUserId,
+                "FILE",
+                file.getId(),
+                null,
+                "channelId=" + channelId + " fileId=" + fileId,
+                null
+        );
+
         return new FileDownloadInfoResponse(
                 file.getId(),
                 file.getOriginalFilename(),
@@ -86,6 +101,17 @@ public class ChannelFileService {
                 request.sizeBytes(),
                 safeKey.length() > 1024 ? safeKey.substring(0, 1024) : safeKey
         ));
+
+        auditLogService.safeRecord(
+                AuditEventType.FILE_UPLOADED,
+                uploader.getId(),
+                "FILE",
+                saved.getId(),
+                channel.getWorkspaceKey(),
+                "channelId=" + channelId + " filename=" + safeName,
+                null
+        );
+
         return toResponse(saved);
     }
 

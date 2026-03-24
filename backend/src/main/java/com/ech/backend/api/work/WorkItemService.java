@@ -1,7 +1,9 @@
 package com.ech.backend.api.work;
 
+import com.ech.backend.api.auditlog.AuditLogService;
 import com.ech.backend.api.work.dto.CreateWorkItemFromMessageRequest;
 import com.ech.backend.api.work.dto.WorkItemResponse;
+import com.ech.backend.domain.audit.AuditEventType;
 import com.ech.backend.domain.channel.ChannelMemberRepository;
 import com.ech.backend.domain.message.Message;
 import com.ech.backend.domain.message.MessageRepository;
@@ -24,17 +26,20 @@ public class WorkItemService {
     private final UserRepository userRepository;
     private final ChannelMemberRepository channelMemberRepository;
     private final WorkItemRepository workItemRepository;
+    private final AuditLogService auditLogService;
 
     public WorkItemService(
             MessageRepository messageRepository,
             UserRepository userRepository,
             ChannelMemberRepository channelMemberRepository,
-            WorkItemRepository workItemRepository
+            WorkItemRepository workItemRepository,
+            AuditLogService auditLogService
     ) {
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
         this.channelMemberRepository = channelMemberRepository;
         this.workItemRepository = workItemRepository;
+        this.auditLogService = auditLogService;
     }
 
     public WorkItemResponse getById(Long workItemId) {
@@ -71,6 +76,17 @@ public class WorkItemService {
                 message.getChannel(),
                 creator
         ));
+
+        auditLogService.safeRecord(
+                AuditEventType.WORK_ITEM_CREATED,
+                creator.getId(),
+                "WORK_ITEM",
+                saved.getId(),
+                null,
+                "sourceMessageId=" + messageId + " channelId=" + channelId,
+                null
+        );
+
         return toResponse(saved);
     }
 

@@ -167,3 +167,21 @@ CREATE TABLE IF NOT EXISTS error_logs (
 
 CREATE INDEX IF NOT EXISTS idx_error_logs_created_at ON error_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_error_logs_error_code ON error_logs(error_code);
+
+-- 감사 이벤트 로그 (채널/메시지/파일/업무 도메인 이벤트 기록, 대화 본문 미수집)
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id BIGSERIAL PRIMARY KEY,
+    event_type VARCHAR(60) NOT NULL,
+    actor_user_id BIGINT,
+    resource_type VARCHAR(40) NOT NULL,
+    resource_id BIGINT,
+    workspace_key VARCHAR(100) NOT NULL DEFAULT 'default',
+    detail VARCHAR(500),
+    request_id VARCHAR(100),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_event_type ON audit_logs(event_type);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_actor_user_id ON audit_logs(actor_user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
