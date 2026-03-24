@@ -6,7 +6,8 @@
 ---
 
 ## 📌 프로젝트 개요 (Overview)
-**ECH**는 기존 시스템의 안정성과 최신 협업 툴의 기민함을 결합한 프로젝트입니다. Java의 견고한 비즈니스 로직과 Node.js의 실시간 통신을 결합하고, 사내 그룹웨어와 완벽히 연동되는 관리 시스템을 제공합니다.
+**ECH**는 기존 시스템의 안정성과 최신 협업 툴의 기민함을 결합한 프로젝트입니다. Java의 견고한 비즈니스 로직 처리와 Node.js의 빠른 실시간성을 활용하여 가볍고 끊김 없는 사용자 경험을 제공하는 것을 목표로 합니다.
+또한 Slack, Flow, Teams를 모티브로 하여 채널 중심 협업, 실시간 소통, 업무 연계 경험을 제공하는 것을 지향합니다.
 
 ## ✨ 주요 기능 (Key Features)
 
@@ -31,21 +32,76 @@
 
 | 구분 | 기술 (Tech) | 역할 (Role) |
 | :--- | :--- | :--- |
-| **Backend (Core)** | **Java / Spring Boot** | 비즈니스 로직, 그룹웨어 SSO 연동, API 관리 |
-| **Real-time** | **Node.js / Socket.io** | 실시간 메시지 중계 및 소켓 세션 관리 |
-| **Frontend** | **Vanilla JS (ES6+)** | 가벼운 UI 렌더링 및 Chart.js 기반 데이터 시각화 |
-| **Database** | **PostgreSQL** | 메시지, 유저, 채널 및 통계 데이터 저장 |
-| **Storage** | **Internal File Server** | 사내 보안 규정에 맞춘 첨부 파일 저장소 |
+| **Backend (Core)** | **Java / Spring Boot** | 비즈니스 로직, 인증, DB 트랜잭션 및 API 관리 |
+| **Real-time** | **Node.js / Socket.io** | 실시간 메시지 중계, 알림 및 소켓 연결 관리 |
+| **Frontend** | **Vanilla JS (ES6+)** | 외부 라이브러리를 최소화한 가볍고 빠른 반응형 UI |
+| **Database** | **PostgreSQL** | 사용자 정보, 채널 구성, 메시지 및 업무 데이터 저장 |
+| **Storage** | **File Server (NAS/S3)** | 사내 규정에 맞춘 대용량 첨부 파일 및 미디어 저장 |
 
 ---
 
 ## 🏗 시스템 아키텍처 (Architecture)
 
 ```mermaid
-graph TD
-    User((User Client)) <-->|Socket| Node[Node.js Server]
-    Admin((Admin Panel)) <-->|REST API| Java[Java Spring Server]
-    Java <-->|Auth| GW[사내 그룹웨어 SSO]
-    Java <--> DB[(Main DB)]
-    Node <--> DB
-    Java <-->|File IO| Storage[Internal Storage]
+graph LR
+    User((User Interface)) --- JS[Vanilla JavaScript]
+    JS <-->|REST API| Java[Java Spring Server]
+    JS <-->|WebSocket| Node[Node.js Socket Server]
+    Java --- DB[(Main Database)]
+    Node --- Redis[(Session/Status)]
+    Java --- Storage[File Storage]
+```
+
+---
+
+## 📁 기본 프로젝트 틀 (Scaffold)
+기본 구조와 파일별 역할은 별도 문서에서 관리합니다.
+
+- 상세 문서: `docs/PROJECT_SCAFFOLD.md`
+- 기능/조건 명세: `docs/PROJECT_REQUIREMENTS.md`
+- 개발 로드맵: `docs/ROADMAP.md`
+- 기능 명세서: `docs/FEATURE_SPEC.md`
+- 인수인계서: `docs/HANDOVER.md`
+- 변경 이력: `.cursor/rules/CHANGELOG.md`
+- 에러 이력: `.cursor/rules/ERRORS.md`
+
+## 🚀 빠른 시작 (Docker 미사용)
+
+### 1) 로컬 DB 준비
+- PostgreSQL을 로컬에 설치합니다.
+- `.env.example`을 참고해 환경 변수를 설정합니다.
+
+예시:
+```bash
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=ech
+DB_USER=ech_user
+DB_PASSWORD=ech_password
+SPRING_PORT=8080
+SOCKET_PORT=3001
+```
+
+### 2) Realtime 서버 실행 (Node.js)
+```bash
+cd realtime
+npm install
+npm run dev
+```
+
+### 3) Backend 서버 실행 (Spring Boot)
+Windows:
+```bash
+cd backend
+gradlew.bat bootRun
+```
+
+macOS/Linux:
+```bash
+cd backend
+./gradlew bootRun
+```
+
+### 4) Frontend 확인
+- `frontend/index.html`을 브라우저에서 열어 UI를 확인합니다.
+- 기본 소켓 서버 주소는 `http://localhost:3001`입니다.
