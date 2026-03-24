@@ -44,6 +44,17 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt = OffsetDateTime.now();
 
+    /**
+     * 테스트 및 신규 사용자 생성용 생성자.
+     */
+    public User(String employeeNo, String email, String name, String department, String role) {
+        this.employeeNo = employeeNo;
+        this.email = email;
+        this.name = name;
+        this.department = department;
+        this.role = role != null ? role : "MEMBER";
+    }
+
     public Long getId() {
         return id;
     }

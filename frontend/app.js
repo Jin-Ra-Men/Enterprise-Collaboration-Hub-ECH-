@@ -191,7 +191,15 @@ function initSocket(user) {
   if (socket) {
     socket.disconnect();
   }
-  socket = io(SOCKET_URL);
+  socket = io(SOCKET_URL, {
+    // 재연결 설정: 네트워크 단절/서버 재시작 시 자동 복구
+    reconnection: true,
+    reconnectionAttempts: Infinity,     // 무한 재시도
+    reconnectionDelay: 1000,            // 첫 재시도 1초 후
+    reconnectionDelayMax: 15000,        // 최대 15초 간격
+    randomizationFactor: 0.3,           // 재시도 간격 분산
+    timeout: 10000,
+  });
 
   socket.on("connect", () => {
     appendMessage("실시간 서버에 연결되었습니다.", "system");
@@ -199,10 +207,30 @@ function initSocket(user) {
     if (Number.isInteger(channelId) && channelId > 0) {
       joinChannel(channelId);
     }
+    if (user) {
+      socket.emit("presence:set", { userId: user.userId, status: "ONLINE" });
+    }
   });
 
-  socket.on("disconnect", () => {
-    appendMessage("실시간 서버와 연결이 끊어졌습니다.", "system");
+  socket.on("reconnect", (attempt) => {
+    appendMessage(`재연결 성공 (${attempt}번째 시도)`, "system");
+    // 재연결 후 채널 재입장
+    if (joinedChannel) {
+      socket.emit("channel:join", joinedChannel);
+      if (user) socket.emit("presence:set", { userId: user.userId, status: "ONLINE" });
+    }
+  });
+
+  socket.on("reconnect_attempt", (attempt) => {
+    if (attempt === 1) appendMessage("서버 재연결 시도 중...", "system");
+  });
+
+  socket.on("reconnect_failed", () => {
+    appendMessage("서버 재연결에 실패했습니다. 페이지를 새로고침하세요.", "error");
+  });
+
+  socket.on("disconnect", (reason) => {
+    appendMessage(`실시간 서버와 연결이 끊어졌습니다. (${reason})`, "system");
   });
 
   socket.on("message:new", (msg) => appendMessage(msg));
@@ -234,7 +262,14 @@ messageForm.addEventListener("submit", (e) => {
   if (!Number.isInteger(channelId) || channelId <= 0 || !text || !user) return;
 
   joinChannel(channelId);
-  socket.emit("message:send", { channelId, senderId: user.userId, text });
+
+  // ACK 콜백으로 전송 성공/실패를 확인한다.
+  // 서버가 ACK를 지원하지 않는 구버전과도 호환된다.
+  socket.emit("message:send", { channelId, senderId: user.userId, text }, (ack) => {
+    if (ack && !ack.ok) {
+      appendMessage("전송 실패: " + (ack.message || "알 수 없는 오류"), "error");
+    }
+  });
   messageInputEl.value = "";
 });
 
