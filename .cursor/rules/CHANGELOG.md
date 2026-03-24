@@ -110,6 +110,15 @@
   - `application.yml` 멀티파트 파일 크기 설정(기본 500MB), `app.releases-dir` 추가
   - 프론트엔드: 탭 네비게이션 + 배포 관리 화면(목록/업로드/활성화/이력)
   - 로드맵 Phase 3-5 완료 처리(`[v]`)
+- 파일 스토리지 경로 설정 및 실제 파일 업로드/다운로드 구현
+  - app_settings 테이블, AppSetting 엔티티/리포지토리, AppSettingKey 상수 추가
+  - AppSettingsService: DB 우선 + yml 폴백 스토리지 경로 조회/변경
+  - AppSettingsController: GET/PUT /api/admin/settings (ADMIN 전용)
+  - ChannelFileService: 실제 파일 저장 (channels/{id}/{YYYY}/{MM}/{UUID}_{name}), 다운로드
+  - ChannelFileController: POST /upload(multipart), GET /{id}/download 추가
+  - DataInitializer: file.storage.base-dir=D:/testStorage 자동 시드
+  - application.yml: app.file-storage-dir 추가 (기본 D:/testStorage)
+  - 프론트엔드: 채널 파일 업로드/목록/다운로드 UI + 관리자 설정 탭
 - 통합 검색 기능 구현 (Phase 3-6 완료)
   - PostgreSQL `pg_trgm` 확장 + GIN 인덱스 SQL 추가 (성능 튜닝 기준)
   - `SearchType` Enum(ALL/MESSAGES/FILES/WORK_ITEMS/KANBAN_CARDS), `SearchResultItem`, `SearchResponse` DTO

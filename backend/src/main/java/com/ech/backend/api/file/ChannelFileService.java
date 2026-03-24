@@ -4,45 +4,63 @@ import com.ech.backend.api.auditlog.AuditLogService;
 import com.ech.backend.api.file.dto.ChannelFileResponse;
 import com.ech.backend.api.file.dto.CreateChannelFileMetadataRequest;
 import com.ech.backend.api.file.dto.FileDownloadInfoResponse;
+import com.ech.backend.api.settings.AppSettingsService;
 import com.ech.backend.domain.audit.AuditEventType;
 import com.ech.backend.domain.channel.Channel;
 import com.ech.backend.domain.channel.ChannelMemberRepository;
 import com.ech.backend.domain.channel.ChannelRepository;
 import com.ech.backend.domain.file.ChannelFile;
 import com.ech.backend.domain.file.ChannelFileRepository;
+import com.ech.backend.domain.settings.AppSettingKey;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @Transactional(readOnly = true)
 public class ChannelFileService {
 
     private static final int LIST_PAGE_SIZE = 100;
-    private static final String DOWNLOAD_HINT =
-            "현재는 스토리지 키 기준 안내입니다. NAS/S3 연동 시 사전 서명 URL로 교체 예정입니다.";
 
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
     private final UserRepository userRepository;
     private final ChannelFileRepository channelFileRepository;
     private final AuditLogService auditLogService;
+    private final AppSettingsService appSettingsService;
 
     public ChannelFileService(
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
             UserRepository userRepository,
             ChannelFileRepository channelFileRepository,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            AppSettingsService appSettingsService
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
         this.userRepository = userRepository;
         this.channelFileRepository = channelFileRepository;
         this.auditLogService = auditLogService;
+        this.appSettingsService = appSettingsService;
     }
 
     public List<ChannelFileResponse> listFiles(Long channelId, Long requesterUserId) {
@@ -54,33 +72,123 @@ public class ChannelFileService {
                 .toList();
     }
 
-    public FileDownloadInfoResponse getDownloadInfo(Long channelId, Long fileId, Long requesterUserId) {
+    /**
+     * 실제 파일을 디스크에 저장하고 메타데이터를 DB에 등록한다.
+     *
+     * <p>저장 경로 구조:
+     * <pre>{basedir}/channels/{channelId}/{YYYY}/{MM}/{UUID}_{sanitizedFilename}</pre>
+     *
+     * <p>저장 경로는 DB의 {@code file.storage.base-dir} 설정 값을 우선 사용하며,
+     * 없을 경우 {@code application.yml}의 {@code app.file-storage-dir} 기본값을 사용한다.
+     */
+    @Transactional
+    public ChannelFileResponse uploadFile(Long channelId, Long uploaderUserId,
+                                          MultipartFile file) throws IOException {
+        validateFileSize(file);
+
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new IllegalArgumentException("채널을 찾을 수 없습니다."));
+        User uploader = userRepository.findById(uploaderUserId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        requireChannelMember(channelId, uploaderUserId);
+
+        String originalName = sanitizeOriginalFilename(
+                file.getOriginalFilename() != null ? file.getOriginalFilename() : "file");
+
+        // 저장 경로: {basedir}/channels/{channelId}/{YYYY}/{MM}/
+        String baseDir = appSettingsService.getFileStorageDir();
+        LocalDate now = LocalDate.now();
+        Path dirPath = Paths.get(baseDir, "channels",
+                String.valueOf(channelId),
+                String.valueOf(now.getYear()),
+                String.format("%02d", now.getMonthValue()));
+        Files.createDirectories(dirPath);
+
+        // 파일명: {UUID}_{originalFilename} — 중복 방지
+        String storedName = UUID.randomUUID().toString().replace("-", "") + "_" + originalName;
+        Path targetPath = dirPath.resolve(storedName);
+        Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+
+        // storageKey: 베이스 디렉토리를 제외한 상대 경로
+        String relativeKey = Paths.get("channels",
+                String.valueOf(channelId),
+                String.valueOf(now.getYear()),
+                String.format("%02d", now.getMonthValue()),
+                storedName).toString().replace('\\', '/');
+
+        ChannelFile saved = channelFileRepository.save(new ChannelFile(
+                channel, uploader, originalName,
+                file.getContentType() != null ? file.getContentType() : "application/octet-stream",
+                file.getSize(), relativeKey
+        ));
+
+        auditLogService.safeRecord(
+                AuditEventType.FILE_UPLOADED,
+                uploaderUserId, "FILE", saved.getId(),
+                channel.getWorkspaceKey(),
+                "channelId=" + channelId + " filename=" + originalName + " size=" + file.getSize(),
+                null
+        );
+        return toResponse(saved);
+    }
+
+    /**
+     * 파일을 실제로 다운로드한다.
+     * 저장된 storageKey를 이용해 현재 설정된 basedir에서 파일을 찾는다.
+     */
+    public ResponseEntity<Resource> downloadFile(Long channelId, Long fileId,
+                                                  Long requesterUserId) throws IOException {
+        requireChannelMember(channelId, requesterUserId);
+        ChannelFile meta = channelFileRepository.findByIdAndChannel_Id(fileId, channelId)
+                .orElseThrow(() -> new IllegalArgumentException("파일을 찾을 수 없습니다."));
+
+        String baseDir = appSettingsService.getFileStorageDir();
+        Path filePath = Paths.get(baseDir, meta.getStorageKey().replace('/', java.io.File.separatorChar));
+
+        if (!Files.exists(filePath)) {
+            throw new IllegalStateException("파일이 스토리지에 존재하지 않습니다: " + meta.getStorageKey());
+        }
+
+        Resource resource = new UrlResource(filePath.toUri());
+        String encodedName = URLEncoder.encode(meta.getOriginalFilename(), StandardCharsets.UTF_8)
+                .replace("+", "%20");
+
+        auditLogService.safeRecord(
+                AuditEventType.FILE_DOWNLOAD_INFO_ACCESSED,
+                requesterUserId, "FILE", fileId, null,
+                "channelId=" + channelId + " fileId=" + fileId, null
+        );
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename*=UTF-8''" + encodedName)
+                .contentType(MediaType.parseMediaType(meta.getContentType()))
+                .contentLength(meta.getSizeBytes())
+                .body(resource);
+    }
+
+    public FileDownloadInfoResponse getDownloadInfo(Long channelId, Long fileId,
+                                                     Long requesterUserId) {
         requireChannelMember(channelId, requesterUserId);
         ChannelFile file = channelFileRepository
                 .findByIdAndChannel_Id(fileId, channelId)
                 .orElseThrow(() -> new IllegalArgumentException("파일을 찾을 수 없습니다."));
         auditLogService.safeRecord(
                 AuditEventType.FILE_DOWNLOAD_INFO_ACCESSED,
-                requesterUserId,
-                "FILE",
-                file.getId(),
-                null,
-                "channelId=" + channelId + " fileId=" + fileId,
-                null
+                requesterUserId, "FILE", file.getId(), null,
+                "channelId=" + channelId + " fileId=" + fileId, null
         );
-
+        String baseDir = appSettingsService.getFileStorageDir();
         return new FileDownloadInfoResponse(
-                file.getId(),
-                file.getOriginalFilename(),
-                file.getContentType(),
-                file.getSizeBytes(),
-                file.getStorageKey(),
-                DOWNLOAD_HINT
+                file.getId(), file.getOriginalFilename(), file.getContentType(),
+                file.getSizeBytes(), file.getStorageKey(),
+                "저장 경로: " + baseDir + " | 상대 키: " + file.getStorageKey()
         );
     }
 
     @Transactional
-    public ChannelFileResponse registerMetadata(Long channelId, CreateChannelFileMetadataRequest request) {
+    public ChannelFileResponse registerMetadata(Long channelId,
+                                                 CreateChannelFileMetadataRequest request) {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new IllegalArgumentException("채널을 찾을 수 없습니다."));
         User uploader = userRepository.findById(request.uploadedByUserId())
@@ -94,25 +202,34 @@ public class ChannelFileService {
         }
 
         ChannelFile saved = channelFileRepository.save(new ChannelFile(
-                channel,
-                uploader,
-                safeName,
-                request.contentType().trim(),
-                request.sizeBytes(),
+                channel, uploader, safeName,
+                request.contentType().trim(), request.sizeBytes(),
                 safeKey.length() > 1024 ? safeKey.substring(0, 1024) : safeKey
         ));
-
         auditLogService.safeRecord(
                 AuditEventType.FILE_UPLOADED,
-                uploader.getId(),
-                "FILE",
-                saved.getId(),
+                uploader.getId(), "FILE", saved.getId(),
                 channel.getWorkspaceKey(),
-                "channelId=" + channelId + " filename=" + safeName,
-                null
+                "channelId=" + channelId + " filename=" + safeName, null
         );
-
         return toResponse(saved);
+    }
+
+    // ── private helpers ──────────────────────────────────────────
+
+    private void validateFileSize(MultipartFile file) {
+        String maxMbStr = appSettingsService.get(AppSettingKey.FILE_MAX_SIZE_MB, "100");
+        long maxBytes;
+        try {
+            maxBytes = Long.parseLong(maxMbStr.trim()) * 1024L * 1024L;
+        } catch (NumberFormatException e) {
+            maxBytes = 100L * 1024 * 1024;
+        }
+        if (file.getSize() > maxBytes) {
+            throw new IllegalArgumentException(
+                    "파일 크기 초과. 최대 허용: " + maxMbStr + "MB, 현재: "
+                            + (file.getSize() / 1024 / 1024) + "MB");
+        }
     }
 
     private void requireChannelMember(Long channelId, Long userId) {
@@ -121,34 +238,30 @@ public class ChannelFileService {
         userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         if (!channelMemberRepository.existsByChannelIdAndUserId(channelId, userId)) {
-            throw new IllegalArgumentException("채널 멤버만 파일 메타데이터에 접근할 수 있습니다.");
+            throw new IllegalArgumentException("채널 멤버만 파일에 접근할 수 있습니다.");
         }
     }
 
     private static String sanitizeOriginalFilename(String raw) {
         String trimmed = raw == null ? "" : raw.trim();
-        if (trimmed.isEmpty()) {
-            throw new IllegalArgumentException("파일명이 비어 있습니다.");
-        }
+        if (trimmed.isEmpty()) throw new IllegalArgumentException("파일명이 비어 있습니다.");
         String normalized = trimmed.replace('\\', '/');
         int slash = normalized.lastIndexOf('/');
         String base = slash >= 0 ? normalized.substring(slash + 1) : normalized;
         if (base.contains("..") || base.isEmpty()) {
             throw new IllegalArgumentException("유효하지 않은 파일명입니다.");
         }
-        return base.length() > 500 ? base.substring(0, 500) : base;
+        // 경로 특수문자 제거
+        base = base.replaceAll("[<>:\"/|?*]", "_");
+        return base.length() > 200 ? base.substring(0, 200) : base;
     }
 
     private ChannelFileResponse toResponse(ChannelFile file) {
         return new ChannelFileResponse(
-                file.getId(),
-                file.getChannel().getId(),
-                file.getUploadedBy().getId(),
-                file.getOriginalFilename(),
-                file.getContentType(),
-                file.getSizeBytes(),
-                file.getStorageKey(),
-                file.getCreatedAt()
+                file.getId(), file.getChannel().getId(),
+                file.getUploadedBy().getId(), file.getOriginalFilename(),
+                file.getContentType(), file.getSizeBytes(),
+                file.getStorageKey(), file.getCreatedAt()
         );
     }
 }

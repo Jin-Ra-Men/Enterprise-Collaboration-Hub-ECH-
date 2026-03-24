@@ -206,6 +206,17 @@ CREATE INDEX IF NOT EXISTS idx_work_items_title_trgm ON work_items USING GIN (ti
 -- 칸반 카드 검색
 CREATE INDEX IF NOT EXISTS idx_kanban_cards_title_trgm ON kanban_cards USING GIN (title gin_trgm_ops);
 
+-- 앱 전역 설정 (관리자 UI 또는 환경 변수로 변경 가능)
+CREATE TABLE IF NOT EXISTS app_settings (
+    id BIGSERIAL PRIMARY KEY,
+    setting_key VARCHAR(100) NOT NULL UNIQUE,
+    setting_value TEXT,
+    description TEXT,
+    updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_app_settings_key ON app_settings(setting_key);
+
 -- 보존 정책 (resource_type 별 자동 아카이빙/삭제 설정)
 CREATE TABLE IF NOT EXISTS retention_policies (
     id BIGSERIAL PRIMARY KEY,
