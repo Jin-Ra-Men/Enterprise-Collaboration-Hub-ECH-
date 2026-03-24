@@ -169,6 +169,24 @@
 - 저장 목적은 운영 추적이며, 메시지 본문/파일 원문/토큰 등 민감 데이터는 저장하지 않습니다.
 - 조회 API는 `ADMIN` 전용이며 기간/코드/경로 기준 필터가 가능합니다.
 
+### 보존 정책 및 아카이빙 인수인계 메모
+- **목적**: 오래된 데이터를 자원 유형별로 정의된 보존 기간에 따라 자동 처리해 DB 비대화를 방지한다.
+- **자원 유형**: `MESSAGES`(소프트 아카이브), `AUDIT_LOGS`(물리 삭제), `ERROR_LOGS`(물리 삭제)
+- **기본 정책**: 서버 기동 시 `DataInitializer`가 자동 시드 (모두 비활성 상태로 생성)
+  - MESSAGES: 365일 / AUDIT_LOGS: 180일 / ERROR_LOGS: 90일
+- **스케줄러**: 매일 02:00 `ArchivingScheduler`가 활성 정책을 순서대로 실행
+- **수동 트리거**: `POST /api/admin/retention-policies/trigger` (전체) 또는 `/trigger/{resourceType}` (단일)
+- **API 목록**:
+  - `GET /api/admin/retention-policies` — 전체 정책 조회
+  - `PUT /api/admin/retention-policies/{resourceType}` — 정책 수정 (일수·활성여부·설명)
+  - `POST /api/admin/retention-policies/trigger` — 전체 수동 실행
+  - `POST /api/admin/retention-policies/trigger/{resourceType}` — 단일 수동 실행
+- **메시지 아카이빙**: `messages.archived_at` 컬럼 설정 (소프트). 스레드 답글 조회 시 아카이브된 메시지 자동 제외.
+- **구현 파일**:
+  - `backend/.../domain/retention/` (RetentionPolicy, RetentionPolicyRepository, RetentionResourceType)
+  - `backend/.../api/retention/` (RetentionPolicyService, ArchivingScheduler, RetentionPolicyController, dto/)
+  - `backend/.../common/config/SchedulingConfig.java`
+
 ### 감사 이벤트 로그 인수인계 메모
 - 채널·메시지·파일·업무·칸반 도메인의 주요 이벤트가 `audit_logs` 테이블에 기록됩니다.
 - 이벤트 유형: `CHANNEL_CREATED`, `CHANNEL_JOINED`, `MESSAGE_SENT`, `MESSAGE_REPLY_SENT`, `FILE_UPLOADED`, `FILE_DOWNLOAD_INFO_ACCESSED`, `WORK_ITEM_CREATED`, `KANBAN_BOARD_CREATED`, `KANBAN_CARD_CREATED` 등

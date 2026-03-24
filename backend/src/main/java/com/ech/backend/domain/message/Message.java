@@ -45,6 +45,9 @@ public class Message {
     @Column(name = "is_deleted", nullable = false)
     private boolean isDeleted = false;
 
+    @Column(name = "archived_at")
+    private OffsetDateTime archivedAt;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
@@ -79,6 +82,14 @@ public class Message {
 
     public String getBody() {
         return body;
+    }
+
+    public OffsetDateTime getArchivedAt() {
+        return archivedAt;
+    }
+
+    public boolean isArchived() {
+        return archivedAt != null;
     }
 
     public OffsetDateTime getCreatedAt() {

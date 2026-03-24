@@ -32,5 +32,9 @@ public enum AuditEventType {
 
     // 조직/사용자 관리 이벤트
     ORG_SYNC_EXECUTED,
-    USER_STATUS_CHANGED
+    USER_STATUS_CHANGED,
+
+    // 보존 정책 / 아카이빙 이벤트
+    RETENTION_POLICY_UPDATED,
+    DATA_ARCHIVED
 }

@@ -4,6 +4,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -28,4 +29,9 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
             @Param("workspaceKey") String workspaceKey,
             Pageable pageable
     );
+
+    /** 보존 정책 적용: 지정 일시 이전의 감사 로그를 물리 삭제. */
+    @Modifying
+    @Query("DELETE FROM AuditLog a WHERE a.createdAt < :cutoff")
+    int deleteOlderThan(@Param("cutoff") OffsetDateTime cutoff);
 }
