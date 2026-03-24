@@ -8,3 +8,5 @@ out/
 *.log
 .env
 .DS_Store
+tools/gradle-8.10-bin.zip
+tools/gradle-8.10/

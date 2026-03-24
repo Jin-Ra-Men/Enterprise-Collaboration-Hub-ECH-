@@ -35,22 +35,26 @@ alwaysApply: true
   - 원인
   - 해결 방법 또는 현재 상태
 
-## 커밋 규칙
+## Git 커밋 규칙
 1. 커밋은 작업한 기능 단위로 나눠 진행합니다.
-2. 커밋 메시지는 한글이 깨지지 않도록 작성합니다. **Windows PowerShell/CMD에서 `git commit -m "한글…"`만 쓰면** 터미널 인코딩 때문에 Git 객체에 `??`·모지바케가 저장되는 경우가 많습니다. 우선순위: **(가)** Cursor/VS Code 등에서 UTF-8(무 BOM 권장) 메시지 파일을 만든 뒤 `git commit -F 경로` **(나)** Git Bash에서 `git commit-tree … < 메시지파일` 등으로 UTF-8이 그대로 들어가게 할 것 **(다)** 저장소에 `git config i18n.commitEncoding utf-8` 설정.
-3. 커밋 메시지는 실제 작업 내용을 기준으로 명확하게 작성합니다.
-4. **커밋 직후 반드시** 최신 커밋 메시지가 올바른지 확인합니다. (`git log -1 --pretty=full` 또는 GUI). Windows에서는 **PowerShell 출력만으로 판단하지 말고** Git Bash에서 `git cat-file -p HEAD` 등으로 확인하는 것이 안전합니다.
-   - 한글이 깨져 보이거나(모지바케·물음표 연속 등) 의미가 없으면 **즉시** 수정합니다. PowerShell에서 `git commit --amend -m`은 재깨짐 위험이 크므로, UTF-8 메시지 파일 + `git commit -F`(가능하면 Git Bash에서 실행) 또는 저장소의 `tools/rewrite-head-commit-message.sh`(Git Bash)로 HEAD 메시지만 UTF-8 유지하며 다시 쓸 수 있습니다. (이미 원격에 푸시했다면 `amend` 후 `push --force-with-lease` 등은 팀 정책에 따릅니다.)
-5. 로컬 Git 권장 설정: `git config i18n.commitEncoding utf-8`, `git config i18n.logOutputEncoding utf-8` (저장소 또는 전역)
-6. 커밋 전에 아래를 사용자에게 반드시 확인합니다.
+2. 커밋 전에 아래를 사용자에게 반드시 확인합니다.
    - 새로운 브랜치를 만들어 커밋할지
    - `main`에 바로 커밋할지
    - 현재 변경이 기존 브랜치와 연관 있다면 해당 연관 브랜치에 커밋할지
-7. 커밋 메시지 형식은 아래 템플릿을 사용합니다.
-
-## 커밋 메시지 형식
-- 기본 형식: `<type>: <한글 제목>`
-- 본문(선택): 변경 이유/영향을 1~3줄로 작성
+3. 커밋 메시지는 아래 형식으로, 실제 작업 내용을 기준으로 **최대한 요약**해 작성합니다.
+   - 기본 형식: `<type>: <한글 제목>`
+   - 본문(선택): 변경 이유/영향 1~3줄
+4. 한글 인코딩은 UTF-8을 사용합니다.
+   - 권장: UTF-8(무 BOM 권장) 메시지 파일 + `git commit -F <파일경로>` / `git commit --amend -F <파일경로>`
+   - 대안: Git Bash에서 `git commit-tree ... < 메시지파일` 방식
+   - 저장소의 `i18n.commitEncoding=utf-8`, `i18n.logOutputEncoding=utf-8` 설정은 유지합니다.
+5. **커밋 직후 반드시** 메시지 깨짐 여부를 확인합니다.
+   - 확인: `git log -1 --pretty=full` 또는 GUI
+   - Windows 권장: Git Bash에서 `git cat-file -p HEAD`로 최종 검증
+6. 한글이 깨져 보이면 즉시 수정합니다.
+   - PowerShell `git commit --amend -m`은 재깨짐 위험이 커서 지양
+   - UTF-8 메시지 파일 + `git commit -F`(가능하면 Git Bash) 또는 `tools/rewrite-head-commit-message.sh` 사용
+   - 이미 원격에 푸시한 뒤 수정이 필요하면 팀 정책에 따라 `push --force-with-lease`를 검토
 
 ### type 규칙
 - `feat`: 사용자 기능 추가/확장
