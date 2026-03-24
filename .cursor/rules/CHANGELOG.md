@@ -100,6 +100,16 @@
   - `AuditEventType` `RETENTION_POLICY_UPDATED`, `DATA_ARCHIVED` 추가
   - `SchedulingConfig` (`@EnableScheduling`) 추가
   - 로드맵 Phase 3-4 완료 처리(`[v]`)
+- 관리자 배포 관리 기능 구현 (Phase 3-5 완료)
+  - `release_versions`, `deployment_history` 테이블 추가
+  - `ReleaseVersion`, `DeploymentHistory` 엔티티/리포지토리 (`domain/release/`)
+  - `ReleaseStatus`, `DeploymentAction` Enum 추가
+  - `ReleaseService`: WAR/JAR 업로드(SHA-256 체크섬), 활성화, 롤백, 삭제, 이력 조회
+  - `ReleaseController`: 7개 관리자 API (`/api/admin/releases`)
+  - `AuditEventType` RELEASE_UPLOADED/ACTIVATED/ROLLED_BACK/DELETED 추가
+  - `application.yml` 멀티파트 파일 크기 설정(기본 500MB), `app.releases-dir` 추가
+  - 프론트엔드: 탭 네비게이션 + 배포 관리 화면(목록/업로드/활성화/이력)
+  - 로드맵 Phase 3-5 완료 처리(`[v]`)
 - JWT 기반 로그인 인증 구현 (Phase 3-0 신규 추가 및 완료)
   - `SecurityConfig` (Spring Security 정책: Stateless JWT, CORS 허용)
   - `JwtUtil` (토큰 발급/검증), `JwtAuthFilter` (OncePerRequestFilter), `UserPrincipal` (인증 주체)

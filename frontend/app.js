@@ -4,6 +4,7 @@
  * - JWT 토큰 관리 (sessionStorage)
  * - 모든 API 호출에 Authorization 헤더 자동 첨부
  * - Socket.io 실시간 메시지
+ * - 관리자: 배포 버전 관리 (업로드/활성화/롤백/이력)
  * ===================================================================== */
 
 const API_BASE = "http://localhost:8080";
@@ -79,7 +80,14 @@ function showMain(user) {
   loginPage.classList.add("hidden");
   mainApp.classList.remove("hidden");
   userInfoBadge.textContent = `${user.name} (${user.department || user.role})`;
+
+  // 관리자 전용 메뉴 노출
+  if (user.role === "ADMIN") {
+    document.querySelectorAll(".admin-only").forEach((el) => el.classList.remove("hidden"));
+  }
+
   initSocket(user);
+  initTabs();
 }
 
 function showLoginError(msg) {
@@ -228,6 +236,156 @@ messageForm.addEventListener("submit", (e) => {
   joinChannel(channelId);
   socket.emit("message:send", { channelId, senderId: user.userId, text });
   messageInputEl.value = "";
+});
+
+/* ─────────────────────────────────────────
+ * 탭 전환
+ * ───────────────────────────────────────── */
+function initTabs() {
+  document.querySelectorAll(".tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tabName = btn.dataset.tab;
+      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.add("hidden"));
+      btn.classList.add("active");
+      document.getElementById(`tab-${tabName}`).classList.remove("hidden");
+      if (tabName === "releases") loadReleases();
+    });
+  });
+}
+
+/* ─────────────────────────────────────────
+ * 배포 관리
+ * ───────────────────────────────────────── */
+const STATUS_LABEL = { UPLOADED: "대기", ACTIVE: "운영중", PREVIOUS: "이전", DEPRECATED: "폐기" };
+const STATUS_CLASS = { UPLOADED: "status-uploaded", ACTIVE: "status-active", PREVIOUS: "status-prev", DEPRECATED: "status-dep" };
+const ACTION_LABEL = { ACTIVATED: "활성화", ROLLED_BACK: "롤백" };
+
+function fmtSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function fmtDate(iso) {
+  if (!iso) return "-";
+  return new Date(iso).toLocaleString("ko-KR");
+}
+
+async function loadReleases() {
+  const user = getUser();
+
+  try {
+    const res = await apiFetch("/api/admin/releases");
+    const json = await res.json();
+    const tbody = document.getElementById("releaseTableBody");
+    tbody.innerHTML = "";
+    (json.data || []).forEach((r) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><strong>${r.version}</strong></td>
+        <td>${r.fileName}</td>
+        <td>${fmtSize(r.fileSize)}</td>
+        <td><span class="status-badge ${STATUS_CLASS[r.status] || ""}">${STATUS_LABEL[r.status] || r.status}</span></td>
+        <td>${fmtDate(r.uploadedAt)}</td>
+        <td>${fmtDate(r.activatedAt)}</td>
+        <td class="action-cell">
+          ${r.status !== "ACTIVE" && r.status !== "DEPRECATED"
+            ? `<button class="btn-sm btn-activate" data-id="${r.id}" data-ver="${r.version}">활성화</button>`
+            : ""}
+          ${r.status === "UPLOADED" || r.status === "DEPRECATED"
+            ? `<button class="btn-sm btn-danger btn-delete" data-id="${r.id}">삭제</button>`
+            : ""}
+        </td>`;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll(".btn-activate").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!confirm(`v${btn.dataset.ver}을 운영 버전으로 활성화하시겠습니까?`)) return;
+        const r = await apiFetch(`/api/admin/releases/${btn.dataset.id}/activate`, {
+          method: "POST",
+          body: JSON.stringify({ actorUserId: user ? user.userId : null, note: "수동 활성화" }),
+        });
+        alert(r.ok ? "활성화 완료" : "활성화 실패");
+        loadReleases();
+      });
+    });
+
+    tbody.querySelectorAll(".btn-delete").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("이 릴리즈 파일을 삭제하시겠습니까?")) return;
+        const uid = user ? user.userId : "";
+        const r = await apiFetch(`/api/admin/releases/${btn.dataset.id}?actorUserId=${uid}`, {
+          method: "DELETE",
+        });
+        alert(r.ok ? "삭제 완료" : "삭제 실패");
+        loadReleases();
+      });
+    });
+  } catch (e) {
+    console.error("릴리즈 목록 로드 실패", e);
+  }
+
+  try {
+    const res = await apiFetch("/api/admin/releases/history");
+    const json = await res.json();
+    const hbody = document.getElementById("deployHistoryBody");
+    hbody.innerHTML = "";
+    (json.data || []).forEach((h) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${fmtDate(h.createdAt)}</td>
+        <td><span class="action-badge action-${h.action.toLowerCase()}">${ACTION_LABEL[h.action] || h.action}</span></td>
+        <td>${h.fromVersion || "-"}</td>
+        <td><strong>${h.toVersion}</strong></td>
+        <td>${h.note || "-"}</td>`;
+      hbody.appendChild(tr);
+    });
+  } catch (e) {
+    console.error("배포 이력 로드 실패", e);
+  }
+}
+
+document.getElementById("refreshReleasesBtn").addEventListener("click", loadReleases);
+
+document.getElementById("releaseUploadForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const user = getUser();
+  const version = document.getElementById("releaseVersion").value.trim();
+  const file = document.getElementById("releaseFile").files[0];
+  const description = document.getElementById("releaseDescription").value.trim();
+  const statusEl = document.getElementById("releaseUploadStatus");
+
+  if (!version || !file) {
+    statusEl.textContent = "버전과 파일을 모두 입력하세요.";
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("version", version);
+  formData.append("file", file);
+  if (description) formData.append("description", description);
+  if (user && user.userId) formData.append("uploadedBy", user.userId);
+
+  statusEl.textContent = "업로드 중...";
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/releases`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${getToken()}` },
+      body: formData,
+    });
+    const json = await res.json();
+    if (res.ok) {
+      statusEl.textContent = `완료: v${json.data ? json.data.version : ""} 업로드 성공`;
+      document.getElementById("releaseUploadForm").reset();
+      loadReleases();
+    } else {
+      statusEl.textContent = `실패: ${json.error ? json.error.message : "업로드 오류"}`;
+    }
+  } catch (err) {
+    statusEl.textContent = "서버 연결 오류";
+  }
 });
 
 /* ─────────────────────────────────────────

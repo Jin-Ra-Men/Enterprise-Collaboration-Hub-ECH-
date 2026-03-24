@@ -169,6 +169,26 @@
 - 저장 목적은 운영 추적이며, 메시지 본문/파일 원문/토큰 등 민감 데이터는 저장하지 않습니다.
 - 조회 API는 `ADMIN` 전용이며 기간/코드/경로 기준 필터가 가능합니다.
 
+### 관리자 배포 관리 인수인계 메모
+- **목적**: 백엔드 WAR/JAR 파일을 웹 UI에서 업로드하고, 버전 전환(활성화) 및 롤백을 관리한다.
+- **파일 저장 위치**: `APP_RELEASES_DIR` 환경 변수(기본 `./releases`). 실제 배포 시 절대 경로 지정 권장.
+- **`releases/current-version.txt`**: 현재 활성 버전 문자열이 기록됨. 외부 배포 스크립트가 참조해 서비스 재시작 가능.
+- **활성화 흐름**: 기존 ACTIVE → PREVIOUS 전환 → 신규 ACTIVE 지정 → 이력 기록 → 감사 로그 기록
+- **롤백 흐름**: 가장 최근의 PREVIOUS 버전을 ACTIVE로 승격 → 이전 ACTIVE는 PREVIOUS로 이동
+- **삭제 제약**: ACTIVE/PREVIOUS 상태는 삭제 불가. UPLOADED/DEPRECATED만 삭제 가능.
+- **멀티파트 크기**: 기본 500MB (`MAX_UPLOAD_SIZE` 환경 변수로 조정).
+- **API 목록** (모두 ADMIN 권한 필요):
+  - `POST /api/admin/releases` — 업로드 (multipart/form-data)
+  - `GET /api/admin/releases` — 전체 목록
+  - `GET /api/admin/releases/{id}` — 단건 조회
+  - `POST /api/admin/releases/{id}/activate` — 활성화
+  - `POST /api/admin/releases/rollback` — 롤백
+  - `GET /api/admin/releases/history` — 배포 이력
+  - `DELETE /api/admin/releases/{id}` — 삭제
+- **구현 파일**:
+  - `backend/.../domain/release/` (ReleaseVersion, DeploymentHistory, 리포지토리, Enum)
+  - `backend/.../api/release/` (ReleaseService, ReleaseController, dto/)
+
 ### 보존 정책 및 아카이빙 인수인계 메모
 - **목적**: 오래된 데이터를 자원 유형별로 정의된 보존 기간에 따라 자동 처리해 DB 비대화를 방지한다.
 - **자원 유형**: `MESSAGES`(소프트 아카이브), `AUDIT_LOGS`(물리 삭제), `ERROR_LOGS`(물리 삭제)

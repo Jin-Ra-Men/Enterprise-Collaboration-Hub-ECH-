@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: ech-backend
+  servlet:
+    multipart:
+      # WAR/JAR 업로드를 위한 파일 크기 제한 (운영 환경에서 조정 가능)
+      max-file-size: ${MAX_UPLOAD_SIZE:500MB}
+      max-request-size: ${MAX_REQUEST_SIZE:500MB}
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:ech}
     username: ${DB_USER:ech_user}
@@ -22,3 +27,7 @@ jwt:
   secret: ${JWT_SECRET:ECH-dev-jwt-secret-key-change-in-prod}
   # 기본 8시간 (28800000 ms)
   expiration-ms: ${JWT_EXPIRATION_MS:28800000}
+
+app:
+  # 릴리즈 파일 저장 디렉토리 (운영 환경에서 절대 경로 지정 권장)
+  releases-dir: ${APP_RELEASES_DIR:./releases}
