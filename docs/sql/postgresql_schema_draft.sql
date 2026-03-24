@@ -204,3 +204,32 @@ CREATE TABLE IF NOT EXISTS retention_policies (
 -- messages 아카이빙 컬럼 (기존 테이블 확장)
 ALTER TABLE messages ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_messages_archived_at ON messages(archived_at) WHERE archived_at IS NOT NULL;
+
+-- 릴리즈 버전 (WAR/JAR 배포 파일 관리)
+CREATE TABLE IF NOT EXISTS release_versions (
+    id BIGSERIAL PRIMARY KEY,
+    version VARCHAR(50) NOT NULL UNIQUE,
+    file_name VARCHAR(255) NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    file_size BIGINT NOT NULL DEFAULT 0,
+    checksum VARCHAR(64),                  -- SHA-256 hex
+    status VARCHAR(20) NOT NULL DEFAULT 'UPLOADED',  -- UPLOADED/ACTIVE/PREVIOUS/DEPRECATED
+    description TEXT,
+    uploaded_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    activated_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_release_versions_status ON release_versions(status);
+
+-- 배포 이력 (활성화/롤백 기록)
+CREATE TABLE IF NOT EXISTS deployment_history (
+    id BIGSERIAL PRIMARY KEY,
+    release_id BIGINT NOT NULL REFERENCES release_versions(id),
+    action VARCHAR(30) NOT NULL,           -- ACTIVATED/ROLLED_BACK
+    from_version VARCHAR(50),
+    to_version VARCHAR(50) NOT NULL,
+    actor_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    note TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_deployment_history_created_at ON deployment_history(created_at DESC);

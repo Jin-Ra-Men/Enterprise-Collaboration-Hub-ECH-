@@ -36,5 +36,11 @@ public enum AuditEventType {
 
     // 보존 정책 / 아카이빙 이벤트
     RETENTION_POLICY_UPDATED,
-    DATA_ARCHIVED
+    DATA_ARCHIVED,
+
+    // 배포 관리 이벤트
+    RELEASE_UPLOADED,
+    RELEASE_ACTIVATED,
+    RELEASE_ROLLED_BACK,
+    RELEASE_DELETED
 }

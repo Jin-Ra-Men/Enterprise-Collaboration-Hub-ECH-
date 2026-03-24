@@ -119,6 +119,12 @@ graph LR
 - 전역 예외를 `error_logs` 테이블에 저장하고 관리자 API로 조회 가능
 - 메시지 본문/파일 원문/토큰 등 민감 데이터는 저장하지 않음
 
+### 관리자 배포 관리(Phase 3-5)
+- WAR/JAR 릴리즈 파일 업로드 (SHA-256 체크섬, 파일 크기 제한 설정)
+- 버전 활성화/롤백, 배포 이력 기록
+- 관리자 API: `POST/GET /api/admin/releases`, `POST /{id}/activate`, `POST /rollback`, `GET /history`
+- 프론트엔드: 관리자 전용 `배포 관리` 탭 (목록/업로드/활성화/이력)
+
 ### 보존 정책 및 아카이빙(Phase 3-4)
 - 자원 유형별(메시지/감사로그/오류로그) 보존 기간 설정 및 자동/수동 아카이빙
 - 매일 02:00 스케줄러 자동 실행 (`ArchivingScheduler`)
