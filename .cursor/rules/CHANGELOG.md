@@ -29,6 +29,9 @@
 - 운영 오류 로그(`error_logs` 테이블, 전역 예외 저장, 관리자 조회 API `/api/admin/error-logs`) 추가
 
 ### Changed
+- `.gitignore`에 로컬 Gradle 배포 산출물(`tools/gradle-8.10-bin.zip`, `tools/gradle-8.10/`) 제외 규칙 추가
+- `core-rules.mdc` 커밋 규칙 중복 섹션을 통합해 단일 "Git 커밋 규칙"으로 가독성 개선
+- `core-rules.mdc`에 "Git 커밋 메시지 규칙" 보강(UTF-8 파일 커밋/수정, 인코딩 설정 유지, 메시지 요약 원칙)
 - `core-rules.mdc` 커밋 규칙 보강: 커밋 직후 한글 깨짐 검증, PowerShell `-m`/`commit -F` 인코딩 위험, UTF-8 파일+Git Bash·`tools/rewrite-head-commit-message.sh` 안내, `i18n.commitEncoding` 권장
 - `tools/rewrite-head-commit-message.sh` 추가(Git Bash에서 HEAD 메시지를 UTF-8 파일로 안전히 재작성)
 - `tools/rebuild-head-with-staged.sh` 추가(스테이징된 트리로 HEAD 커밋만 UTF-8 메시지와 함께 재구성)
