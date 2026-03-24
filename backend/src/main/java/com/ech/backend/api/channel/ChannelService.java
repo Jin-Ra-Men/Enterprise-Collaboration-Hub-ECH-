@@ -1,9 +1,11 @@
 package com.ech.backend.api.channel;
 
+import com.ech.backend.api.auditlog.AuditLogService;
 import com.ech.backend.api.channel.dto.ChannelMemberResponse;
 import com.ech.backend.api.channel.dto.ChannelResponse;
 import com.ech.backend.api.channel.dto.CreateChannelRequest;
 import com.ech.backend.api.channel.dto.JoinChannelRequest;
+import com.ech.backend.domain.audit.AuditEventType;
 import com.ech.backend.domain.channel.Channel;
 import com.ech.backend.domain.channel.ChannelMember;
 import com.ech.backend.domain.channel.ChannelMemberRole;
@@ -22,15 +24,18 @@ public class ChannelService {
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
     private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
 
     public ChannelService(
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            AuditLogService auditLogService
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
         this.userRepository = userRepository;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional
@@ -53,6 +58,16 @@ public class ChannelService {
 
         ChannelMember ownerMembership = new ChannelMember(savedChannel, creator, ChannelMemberRole.MANAGER);
         channelMemberRepository.save(ownerMembership);
+
+        auditLogService.safeRecord(
+                AuditEventType.CHANNEL_CREATED,
+                creator.getId(),
+                "CHANNEL",
+                savedChannel.getId(),
+                savedChannel.getWorkspaceKey(),
+                "name=" + savedChannel.getName(),
+                null
+        );
 
         return toResponse(savedChannel, List.of(ownerMembership));
     }
@@ -77,6 +92,17 @@ public class ChannelService {
 
         channelMemberRepository.save(new ChannelMember(channel, user, request.memberRole()));
         List<ChannelMember> members = channelMemberRepository.findByChannelId(channelId);
+
+        auditLogService.safeRecord(
+                AuditEventType.CHANNEL_JOINED,
+                user.getId(),
+                "CHANNEL",
+                channelId,
+                channel.getWorkspaceKey(),
+                "channelName=" + channel.getName(),
+                null
+        );
+
         return toResponse(channel, members);
     }
 

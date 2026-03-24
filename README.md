@@ -112,6 +112,12 @@ graph LR
 - 전역 예외를 `error_logs` 테이블에 저장하고 관리자 API로 조회 가능
 - 메시지 본문/파일 원문/토큰 등 민감 데이터는 저장하지 않음
 
+### 감사 이벤트 로그(Phase 3-3)
+- 채널·메시지·파일·업무·칸반 도메인의 주요 이벤트를 `audit_logs` 테이블에 기록
+- 이벤트 유형(채널 생성/참여, 메시지 전송, 파일 업로드, 업무 생성, 칸반 변경 등)을 `AuditEventType` Enum으로 관리
+- 대화 본문 미기록 원칙 준수, `detail` 최대 500자 메타데이터만 수집
+- 관리자 조회 API: `GET /api/admin/audit-logs` (기간·행위자·이벤트유형·리소스유형·워크스페이스 필터)
+
 ### Realtime 이벤트/엔드포인트
 - Socket: `channel:join`, `message:send`, `message:new`, `message:error` (`MESSAGE_TOO_LARGE` 등)
 - Presence: `presence:set`, `presence:update`, `presence:error` (전 소켓 종료 시 OFFLINE 정리)

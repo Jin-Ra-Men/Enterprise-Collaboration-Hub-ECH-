@@ -1,5 +1,6 @@
 package com.ech.backend.api.kanban;
 
+import com.ech.backend.api.auditlog.AuditLogService;
 import com.ech.backend.api.kanban.dto.CreateKanbanBoardRequest;
 import com.ech.backend.api.kanban.dto.CreateKanbanCardRequest;
 import com.ech.backend.api.kanban.dto.CreateKanbanColumnRequest;
@@ -20,6 +21,7 @@ import com.ech.backend.domain.kanban.KanbanCardEvent;
 import com.ech.backend.domain.kanban.KanbanCardEventRepository;
 import com.ech.backend.domain.kanban.KanbanCardEventType;
 import com.ech.backend.domain.kanban.KanbanCardRepository;
+import com.ech.backend.domain.audit.AuditEventType;
 import com.ech.backend.domain.kanban.KanbanColumn;
 import com.ech.backend.domain.kanban.KanbanColumnRepository;
 import com.ech.backend.domain.user.User;
@@ -45,6 +47,7 @@ public class KanbanService {
     private final KanbanCardAssigneeRepository assigneeRepository;
     private final KanbanCardEventRepository eventRepository;
     private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
 
     public KanbanService(
             KanbanBoardRepository boardRepository,
@@ -52,7 +55,8 @@ public class KanbanService {
             KanbanCardRepository cardRepository,
             KanbanCardAssigneeRepository assigneeRepository,
             KanbanCardEventRepository eventRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            AuditLogService auditLogService
     ) {
         this.boardRepository = boardRepository;
         this.columnRepository = columnRepository;
@@ -60,6 +64,7 @@ public class KanbanService {
         this.assigneeRepository = assigneeRepository;
         this.eventRepository = eventRepository;
         this.userRepository = userRepository;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional
@@ -75,6 +80,15 @@ public class KanbanService {
                 request.description() == null ? null : request.description().trim(),
                 creator
         ));
+        auditLogService.safeRecord(
+                AuditEventType.KANBAN_BOARD_CREATED,
+                creator.getId(),
+                "KANBAN_BOARD",
+                board.getId(),
+                board.getWorkspaceKey(),
+                "name=" + board.getName(),
+                null
+        );
         return toSummary(board);
     }
 
@@ -208,6 +222,15 @@ public class KanbanService {
                 null,
                 card.getTitle()
         ));
+        auditLogService.safeRecord(
+                AuditEventType.KANBAN_CARD_CREATED,
+                actor.getId(),
+                "KANBAN_CARD",
+                card.getId(),
+                column.getBoard().getWorkspaceKey(),
+                "boardId=" + column.getBoard().getId() + " columnId=" + columnId,
+                null
+        );
         return toCardResponse(cardRepository.findById(card.getId()).orElseThrow());
     }
 

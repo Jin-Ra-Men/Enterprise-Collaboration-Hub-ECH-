@@ -104,6 +104,8 @@
   - `PUT /api/admin/org-sync/users/{employeeNo}/status`
 - 오류 로그(관리):
   - `GET /api/admin/error-logs?from=&to=&errorCode=&path=&limit=`
+- 감사 로그(관리):
+  - `GET /api/admin/audit-logs?from=&to=&actorUserId=&eventType=&resourceType=&workspaceKey=&limit=`
 - Realtime 소켓:
   - `channel:join`
   - `message:send` (DB 저장 연계)
@@ -150,6 +152,14 @@
 - 전역 예외는 `error_logs` 테이블에 적재됩니다.
 - 저장 목적은 운영 추적이며, 메시지 본문/파일 원문/토큰 등 민감 데이터는 저장하지 않습니다.
 - 조회 API는 `ADMIN` 전용이며 기간/코드/경로 기준 필터가 가능합니다.
+
+### 감사 이벤트 로그 인수인계 메모
+- 채널·메시지·파일·업무·칸반 도메인의 주요 이벤트가 `audit_logs` 테이블에 기록됩니다.
+- 이벤트 유형: `CHANNEL_CREATED`, `CHANNEL_JOINED`, `MESSAGE_SENT`, `MESSAGE_REPLY_SENT`, `FILE_UPLOADED`, `FILE_DOWNLOAD_INFO_ACCESSED`, `WORK_ITEM_CREATED`, `KANBAN_BOARD_CREATED`, `KANBAN_CARD_CREATED` 등
+- **대화 본문·파일 원문은 절대 기록하지 않습니다.** `detail` 필드는 채널명·리소스 ID 등 메타만 저장하며 최대 500자입니다.
+- `AuditLogService.safeRecord()` 호출 방식이므로 감사 로그 저장 실패가 비즈니스 응답에 영향을 주지 않습니다.
+- 조회 API: `GET /api/admin/audit-logs` (`ADMIN` 전용, 기간/행위자/이벤트유형/리소스유형/워크스페이스/한도 필터)
+- 향후 `OrgSyncService`, 배포 관리 등에도 적용 범위 확장 가능합니다.
 
 ### 메시지→업무 인수인계 메모
 - 메시지 하나당 연결된 업무는 최대 1건(`work_items.source_message_id` 유니크).

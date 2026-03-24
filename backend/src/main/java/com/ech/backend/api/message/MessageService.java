@@ -1,7 +1,9 @@
 package com.ech.backend.api.message;
 
+import com.ech.backend.api.auditlog.AuditLogService;
 import com.ech.backend.api.message.dto.CreateMessageRequest;
 import com.ech.backend.api.message.dto.MessageResponse;
+import com.ech.backend.domain.audit.AuditEventType;
 import com.ech.backend.domain.channel.Channel;
 import com.ech.backend.domain.channel.ChannelRepository;
 import com.ech.backend.domain.message.Message;
@@ -19,15 +21,18 @@ public class MessageService {
     private final ChannelRepository channelRepository;
     private final UserRepository userRepository;
     private final MessageRepository messageRepository;
+    private final AuditLogService auditLogService;
 
     public MessageService(
             ChannelRepository channelRepository,
             UserRepository userRepository,
-            MessageRepository messageRepository
+            MessageRepository messageRepository,
+            AuditLogService auditLogService
     ) {
         this.channelRepository = channelRepository;
         this.userRepository = userRepository;
         this.messageRepository = messageRepository;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional
@@ -38,6 +43,17 @@ public class MessageService {
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
         Message message = messageRepository.save(new Message(channel, sender, null, request.text()));
+
+        auditLogService.safeRecord(
+                AuditEventType.MESSAGE_SENT,
+                sender.getId(),
+                "MESSAGE",
+                message.getId(),
+                channel.getWorkspaceKey(),
+                "channelId=" + channelId,
+                null
+        );
+
         return toResponse(message);
     }
 
@@ -55,6 +71,17 @@ public class MessageService {
         }
 
         Message reply = messageRepository.save(new Message(channel, sender, parent, request.text()));
+
+        auditLogService.safeRecord(
+                AuditEventType.MESSAGE_REPLY_SENT,
+                sender.getId(),
+                "MESSAGE",
+                reply.getId(),
+                channel.getWorkspaceKey(),
+                "channelId=" + channelId + " parentId=" + parentMessageId,
+                null
+        );
+
         return toResponse(reply);
     }
 

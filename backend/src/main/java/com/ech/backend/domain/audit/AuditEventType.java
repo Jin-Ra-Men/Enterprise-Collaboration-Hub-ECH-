@@ -1,0 +1,36 @@
+package com.ech.backend.domain.audit;
+
+public enum AuditEventType {
+
+    // 채널 이벤트
+    CHANNEL_CREATED,
+    CHANNEL_JOINED,
+
+    // 메시지 이벤트 (본문 미기록, 메타데이터만)
+    MESSAGE_SENT,
+    MESSAGE_REPLY_SENT,
+
+    // 파일 이벤트
+    FILE_UPLOADED,
+    FILE_DOWNLOAD_INFO_ACCESSED,
+
+    // 업무 항목 이벤트
+    WORK_ITEM_CREATED,
+
+    // 칸반 이벤트
+    KANBAN_BOARD_CREATED,
+    KANBAN_COLUMN_CREATED,
+    KANBAN_COLUMN_UPDATED,
+    KANBAN_COLUMN_DELETED,
+    KANBAN_CARD_CREATED,
+    KANBAN_CARD_UPDATED,
+    KANBAN_CARD_MOVED,
+    KANBAN_CARD_STATUS_CHANGED,
+    KANBAN_CARD_DELETED,
+    KANBAN_ASSIGNEE_ADDED,
+    KANBAN_ASSIGNEE_REMOVED,
+
+    // 조직/사용자 관리 이벤트
+    ORG_SYNC_EXECUTED,
+    USER_STATUS_CHANGED
+}

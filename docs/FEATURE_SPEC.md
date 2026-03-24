@@ -502,3 +502,60 @@
 - 비고:
   - 구현 파일:
     - `realtime/src/server.js`
+
+---
+
+## 감사 이벤트 로그 (audit_logs) — Phase 3-3-1/3-3-2
+
+### 개요
+채널·메시지·파일·업무·칸반 도메인에서 발생하는 주요 이벤트를 `audit_logs` 테이블에 기록한다.  
+**대화 본문·파일 원문 등 민감 데이터는 저장하지 않으며**, 리소스 ID·이벤트 유형·행위자·부가 메타만 수집한다.
+
+### 이벤트 유형 (`AuditEventType`)
+| 이벤트 | 기록 서비스 |
+|---|---|
+| `CHANNEL_CREATED` | ChannelService |
+| `CHANNEL_JOINED` | ChannelService |
+| `MESSAGE_SENT` | MessageService |
+| `MESSAGE_REPLY_SENT` | MessageService |
+| `FILE_UPLOADED` | ChannelFileService |
+| `FILE_DOWNLOAD_INFO_ACCESSED` | ChannelFileService |
+| `WORK_ITEM_CREATED` | WorkItemService |
+| `KANBAN_BOARD_CREATED` | KanbanService |
+| `KANBAN_CARD_CREATED` | KanbanService |
+| `KANBAN_COLUMN_CREATED/UPDATED/DELETED` | (Enum 정의됨, 추후 연동 가능) |
+| `KANBAN_CARD_MOVED/STATUS_CHANGED/DELETED` | (Enum 정의됨) |
+| `KANBAN_ASSIGNEE_ADDED/REMOVED` | (Enum 정의됨) |
+| `ORG_SYNC_EXECUTED`, `USER_STATUS_CHANGED` | (Enum 정의됨) |
+
+### DB 스키마
+```sql
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id BIGSERIAL PRIMARY KEY,
+    event_type VARCHAR(60) NOT NULL,
+    actor_user_id BIGINT,
+    resource_type VARCHAR(40) NOT NULL,
+    resource_id BIGINT,
+    workspace_key VARCHAR(100) NOT NULL DEFAULT 'default',
+    detail VARCHAR(500),
+    request_id VARCHAR(100),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+### API
+| 메서드 | 경로 | 권한 | 설명 |
+|---|---|---|---|
+| `GET` | `/api/admin/audit-logs` | ADMIN | 감사 로그 조회 (필터: from/to/actorUserId/eventType/resourceType/workspaceKey/limit) |
+
+### 설계 원칙
+- `AuditLogService.safeRecord()`: 예외를 삼키는 래퍼 → 감사 로깅 실패가 주 비즈니스 흐름에 영향을 주지 않음
+- `REQUIRES_NEW` 전파 수준 → 호출 트랜잭션과 독립적으로 커밋
+- `detail` 최대 500자, 줄바꿈 제거, 개인정보/본문 저장 금지
+- 구현 파일:
+  - `backend/src/main/java/com/ech/backend/domain/audit/AuditEventType.java`
+  - `backend/src/main/java/com/ech/backend/domain/audit/AuditLog.java`
+  - `backend/src/main/java/com/ech/backend/domain/audit/AuditLogRepository.java`
+  - `backend/src/main/java/com/ech/backend/api/auditlog/AuditLogService.java`
+  - `backend/src/main/java/com/ech/backend/api/auditlog/AuditLogController.java`
+  - `backend/src/main/java/com/ech/backend/api/auditlog/dto/AuditLogResponse.java`
