@@ -110,6 +110,16 @@
   - `application.yml` 멀티파트 파일 크기 설정(기본 500MB), `app.releases-dir` 추가
   - 프론트엔드: 탭 네비게이션 + 배포 관리 화면(목록/업로드/활성화/이력)
   - 로드맵 Phase 3-5 완료 처리(`[v]`)
+- Phase 4 안정화 및 품질 완료
+  - 4-1-1: Spring Boot 통합 테스트 (H2 인메모리, AuthApiTest/ChannelApiTest/SearchApiTest/JwtUtilTest)
+  - 4-1-2: GitHub Actions CI 파이프라인 (.github/workflows/ci.yml)
+  - 4-2-1: k6 부하 테스트 스크립트 (tools/k6/load-test.js, message-stress-test.js)
+  - 4-2-2: HikariCP 튜닝 (min-idle, max-lifetime, keepalive-time), DB Pool 에러 핸들링 강화
+  - 4-3-1: realtime pg Pool 에러 핸들링, gracefulShutdown, 재연결 재시도 로직
+  - 4-3-2: socket.io 재연결 설정 강화, message:send ACK 콜백 적용, 메시지 rate limit
+  - 4-4-1: docs/DEPLOY.md (배포/롤백/체크리스트)
+  - 4-4-2: docs/MONITORING.md (알람 임계치/헬스체크/부하 기준/장애 대응)
+  - 로드맵 Phase 4 전체 완료 처리([v])
 - 파일 스토리지 경로 설정 및 실제 파일 업로드/다운로드 구현
   - app_settings 테이블, AppSetting 엔티티/리포지토리, AppSettingKey 상수 추가
   - AppSettingsService: DB 우선 + yml 폴백 스토리지 경로 조회/변경
