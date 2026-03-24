@@ -1,5 +1,8 @@
 package com.ech.backend.api.init;
 
+import com.ech.backend.domain.retention.RetentionPolicy;
+import com.ech.backend.domain.retention.RetentionPolicyRepository;
+import com.ech.backend.domain.retention.RetentionResourceType;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
 import java.util.List;
@@ -30,20 +33,30 @@ public class DataInitializer implements ApplicationRunner {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RetentionPolicyRepository retentionPolicyRepository;
 
-    public DataInitializer(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public DataInitializer(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            RetentionPolicyRepository retentionPolicyRepository
+    ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.retentionPolicyRepository = retentionPolicyRepository;
     }
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
+        initDefaultPasswords();
+        initDefaultRetentionPolicies();
+    }
+
+    private void initDefaultPasswords() {
         List<User> usersWithoutPassword = userRepository.findUsersWithoutPassword();
         if (usersWithoutPassword.isEmpty()) {
             return;
         }
-
         String encodedDefault = passwordEncoder.encode(DEFAULT_PASSWORD);
         for (User user : usersWithoutPassword) {
             user.setPasswordHash(encodedDefault);
@@ -51,5 +64,33 @@ public class DataInitializer implements ApplicationRunner {
         userRepository.saveAll(usersWithoutPassword);
         log.info("[DataInitializer] 비밀번호 미설정 사용자 {}명에게 기본 비밀번호 적용 완료. (Test1234!)",
                 usersWithoutPassword.size());
+    }
+
+    /**
+     * 기본 보존 정책을 시드한다. 이미 존재하는 정책은 덮어쓰지 않는다.
+     * <ul>
+     *   <li>MESSAGES: 365일, 비활성</li>
+     *   <li>AUDIT_LOGS: 180일, 비활성</li>
+     *   <li>ERROR_LOGS: 90일, 비활성</li>
+     * </ul>
+     */
+    private void initDefaultRetentionPolicies() {
+        seedPolicy(RetentionResourceType.MESSAGES, 365, false,
+                "채널 메시지 보존 정책. 만료 시 archived_at 설정(소프트 아카이브).");
+        seedPolicy(RetentionResourceType.AUDIT_LOGS, 180, false,
+                "감사 이벤트 로그 보존 정책. 만료 시 물리 삭제.");
+        seedPolicy(RetentionResourceType.ERROR_LOGS, 90, false,
+                "운영 오류 로그 보존 정책. 만료 시 물리 삭제.");
+    }
+
+    private void seedPolicy(RetentionResourceType type, int retentionDays,
+                            boolean isEnabled, String description) {
+        String typeName = type.name();
+        if (retentionPolicyRepository.findByResourceType(typeName).isEmpty()) {
+            retentionPolicyRepository.save(
+                    new RetentionPolicy(typeName, retentionDays, isEnabled, description));
+            log.info("[DataInitializer] 보존 정책 기본값 생성: {} ({}일, enabled={})",
+                    typeName, retentionDays, isEnabled);
+        }
     }
 }

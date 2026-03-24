@@ -189,3 +189,18 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at DE
 CREATE INDEX IF NOT EXISTS idx_audit_logs_event_type ON audit_logs(event_type);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_actor_user_id ON audit_logs(actor_user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
+
+-- 보존 정책 (resource_type 별 자동 아카이빙/삭제 설정)
+CREATE TABLE IF NOT EXISTS retention_policies (
+    id BIGSERIAL PRIMARY KEY,
+    resource_type VARCHAR(40) NOT NULL UNIQUE,
+    retention_days INT NOT NULL DEFAULT 365,  -- 0 이하 = 영구 보관
+    is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    description TEXT,
+    updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- messages 아카이빙 컬럼 (기존 테이블 확장)
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_messages_archived_at ON messages(archived_at) WHERE archived_at IS NOT NULL;

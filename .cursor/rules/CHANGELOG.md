@@ -90,6 +90,16 @@
 - 관리자 감사 로그 조회 API(`GET /api/admin/audit-logs`, 기간/행위자/이벤트유형/리소스/워크스페이스 필터) 추가
 - `ChannelService`, `MessageService`, `ChannelFileService`, `WorkItemService`, `KanbanService`에 감사 로그 연동(`safeRecord` 호출)
 - 로드맵 Phase 3 항목 `3-3-1`, `3-3-2` 완료 처리(`[v]`)
+- 보존 정책/아카이빙 기능 구현 (Phase 3-4 완료)
+  - `retention_policies` 테이블 및 `RetentionResourceType` Enum 추가 (MESSAGES/AUDIT_LOGS/ERROR_LOGS)
+  - `messages.archived_at` 컬럼 추가 (소프트 아카이브)
+  - `RetentionPolicyService`: 정책 CRUD + 아카이빙 실행 로직
+  - `ArchivingScheduler`: 매일 02:00 활성 정책 자동 실행 (`@Scheduled`)
+  - `RetentionPolicyController`: 관리자 API (`GET/PUT /api/admin/retention-policies`, `POST /trigger`, `POST /trigger/{resourceType}`)
+  - `DataInitializer`: 서버 기동 시 기본 보존 정책 자동 시드
+  - `AuditEventType` `RETENTION_POLICY_UPDATED`, `DATA_ARCHIVED` 추가
+  - `SchedulingConfig` (`@EnableScheduling`) 추가
+  - 로드맵 Phase 3-4 완료 처리(`[v]`)
 - JWT 기반 로그인 인증 구현 (Phase 3-0 신규 추가 및 완료)
   - `SecurityConfig` (Spring Security 정책: Stateless JWT, CORS 허용)
   - `JwtUtil` (토큰 발급/검증), `JwtAuthFilter` (OncePerRequestFilter), `UserPrincipal` (인증 주체)
