@@ -1,6 +1,5 @@
 package com.ech.backend.api.user;
 
-import com.ech.backend.api.user.dto.DepartmentGroupResponse;
 import com.ech.backend.api.user.dto.UserProfileResponse;
 import com.ech.backend.api.user.dto.UserSearchResponse;
 import com.ech.backend.common.api.ApiResponse;
@@ -32,10 +31,13 @@ public class UserSearchController {
         return ApiResponse.success(userSearchService.searchUsers(keyword, department));
     }
 
-    /** ACTIVE 사용자를 부서 단위로 묶어 조직도 선택 UI에 사용한다. */
-    @GetMapping("/organization")
-    public ApiResponse<List<DepartmentGroupResponse>> listOrganization() {
-        return ApiResponse.success(userSearchService.listUsersGroupedByDepartment());
+    /**
+     * 프로필 조회(쿼리 파라미터).
+     * 프론트엔드 기본 연동 경로. 일부 환경에서 경로형 {@code /{userId}/profile}이 404가 될 때 대비.
+     */
+    @GetMapping(value = "/profile", params = "userId")
+    public ApiResponse<UserProfileResponse> getProfileByQuery(@RequestParam Long userId) {
+        return ApiResponse.success(userSearchService.getProfile(userId));
     }
 
     @GetMapping("/{userId}/profile")

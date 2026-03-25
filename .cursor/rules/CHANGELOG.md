@@ -2,6 +2,30 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-03-25 (10차)
+
+### Fixed
+- Spring Boot 기본 `/**` 정적 리소스 매핑이 `/api/**` 를 가로채 `NoResourceFoundException`(api/users/profile, api/user-directory/organization 등)이 나던 문제 수정
+- `spring.web.resources.add-mappings: false` + `FrontendResourceConfig` 로 `index.html` / `styles.css` / `app.js` 만 명시 노출, `/` → `/index.html` 리다이렉트
+
+## 2026-03-25 (9차)
+
+### Added
+- 백엔드: `GET /api/user-directory/organization` — 조직도용 부서별 사용자 목록(정적 리소스와 `/api/users/*` 충돌 회피)
+
+### Changed
+- 백엔드: `GET /api/users/organization` 제거(프론트는 `user-directory` 경로 사용)
+- 백엔드: 채널 파일 다운로드 — `FileSystemResource`·실제 파일 크기·유효하지 않은 Content-Type 시 `application/octet-stream`, 미존재 시 `NotFoundException`(404), 스토리지 base 이탈 경로 차단
+- 프론트엔드: 조직도 요청 URL을 `/api/user-directory/organization`으로 변경
+
+## 2026-03-25 (8차)
+
+### Added
+- 백엔드: `GET /api/users/profile?userId=` — 프로필 조회(쿼리형, 프론트 기본 연동)
+
+### Changed
+- 프론트엔드: 프로필 요청을 경로형 `/{userId}/profile` 대신 쿼리형으로 전환(404 회피)
+
 ## 2026-03-25 (7차)
 
 ### Added

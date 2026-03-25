@@ -32,9 +32,9 @@ spring:
       keepalive-time: 300000
   web:
     resources:
-      # gradlew bootRun 실행 위치(backend/)를 기준으로 ../frontend/ 를 정적 파일 경로로 추가
-      # 운영 배포 시에는 classpath:/static/ 에 빌드 산출물을 복사해 두는 방식 사용 권장
-      static-locations: file:../frontend/, classpath:/static/, classpath:/public/
+      # 기본 /** 정적 매핑을 끈다. /api/** 가 리소스 핸들러로 떨어져 REST 404가 나는 문제 방지.
+      # 실제 노출 경로는 FrontendResourceConfig 에서 index.html / styles.css / app.js 만 등록한다.
+      add-mappings: false
   jpa:
     hibernate:
       ddl-auto: update
