@@ -1,6 +1,9 @@
 package com.ech.backend.api.user;
 
-import com.ech.backend.api.user.dto.DepartmentGroupResponse;
+import com.ech.backend.api.user.dto.OrgCompanyResponse;
+import com.ech.backend.api.user.dto.OrgDivisionResponse;
+import com.ech.backend.api.user.dto.OrganizationTreeResponse;
+import com.ech.backend.api.user.dto.OrgTeamResponse;
 import com.ech.backend.api.user.dto.UserProfileResponse;
 import com.ech.backend.api.user.dto.UserSearchResponse;
 import com.ech.backend.domain.user.User;
@@ -32,20 +35,56 @@ public class UserSearchService {
                 .toList();
     }
 
-    public List<DepartmentGroupResponse> listUsersGroupedByDepartment() {
+    /**
+     * 회사 → 본부 → 팀 → 사용자. company/division/team 컬럼이 비어 있으면 기본값·department로 보완한다.
+     */
+    public OrganizationTreeResponse getOrganizationTree() {
         List<User> users = userRepository.findActiveUsersForOrganization();
-        Map<String, List<User>> grouped = new LinkedHashMap<>();
+        Map<String, Map<String, Map<String, List<User>>>> byCompany = new LinkedHashMap<>();
         for (User u : users) {
-            String dept = (u.getDepartment() != null && !u.getDepartment().isBlank())
-                    ? u.getDepartment()
-                    : "미지정";
-            grouped.computeIfAbsent(dept, k -> new ArrayList<>()).add(u);
+            String co = resolveCompany(u);
+            String div = resolveDivision(u);
+            String team = resolveTeam(u);
+            byCompany
+                    .computeIfAbsent(co, k -> new LinkedHashMap<>())
+                    .computeIfAbsent(div, k -> new LinkedHashMap<>())
+                    .computeIfAbsent(team, k -> new ArrayList<>())
+                    .add(u);
         }
-        return grouped.entrySet().stream()
-                .map(e -> new DepartmentGroupResponse(
-                        e.getKey(),
-                        e.getValue().stream().map(this::toSearchResponse).toList()))
-                .toList();
+        List<OrgCompanyResponse> companies = new ArrayList<>();
+        for (var coEntry : byCompany.entrySet()) {
+            List<OrgDivisionResponse> divisions = new ArrayList<>();
+            for (var divEntry : coEntry.getValue().entrySet()) {
+                List<OrgTeamResponse> teams = new ArrayList<>();
+                for (var teamEntry : divEntry.getValue().entrySet()) {
+                    teams.add(new OrgTeamResponse(
+                            teamEntry.getKey(),
+                            teamEntry.getValue().stream().map(this::toSearchResponse).toList()));
+                }
+                divisions.add(new OrgDivisionResponse(divEntry.getKey(), teams));
+            }
+            companies.add(new OrgCompanyResponse(coEntry.getKey(), divisions));
+        }
+        return new OrganizationTreeResponse(companies);
+    }
+
+    private static String resolveCompany(User u) {
+        String c = u.getCompanyName();
+        return (c != null && !c.isBlank()) ? c.trim() : "ECH 주식회사";
+    }
+
+    private static String resolveDivision(User u) {
+        String d = u.getDivisionName();
+        return (d != null && !d.isBlank()) ? d.trim() : "미지정 본부";
+    }
+
+    private static String resolveTeam(User u) {
+        String t = u.getTeamName();
+        if (t != null && !t.isBlank()) {
+            return t.trim();
+        }
+        String dept = u.getDepartment();
+        return (dept != null && !dept.isBlank()) ? dept.trim() : "미지정 팀";
     }
 
     public UserProfileResponse getProfile(Long userId) {

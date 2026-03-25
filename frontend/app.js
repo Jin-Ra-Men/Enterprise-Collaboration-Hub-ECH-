@@ -28,7 +28,6 @@ let selectedMembers = [];     // 채널/DM 생성 시 선택된 사용자
 let selectedDmMembers = [];
 let selectedAddMembers = [];  // 기존 채널에 추가할 사용자
 let orgPickerContext = null;  // member | dm | channelMember
-const orgPickerSelectedIds = new Set();
 /** 프로필 모달에 표시 중인 사용자 ID (DM 보내기용) */
 let profileViewUserId = null;
 
@@ -275,11 +274,17 @@ async function downloadChannelFile(fileId, filename) {
   }
 }
 
+const ORG_EMBED_IDS = {
+  member: "orgTreeEmbedMember",
+  dm: "orgTreeEmbedDm",
+  channelMember: "orgTreeEmbedAdd",
+};
+
 async function loadOrgTree(context) {
-  const el = document.getElementById("orgPickerTree");
+  const elId = ORG_EMBED_IDS[context];
+  const el = elId ? document.getElementById(elId) : null;
   if (!el) return;
   orgPickerContext = context;
-  orgPickerSelectedIds.clear();
   el.innerHTML = '<p class="empty-notice">불러오는 중...</p>';
   try {
     const res  = await apiFetch("/api/user-directory/organization");
@@ -288,44 +293,80 @@ async function loadOrgTree(context) {
       el.innerHTML = `<p class="empty-notice">${escHtml(json.error?.message || "오류")}</p>`;
       return;
     }
-    const groups = json.data || [];
+    const root = json.data || {};
+    const companies = root.companies || [];
     el.innerHTML = "";
-    if (groups.length === 0) {
+    if (companies.length === 0) {
       el.innerHTML = '<p class="empty-notice">표시할 사용자가 없습니다.</p>';
       return;
     }
-    groups.forEach((g) => {
-      const det = document.createElement("details");
-      det.className = "org-dept";
-      det.innerHTML = `<summary>${escHtml(g.department)} <span class="org-dept-count">(${g.users.length})</span></summary>`;
-      const ul = document.createElement("ul");
-      ul.className = "org-user-list";
-      (g.users || []).forEach((u) => {
-        if (u.userId === currentUser?.userId) return;
-        const checked = isUserAlreadySelected(u.userId, context) ? "checked" : "";
-        const li = document.createElement("li");
-        li.innerHTML = `
-          <label class="org-user-check">
-            <input type="checkbox" class="org-user-checkbox" data-user-id="${u.userId}" ${checked}/>
-            <span>
-              <span class="org-user-name">${escHtml(u.name)}</span>
-              <span class="org-user-email">${escHtml([u.department, u.email].filter(Boolean).join(" · "))}</span>
-            </span>
-          </label>`;
-        const cb = li.querySelector(".org-user-checkbox");
-        if (cb.checked) orgPickerSelectedIds.add(Number(u.userId));
-        cb.addEventListener("change", () => {
-          const uid = Number(cb.dataset.userId);
-          if (cb.checked) orgPickerSelectedIds.add(uid);
-          else orgPickerSelectedIds.delete(uid);
+    companies.forEach((co) => {
+      const detCo = document.createElement("details");
+      detCo.className = "org-lvl org-lvl-company";
+      detCo.open = true;
+      detCo.innerHTML = `<summary><span class="org-lvl-label">${escHtml(co.name)}</span></summary>`;
+      const wrapCo = document.createElement("div");
+      wrapCo.className = "org-lvl-body";
+      (co.divisions || []).forEach((div) => {
+        const detDiv = document.createElement("details");
+        detDiv.className = "org-lvl org-lvl-division";
+        detDiv.open = true;
+        detDiv.innerHTML = `<summary><span class="org-lvl-label">${escHtml(div.name)}</span></summary>`;
+        const wrapDiv = document.createElement("div");
+        wrapDiv.className = "org-lvl-body";
+        (div.teams || []).forEach((team) => {
+          const detTeam = document.createElement("details");
+          detTeam.className = "org-lvl org-lvl-team";
+          detTeam.open = true;
+          const uCount = (team.users || []).length;
+          detTeam.innerHTML = `<summary><span class="org-lvl-label">${escHtml(team.name)}</span> <span class="org-dept-count">(${uCount})</span></summary>`;
+          const ul = document.createElement("ul");
+          ul.className = "org-user-list";
+          (team.users || []).forEach((u) => {
+            if (u.userId === currentUser?.userId) return;
+            const checked = isUserAlreadySelected(u.userId, context) ? "checked" : "";
+            const li = document.createElement("li");
+            const payload = JSON.stringify({
+              userId: u.userId,
+              name: u.name,
+              email: u.email || "",
+              department: u.department || "",
+              employeeNo: u.employeeNo || "",
+            });
+            li.dataset.userPayload = payload;
+            li.innerHTML = `
+              <label class="org-user-check">
+                <input type="checkbox" class="org-user-checkbox" data-user-id="${u.userId}" ${checked}/>
+                <span>
+                  <span class="org-user-name">${escHtml(u.name)}</span>
+                  <span class="org-user-email">${escHtml([u.department, u.email].filter(Boolean).join(" · "))}</span>
+                </span>
+              </label>`;
+            const cb = li.querySelector(".org-user-checkbox");
+            cb.addEventListener("change", () => {
+              let userObj;
+              try {
+                userObj = JSON.parse(li.dataset.userPayload || "{}");
+              } catch {
+                return;
+              }
+              if (cb.checked) {
+                addSelectedMember(userObj, context);
+              } else {
+                removeSelectedMember(userObj.userId, context);
+              }
+            });
+            ul.appendChild(li);
+          });
+          if (ul.children.length === 0) return;
+          detTeam.appendChild(ul);
+          wrapDiv.appendChild(detTeam);
         });
-        ul.appendChild(li);
+        detDiv.appendChild(wrapDiv);
+        wrapCo.appendChild(detDiv);
       });
-      if (ul.children.length === 0) {
-        return;
-      }
-      det.appendChild(ul);
-      el.appendChild(det);
+      detCo.appendChild(wrapCo);
+      el.appendChild(detCo);
     });
   } catch (e) {
     console.error(e);
@@ -340,24 +381,13 @@ function isUserAlreadySelected(userId, context) {
   return ref.some((u) => Number(u.userId) === Number(userId));
 }
 
-function applyOrgPickerSelection() {
-  const context = orgPickerContext;
-  if (!context) return;
-  const selectedIds = Array.from(orgPickerSelectedIds);
-  if (!selectedIds.length) {
-    alert("조직도에서 사용자를 선택하세요.");
-    return;
-  }
-  const targetListEl = context === "dm"
-    ? document.getElementById("dmSearchResults")
-    : (context === "channelMember"
-      ? document.getElementById("addMemberSearchResults")
-      : document.getElementById("userSearchResults"));
-  selectedIds.forEach((uid) => {
-    const btn = targetListEl?.querySelector(`.btn-add-member[data-uid="${uid}"]`);
-    if (btn) btn.click();
-  });
-  closeModal("modalOrgPicker");
+function syncOrgCheckbox(userId, context, checked) {
+  const id = ORG_EMBED_IDS[context];
+  if (!id) return;
+  const root = document.getElementById(id);
+  if (!root) return;
+  const cb = root.querySelector(`.org-user-checkbox[data-user-id="${userId}"]`);
+  if (cb) cb.checked = checked;
 }
 
 function avatarInitials(name) {
@@ -624,6 +654,30 @@ function minuteKey(iso) {
   return `${y}-${mo}-${da}T${h}:${mi}`;
 }
 
+/** 날짜 구분선용 로컬 YYYY-MM-DD */
+function dateKeyLocal(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
+  const da = String(d.getDate()).padStart(2, "0");
+  return `${y}-${mo}-${da}`;
+}
+
+function fmtDateDividerLabel(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleDateString("ko-KR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+}
+
+function createDateDividerElement(iso) {
+  const div = document.createElement("div");
+  div.className = "msg-date-divider";
+  div.dataset.dateKey = dateKeyLocal(iso);
+  div.innerHTML = `<span class="msg-date-pill">${escHtml(fmtDateDividerLabel(iso))}</span>`;
+  return div;
+}
+
 /** 다음 줄이 같은 사람·같은 분이면 현재 줄에는 시각 미표시 */
 function shouldShowMessageTime(msgs, i) {
   const cur = msgs[i];
@@ -652,6 +706,7 @@ function createMessageRowElement(msg, { showAvatar, showTime }) {
   div.className = `msg-row msg-chat ${isMine ? "msg-mine" : "msg-other"}${showAvatar ? "" : " msg-continued"}`;
   div.dataset.senderId = String(senderIdNum);
   div.dataset.minuteKey = minuteKey(msg.createdAt);
+  div.dataset.dateKey = dateKeyLocal(msg.createdAt);
 
   const timeHtml = showTime
     ? `<span class="msg-time">${escHtml(fmtTime(msg.createdAt))}</span>`
@@ -687,7 +742,13 @@ function createMessageRowElement(msg, { showAvatar, showTime }) {
 function renderMessages(msgs) {
   messagesEl.innerHTML = "";
   if (!msgs.length) return;
+  let prevDk = null;
   msgs.forEach((m, i) => {
+    const dk = dateKeyLocal(m.createdAt);
+    if (prevDk !== dk) {
+      messagesEl.appendChild(createDateDividerElement(m.createdAt));
+      prevDk = dk;
+    }
     const showAvatar = shouldShowAvatarForMessage(msgs, i);
     const showTime = shouldShowMessageTime(msgs, i);
     messagesEl.appendChild(createMessageRowElement(m, { showAvatar, showTime }));
@@ -701,14 +762,21 @@ function renderMessages(msgs) {
 function appendMessageRealtime(msg) {
   const sid = Number(msg.senderId);
   const mk = minuteKey(msg.createdAt);
-  const rows = messagesEl.querySelectorAll(".msg-row.msg-chat");
-  const last = rows[rows.length - 1];
-
+  const dk = dateKeyLocal(msg.createdAt);
+  let rows = messagesEl.querySelectorAll(".msg-row.msg-chat");
+  let last = rows[rows.length - 1];
+  const lastDk = last ? last.dataset.dateKey : null;
+  if (!last || lastDk !== dk) {
+    messagesEl.appendChild(createDateDividerElement(msg.createdAt));
+  }
+  rows = messagesEl.querySelectorAll(".msg-row.msg-chat");
+  last = rows[rows.length - 1];
   if (last && Number(last.dataset.senderId) === sid && last.dataset.minuteKey === mk) {
     const timeEl = last.querySelector(".msg-time");
     if (timeEl) timeEl.remove();
   }
-
+  rows = messagesEl.querySelectorAll(".msg-row.msg-chat");
+  last = rows[rows.length - 1];
   const showAvatar = !last || Number(last.dataset.senderId) !== sid;
   messagesEl.appendChild(
     createMessageRowElement(msg, { showAvatar, showTime: true })
@@ -726,22 +794,54 @@ function appendSystemMsg(text) {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-function appendUploadedFileMessage(fileMeta) {
-  if (!fileMeta || !fileMeta.id) return;
+function createFileAttachmentRow(fileMeta, iso) {
+  const senderIdNum = Number(fileMeta.uploadedByUserId || currentUser?.userId);
+  const senderName = fileMeta.uploaderName || currentUser?.name || `user#${senderIdNum}`;
+  const pr = presenceByUserId.get(senderIdNum) || "OFFLINE";
+  const prCl = presenceCssClass(pr);
+  const prTip = presenceTitle(pr);
   const div = document.createElement("div");
-  div.className = "msg-file";
+  div.className = "msg-row msg-chat msg-mine msg-has-attachment";
+  div.dataset.senderId = String(senderIdNum);
+  div.dataset.minuteKey = minuteKey(iso);
+  div.dataset.dateKey = dateKeyLocal(iso);
+  const initials = avatarInitials(senderName);
+  const timeHtml = `<span class="msg-time">${escHtml(fmtTime(iso))}</span>`;
   div.innerHTML = `
-    <span class="msg-file-icon">📎</span>
-    <div class="msg-file-body">
-      <p class="msg-file-name">${escHtml(fileMeta.originalFilename || "첨부파일")}</p>
-      <p class="msg-file-sub">${fmtSize(fileMeta.sizeBytes || 0)} · 업로더 ${escHtml(fileMeta.uploaderName || "")}</p>
+    <div class="msg-avatar-wrap">
+      <button type="button" class="msg-avatar msg-user-trigger" data-user-id="${senderIdNum}" title="프로필 보기">${initials}</button>
+      <span class="presence-dot ${prCl}" data-presence-user="${senderIdNum}" title="${prTip}"></span>
     </div>
-    <button type="button" class="btn-channel-file-dl">다운로드</button>`;
-  div.querySelector(".btn-channel-file-dl").addEventListener("click", () => {
+    <div class="msg-body">
+      <div class="msg-meta">
+        <button type="button" class="msg-sender msg-user-trigger" data-user-id="${senderIdNum}">${escHtml(senderName)}</button>
+      </div>
+      <div class="msg-content-row msg-attachment-inline">
+        <span class="msg-attach-icon" aria-hidden="true">📎</span>
+        <span class="msg-attach-name">${escHtml(fileMeta.originalFilename || "첨부파일")}</span>
+        <span class="msg-attach-meta">${fmtSize(fileMeta.sizeBytes || 0)}</span>
+        <button type="button" class="btn-attach-dl">다운로드</button>${timeHtml}
+      </div>
+    </div>`;
+  div.querySelector(".btn-attach-dl").addEventListener("click", () => {
     downloadChannelFile(fileMeta.id, fileMeta.originalFilename);
   });
-  messagesEl.appendChild(div);
+  return div;
+}
+
+function appendUploadedFileMessage(fileMeta) {
+  if (!fileMeta || !fileMeta.id || !currentUser) return;
+  const iso = fileMeta.createdAt || new Date().toISOString();
+  const dk = dateKeyLocal(iso);
+  const rows = messagesEl.querySelectorAll(".msg-row.msg-chat");
+  const lastRow = rows[rows.length - 1];
+  const lastDk = lastRow ? lastRow.dataset.dateKey : null;
+  if (!lastRow || lastDk !== dk) {
+    messagesEl.appendChild(createDateDividerElement(iso));
+  }
+  messagesEl.appendChild(createFileAttachmentRow(fileMeta, iso));
   trimMessages();
+  refreshPresenceDots();
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
@@ -871,7 +971,6 @@ async function uploadFile(file) {
   if (!activeChannelId || !currentUser) return;
   const formData = new FormData();
   formData.append("file", file);
-  appendSystemMsg(`파일 업로드 중: ${file.name}`);
   try {
     const res  = await fetch(`${API_BASE}/api/channels/${activeChannelId}/files/upload?userId=${currentUser.userId}`, {
       method: "POST",
@@ -880,7 +979,6 @@ async function uploadFile(file) {
     });
     const json = await res.json();
     if (res.ok) {
-      appendSystemMsg(`파일 업로드 완료: ${json.data?.originalFilename || file.name}`);
       appendUploadedFileMessage(json.data);
       if (activeChannelId) loadChannelFiles(activeChannelId);
     } else {
@@ -894,7 +992,7 @@ async function uploadFile(file) {
 /* ==========================================================================
  * 채널 만들기 모달
  * ========================================================================== */
-document.getElementById("btnCreateChannel").addEventListener("click", () => {
+document.getElementById("btnCreateChannel").addEventListener("click", async () => {
   selectedMembers = [];
   document.getElementById("newChannelName").value = "";
   document.getElementById("newChannelDesc").value = "";
@@ -903,15 +1001,10 @@ document.getElementById("btnCreateChannel").addEventListener("click", () => {
   document.getElementById("selectedMembersWrap").innerHTML = "";
   document.getElementById("memberSearchInput").value = "";
   openModal("modalCreateChannel");
+  await loadOrgTree("member");
 });
 
 document.getElementById("btnSearchMember").addEventListener("click", () => searchUsers("member"));
-document.getElementById("btnOpenOrgChannel").addEventListener("click", async () => {
-  await searchUsers("member", "__all__");
-  await loadOrgTree("member");
-  document.getElementById("orgPickerTitle").textContent = "조직도 선택 - 채널 구성원";
-  openModal("modalOrgPicker");
-});
 document.getElementById("memberSearchInput").addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); searchUsers("member"); }
 });
@@ -983,13 +1076,27 @@ function addSelectedMember(user, context) {
   const tag  = document.createElement("span");
   tag.className   = "member-tag";
   tag.dataset.uid = user.userId;
-  tag.innerHTML   = `${escHtml(user.name)} <button data-uid="${user.userId}">✕</button>`;
+  tag.innerHTML   = `${escHtml(user.name)} <button type="button" data-uid="${user.userId}">✕</button>`;
   tag.querySelector("button").addEventListener("click", () => {
-    const idx = listRef.findIndex(m => m.userId === user.userId);
-    if (idx >= 0) listRef.splice(idx, 1);
-    tag.remove();
+    removeSelectedMember(user.userId, context);
   });
   wrap.appendChild(tag);
+  syncOrgCheckbox(user.userId, context, true);
+}
+
+function removeSelectedMember(userId, context) {
+  const listRef = context === "dm"
+    ? selectedDmMembers
+    : (context === "channelMember" ? selectedAddMembers : selectedMembers);
+  const wrapId = context === "dm"
+    ? "selectedDmMembersWrap"
+    : (context === "channelMember" ? "selectedAddMembersWrap" : "selectedMembersWrap");
+  const idx = listRef.findIndex(m => m.userId === userId);
+  if (idx >= 0) listRef.splice(idx, 1);
+  const wrap = document.getElementById(wrapId);
+  const tag = wrap?.querySelector(`.member-tag[data-uid="${userId}"]`);
+  if (tag) tag.remove();
+  syncOrgCheckbox(userId, context, false);
 }
 
 document.getElementById("btnConfirmCreateChannel").addEventListener("click", async () => {
@@ -1033,21 +1140,16 @@ document.getElementById("btnConfirmCreateChannel").addEventListener("click", asy
 /* ==========================================================================
  * DM 만들기 모달
  * ========================================================================== */
-document.getElementById("btnCreateDm").addEventListener("click", () => {
+document.getElementById("btnCreateDm").addEventListener("click", async () => {
   selectedDmMembers = [];
   document.getElementById("dmSearchInput").value = "";
   document.getElementById("dmSearchResults").innerHTML = "";
   document.getElementById("selectedDmMembersWrap").innerHTML = "";
   openModal("modalCreateDm");
+  await loadOrgTree("dm");
 });
 
 document.getElementById("btnDmSearch").addEventListener("click", () => searchUsers("dm"));
-document.getElementById("btnOpenOrgDm").addEventListener("click", async () => {
-  await searchUsers("dm", "__all__");
-  await loadOrgTree("dm");
-  document.getElementById("orgPickerTitle").textContent = "조직도 선택 - DM 대상";
-  openModal("modalOrgPicker");
-});
 document.getElementById("dmSearchInput").addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); searchUsers("dm"); }
 });
@@ -1104,7 +1206,7 @@ document.getElementById("btnOpenFileHub").addEventListener("click", async () => 
   openModal("modalFileHub");
 });
 
-document.getElementById("btnAddMembersLater").addEventListener("click", () => {
+document.getElementById("btnAddMembersLater").addEventListener("click", async () => {
   if (!activeChannelId) {
     alert("채널을 먼저 선택하세요.");
     return;
@@ -1114,16 +1216,11 @@ document.getElementById("btnAddMembersLater").addEventListener("click", () => {
   document.getElementById("addMemberSearchResults").innerHTML = "";
   document.getElementById("selectedAddMembersWrap").innerHTML = "";
   openModal("modalAddChannelMembers");
+  await loadOrgTree("channelMember");
 });
 document.getElementById("btnSearchAddMember").addEventListener("click", () => searchUsers("channelMember"));
 document.getElementById("addMemberSearchInput").addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); searchUsers("channelMember"); }
-});
-document.getElementById("btnOpenOrgAddMember").addEventListener("click", async () => {
-  await searchUsers("channelMember", "__all__");
-  await loadOrgTree("channelMember");
-  document.getElementById("orgPickerTitle").textContent = "조직도 선택 - 채널 구성원 추가";
-  openModal("modalOrgPicker");
 });
 document.getElementById("btnConfirmAddMembers").addEventListener("click", async () => {
   if (!activeChannelId) return;
@@ -1147,8 +1244,6 @@ document.getElementById("btnConfirmAddMembers").addEventListener("click", async 
     appendSystemMsg("구성원 추가 완료");
   }
 });
-document.getElementById("btnConfirmOrgPick").addEventListener("click", applyOrgPickerSelection);
-
 document.getElementById("btnProfileDm").addEventListener("click", async () => {
   const name = document.getElementById("profileModalName")?.textContent?.trim() || "";
   await startDmWithUser(profileViewUserId, name);

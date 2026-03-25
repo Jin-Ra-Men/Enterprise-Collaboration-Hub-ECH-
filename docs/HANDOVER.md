@@ -136,6 +136,7 @@
 
 ### 사용자 검색/Presence 인수인계 메모
 - 사용자 검색은 `users.department`를 조직도 속성으로 사용해 부서 필터를 지원합니다.
+- `GET /api/user-directory/organization` 응답은 `data.companies[]` → `divisions[]` → `teams[]` → `users[]` 3단계 트리이며, DB의 `company_name` / `division_name` / `team_name`(및 기존 `department` 폴백)을 사용합니다. 프론트는 채널·DM·구성원 추가 모달에서 검색과 조직도를 한 화면(`.picker-unified`)에 띄웁니다.
 - 검색 키워드(`q`)는 이름/이메일/사번에 대해 부분 일치 조회를 수행합니다.
 - Presence는 Realtime 서버 메모리 기반으로 관리됩니다.
 - 소켓별로 사용자를 추적하며, 해당 사용자의 **모든** 소켓이 끊기면 OFFLINE 브로드캐스트 후 메모리에서 제거합니다(유령 userId 누적 방지).

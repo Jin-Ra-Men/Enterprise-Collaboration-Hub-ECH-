@@ -1,10 +1,9 @@
 package com.ech.backend.api.user;
 
-import com.ech.backend.api.user.dto.DepartmentGroupResponse;
+import com.ech.backend.api.user.dto.OrganizationTreeResponse;
 import com.ech.backend.common.api.ApiResponse;
 import com.ech.backend.common.rbac.AppRole;
 import com.ech.backend.common.rbac.RequireRole;
-import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,7 +24,7 @@ public class UserDirectoryController {
     }
 
     @GetMapping("/organization")
-    public ApiResponse<List<DepartmentGroupResponse>> organization() {
-        return ApiResponse.success(userSearchService.listUsersGroupedByDepartment());
+    public ApiResponse<OrganizationTreeResponse> organization() {
+        return ApiResponse.success(userSearchService.getOrganizationTree());
     }
 }
