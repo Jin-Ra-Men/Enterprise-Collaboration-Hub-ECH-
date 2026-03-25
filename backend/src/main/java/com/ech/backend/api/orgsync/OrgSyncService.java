@@ -40,6 +40,8 @@ public class OrgSyncService {
                     user.email(),
                     user.name(),
                     user.department(),
+                    user.jobRank(),
+                    user.dutyTitle(),
                     safeRole(user.role()),
                     safeStatus(user.status())
             );

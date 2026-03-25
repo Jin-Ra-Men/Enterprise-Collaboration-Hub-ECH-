@@ -145,6 +145,22 @@ async function openUserProfile(userId) {
     document.getElementById("profileModalEmpNo").textContent = u.employeeNo || "-";
     document.getElementById("profileModalEmail").textContent = u.email || "-";
     document.getElementById("profileModalDept").textContent = u.department || "-";
+    const jr = u.jobRank != null && String(u.jobRank).trim() !== "";
+    document.getElementById("profileModalJobRank").textContent = jr ? String(u.jobRank).trim() : "-";
+    const dutyDt = document.getElementById("profileDutyTitleDt");
+    const dutyDd = document.getElementById("profileModalDutyTitle");
+    const hasDuty = u.dutyTitle != null && String(u.dutyTitle).trim() !== "";
+    if (dutyDt && dutyDd) {
+      if (hasDuty) {
+        dutyDt.classList.remove("hidden");
+        dutyDd.classList.remove("hidden");
+        dutyDd.textContent = String(u.dutyTitle).trim();
+      } else {
+        dutyDt.classList.add("hidden");
+        dutyDd.classList.add("hidden");
+        dutyDd.textContent = "";
+      }
+    }
     const dmBtn = document.getElementById("btnProfileDm");
     if (dmBtn) {
       const self = Number(profileViewUserId) === Number(currentUser.userId);
@@ -563,15 +579,24 @@ async function loadChannelMembers(channelId) {
       const uid = Number(m.userId);
       const pr = presenceByUserId.get(uid) || "OFFLINE";
       const prCl = presenceCssClass(pr);
+      const deptParts = [m.department, m.jobRank].filter(x => x != null && String(x).trim() !== "");
+      const orgLine = deptParts.length ? deptParts.map(x => String(x).trim()).join(" · ") : "조직 미지정";
+      const dutyHtml =
+        m.dutyTitle != null && String(m.dutyTitle).trim() !== ""
+          ? `<span class="member-duty-txt">${escHtml(String(m.dutyTitle).trim())}</span>`
+          : "";
       const li = document.createElement("li");
       li.className = "member-list-item";
       li.innerHTML = `
-        <span class="presence-dot ${prCl}" data-presence-user="${uid}" title="${presenceTitle(pr)}"></span>
-        <button type="button" class="member-profile-btn" data-user-id="${uid}">
+        <div class="member-avatar-wrap">
           <span class="member-avatar-sm">${avatarInitials(m.name || "?")}</span>
+          <span class="presence-dot ${prCl}" data-presence-user="${uid}" title="${presenceTitle(pr)}"></span>
+        </div>
+        <button type="button" class="member-profile-btn" data-user-id="${uid}">
           <span class="member-name-wrap">
             <span class="member-name-txt">${escHtml(m.name || "알 수 없음")}</span>
-            <span class="member-org-txt">${escHtml(m.department || "조직 미지정")}</span>
+            <span class="member-org-txt">${escHtml(orgLine)}</span>
+            ${dutyHtml}
           </span>
         </button>`;
       li.querySelector(".member-profile-btn").addEventListener("click", () => openUserProfile(uid));
@@ -635,10 +660,12 @@ function createMessageRowElement(msg, { showAvatar, showTime }) {
   if (showAvatar) {
     const initials = avatarInitials(senderName);
     div.innerHTML = `
-      <button type="button" class="msg-avatar msg-user-trigger" data-user-id="${senderIdNum}" title="프로필 보기">${initials}</button>
+      <div class="msg-avatar-wrap">
+        <button type="button" class="msg-avatar msg-user-trigger" data-user-id="${senderIdNum}" title="프로필 보기">${initials}</button>
+        <span class="presence-dot ${prCl}" data-presence-user="${senderIdNum}" title="${prTip}"></span>
+      </div>
       <div class="msg-body">
         <div class="msg-meta">
-          <span class="presence-dot ${prCl}" data-presence-user="${senderIdNum}" title="${prTip}"></span>
           <button type="button" class="msg-sender msg-user-trigger" data-user-id="${senderIdNum}">${escHtml(senderName)}</button>
         </div>
         <div class="msg-content-row">

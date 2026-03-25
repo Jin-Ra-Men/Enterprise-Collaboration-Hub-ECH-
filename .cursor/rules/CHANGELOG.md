@@ -2,6 +2,21 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-03-25 (12차)
+
+### Added
+- `users.job_rank`(직위), `users.duty_title`(직책) 컬럼 및 JPA·프로필/검색/채널 멤버 API(`jobRank`, `dutyTitle`) 반영
+- 조직 동기화(TEST)·`seed_test_users.sql`에 직위·직책 샘플 값 반영
+
+### Changed
+- 프론트: 프로필 모달에 직위(항상 행, 값 없으면 `-`), 직책은 값이 있을 때만 표시
+- 프론트: 채널 멤버 패널에 부서·직위 한 줄 요약, 직책은 있을 때만 추가 줄
+- 프론트: 채팅 메시지·멤버 패널에서 프레즌스 점을 아바타 네모 우측 하단에 배치(`.msg-avatar-wrap`, `.member-avatar-wrap`)
+
+### Added (에이전트 룰)
+- `.cursor/rules/auto-commit-push.mdc` — 개발 작업 완료 시 커밋·원격 푸시 자동 수행
+- `core-rules.mdc` Git 섹션에 위 예외(현재 브랜치·확인 생략) 문구 추가
+
 ## 2026-03-25 (11차)
 
 ### Added

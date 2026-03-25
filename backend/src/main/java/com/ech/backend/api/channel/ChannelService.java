@@ -130,6 +130,8 @@ public class ChannelService {
                         member.getUser().getId(),
                         member.getUser().getName(),
                         member.getUser().getDepartment(),
+                        member.getUser().getJobRank(),
+                        member.getUser().getDutyTitle(),
                         member.getMemberRole().name(),
                         member.getJoinedAt()
                 ))

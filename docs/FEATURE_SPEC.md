@@ -90,7 +90,7 @@
 - 입력/출력:
   - 생성 입력: `workspaceKey`, `name`, `description`, `channelType`, `createdByUserId`
   - 참여 입력: `userId`, `memberRole`
-  - 출력: 채널 기본 정보 + 멤버 목록(`members`)
+  - 출력: 채널 기본 정보 + 멤버 목록(`members`: `userId`, `name`, `department`, `jobRank`, `dutyTitle`, `memberRole`, `joinedAt`)
 - 상태 전이/예외 케이스:
   - 중복 채널명(`workspaceKey + name`) 생성 시 예외
   - 없는 사용자/채널 조회 시 예외
@@ -428,12 +428,12 @@
 - 관련 API:
   - `GET /api/users/search?q=...&department=...`
   - `GET /api/user-directory/organization` — ACTIVE 사용자를 부서명으로 그룹화(부서 미입력은 `미지정` 그룹). (구) `/api/users/organization` 은 정적 `/**` 매핑과 겹칠 수 있어 분리. 백엔드는 `add-mappings: false` + 명시적 프론트 3파일만 서빙해 `/api/**` 404를 방지
-  - `GET /api/users/profile?userId=` — 동료 프로필(프론트 기본, 이름·사원번호·이메일·부서; **DM 보내기**로 동일 플로우로 DM 채널 생성·입장). 응답에 `role`/`status`가 있어도 프로필 모달에는 표시하지 않음
+  - `GET /api/users/profile?userId=` — 동료 프로필(프론트 기본, 이름·사원번호·이메일·부서·직위; 직책(`dutyTitle`)은 값이 있을 때만 모달에 표시. **DM 보내기**로 DM 채널 생성·입장). 응답에 `role`/`status`가 있어도 프로필 모달에는 표시하지 않음
   - `GET /api/users/{userId}/profile` — 동일(경로형, 하위 호환)
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:
   - 검색 입력: `q`(이름/이메일/사번/부서 부분 일치, 숫자만 입력 시 사용자 ID 일치), `department`(정확히 일치하는 부서명으로 추가 필터)
-  - 검색 출력: `userId`, `employeeNo`, `name`, `email`, `department`, `role`, `status`
+  - 검색 출력: `userId`, `employeeNo`, `name`, `email`, `department`, `jobRank`, `dutyTitle`, `role`, `status`
   - 조직도 출력: `[{ department, users: [...] }]`
 - 상태 전이/예외 케이스:
   - `q`/`department`가 비어 있으면 전체 사용자 또는 부서 필터 기준 조회
@@ -487,7 +487,7 @@
 ## 사용자 Presence 확인 기능
 - 목적: 온라인/자리비움/오프라인 상태를 실시간 확인
 - 사용자: 모든 사용자(조회), Admin/Manager(관리 화면 활용)
-- 관련 화면/경로: 채팅 메시지 발신자 이름 옆·멤버 패널 옆 **프레즌스 점**, 프론트는 연결 시 `GET /presence`로 스냅샷 후 `presence:update`로 갱신
+- 관련 화면/경로: 채팅 메시지·멤버 패널에서 **아바타 네모칸 우측 하단**에 프레즌스 점, 프론트는 연결 시 `GET /presence`로 스냅샷 후 `presence:update`로 갱신
 - 관련 API:
   - `GET /presence` (현재 Presence 목록 조회)
 - 관련 Socket 이벤트:
@@ -581,7 +581,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - `GET /api/channels/{channelId}/files/{fileId}/download?userId=...`
 - 입력/출력:
   - 조직도 팝업: 부서 트리 + 사용자 체크박스(다중 선택) 후 선택 일괄 추가
-  - 멤버 패널: 역할 대신 `department` 소형 텍스트 표시
+  - 멤버 패널: `department`·`jobRank`를 한 줄 요약, `dutyTitle`은 값이 있을 때만 추가 줄(직책 없으면 UI에 안 보임)
   - 파일 업로드 성공 시: 채팅 본문에 파일 카드(파일명/크기/다운로드 버튼) 표시
 - 상태 전이/예외 케이스:
   - 중복 멤버 추가 시 서버 검증 메시지를 시스템 메시지로 노출

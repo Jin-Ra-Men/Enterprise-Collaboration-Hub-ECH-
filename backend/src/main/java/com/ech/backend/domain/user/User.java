@@ -28,6 +28,14 @@ public class User {
     @Column(length = 100)
     private String department;
 
+    /** 조직 직위(예: 대리, 과장). UI는 값이 없으면 `-` 등으로 표시. */
+    @Column(name = "job_rank", length = 100)
+    private String jobRank;
+
+    /** 조직 직책(예: 팀장, PM). 없으면 API는 null, UI에서는 행 자체를 숨김. */
+    @Column(name = "duty_title", length = 100)
+    private String dutyTitle;
+
     @Column(nullable = false, length = 30)
     private String role = "MEMBER";
 
@@ -76,6 +84,14 @@ public class User {
 
     public String getDepartment() {
         return department;
+    }
+
+    public String getJobRank() {
+        return jobRank;
+    }
+
+    public String getDutyTitle() {
+        return dutyTitle;
     }
 
     public String getRole() {
