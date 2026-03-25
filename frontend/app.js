@@ -331,98 +331,264 @@ const ORG_EMBED_IDS = {
   channelMember: "orgTreeEmbedAdd",
 };
 
+let orgPickerCompanies = [];
+let orgPickerTeamIndex = new Map(); // key -> { companyName, divisionName, teamName, users }
+let orgPickerSelectedTeamKey = null;
+
+function buildTeamKey(companyName, divisionName, teamName) {
+  return `${companyName}||${divisionName}||${teamName}`;
+}
+
+function normalizeSearchKeyword(keyword) {
+  return (keyword || "").toString().trim();
+}
+
+function matchUserForSearch(user, searchType, keyword) {
+  const kw = normalizeSearchKeyword(keyword).toLowerCase();
+  if (!kw) return true;
+
+  const name = (user?.name || "").toLowerCase();
+  const department = (user?.department || "").toLowerCase();
+  const email = (user?.email || "").toLowerCase();
+  const empNo = (user?.employeeNo || "").toLowerCase();
+
+  switch (searchType) {
+    case "NAME":
+      return name.includes(kw);
+    case "DEPARTMENT":
+      return department.includes(kw);
+    case "EMAIL":
+      return email.includes(kw);
+    case "EMP_NO":
+      return empNo.includes(kw);
+    default:
+      return true;
+  }
+}
+
+function filterUsers(users, searchType, keyword) {
+  const kw = normalizeSearchKeyword(keyword);
+  if (!kw) return users;
+  return (users || []).filter((u) => matchUserForSearch(u, searchType, kw));
+}
+
+function getMemberPickerLeftSearchType() {
+  return document.getElementById("addMemberOrgSearchType")?.value || "NAME";
+}
+function getMemberPickerLeftSearchKeyword() {
+  return document.getElementById("addMemberOrgSearchInput")?.value || "";
+}
+function getMemberPickerRightSearchType() {
+  return document.getElementById("addMemberMemberSearchType")?.value || "NAME";
+}
+function getMemberPickerRightSearchKeyword() {
+  return document.getElementById("addMemberMemberSearchInput")?.value || "";
+}
+
+function renderOrgTreeLeft() {
+  const treeEl = document.getElementById("orgTreeEmbedAdd");
+  if (!treeEl) return;
+  treeEl.innerHTML = "";
+
+  if (!orgPickerCompanies.length) {
+    treeEl.innerHTML = '<p class="empty-notice">표시할 사용자가 없습니다.</p>';
+    return;
+  }
+
+  const selectedKey = orgPickerSelectedTeamKey;
+
+  orgPickerCompanies.forEach((co) => {
+    const detCo = document.createElement("details");
+    detCo.className = "org-lvl org-lvl-company";
+    detCo.open = true;
+    detCo.innerHTML = `<summary><span class="org-lvl-label">${escHtml(co.name)}</span></summary>`;
+    const wrapCo = document.createElement("div");
+    wrapCo.className = "org-lvl-body";
+
+    (co.divisions || []).forEach((div) => {
+      const detDiv = document.createElement("details");
+      detDiv.className = "org-lvl org-lvl-division";
+      detDiv.open = true;
+      detDiv.innerHTML = `<summary><span class="org-lvl-label">${escHtml(div.name)}</span></summary>`;
+      const wrapDiv = document.createElement("div");
+      wrapDiv.className = "org-lvl-body";
+
+      (div.teams || []).forEach((team) => {
+        const teamKey = buildTeamKey(co.name, div.name, team.name);
+        const uCount = (team.users || []).length;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `org-team-select${teamKey === selectedKey ? " active" : ""}`;
+        btn.dataset.teamKey = teamKey;
+        btn.innerHTML = `
+          <span>${escHtml(team.name)}</span>
+          <span class="org-team-count">(${uCount})</span>
+        `;
+        btn.addEventListener("click", () => {
+          orgPickerSelectedTeamKey = teamKey;
+          renderOrgTreeLeft();
+          renderMemberListRight();
+        });
+        wrapDiv.appendChild(btn);
+      });
+
+      detDiv.appendChild(wrapDiv);
+      wrapCo.appendChild(detDiv);
+    });
+
+    detCo.appendChild(wrapCo);
+    treeEl.appendChild(detCo);
+  });
+}
+
+function renderMemberListRight() {
+  const listEl = document.getElementById("addMemberMemberList");
+  if (!listEl) return;
+
+  listEl.innerHTML = "";
+
+  if (!orgPickerSelectedTeamKey || !orgPickerTeamIndex.has(orgPickerSelectedTeamKey)) {
+    listEl.innerHTML = '<li class="empty-notice">부서를 선택하세요.</li>';
+    return;
+  }
+
+  const team = orgPickerTeamIndex.get(orgPickerSelectedTeamKey);
+  const rightType = getMemberPickerRightSearchType();
+  const rightKeyword = getMemberPickerRightSearchKeyword();
+
+  const allUsers = (team.users || []).filter((u) => u.userId !== currentUser?.userId);
+  const filtered = filterUsers(allUsers, rightType, rightKeyword);
+
+  if (!filtered.length) {
+    const li = document.createElement("li");
+    li.className = "empty-notice";
+    li.textContent = rightKeyword
+      ? "검색 결과가 없습니다."
+      : "선택 부서원 목록이 비어 있습니다.";
+    listEl.appendChild(li);
+    return;
+  }
+
+  filtered
+    .slice()
+    .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "ko-KR"))
+    .forEach((u) => {
+      const selected = isUserAlreadySelected(u.userId, orgPickerContext);
+      const item = document.createElement("li");
+      item.className = "member-picker-member-item";
+      item.innerHTML = `
+        <div class="member-picker-member-main">
+          <div class="member-picker-member-name">${escHtml(u.name || "")}</div>
+          <div class="member-picker-member-sub">${escHtml(u.department || "")}${u.email ? " · " + escHtml(u.email) : ""}</div>
+          <div class="member-picker-member-sub">${escHtml("사번: " + (u.employeeNo || ""))}</div>
+        </div>
+        <button type="button" class="member-picker-member-btn" data-user-id="${u.userId}">
+          ${selected ? "제외" : "추가"}
+        </button>
+      `;
+      const btn = item.querySelector("button[data-user-id]");
+      btn.addEventListener("click", () => {
+        if (selected) removeSelectedMember(u.userId, orgPickerContext);
+        else addSelectedMember(u, orgPickerContext);
+        renderMemberListRight();
+      });
+      listEl.appendChild(item);
+    });
+}
+
 async function loadOrgTree(context, embedElIdOverride = null) {
-  const elId = embedElIdOverride ?? ORG_EMBED_IDS[context];
-  const el = elId ? document.getElementById(elId) : null;
-  if (!el) return;
   orgPickerContext = context;
-  orgPickerEmbedElId = elId;
-  el.innerHTML = '<p class="empty-notice">불러오는 중...</p>';
+
+  // 이 팝업은 항상 `orgTreeEmbedAdd` / `addMemberMemberList`를 사용합니다.
+  orgPickerEmbedElId = embedElIdOverride ?? "orgTreeEmbedAdd";
+
+  orgPickerTeamIndex = new Map();
+  orgPickerCompanies = [];
+  orgPickerSelectedTeamKey = null;
+
+  // 검색 입력 초기화
+  const leftInput = document.getElementById("addMemberOrgSearchInput");
+  const leftTypeEl = document.getElementById("addMemberOrgSearchType");
+  const rightInput = document.getElementById("addMemberMemberSearchInput");
+  const rightTypeEl = document.getElementById("addMemberMemberSearchType");
+  if (leftInput) leftInput.value = "";
+  if (rightInput) rightInput.value = "";
+  if (leftTypeEl) leftTypeEl.value = "NAME";
+  if (rightTypeEl) rightTypeEl.value = "NAME";
+
   try {
     const res  = await apiFetch("/api/user-directory/organization");
     const json = await res.json();
     if (!res.ok) {
-      el.innerHTML = `<p class="empty-notice">${escHtml(json.error?.message || "오류")}</p>`;
+      const treeEl = document.getElementById("orgTreeEmbedAdd");
+      if (treeEl) treeEl.innerHTML = `<p class="empty-notice">${escHtml(json.error?.message || "오류")}</p>`;
       return;
     }
+
     const root = json.data || {};
     const companies = root.companies || [];
-    el.innerHTML = "";
-    if (companies.length === 0) {
-      el.innerHTML = '<p class="empty-notice">표시할 사용자가 없습니다.</p>';
+    orgPickerCompanies = companies;
+
+    if (!orgPickerCompanies.length) {
+      orgPickerSelectedTeamKey = null;
+      renderOrgTreeLeft();
+      renderMemberListRight();
       return;
     }
-    companies.forEach((co) => {
-      const detCo = document.createElement("details");
-      detCo.className = "org-lvl org-lvl-company";
-      detCo.open = true;
-      detCo.innerHTML = `<summary><span class="org-lvl-label">${escHtml(co.name)}</span></summary>`;
-      const wrapCo = document.createElement("div");
-      wrapCo.className = "org-lvl-body";
+
+    // team(users) 인덱싱
+    orgPickerCompanies.forEach((co) => {
       (co.divisions || []).forEach((div) => {
-        const detDiv = document.createElement("details");
-        detDiv.className = "org-lvl org-lvl-division";
-        detDiv.open = true;
-        detDiv.innerHTML = `<summary><span class="org-lvl-label">${escHtml(div.name)}</span></summary>`;
-        const wrapDiv = document.createElement("div");
-        wrapDiv.className = "org-lvl-body";
         (div.teams || []).forEach((team) => {
-          const detTeam = document.createElement("details");
-          detTeam.className = "org-lvl org-lvl-team";
-          detTeam.open = true;
-          const uCount = (team.users || []).length;
-          detTeam.innerHTML = `<summary><span class="org-lvl-label">${escHtml(team.name)}</span> <span class="org-dept-count">(${uCount})</span></summary>`;
-          const ul = document.createElement("ul");
-          ul.className = "org-user-list";
-          (team.users || []).forEach((u) => {
-            if (u.userId === currentUser?.userId) return;
-            const checked = isUserAlreadySelected(u.userId, context) ? "checked" : "";
-            const li = document.createElement("li");
-            const payload = JSON.stringify({
-              userId: u.userId,
-              name: u.name,
+          const key = buildTeamKey(co.name, div.name, team.name);
+          orgPickerTeamIndex.set(key, {
+            companyName: co.name,
+            divisionName: div.name,
+            teamName: team.name,
+            users: (team.users || []).map((u) => ({
+              ...u,
               email: u.email || "",
               department: u.department || "",
               employeeNo: u.employeeNo || "",
-            });
-            li.dataset.userPayload = payload;
-            li.innerHTML = `
-              <label class="org-user-check">
-                <input type="checkbox" class="org-user-checkbox" data-user-id="${u.userId}" ${checked}/>
-                <span>
-                  <span class="org-user-name">${escHtml(u.name)}</span>
-                  <span class="org-user-email">${escHtml([u.department, u.email].filter(Boolean).join(" · "))}</span>
-                </span>
-              </label>`;
-            const cb = li.querySelector(".org-user-checkbox");
-            cb.addEventListener("change", () => {
-              let userObj;
-              try {
-                userObj = JSON.parse(li.dataset.userPayload || "{}");
-              } catch {
-                return;
-              }
-              if (cb.checked) {
-                addSelectedMember(userObj, context);
-              } else {
-                removeSelectedMember(userObj.userId, context);
-              }
-            });
-            ul.appendChild(li);
+            })),
           });
-          if (ul.children.length === 0) return;
-          detTeam.appendChild(ul);
-          wrapDiv.appendChild(detTeam);
         });
-        detDiv.appendChild(wrapDiv);
-        wrapCo.appendChild(detDiv);
       });
-      detCo.appendChild(wrapCo);
-      el.appendChild(detCo);
     });
+
+    // 기본 선택: 현재 사용자의 속한 팀(또는 부서명)로 맞춤
+    const myId = currentUser?.userId;
+    let defaultKey = null;
+    for (const [key, team] of orgPickerTeamIndex.entries()) {
+      const hasMe = (team.users || []).some((u) => Number(u.userId) === Number(myId));
+      if (hasMe) {
+        defaultKey = key;
+        break;
+      }
+    }
+    if (!defaultKey && currentUser?.department) {
+      const myDept = String(currentUser.department);
+      for (const [key, team] of orgPickerTeamIndex.entries()) {
+        const teamName = String(team.teamName || "");
+        if (teamName === myDept) {
+          defaultKey = key;
+          break;
+        }
+      }
+    }
+    if (!defaultKey) {
+      defaultKey = orgPickerTeamIndex.keys().next().value || null;
+    }
+    orgPickerSelectedTeamKey = defaultKey;
+
+    renderOrgTreeLeft();
+    renderMemberListRight();
   } catch (e) {
     console.error(e);
-    el.innerHTML = '<p class="empty-notice">조직도를 불러오지 못했습니다.</p>';
+    const treeEl = document.getElementById("orgTreeEmbedAdd");
+    if (treeEl) treeEl.innerHTML = '<p class="empty-notice">조직도를 불러오지 못했습니다.</p>';
+    const listEl = document.getElementById("addMemberMemberList");
+    if (listEl) listEl.innerHTML = '';
   }
 }
 
@@ -1113,6 +1279,7 @@ async function searchUsers(context, forcedKeyword = null) {
       : (context === "channelMember"
         ? document.getElementById("addMemberSearchResults")
         : document.getElementById("userSearchResults"));
+  if (!inputEl || !resultEl) return;
   const isAll = forcedKeyword === "__all__";
   const keyword = isAll ? "" : (forcedKeyword ?? inputEl.value.trim());
   if (!isAll && !keyword) return;
@@ -1291,62 +1458,62 @@ document.getElementById("btnAddMembersLater").addEventListener("click", async ()
     return;
   }
   selectedAddMembers = [];
-  document.getElementById("addMemberSearchInput").value = "";
-  document.getElementById("addMemberSearchResults").innerHTML = "";
   document.getElementById("selectedAddMembersWrap").innerHTML = "";
   openModal("modalAddChannelMembers");
 });
 document.getElementById("btnOpenAddMemberPicker").addEventListener("click", async () => {
   openModal("modalAddMemberPicker");
-  document.getElementById("addMemberSearchInput").value = "";
-  document.getElementById("addMemberSearchResults").innerHTML = "";
   await loadOrgTree("channelMember");
 });
 document.getElementById("btnCloseAddMemberPicker").addEventListener("click", () => {
   closeModal("modalAddMemberPicker");
 });
-async function searchUsersInMemberPicker() {
-  const inputEl = document.getElementById("addMemberSearchInput");
-  const resultEl = document.getElementById("addMemberSearchResults");
-  if (!inputEl || !resultEl) return;
-  const context = orgPickerContext || "channelMember";
-  const keyword = inputEl.value.trim();
-  if (!keyword) return;
 
-  try {
-    const res  = await apiFetch(`/api/users/search?q=${encodeURIComponent(keyword)}`);
-    const json = await res.json();
-    if (!res.ok) {
-      resultEl.innerHTML = `<li class="search-empty">${escHtml(json.error?.message || "오류")}</li>`;
-      return;
+function searchOrgInPicker() {
+  const leftType = getMemberPickerLeftSearchType();
+  const leftKeyword = getMemberPickerLeftSearchKeyword().trim();
+  if (!leftKeyword) return;
+  let foundKey = null;
+  for (const [key, team] of orgPickerTeamIndex.entries()) {
+    const users = team.users || [];
+    if (users.some((u) => matchUserForSearch(u, leftType, leftKeyword))) {
+      foundKey = key;
+      break;
     }
-    renderUserSearchResults(json.data || [], resultEl, context);
-  } catch {
-    resultEl.innerHTML = '<li class="search-empty">검색 오류</li>';
   }
+  if (!foundKey) return;
+  orgPickerSelectedTeamKey = foundKey;
+  renderOrgTreeLeft();
+
+  // 좌측 검색 조건을 우측 검색으로도 동기화 (요구사항: 검색 조건으로 부서원 필터)
+  const rightTypeEl = document.getElementById("addMemberMemberSearchType");
+  const rightInputEl = document.getElementById("addMemberMemberSearchInput");
+  if (rightTypeEl) rightTypeEl.value = leftType;
+  if (rightInputEl) rightInputEl.value = leftKeyword;
+
+  renderMemberListRight();
 }
 
-document.getElementById("btnSearchAddMember").addEventListener("click", () => searchUsersInMemberPicker());
-document.getElementById("addMemberSearchInput").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    searchUsersInMemberPicker();
-  }
+function searchMembersInPicker() {
+  renderMemberListRight();
+}
+
+document.getElementById("btnSearchOrg")?.addEventListener("click", searchOrgInPicker);
+document.getElementById("addMemberOrgSearchInput")?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); searchOrgInPicker(); }
+});
+document.getElementById("btnSearchMembers")?.addEventListener("click", searchMembersInPicker);
+document.getElementById("addMemberMemberSearchInput")?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); searchMembersInPicker(); }
 });
 
 document.getElementById("btnOpenAddMemberPickerForCreateChannel")?.addEventListener("click", async () => {
   openModal("modalAddMemberPicker");
-  // 멤버 추가는 팝업에서만 수행 (컨텍스트=member)
-  document.getElementById("addMemberSearchInput").value = "";
-  document.getElementById("addMemberSearchResults").innerHTML = "";
   await loadOrgTree("member", "orgTreeEmbedAdd");
 });
 
 document.getElementById("btnOpenAddMemberPickerForCreateDm")?.addEventListener("click", async () => {
   openModal("modalAddMemberPicker");
-  // DM 생성은 팝업에서만 수행 (컨텍스트=dm)
-  document.getElementById("addMemberSearchInput").value = "";
-  document.getElementById("addMemberSearchResults").innerHTML = "";
   await loadOrgTree("dm", "orgTreeEmbedAdd");
 });
 document.getElementById("btnConfirmAddMembers").addEventListener("click", async () => {
