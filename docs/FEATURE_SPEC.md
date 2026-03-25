@@ -580,7 +580,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - `GET /api/channels/{channelId}/files?userId=...`
   - `GET /api/channels/{channelId}/files/{fileId}/download?userId=...`
 - 입력/출력:
-  - **통합 피커**: 채널 생성·DM 모달에서는 검색과 조직도(회사>본부>팀)를 **한 모달 내 2열**로 표시. **구성원 추가**(`modalAddMembers`)는 본문에 선택 태그만 두고, **「구성원 추가」 옆 + 버튼**으로 `modalAddMemberPicker` 스택 오버레이(`.modal-stacked`)를 열어 동일 피커에서 검색·선택 후 태그에 반영
+  - **통합 피커**: 채널 생성·DM 생성·구성원 추가 모두 **동일한 `+` 버튼 기반 팝업**(`modalAddMemberPicker`)을 사용합니다. 팝업에서 검색과 조직도(회사>본부>팀)로 사용자 선택 후 상위 모달의 선택 태그에 반영됩니다.
   - 멤버 패널: `department`·`jobRank`를 한 줄 요약, `dutyTitle`은 값이 있을 때만 추가 줄(직책 없으면 UI에 안 보임)
   - 파일 업로드 성공 시: 일반 텍스트 메시지와 동일한 **메시지 행**(아바타·발신자·시간) 안에 첨부 인라인(파일명·크기·다운로드) 표시
   - **날짜 구분선**: 스레드 첫 메시지 또는 로컬 날짜가 바뀔 때 채팅 영역에 날짜 pill 표시
