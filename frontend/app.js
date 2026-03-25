@@ -372,17 +372,11 @@ function filterUsers(users, searchType, keyword) {
   return (users || []).filter((u) => matchUserForSearch(u, searchType, kw));
 }
 
-function getMemberPickerLeftSearchType() {
-  return document.getElementById("addMemberOrgSearchType")?.value || "NAME";
-}
-function getMemberPickerLeftSearchKeyword() {
-  return document.getElementById("addMemberOrgSearchInput")?.value || "";
-}
 function getMemberPickerRightSearchType() {
-  return document.getElementById("addMemberMemberSearchType")?.value || "NAME";
+  return document.getElementById("addMemberTopSearchType")?.value || "NAME";
 }
 function getMemberPickerRightSearchKeyword() {
-  return document.getElementById("addMemberMemberSearchInput")?.value || "";
+  return document.getElementById("addMemberTopSearchInput")?.value || "";
 }
 
 function renderOrgTreeLeft() {
@@ -462,9 +456,7 @@ function renderMemberListRight() {
   if (!filtered.length) {
     const li = document.createElement("li");
     li.className = "empty-notice";
-    li.textContent = rightKeyword
-      ? "검색 결과가 없습니다."
-      : "선택 부서원 목록이 비어 있습니다.";
+    li.textContent = rightKeyword ? "검색 결과가 없습니다." : "선택 부서원 목록이 비어 있습니다.";
     listEl.appendChild(li);
     return;
   }
@@ -506,15 +498,11 @@ async function loadOrgTree(context, embedElIdOverride = null) {
   orgPickerCompanies = [];
   orgPickerSelectedTeamKey = null;
 
-  // 검색 입력 초기화
-  const leftInput = document.getElementById("addMemberOrgSearchInput");
-  const leftTypeEl = document.getElementById("addMemberOrgSearchType");
-  const rightInput = document.getElementById("addMemberMemberSearchInput");
-  const rightTypeEl = document.getElementById("addMemberMemberSearchType");
-  if (leftInput) leftInput.value = "";
-  if (rightInput) rightInput.value = "";
-  if (leftTypeEl) leftTypeEl.value = "NAME";
-  if (rightTypeEl) rightTypeEl.value = "NAME";
+  // 상단 검색 초기화
+  const topInput = document.getElementById("addMemberTopSearchInput");
+  const topTypeEl = document.getElementById("addMemberTopSearchType");
+  if (topInput) topInput.value = "";
+  if (topTypeEl) topTypeEl.value = "NAME";
 
   try {
     const res  = await apiFetch("/api/user-directory/organization");
@@ -556,7 +544,7 @@ async function loadOrgTree(context, embedElIdOverride = null) {
       });
     });
 
-    // 기본 선택: 현재 사용자의 속한 팀(또는 부서명)로 맞춤
+    // 기본 선택: 현재 사용자의 속한 팀(부서)으로 맞춤
     const myId = currentUser?.userId;
     let defaultKey = null;
     for (const [key, team] of orgPickerTeamIndex.entries()) {
@@ -576,9 +564,7 @@ async function loadOrgTree(context, embedElIdOverride = null) {
         }
       }
     }
-    if (!defaultKey) {
-      defaultKey = orgPickerTeamIndex.keys().next().value || null;
-    }
+    if (!defaultKey) defaultKey = orgPickerTeamIndex.keys().next().value || null;
     orgPickerSelectedTeamKey = defaultKey;
 
     renderOrgTreeLeft();
@@ -1469,41 +1455,12 @@ document.getElementById("btnCloseAddMemberPicker").addEventListener("click", () 
   closeModal("modalAddMemberPicker");
 });
 
-function searchOrgInPicker() {
-  const leftType = getMemberPickerLeftSearchType();
-  const leftKeyword = getMemberPickerLeftSearchKeyword().trim();
-  if (!leftKeyword) return;
-  let foundKey = null;
-  for (const [key, team] of orgPickerTeamIndex.entries()) {
-    const users = team.users || [];
-    if (users.some((u) => matchUserForSearch(u, leftType, leftKeyword))) {
-      foundKey = key;
-      break;
-    }
-  }
-  if (!foundKey) return;
-  orgPickerSelectedTeamKey = foundKey;
-  renderOrgTreeLeft();
-
-  // 좌측 검색 조건을 우측 검색으로도 동기화 (요구사항: 검색 조건으로 부서원 필터)
-  const rightTypeEl = document.getElementById("addMemberMemberSearchType");
-  const rightInputEl = document.getElementById("addMemberMemberSearchInput");
-  if (rightTypeEl) rightTypeEl.value = leftType;
-  if (rightInputEl) rightInputEl.value = leftKeyword;
-
-  renderMemberListRight();
-}
-
 function searchMembersInPicker() {
   renderMemberListRight();
 }
 
-document.getElementById("btnSearchOrg")?.addEventListener("click", searchOrgInPicker);
-document.getElementById("addMemberOrgSearchInput")?.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") { e.preventDefault(); searchOrgInPicker(); }
-});
-document.getElementById("btnSearchMembers")?.addEventListener("click", searchMembersInPicker);
-document.getElementById("addMemberMemberSearchInput")?.addEventListener("keydown", (e) => {
+document.getElementById("btnSearchTop")?.addEventListener("click", searchMembersInPicker);
+document.getElementById("addMemberTopSearchInput")?.addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); searchMembersInPicker(); }
 });
 

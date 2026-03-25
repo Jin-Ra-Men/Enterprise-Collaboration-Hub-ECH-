@@ -22,6 +22,12 @@
 - 프론트: `modalAddMemberPicker` UI를 스크린샷 형태(좌측 조직도 트리 + 우측 검색/결과)로 재구성
 - 백엔드: 조직도 생성 시 `division_name`/`team_name`이 비어 있으면 `users.department` 문자열에서 본부/부서를 유추하도록 보완
 
+## 2026-03-25 (20차)
+
+### Changed
+- 프론트: `modalAddMemberPicker` 팝업 크기 확대 및 좌측 조직도/우측 부서원 영역 레이아웃 고정
+- 프론트: 검색 UI를 팝업 상단 1줄로 단일화(좌/우 박스 내부 검색 제거)
+
 ## 2026-03-25 (16차)
 
 ### Changed
