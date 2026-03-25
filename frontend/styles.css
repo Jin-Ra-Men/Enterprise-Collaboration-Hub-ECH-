@@ -331,10 +331,18 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 }
 
 .msg-body { flex: 1; min-width: 0; }
-.msg-meta { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }
+.msg-meta { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
 .msg-sender { font-size: 15px; font-weight: 700; color: #1d1c1d; }
-.msg-time { font-size: 12px; color: #868686; }
-.msg-text {
+.msg-time { font-size: 12px; color: #868686; white-space: nowrap; flex-shrink: 0; }
+
+/* 본문 + 시각(오른쪽 정렬). 같은 분·같은 사람 묶음에서는 마지막 줄에만 .msg-time 존재 */
+.msg-content-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+}
+.msg-content-row .msg-text {
   font-size: 15px;
   color: #1d1c1d;
   word-break: break-word;
@@ -342,6 +350,8 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   margin: 0;
   padding: 0;
   text-align: left;
+  flex: 1;
+  min-width: 0;
 }
 
 .msg-system {
