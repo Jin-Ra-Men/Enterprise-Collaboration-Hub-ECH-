@@ -4,6 +4,7 @@ import com.ech.backend.api.auditlog.AuditLogService;
 import com.ech.backend.common.exception.NotFoundException;
 import com.ech.backend.api.channel.dto.ChannelMemberResponse;
 import com.ech.backend.api.channel.dto.ChannelResponse;
+import com.ech.backend.api.channel.dto.ChannelSummaryResponse;
 import com.ech.backend.api.channel.dto.CreateChannelRequest;
 import com.ech.backend.api.channel.dto.JoinChannelRequest;
 import com.ech.backend.domain.audit.AuditEventType;
@@ -107,10 +108,27 @@ public class ChannelService {
         return toResponse(channel, members);
     }
 
+    public List<ChannelSummaryResponse> getMyChannels(Long userId) {
+        return channelRepository.findByMemberId(userId).stream()
+                .map(channel -> {
+                    int memberCount = channelMemberRepository.findByChannelId(channel.getId()).size();
+                    return new ChannelSummaryResponse(
+                            channel.getId(),
+                            channel.getWorkspaceKey(),
+                            channel.getName(),
+                            channel.getChannelType().name(),
+                            memberCount,
+                            channel.getCreatedAt()
+                    );
+                })
+                .toList();
+    }
+
     private ChannelResponse toResponse(Channel channel, List<ChannelMember> members) {
         List<ChannelMemberResponse> memberResponses = members.stream()
                 .map(member -> new ChannelMemberResponse(
                         member.getUser().getId(),
+                        member.getUser().getName(),
                         member.getMemberRole().name(),
                         member.getJoinedAt()
                 ))

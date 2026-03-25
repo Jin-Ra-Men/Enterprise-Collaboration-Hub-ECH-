@@ -2,6 +2,28 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-03-25
+
+### Added
+- 백엔드: `GET /api/channels?userId=` — 사용자가 참여한 채널 목록 조회 API 추가
+- 백엔드: `GET /api/channels/{id}/messages?userId=&limit=` — 채널 메시지 내역 조회 API 추가
+- 백엔드: `ChannelSummaryResponse` DTO 신규 생성
+- 백엔드: `ChannelMemberResponse`에 `name` 필드 추가
+- 백엔드: `MessageResponse`에 `senderName` 필드 추가
+
+### Changed
+- 백엔드: `ChannelController.createChannel()` `@RequireRole` MANAGER → MEMBER (모든 사용자 채널 생성 허용)
+- 백엔드: `ChannelController.joinChannel()` `@RequireRole` MANAGER → MEMBER
+- 백엔드: `UserSearchController` `@RequireRole` MANAGER → MEMBER (모든 사용자 동료 검색 허용)
+- 프론트엔드: `index.html` Slack 스타일 레이아웃으로 완전 재작성
+- 프론트엔드: `app.js` 완전 재작성 (채널 사이드바, 메시지 히스토리, 실시간 소켓, 파일 업로드 통합, 채널/DM 생성 모달)
+- 프론트엔드: `styles.css` Slack 스타일 완전 재작성
+
+### Fixed
+- 메시지 보내기 — 채널 선택 후 소켓을 통해 정상 전송
+- 배포관리 탭 — 일반 사용자에게 노출되지 않도록 사이드바 ADMIN 전용 섹션으로 이동
+- 첨부파일 — 현재 채팅방에서만 업로드 (채널 ID 수동 입력 제거)
+
 ## 2026-03-24 (2차)
 
 ### Fixed

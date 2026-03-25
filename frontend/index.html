@@ -12,170 +12,259 @@
     <div id="loginPage" class="login-page">
       <div class="login-card">
         <div class="login-logo">
-          <span class="login-logo-icon">🏢</span>
+          <div class="login-logo-icon">ECH</div>
           <h1 class="login-title">Enterprise Collaboration Hub</h1>
           <p class="login-subtitle">사내 협업 플랫폼</p>
         </div>
-
         <form id="loginForm" class="login-form" novalidate>
           <div class="form-group">
             <label for="loginId">사원번호 또는 이메일</label>
-            <input
-              id="loginId"
-              type="text"
-              placeholder="예) EMP001 또는 hong@test.com"
-              autocomplete="username"
-              required
-            />
+            <input id="loginId" type="text" placeholder="예) ECH-ADM-001 또는 email@ech.com" autocomplete="username" required />
           </div>
           <div class="form-group">
             <label for="loginPassword">비밀번호</label>
-            <input
-              id="loginPassword"
-              type="password"
-              placeholder="비밀번호 입력"
-              autocomplete="current-password"
-              required
-            />
+            <input id="loginPassword" type="password" placeholder="비밀번호 입력" autocomplete="current-password" required />
           </div>
           <p id="loginError" class="login-error hidden"></p>
-          <button type="submit" id="loginBtn" class="btn-primary">로그인</button>
+          <button type="submit" id="loginBtn" class="btn-login">로그인</button>
         </form>
-
-        <p class="login-hint">
-          테스트 계정 기본 비밀번호: <code>Test1234!</code>
-        </p>
+        <p class="login-hint">테스트 계정 기본 비밀번호: <code>Test1234!</code></p>
       </div>
     </div>
 
     <!-- ===================== 메인 앱 ===================== -->
-    <div id="mainApp" class="hidden">
+    <div id="mainApp" class="app-layout hidden">
 
-      <!-- 상단 헤더 -->
-      <header class="app-header">
-        <div class="app-header-left">
-          <span class="app-header-logo">🏢</span>
-          <span class="app-header-name">ECH</span>
+      <!-- 왼쪽 사이드바 -->
+      <aside class="sidebar">
+        <!-- 워크스페이스 헤더 -->
+        <div class="sidebar-workspace">
+          <span class="workspace-name">ECH</span>
+          <button class="workspace-menu-btn" title="메뉴">⌄</button>
         </div>
-        <div class="app-header-center">
-          <form id="searchForm" class="search-form" autocomplete="off">
-            <input id="searchInput" type="search" placeholder="메시지, 파일, 업무, 칸반 검색..." />
-            <button type="submit" class="search-btn">🔍</button>
+
+        <!-- 검색 -->
+        <div class="sidebar-search-wrap">
+          <form id="searchForm" autocomplete="off">
+            <button type="submit" class="sidebar-search-icon">🔍</button>
+            <input id="searchInput" type="search" class="sidebar-search-input" placeholder="검색" />
           </form>
         </div>
-        <div class="app-header-right">
-          <span id="userInfoBadge" class="user-badge"></span>
-          <button id="logoutBtn" class="btn-logout">로그아웃</button>
+
+        <!-- 채널 섹션 -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-header" id="channelSectionHeader">
+            <button class="section-toggle" data-target="channelList">▾ 채널</button>
+            <button class="btn-add-item" id="btnCreateChannel" title="채널 만들기">+</button>
+          </div>
+          <ul class="sidebar-list" id="channelList"></ul>
         </div>
-      </header>
 
-      <!-- 탭 네비게이션 -->
-      <nav class="app-tabs">
-        <button class="tab-btn active" data-tab="chat">💬 채팅</button>
-        <button class="tab-btn admin-only hidden" data-tab="releases">🚀 배포 관리</button>
-        <button class="tab-btn admin-only hidden" data-tab="settings">⚙️ 설정</button>
-      </nav>
+        <!-- 다이렉트 메시지 섹션 -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-header">
+            <button class="section-toggle" data-target="dmList">▾ 다이렉트 메시지</button>
+            <button class="btn-add-item" id="btnCreateDm" title="새 DM">+</button>
+          </div>
+          <ul class="sidebar-list" id="dmList"></ul>
+        </div>
 
-      <!-- 본문 -->
-      <main class="app-main">
+        <!-- 관리자 전용 -->
+        <div class="sidebar-section admin-only hidden" id="adminSection">
+          <div class="sidebar-section-header">
+            <span class="section-toggle">▾ 관리자</span>
+          </div>
+          <ul class="sidebar-list">
+            <li class="sidebar-item" id="navReleases" data-view="releases">🚀 배포 관리</li>
+            <li class="sidebar-item" id="navSettings" data-view="settings">⚙️ 설정</li>
+          </ul>
+        </div>
 
-        <!-- 채팅 탭 -->
-        <div id="tab-chat" class="tab-panel">
-          <div class="app-card">
-            <h2>채널 메시지</h2>
+        <!-- 사용자 프로필 -->
+        <div class="sidebar-user">
+          <div class="user-avatar" id="sidebarAvatar">?</div>
+          <div class="user-info">
+            <span class="user-name" id="sidebarUserName">-</span>
+            <span class="user-status online">● 온라인</span>
+          </div>
+          <button id="logoutBtn" class="btn-sidebar-logout" title="로그아웃">⏏</button>
+        </div>
+      </aside>
+
+      <!-- 오른쪽 채팅 영역 -->
+      <main class="chat-area">
+
+        <!-- 채널 선택 전 기본 화면 -->
+        <div id="viewWelcome" class="view-welcome">
+          <div class="welcome-content">
+            <div class="welcome-icon">👋</div>
+            <h2>ECH에 오신 것을 환영합니다</h2>
+            <p>왼쪽 사이드바에서 채널을 선택하거나, <strong>+</strong> 버튼으로 새 채널을 만드세요.</p>
+          </div>
+        </div>
+
+        <!-- 채팅 패널 -->
+        <div id="viewChat" class="view-chat hidden">
+          <!-- 채널 헤더 -->
+          <header class="chat-header">
+            <div class="chat-header-left">
+              <span class="chat-channel-prefix" id="chatChannelPrefix">#</span>
+              <h2 class="chat-channel-name" id="chatChannelName">채널명</h2>
+            </div>
+            <div class="chat-header-right">
+              <span class="chat-member-count" id="chatMemberCount"></span>
+              <button class="btn-header-icon" id="btnShowMembers" title="멤버 보기">👥</button>
+            </div>
+          </header>
+
+          <!-- 멤버 패널 (토글) -->
+          <div id="memberPanel" class="member-panel hidden">
+            <div class="member-panel-header">
+              <h3>멤버</h3>
+              <button id="btnCloseMemberPanel" class="btn-panel-close">✕</button>
+            </div>
+            <ul id="memberList" class="member-list"></ul>
+          </div>
+
+          <!-- 메시지 영역 -->
+          <div class="messages-wrap">
             <div id="messages" class="messages"></div>
-            <form id="messageForm" class="message-form">
-              <input id="channelId" type="number" placeholder="채널 ID" value="1" min="1" />
-              <input id="messageInput" type="text" placeholder="메시지 입력 후 Enter" />
-              <button type="submit" class="btn-primary">보내기</button>
-            </form>
           </div>
 
-          <!-- 파일 업로드 -->
-          <div class="app-card">
-            <h2>📎 파일 업로드</h2>
-            <form id="fileUploadForm" class="file-upload-form">
-              <div class="form-row">
-                <input id="fileChannelId" type="number" placeholder="채널 ID" value="1" min="1" />
-                <input id="fileInput" type="file" />
-                <button type="submit" class="btn-primary">업로드</button>
-              </div>
-              <p id="fileUploadStatus" class="upload-status"></p>
-            </form>
-            <div id="fileList" class="file-list"></div>
+          <!-- 메시지 입력 -->
+          <div class="composer">
+            <div class="composer-inner">
+              <button class="composer-attach-btn" id="btnAttach" title="파일 첨부">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
+                </svg>
+              </button>
+              <input type="file" id="fileInput" class="hidden" />
+              <input id="messageInput" type="text" class="composer-input" placeholder="메시지 보내기..." />
+              <button class="composer-send-btn" id="btnSend" title="전송">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+              </button>
+            </div>
+            <div id="filePreview" class="file-preview hidden">
+              <span id="filePreviewName"></span>
+              <button id="btnClearFile" class="btn-clear-file">✕</button>
+            </div>
           </div>
         </div>
 
-        <!-- 배포 관리 탭 (관리자 전용) -->
-        <div id="tab-releases" class="tab-panel hidden">
-          <div class="app-card">
-            <div class="release-header">
-              <h2>🚀 배포 버전 관리</h2>
-              <button id="refreshReleasesBtn" class="btn-secondary">새로고침</button>
-            </div>
-
-            <!-- 업로드 폼 -->
-            <details class="release-upload-details">
-              <summary>새 릴리즈 업로드</summary>
-              <form id="releaseUploadForm" class="release-upload-form">
-                <div class="form-row">
-                  <input id="releaseVersion" type="text" placeholder="버전 (예: 1.2.0)" required />
-                  <input id="releaseFile" type="file" accept=".war,.jar" required />
-                </div>
-                <input id="releaseDescription" type="text" placeholder="변경 내역 (선택)" />
-                <button type="submit" class="btn-primary">업로드</button>
-                <span id="releaseUploadStatus" class="upload-status"></span>
-              </form>
-            </details>
-
-            <!-- 버전 목록 -->
-            <table class="release-table">
-              <thead>
-                <tr>
-                  <th>버전</th><th>파일명</th><th>크기</th><th>상태</th><th>업로드 일시</th><th>활성화 일시</th><th>작업</th>
-                </tr>
-              </thead>
-              <tbody id="releaseTableBody"></tbody>
-            </table>
+        <!-- 배포 관리 패널 (관리자) -->
+        <div id="viewReleases" class="view-admin hidden">
+          <div class="admin-panel-header">
+            <h2>🚀 배포 버전 관리</h2>
+            <button id="refreshReleasesBtn" class="btn-refresh">새로고침</button>
           </div>
-
-        <!-- 설정 탭 (관리자 전용) -->
-        <div id="tab-settings" class="tab-panel hidden">
-          <div class="app-card">
-            <div class="release-header">
-              <h2>⚙️ 앱 설정</h2>
-              <button id="refreshSettingsBtn" class="btn-secondary">새로고침</button>
-            </div>
-            <p class="settings-desc">변경 사항은 즉시 반영됩니다. 서버 재기동이 필요하지 않습니다.</p>
-            <div id="settingsList"></div>
-          </div>
+          <details class="release-upload-details">
+            <summary>새 릴리즈 업로드</summary>
+            <form id="releaseUploadForm" class="release-form">
+              <input id="releaseVersion" type="text" placeholder="버전 (예: 1.2.0)" required />
+              <input id="releaseFile" type="file" accept=".war,.jar" required />
+              <input id="releaseDescription" type="text" placeholder="변경 내역 (선택)" />
+              <button type="submit" class="btn-primary">업로드</button>
+              <span id="releaseUploadStatus" class="upload-status"></span>
+            </form>
+          </details>
+          <table class="data-table">
+            <thead><tr><th>버전</th><th>파일명</th><th>크기</th><th>상태</th><th>업로드</th><th>활성화</th><th>작업</th></tr></thead>
+            <tbody id="releaseTableBody"></tbody>
+          </table>
+          <h3 style="margin-top:24px">📋 배포 이력</h3>
+          <table class="data-table">
+            <thead><tr><th>일시</th><th>액션</th><th>이전 버전</th><th>배포 버전</th><th>메모</th></tr></thead>
+            <tbody id="deployHistoryBody"></tbody>
+          </table>
         </div>
 
-          <!-- 배포 이력 -->
-          <div class="app-card">
-            <h2>📋 배포 이력</h2>
-            <table class="release-table">
-              <thead>
-                <tr>
-                  <th>일시</th><th>액션</th><th>이전 버전</th><th>배포 버전</th><th>메모</th>
-                </tr>
-              </thead>
-              <tbody id="deployHistoryBody"></tbody>
-            </table>
+        <!-- 설정 패널 (관리자) -->
+        <div id="viewSettings" class="view-admin hidden">
+          <div class="admin-panel-header">
+            <h2>⚙️ 앱 설정</h2>
+            <button id="refreshSettingsBtn" class="btn-refresh">새로고침</button>
           </div>
+          <p class="settings-desc">변경 사항은 즉시 반영됩니다. 서버 재기동이 필요하지 않습니다.</p>
+          <div id="settingsList"></div>
         </div>
 
       </main>
-
     </div>
 
-    <!-- 검색 결과 모달 -->
-    <div id="searchModal" class="search-modal hidden" role="dialog" aria-modal="true">
-      <div class="search-modal-backdrop" id="searchBackdrop"></div>
-      <div class="search-modal-content">
-        <div class="search-modal-header">
+    <!-- ===================== 채널 만들기 모달 ===================== -->
+    <div id="modalCreateChannel" class="modal-overlay hidden">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 id="modalCreateTitle">채널 만들기</h3>
+          <button class="modal-close" data-modal="modalCreateChannel">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>채널 이름</label>
+            <input id="newChannelName" type="text" placeholder="예) 프로젝트-알파" />
+          </div>
+          <div class="form-group">
+            <label>설명 (선택)</label>
+            <input id="newChannelDesc" type="text" placeholder="채널 목적을 입력하세요" />
+          </div>
+          <div class="form-group">
+            <label>채널 유형</label>
+            <select id="newChannelType">
+              <option value="PUBLIC">공개</option>
+              <option value="PRIVATE">비공개</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>구성원 추가</label>
+            <div class="member-search-wrap">
+              <input id="memberSearchInput" type="text" placeholder="이름 또는 부서로 검색" />
+              <button type="button" id="btnSearchMember" class="btn-search">검색</button>
+            </div>
+            <ul id="userSearchResults" class="user-search-results"></ul>
+            <div id="selectedMembersWrap" class="selected-members"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" data-modal="modalCreateChannel">취소</button>
+          <button class="btn-primary" id="btnConfirmCreateChannel">만들기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== DM 만들기 모달 ===================== -->
+    <div id="modalCreateDm" class="modal-overlay hidden">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>새 다이렉트 메시지</h3>
+          <button class="modal-close" data-modal="modalCreateDm">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>대화 상대 검색</label>
+            <div class="member-search-wrap">
+              <input id="dmSearchInput" type="text" placeholder="이름 또는 부서로 검색" />
+              <button type="button" id="btnDmSearch" class="btn-search">검색</button>
+            </div>
+            <ul id="dmSearchResults" class="user-search-results"></ul>
+            <div id="selectedDmMembersWrap" class="selected-members"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" data-modal="modalCreateDm">취소</button>
+          <button class="btn-primary" id="btnConfirmCreateDm">대화 시작</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 검색 결과 모달 ===================== -->
+    <div id="searchModal" class="modal-overlay hidden">
+      <div class="modal modal-wide">
+        <div class="modal-header">
           <h3 id="searchModalTitle">검색 결과</h3>
-          <div class="search-filter">
+          <div class="search-filter-wrap">
             <select id="searchTypeSelect">
               <option value="ALL">전체</option>
               <option value="MESSAGES">메시지</option>
@@ -184,7 +273,7 @@
               <option value="KANBAN_CARDS">칸반 카드</option>
             </select>
           </div>
-          <button id="searchModalClose" class="modal-close-btn">✕</button>
+          <button class="modal-close" data-modal="searchModal">✕</button>
         </div>
         <div id="searchResults" class="search-results"></div>
       </div>

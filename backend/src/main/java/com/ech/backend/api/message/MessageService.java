@@ -3,14 +3,18 @@ package com.ech.backend.api.message;
 import com.ech.backend.api.auditlog.AuditLogService;
 import com.ech.backend.api.message.dto.CreateMessageRequest;
 import com.ech.backend.api.message.dto.MessageResponse;
+import com.ech.backend.common.exception.ForbiddenException;
 import com.ech.backend.domain.audit.AuditEventType;
 import com.ech.backend.domain.channel.Channel;
+import com.ech.backend.domain.channel.ChannelMemberRepository;
 import com.ech.backend.domain.channel.ChannelRepository;
 import com.ech.backend.domain.message.Message;
 import com.ech.backend.domain.message.MessageRepository;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
+import java.util.Collections;
 import java.util.List;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,17 +23,20 @@ import org.springframework.transaction.annotation.Transactional;
 public class MessageService {
 
     private final ChannelRepository channelRepository;
+    private final ChannelMemberRepository channelMemberRepository;
     private final UserRepository userRepository;
     private final MessageRepository messageRepository;
     private final AuditLogService auditLogService;
 
     public MessageService(
             ChannelRepository channelRepository,
+            ChannelMemberRepository channelMemberRepository,
             UserRepository userRepository,
             MessageRepository messageRepository,
             AuditLogService auditLogService
     ) {
         this.channelRepository = channelRepository;
+        this.channelMemberRepository = channelMemberRepository;
         this.userRepository = userRepository;
         this.messageRepository = messageRepository;
         this.auditLogService = auditLogService;
@@ -97,12 +104,23 @@ public class MessageService {
                 .toList();
     }
 
+    public List<MessageResponse> getChannelMessages(Long channelId, Long userId, int limit) {
+        if (!channelMemberRepository.existsByChannelIdAndUserId(channelId, userId)) {
+            throw new ForbiddenException("채널에 참여한 사용자가 아닙니다.");
+        }
+        List<Message> messages = messageRepository.findRecentByChannelId(
+                channelId, PageRequest.of(0, Math.min(limit, 200)));
+        Collections.reverse(messages);
+        return messages.stream().map(this::toResponse).toList();
+    }
+
     private MessageResponse toResponse(Message message) {
         Long parentMessageId = message.getParentMessage() == null ? null : message.getParentMessage().getId();
         return new MessageResponse(
                 message.getId(),
                 message.getChannel().getId(),
                 message.getSender().getId(),
+                message.getSender().getName(),
                 parentMessageId,
                 message.getBody(),
                 message.getCreatedAt()

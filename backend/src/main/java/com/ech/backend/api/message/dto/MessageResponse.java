@@ -6,6 +6,7 @@ public record MessageResponse(
         Long messageId,
         Long channelId,
         Long senderId,
+        String senderName,
         Long parentMessageId,
         String text,
         OffsetDateTime createdAt
