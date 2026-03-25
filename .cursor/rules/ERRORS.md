@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-03-25 — 백엔드 컴파일 실패 (`ChannelType.DM` 누락)
+
+- **에러 요약**: `./gradlew test` 시 `:compileJava` 실패 — `cannot find symbol: variable DM` (`ChannelService.java`)
+- **발생 위치**: `backend/src/main/java/com/ech/backend/api/channel/ChannelService.java` — `ChannelType.DM` 참조
+- **원인**: DM 전용 채널 생성 로직은 추가되었으나 `ChannelType` enum에 `DM` 상수가 없음
+- **해결**: `ChannelType.java`에 `DM` 추가 후 재빌드·테스트 통과
+
+---
+
 ## 2026-03-25 — 연속 메시지 들여쓰기 + 비멤버 발신 메시지 표시
 
 - **에러 요약 1**: 같은 사람이 연속으로 보낸 두 번째 줄·메시지가 오른쪽으로 과하게 들여쓰기됨

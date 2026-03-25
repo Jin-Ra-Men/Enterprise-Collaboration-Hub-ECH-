@@ -13,9 +13,17 @@ import com.ech.backend.domain.channel.ChannelMember;
 import com.ech.backend.domain.channel.ChannelMemberRole;
 import com.ech.backend.domain.channel.ChannelMemberRepository;
 import com.ech.backend.domain.channel.ChannelRepository;
+import com.ech.backend.domain.channel.ChannelType;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,12 +50,79 @@ public class ChannelService {
 
     @Transactional
     public ChannelResponse createChannel(CreateChannelRequest request) {
+        User creator = userRepository.findById(request.createdByUserId())
+                .orElseThrow(() -> new IllegalArgumentException("생성자를 찾을 수 없습니다."));
+
+        boolean dmWithPeers = request.channelType() == ChannelType.DM && !request.dmPeerUserIds().isEmpty();
+
+        if (dmWithPeers) {
+            List<Long> participants = new ArrayList<>();
+            participants.add(request.createdByUserId());
+            participants.addAll(request.dmPeerUserIds());
+            List<Long> distinctSorted = participants.stream().distinct().sorted().toList();
+            for (Long uid : distinctSorted) {
+                if (!userRepository.existsById(uid)) {
+                    throw new IllegalArgumentException("존재하지 않는 사용자 ID입니다: " + uid);
+                }
+            }
+
+            String internalName = buildDmCanonicalName(distinctSorted);
+            String displayLabel = (request.name() != null && !request.name().isBlank())
+                    ? request.name().trim()
+                    : distinctSorted.stream()
+                            .filter(id -> !id.equals(request.createdByUserId()))
+                            .map(id -> userRepository.findById(id).map(User::getName).orElse("user#" + id))
+                            .collect(Collectors.joining(", "));
+            if (displayLabel.isBlank()) {
+                displayLabel = "DM";
+            }
+            if (displayLabel.length() > 2000) {
+                displayLabel = displayLabel.substring(0, 2000);
+            }
+
+            Optional<Channel> existing = channelRepository.findByWorkspaceKeyAndName(
+                    request.workspaceKey(), internalName);
+            if (existing.isPresent()) {
+                Channel ch = existing.get();
+                ensureDmParticipantsMembers(ch, distinctSorted);
+                List<ChannelMember> members = channelMemberRepository.findByChannelId(ch.getId());
+                return toResponse(ch, members);
+            }
+
+            Channel channel = new Channel(
+                    request.workspaceKey(),
+                    internalName,
+                    displayLabel,
+                    ChannelType.DM,
+                    creator
+            );
+            Channel savedChannel = channelRepository.save(channel);
+            channelMemberRepository.save(new ChannelMember(savedChannel, creator, ChannelMemberRole.MANAGER));
+            for (Long uid : distinctSorted) {
+                if (uid.equals(creator.getId())) {
+                    continue;
+                }
+                User peer = userRepository.findById(uid).orElseThrow();
+                channelMemberRepository.save(new ChannelMember(savedChannel, peer, ChannelMemberRole.MEMBER));
+            }
+            List<ChannelMember> members = channelMemberRepository.findByChannelId(savedChannel.getId());
+
+            auditLogService.safeRecord(
+                    AuditEventType.CHANNEL_CREATED,
+                    creator.getId(),
+                    "CHANNEL",
+                    savedChannel.getId(),
+                    savedChannel.getWorkspaceKey(),
+                    "dm internalName=" + internalName + " label=" + displayLabel,
+                    null
+            );
+
+            return toResponse(savedChannel, members);
+        }
+
         if (channelRepository.findByWorkspaceKeyAndName(request.workspaceKey(), request.name()).isPresent()) {
             throw new IllegalArgumentException("이미 존재하는 채널 이름입니다.");
         }
-
-        User creator = userRepository.findById(request.createdByUserId())
-                .orElseThrow(() -> new IllegalArgumentException("생성자를 찾을 수 없습니다."));
 
         Channel channel = new Channel(
                 request.workspaceKey(),
@@ -72,6 +147,37 @@ public class ChannelService {
         );
 
         return toResponse(savedChannel, List.of(ownerMembership));
+    }
+
+    private static String buildDmCanonicalName(List<Long> sortedParticipantIds) {
+        String raw = sortedParticipantIds.stream()
+                .map(String::valueOf)
+                .collect(Collectors.joining("_"));
+        String candidate = "__dm__" + raw;
+        if (candidate.length() <= 100) {
+            return candidate;
+        }
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] digest = md.digest(raw.getBytes(StandardCharsets.UTF_8));
+            String h = HexFormat.of().formatHex(digest);
+            return "__dm__h__" + h;
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private void ensureDmParticipantsMembers(Channel channel, List<Long> participantIds) {
+        Long creatorId = channel.getCreatedBy().getId();
+        for (Long uid : participantIds) {
+            if (channelMemberRepository.existsByChannelIdAndUserId(channel.getId(), uid)) {
+                continue;
+            }
+            User u = userRepository.findById(uid)
+                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + uid));
+            ChannelMemberRole role = uid.equals(creatorId) ? ChannelMemberRole.MANAGER : ChannelMemberRole.MEMBER;
+            channelMemberRepository.save(new ChannelMember(channel, u, role));
+        }
     }
 
     public ChannelResponse getChannel(Long channelId) {
@@ -116,6 +222,7 @@ public class ChannelService {
                             channel.getId(),
                             channel.getWorkspaceKey(),
                             channel.getName(),
+                            channel.getDescription(),
                             channel.getChannelType().name(),
                             memberCount,
                             channel.getCreatedAt()

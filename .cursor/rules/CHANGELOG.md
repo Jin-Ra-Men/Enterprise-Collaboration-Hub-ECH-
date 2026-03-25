@@ -2,6 +2,14 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-03-25 (17차)
+
+### Fixed
+- `ChannelType` enum에 `DM` 추가 — `ChannelService` DM 생성 분기(`channelType == DM` + `dmPeerUserIds`)가 컴파일·실행되도록 정합 (`./gradlew test` 통과)
+
+### Changed
+- `frontend/app.js`: 미사용 `createFileAttachmentRow` / `appendUploadedFileMessage` 제거 — 첨부 메시지 행은 `createFileAttachmentRowFromMsg`·`loadMessages` 경로만 사용
+
 ## 2026-03-25 (16차)
 
 ### Changed

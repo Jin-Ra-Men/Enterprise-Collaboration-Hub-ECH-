@@ -6,6 +6,7 @@ public record ChannelSummaryResponse(
         Long channelId,
         String workspaceKey,
         String name,
+        String description,
         String channelType,
         int memberCount,
         OffsetDateTime createdAt

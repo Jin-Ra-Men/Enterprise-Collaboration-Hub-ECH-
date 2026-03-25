@@ -9,6 +9,7 @@ public record MessageResponse(
         String senderName,
         Long parentMessageId,
         String text,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        String messageType
 ) {
 }

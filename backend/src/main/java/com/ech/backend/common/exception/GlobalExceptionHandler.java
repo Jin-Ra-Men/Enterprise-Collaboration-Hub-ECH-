@@ -3,6 +3,7 @@ package com.ech.backend.common.exception;
 import com.ech.backend.api.errorlog.ErrorLogService;
 import com.ech.backend.common.api.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -58,6 +59,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.fail("BAD_REQUEST", exception.getMessage()));
+    }
+
+    @ExceptionHandler(IOException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIo(IOException exception, HttpServletRequest request) {
+        safeLog("FILE_IO_ERROR", exception, request);
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.fail("FILE_IO_ERROR", "파일을 읽는 중 오류가 발생했습니다."));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

@@ -235,9 +235,10 @@ async function startDmWithUser(userId, displayName) {
       body: JSON.stringify({
         workspaceKey: WS_KEY,
         name: dmName,
-        description: "",
+        description: dmName,
         channelType: "DM",
         createdByUserId: currentUser.userId,
+        dmPeerUserIds: [uid],
       }),
     });
     const json = await res.json();
@@ -246,10 +247,6 @@ async function startDmWithUser(userId, displayName) {
       return;
     }
     const channelId = json.data?.channelId;
-    await apiFetch(`/api/channels/${channelId}/members`, {
-      method: "POST",
-      body: JSON.stringify({ userId, memberRole: "MEMBER" }),
-    });
     closeModal("modalUserProfile");
     await loadMyChannels();
     selectChannel(channelId, dmName, "DM");
@@ -304,7 +301,14 @@ async function downloadChannelFile(fileId, filename) {
     );
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      alert(err.error?.message || "다운로드에 실패했습니다.");
+      const code = err.error?.code;
+      const msg = err.error?.message;
+      alert(
+        msg ||
+          (code === "FILE_IO_ERROR"
+            ? "파일을 읽는 중 오류가 발생했습니다."
+            : "다운로드에 실패했습니다.")
+      );
       return;
     }
     const blob = await res.blob();
@@ -567,10 +571,14 @@ function renderChannelList(channels) {
     li.className = "sidebar-item channel-item";
     li.dataset.channelId   = ch.channelId;
     li.dataset.channelType = ch.channelType;
-    li.dataset.channelName = ch.name;
+    const displayName =
+      ch.channelType === "DM" && ch.description
+        ? ch.description
+        : ch.name;
+    li.dataset.channelName = displayName;
 
     if (ch.channelType === "DM") {
-      li.innerHTML = `<span class="item-icon">●</span><span class="item-label">${escHtml(ch.name)}</span>`;
+      li.innerHTML = `<span class="item-icon">●</span><span class="item-label">${escHtml(displayName)}</span>`;
       dmListEl.appendChild(li);
     } else {
       const icon = ch.channelType === "PRIVATE" ? "🔒" : "#";
@@ -580,7 +588,7 @@ function renderChannelList(channels) {
 
     if (ch.channelId === activeChannelId) li.classList.add("active");
 
-    li.addEventListener("click", () => selectChannel(ch.channelId, ch.name, ch.channelType));
+    li.addEventListener("click", () => selectChannel(ch.channelId, displayName, ch.channelType));
   });
 }
 
@@ -740,7 +748,97 @@ function shouldShowAvatarForMessage(msgs, i) {
   return Number(msgs[i - 1].senderId) !== Number(msgs[i].senderId);
 }
 
+/** API·소켓 메시지에서 파일 첨부 JSON 추출 */
+function tryParseFilePayload(msg) {
+  if (!msg) return null;
+  const t = msg.messageType || msg.message_type;
+  if (t && String(t).toUpperCase() === "FILE" && msg.text) {
+    try {
+      const o = JSON.parse(msg.text);
+      if (o && o.kind === "FILE" && o.fileId != null) return o;
+    } catch {
+      return null;
+    }
+  }
+  if (msg.text && typeof msg.text === "string") {
+    const s = msg.text.trim();
+    if (s.startsWith("{") && s.includes('"kind"') && s.includes("FILE")) {
+      try {
+        const o = JSON.parse(s);
+        if (o && o.kind === "FILE" && o.fileId != null) return o;
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+}
+
+function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) {
+  const senderIdNum = Number(msg.senderId);
+  const isMine = currentUser && Number(currentUser.userId) === senderIdNum;
+  const senderName = msg.senderName || `user#${senderIdNum}`;
+  const pr = presenceByUserId.get(senderIdNum) || "OFFLINE";
+  const prCl = presenceCssClass(pr);
+  const prTip = presenceTitle(pr);
+  const fileMeta = {
+    id: Number(payload.fileId),
+    originalFilename: payload.originalFilename,
+    sizeBytes: payload.sizeBytes,
+    uploadedByUserId: senderIdNum,
+    uploaderName: senderName,
+  };
+  const timeHtml = showTime
+    ? `<span class="msg-time">${escHtml(fmtTime(msg.createdAt))}</span>`
+    : "";
+  const div = document.createElement("div");
+  div.className = `msg-row msg-chat ${isMine ? "msg-mine" : "msg-other"} msg-has-attachment${showAvatar ? "" : " msg-continued"}`;
+  div.dataset.senderId = String(senderIdNum);
+  div.dataset.minuteKey = minuteKey(msg.createdAt);
+  div.dataset.dateKey = dateKeyLocal(msg.createdAt);
+
+  if (showAvatar) {
+    const initials = avatarInitials(senderName);
+    div.innerHTML = `
+      <div class="msg-avatar-wrap">
+        <button type="button" class="msg-avatar msg-user-trigger" data-user-id="${senderIdNum}" title="프로필 보기">${initials}</button>
+        <span class="presence-dot ${prCl}" data-presence-user="${senderIdNum}" title="${prTip}"></span>
+      </div>
+      <div class="msg-body">
+        <div class="msg-meta">
+          <button type="button" class="msg-sender msg-user-trigger" data-user-id="${senderIdNum}">${escHtml(senderName)}</button>
+        </div>
+        <div class="msg-content-row msg-attachment-inline">
+          <span class="msg-attach-icon" aria-hidden="true">📎</span>
+          <span class="msg-attach-name">${escHtml(fileMeta.originalFilename || "첨부파일")}</span>
+          <span class="msg-attach-meta">${fmtSize(fileMeta.sizeBytes || 0)}</span>
+          <button type="button" class="btn-attach-dl">다운로드</button>${timeHtml}
+        </div>
+      </div>`;
+  } else {
+    div.innerHTML = `
+      <div class="msg-spacer"></div>
+      <div class="msg-body">
+        <div class="msg-content-row msg-attachment-inline">
+          <span class="msg-attach-icon" aria-hidden="true">📎</span>
+          <span class="msg-attach-name">${escHtml(fileMeta.originalFilename || "첨부파일")}</span>
+          <span class="msg-attach-meta">${fmtSize(fileMeta.sizeBytes || 0)}</span>
+          <button type="button" class="btn-attach-dl">다운로드</button>${timeHtml}
+        </div>
+      </div>`;
+  }
+  div.querySelector(".btn-attach-dl").addEventListener("click", () => {
+    downloadChannelFile(fileMeta.id, fileMeta.originalFilename);
+  });
+  return div;
+}
+
 function createMessageRowElement(msg, { showAvatar, showTime }) {
+  const filePayload = tryParseFilePayload(msg);
+  if (filePayload) {
+    return createFileAttachmentRowFromMsg(msg, filePayload, { showAvatar, showTime });
+  }
+
   const senderIdNum = Number(msg.senderId);
   const isMine =
     currentUser && Number(currentUser.userId) === senderIdNum;
@@ -837,57 +935,6 @@ function appendSystemMsg(text) {
   div.className = "msg-system";
   div.textContent = text;
   messagesEl.appendChild(div);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-}
-
-function createFileAttachmentRow(fileMeta, iso) {
-  const senderIdNum = Number(fileMeta.uploadedByUserId || currentUser?.userId);
-  const senderName = fileMeta.uploaderName || currentUser?.name || `user#${senderIdNum}`;
-  const pr = presenceByUserId.get(senderIdNum) || "OFFLINE";
-  const prCl = presenceCssClass(pr);
-  const prTip = presenceTitle(pr);
-  const div = document.createElement("div");
-  div.className = "msg-row msg-chat msg-mine msg-has-attachment";
-  div.dataset.senderId = String(senderIdNum);
-  div.dataset.minuteKey = minuteKey(iso);
-  div.dataset.dateKey = dateKeyLocal(iso);
-  const initials = avatarInitials(senderName);
-  const timeHtml = `<span class="msg-time">${escHtml(fmtTime(iso))}</span>`;
-  div.innerHTML = `
-    <div class="msg-avatar-wrap">
-      <button type="button" class="msg-avatar msg-user-trigger" data-user-id="${senderIdNum}" title="프로필 보기">${initials}</button>
-      <span class="presence-dot ${prCl}" data-presence-user="${senderIdNum}" title="${prTip}"></span>
-    </div>
-    <div class="msg-body">
-      <div class="msg-meta">
-        <button type="button" class="msg-sender msg-user-trigger" data-user-id="${senderIdNum}">${escHtml(senderName)}</button>
-      </div>
-      <div class="msg-content-row msg-attachment-inline">
-        <span class="msg-attach-icon" aria-hidden="true">📎</span>
-        <span class="msg-attach-name">${escHtml(fileMeta.originalFilename || "첨부파일")}</span>
-        <span class="msg-attach-meta">${fmtSize(fileMeta.sizeBytes || 0)}</span>
-        <button type="button" class="btn-attach-dl">다운로드</button>${timeHtml}
-      </div>
-    </div>`;
-  div.querySelector(".btn-attach-dl").addEventListener("click", () => {
-    downloadChannelFile(fileMeta.id, fileMeta.originalFilename);
-  });
-  return div;
-}
-
-function appendUploadedFileMessage(fileMeta) {
-  if (!fileMeta || !fileMeta.id || !currentUser) return;
-  const iso = fileMeta.createdAt || new Date().toISOString();
-  const dk = dateKeyLocal(iso);
-  const rows = messagesEl.querySelectorAll(".msg-row.msg-chat");
-  const lastRow = rows[rows.length - 1];
-  const lastDk = lastRow ? lastRow.dataset.dateKey : null;
-  if (!lastRow || lastDk !== dk) {
-    messagesEl.appendChild(createDateDividerElement(iso));
-  }
-  messagesEl.appendChild(createFileAttachmentRow(fileMeta, iso));
-  trimMessages();
-  refreshPresenceDots();
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
@@ -1025,8 +1072,10 @@ async function uploadFile(file) {
     });
     const json = await res.json();
     if (res.ok) {
-      appendUploadedFileMessage(json.data);
-      if (activeChannelId) loadChannelFiles(activeChannelId);
+      if (activeChannelId) {
+        await loadMessages(activeChannelId);
+        loadChannelFiles(activeChannelId);
+      }
     } else {
       appendSystemMsg(`파일 업로드 실패: ${json.error?.message || "오류"}`);
     }
@@ -1204,8 +1253,7 @@ document.getElementById("btnConfirmCreateDm").addEventListener("click", async ()
   if (selectedDmMembers.length === 0) { alert("대화 상대를 선택하세요."); return; }
   if (!currentUser) return;
 
-  const allMembers = [currentUser, ...selectedDmMembers];
-  const dmName     = selectedDmMembers.map(m => m.name).join(", ");
+  const dmName = selectedDmMembers.map(m => m.name).join(", ");
 
   try {
     const res = await apiFetch("/api/channels", {
@@ -1213,21 +1261,16 @@ document.getElementById("btnConfirmCreateDm").addEventListener("click", async ()
       body: JSON.stringify({
         workspaceKey: WS_KEY,
         name: dmName,
-        description: "",
+        description: dmName,
         channelType: "DM",
         createdByUserId: currentUser.userId,
+        dmPeerUserIds: selectedDmMembers.map((m) => m.userId),
       }),
     });
     const json = await res.json();
     if (!res.ok) { alert("DM 생성 실패: " + (json.error?.message || "")); return; }
 
     const channelId = json.data?.channelId;
-    for (const m of selectedDmMembers) {
-      await apiFetch(`/api/channels/${channelId}/members`, {
-        method: "POST",
-        body: JSON.stringify({ userId: m.userId, memberRole: "MEMBER" }),
-      });
-    }
 
     closeModal("modalCreateDm");
     await loadMyChannels();
@@ -1262,7 +1305,13 @@ document.getElementById("btnAddMembersLater").addEventListener("click", async ()
   document.getElementById("addMemberSearchResults").innerHTML = "";
   document.getElementById("selectedAddMembersWrap").innerHTML = "";
   openModal("modalAddChannelMembers");
+});
+document.getElementById("btnOpenAddMemberPicker").addEventListener("click", async () => {
+  openModal("modalAddMemberPicker");
   await loadOrgTree("channelMember");
+});
+document.getElementById("btnCloseAddMemberPicker").addEventListener("click", () => {
+  closeModal("modalAddMemberPicker");
 });
 document.getElementById("btnSearchAddMember").addEventListener("click", () => searchUsers("channelMember"));
 document.getElementById("addMemberSearchInput").addEventListener("keydown", (e) => {
