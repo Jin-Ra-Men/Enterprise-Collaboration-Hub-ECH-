@@ -31,6 +31,16 @@ pool.on("remove", () => {
  * 메시지 저장. 재시도 로직 포함 (최대 3회, 지수 백오프).
  */
 async function saveMessage({ channelId, senderId, body }, retries = 3) {
+  const memberCheck = await pool.query(
+    `SELECT 1 FROM channel_members WHERE channel_id = $1 AND user_id = $2`,
+    [channelId, senderId]
+  );
+  if (memberCheck.rowCount === 0) {
+    const err = new Error("채널 멤버가 아닌 사용자는 메시지를 보낼 수 없습니다.");
+    err.code = "NOT_CHANNEL_MEMBER";
+    throw err;
+  }
+
   const query = `
     INSERT INTO messages (channel_id, sender_id, body, message_type, is_deleted, is_edited, created_at, updated_at)
     VALUES ($1, $2, $3, 'TEXT', false, false, NOW(), NOW())

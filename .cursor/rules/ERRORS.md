@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-03-25 — 연속 메시지 들여쓰기 + 비멤버 발신 메시지 표시
+
+- **에러 요약 1**: 같은 사람이 연속으로 보낸 두 번째 줄·메시지가 오른쪽으로 과하게 들여쓰기됨
+- **발생 위치 1**: `frontend/styles.css` — `.msg-row.msg-continued { padding-left: 46px; }` 와 `.msg-spacer { width: 36px; }` 및 `gap: 10px` 가 동시에 적용되어 가로 오프셋이 이중으로 쌓임
+- **해결 1**: `.msg-continued` 의 `padding-left` 제거, `.msg-text` 에 `margin:0; text-align:left` 명시, `appendMessage` 에서 `senderId` 를 `Number()` 로 통일·`loadMessages`/`logout` 시 `lastSenderId` 초기화
+
+- **에러 요약 2**: 채널 멤버가 아닌 사용자(예: 시스템 관리자) 이름으로 옛 메시지가 보임
+- **발생 위치 2**: DB에 `messages` 행은 있으나 `channel_members` 에 해당 `sender_id` 가 없는 경우 — 개발 중 `psql` 등으로 **직접 INSERT** 한 데이터가 원인일 수 있음 (앱 경로는 멤버십을 거침)
+- **해결 2**: 리얼타임 `saveMessage` 에 INSERT 전 `channel_members` 존재 검사 추가, 비멤버는 저장 거부 (`NOT_CHANNEL_MEMBER`). 기존 잘못된 행은 `docs/sql/cleanup_dev_messages.sql` 참고하여 선택 삭제
+
+---
+
 ## 2026-03-25 — 실시간 메시지 수신 안됨 + 로그아웃 후 관리자 탭 잔류
 
 - **에러 요약 1**: 메시지 전송 후 새로고침해야만 보임 — 실시간 수신(socket `message:new`) 무시됨
