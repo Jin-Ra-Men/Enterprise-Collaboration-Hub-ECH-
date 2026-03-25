@@ -14,3 +14,4 @@ tools/gradle-8.10/
 tools/commit_msg.txt
 tools/git_msg_*.txt
 tools/git_commit_msg.txt
+_tmp_commit_msg.txt
