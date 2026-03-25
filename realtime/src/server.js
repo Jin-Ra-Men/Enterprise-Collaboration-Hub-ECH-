@@ -223,6 +223,7 @@ io.on("connection", (socket) => {
         messageId: saved.id,
         channelId: saved.channel_id,
         senderId: saved.sender_id,
+        senderName: saved.sender_name,
         text: saved.body,
         createdAt: saved.created_at,
       };

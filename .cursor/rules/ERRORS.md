@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-03-25 — 리얼타임 서버 메시지 전송 실패 (DB NOT NULL 제약 위반)
+
+- **에러 요약**: 채널에서 메시지 전송 시 "전송 실패: 메시지 저장 중 오류가 발생했습니다. 잠시 후 재시도해주세요." 반환
+- **발생 위치**: `realtime/src/db.js` — `saveMessage()` 함수
+- **원인**: `messages` 테이블의 `message_type`, `is_deleted`, `is_edited`, `updated_at`, `created_at` 컬럼이 모두 `NOT NULL`이지만, 리얼타임 서버의 INSERT문이 `channel_id`, `sender_id`, `body`만 지정하여 NOT NULL 제약 위반 발생
+- **해결**: `db.js` INSERT 쿼리에 누락 컬럼 추가 — `message_type='TEXT'`, `is_deleted=false`, `is_edited=false`, `created_at=NOW()`, `updated_at=NOW()`
+- **추가 개선**: 브로드캐스트 페이로드에 `senderName` 추가 — 메시지 수신 시 발신자 이름 표시
+
+---
+
 ## 2026-03-25 — CI 테스트 실패: MEMBER 채널 생성 권한 변경 후 테스트 불일치
 
 - **에러 요약**: CI `./gradlew test` 실행 시 `채널 API 통합 테스트 > MEMBER 권한으로 채널 생성 시 403 반환 FAILED`
