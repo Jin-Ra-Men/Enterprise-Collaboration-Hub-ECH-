@@ -44,6 +44,9 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt = OffsetDateTime.now();
 
+    /** JPA 프록시 생성용 기본 생성자 (직접 호출 금지) */
+    protected User() {}
+
     /**
      * 테스트 및 신규 사용자 생성용 생성자.
      */
