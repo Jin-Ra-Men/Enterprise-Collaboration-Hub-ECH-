@@ -316,17 +316,18 @@
           <button type="button" class="modal-close" data-modal="modalAddMemberPicker">✕</button>
         </div>
         <div class="modal-body">
-          <div class="picker-unified">
-            <div class="picker-search-block">
+          <div class="member-picker-popup">
+            <div class="member-picker-tree">
+              <div class="picker-org-title">조직도</div>
+              <div id="orgTreeEmbedAdd" class="org-tree-embedded"></div>
+            </div>
+
+            <div class="member-picker-search">
               <div class="member-search-wrap">
                 <input id="addMemberSearchInput" type="text" placeholder="이름, 부서, 이메일, 사원번호, 사용자 ID" />
                 <button type="button" id="btnSearchAddMember" class="btn-search">검색</button>
               </div>
               <ul id="addMemberSearchResults" class="user-search-results"></ul>
-            </div>
-            <div class="picker-org-block">
-              <div class="picker-org-title">조직도</div>
-              <div id="orgTreeEmbedAdd" class="org-tree-embedded"></div>
             </div>
           </div>
         </div>

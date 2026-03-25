@@ -75,7 +75,31 @@ public class UserSearchService {
 
     private static String resolveDivision(User u) {
         String d = u.getDivisionName();
-        return (d != null && !d.isBlank()) ? d.trim() : "미지정 본부";
+        if (d != null && !d.isBlank()) {
+            return d.trim();
+        }
+
+        String dept = u.getDepartment();
+        if (dept == null || dept.isBlank()) {
+            return "미지정 본부";
+        }
+
+        String t = dept.trim();
+        // 예) "기술본부" / "CS사업본부" / "운영본부" 등 본부 키워드 기반 유추
+        int 본부Idx = t.indexOf("본부");
+        if (본부Idx >= 0) {
+            String candidate = t.substring(0, 본부Idx + 2).trim();
+            if (!candidate.isBlank()) return candidate;
+        }
+
+        // 예) "본부-팀" 같은 형태가 department에 들어있는 경우 유추
+        int dashIdx = t.indexOf('-');
+        if (dashIdx > 0) {
+            String candidate = t.substring(0, dashIdx).trim();
+            if (!candidate.isBlank()) return candidate;
+        }
+
+        return "미지정 본부";
     }
 
     private static String resolveTeam(User u) {
@@ -83,8 +107,38 @@ public class UserSearchService {
         if (t != null && !t.isBlank()) {
             return t.trim();
         }
+
         String dept = u.getDepartment();
-        return (dept != null && !dept.isBlank()) ? dept.trim() : "미지정 팀";
+        if (dept == null || dept.isBlank()) {
+            return "미지정 팀";
+        }
+
+        String td = dept.trim();
+
+        // divisionName이 비어 있고 department가 "본부...팀..." 문자열을 함께 갖고 있는 경우
+        // 앞부분(본부)을 제외한 나머지를 팀(부서)로 유추한다.
+        if (u.getDivisionName() == null || u.getDivisionName().isBlank()) {
+            int 본부Idx = td.indexOf("본부");
+            if (본부Idx >= 0) {
+                String candidateDivision = td.substring(0, 본부Idx + 2).trim();
+                String rest = td.substring(본부Idx + 2).trim();
+                if (!rest.isBlank() && !rest.equals(candidateDivision)) {
+                    // "-" 같은 구분자가 섞여있을 수 있으므로 앞의 구분자 제거
+                    while (!rest.isBlank() && (rest.startsWith("-") || rest.startsWith("—") || rest.startsWith("_"))) {
+                        rest = rest.substring(1).trim();
+                    }
+                    if (!rest.isBlank()) return rest;
+                }
+            }
+
+            int dashIdx = td.indexOf('-');
+            if (dashIdx > 0) {
+                String rest = td.substring(dashIdx + 1).trim();
+                if (!rest.isBlank()) return rest;
+            }
+        }
+
+        return td;
     }
 
     public UserProfileResponse getProfile(Long userId) {
