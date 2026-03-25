@@ -333,25 +333,28 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 .msg-body { flex: 1; min-width: 0; }
 .msg-meta { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
 .msg-sender { font-size: 15px; font-weight: 700; color: #1d1c1d; }
-.msg-time { font-size: 12px; color: #868686; white-space: nowrap; flex-shrink: 0; }
+.msg-time { font-size: 12px; color: #868686; white-space: nowrap; }
 
-/* 본문 + 시각(오른쪽 정렬). 같은 분·같은 사람 묶음에서는 마지막 줄에만 .msg-time 존재 */
+/* 본문 직후에 시각(인라인, 패널 오른쪽 끝이 아님). 같은 분 묶음에서는 마지막 줄에만 .msg-time */
 .msg-content-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  width: 100%;
-}
-.msg-content-row .msg-text {
+  display: block;
   font-size: 15px;
+  line-height: 1.55;
   color: #1d1c1d;
   word-break: break-word;
-  line-height: 1.55;
-  margin: 0;
-  padding: 0;
-  text-align: left;
-  flex: 1;
-  min-width: 0;
+}
+.msg-content-row .msg-text {
+  display: inline;
+  word-break: break-word;
+  vertical-align: baseline;
+}
+.msg-content-row .msg-time {
+  display: inline;
+  margin-left: 10px;
+  font-size: 12px;
+  color: #868686;
+  white-space: nowrap;
+  vertical-align: baseline;
 }
 
 .msg-system {
