@@ -13,9 +13,8 @@
 - 프론트: 채널 멤버 패널에 부서·직위 한 줄 요약, 직책은 있을 때만 추가 줄
 - 프론트: 채팅 메시지·멤버 패널에서 프레즌스 점을 아바타 네모 우측 하단에 배치(`.msg-avatar-wrap`, `.member-avatar-wrap`)
 
-### Added (에이전트 룰)
-- `.cursor/rules/auto-commit-push.mdc` — 개발 작업 완료 시 커밋·원격 푸시 자동 수행
-- `core-rules.mdc` Git 섹션에 위 예외(현재 브랜치·확인 생략) 문구 추가
+### Changed (에이전트 룰)
+- `core-rules.mdc` Git 섹션에 **작업 완료 시 커밋·푸시(자동)** 절차 통합(기존 별도 `auto-commit-push.mdc` 내용 흡수 후 해당 파일 제거)
 
 ## 2026-03-25 (11차)
 
