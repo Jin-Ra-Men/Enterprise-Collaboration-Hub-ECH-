@@ -10,3 +10,7 @@ out/
 .DS_Store
 tools/gradle-8.10-bin.zip
 tools/gradle-8.10/
+# 로컬 UTF-8 커밋 메시지 초안(저장소에 올리지 않음)
+tools/commit_msg.txt
+tools/git_msg_*.txt
+tools/git_commit_msg.txt
