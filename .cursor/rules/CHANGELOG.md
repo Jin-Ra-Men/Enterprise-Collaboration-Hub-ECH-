@@ -10,6 +10,12 @@
 ### Changed
 - `frontend/app.js`: 미사용 `createFileAttachmentRow` / `appendUploadedFileMessage` 제거 — 첨부 메시지 행은 `createFileAttachmentRowFromMsg`·`loadMessages` 경로만 사용
 
+## 2026-03-25 (18차)
+
+### Changed
+- 프론트: 채널/DM 생성 시 구성원 선택을 `+` 버튼 기반 팝업(`modalAddMemberPicker`)으로 통일
+- 프론트: 멤버 추가 팝업에서 검색 결과가 현재 컨텍스트(채널 생성/DM 생성/기존 채널 추가)에 맞는 선택 목록에 반영되도록 수정
+
 ## 2026-03-25 (16차)
 
 ### Changed

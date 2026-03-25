@@ -74,6 +74,7 @@ let selectedMembers = [];     // 채널/DM 생성 시 선택된 사용자
 let selectedDmMembers = [];
 let selectedAddMembers = [];  // 기존 채널에 추가할 사용자
 let orgPickerContext = null;  // member | dm | channelMember
+let orgPickerEmbedElId = null; // member/dm/channelMember 조직도 체크박스가 그려진 엘리먼트 id
 /** 프로필 모달에 표시 중인 사용자 ID (DM 보내기용) */
 let profileViewUserId = null;
 
@@ -330,11 +331,12 @@ const ORG_EMBED_IDS = {
   channelMember: "orgTreeEmbedAdd",
 };
 
-async function loadOrgTree(context) {
-  const elId = ORG_EMBED_IDS[context];
+async function loadOrgTree(context, embedElIdOverride = null) {
+  const elId = embedElIdOverride ?? ORG_EMBED_IDS[context];
   const el = elId ? document.getElementById(elId) : null;
   if (!el) return;
   orgPickerContext = context;
+  orgPickerEmbedElId = elId;
   el.innerHTML = '<p class="empty-notice">불러오는 중...</p>';
   try {
     const res  = await apiFetch("/api/user-directory/organization");
@@ -432,7 +434,7 @@ function isUserAlreadySelected(userId, context) {
 }
 
 function syncOrgCheckbox(userId, context, checked) {
-  const id = ORG_EMBED_IDS[context];
+  const id = orgPickerEmbedElId ?? ORG_EMBED_IDS[context];
   if (!id) return;
   const root = document.getElementById(id);
   if (!root) return;
@@ -1092,17 +1094,11 @@ document.getElementById("btnCreateChannel").addEventListener("click", async () =
   document.getElementById("newChannelName").value = "";
   document.getElementById("newChannelDesc").value = "";
   document.getElementById("newChannelType").value = "PUBLIC";
-  document.getElementById("userSearchResults").innerHTML = "";
   document.getElementById("selectedMembersWrap").innerHTML = "";
-  document.getElementById("memberSearchInput").value = "";
   openModal("modalCreateChannel");
-  await loadOrgTree("member");
 });
 
-document.getElementById("btnSearchMember").addEventListener("click", () => searchUsers("member"));
-document.getElementById("memberSearchInput").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") { e.preventDefault(); searchUsers("member"); }
-});
+// 채널 생성 모달은 + 버튼 기반으로 멤버를 선택하므로 인라인 검색 핸들러는 연결하지 않습니다.
 
 async function searchUsers(context, forcedKeyword = null) {
   const inputEl =
@@ -1237,17 +1233,11 @@ document.getElementById("btnConfirmCreateChannel").addEventListener("click", asy
  * ========================================================================== */
 document.getElementById("btnCreateDm").addEventListener("click", async () => {
   selectedDmMembers = [];
-  document.getElementById("dmSearchInput").value = "";
-  document.getElementById("dmSearchResults").innerHTML = "";
   document.getElementById("selectedDmMembersWrap").innerHTML = "";
   openModal("modalCreateDm");
-  await loadOrgTree("dm");
 });
 
-document.getElementById("btnDmSearch").addEventListener("click", () => searchUsers("dm"));
-document.getElementById("dmSearchInput").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") { e.preventDefault(); searchUsers("dm"); }
-});
+// DM 생성 모달도 + 버튼 기반으로 멤버를 선택합니다.
 
 document.getElementById("btnConfirmCreateDm").addEventListener("click", async () => {
   if (selectedDmMembers.length === 0) { alert("대화 상대를 선택하세요."); return; }
@@ -1308,14 +1298,56 @@ document.getElementById("btnAddMembersLater").addEventListener("click", async ()
 });
 document.getElementById("btnOpenAddMemberPicker").addEventListener("click", async () => {
   openModal("modalAddMemberPicker");
+  document.getElementById("addMemberSearchInput").value = "";
+  document.getElementById("addMemberSearchResults").innerHTML = "";
   await loadOrgTree("channelMember");
 });
 document.getElementById("btnCloseAddMemberPicker").addEventListener("click", () => {
   closeModal("modalAddMemberPicker");
 });
-document.getElementById("btnSearchAddMember").addEventListener("click", () => searchUsers("channelMember"));
+async function searchUsersInMemberPicker() {
+  const inputEl = document.getElementById("addMemberSearchInput");
+  const resultEl = document.getElementById("addMemberSearchResults");
+  if (!inputEl || !resultEl) return;
+  const context = orgPickerContext || "channelMember";
+  const keyword = inputEl.value.trim();
+  if (!keyword) return;
+
+  try {
+    const res  = await apiFetch(`/api/users/search?q=${encodeURIComponent(keyword)}`);
+    const json = await res.json();
+    if (!res.ok) {
+      resultEl.innerHTML = `<li class="search-empty">${escHtml(json.error?.message || "오류")}</li>`;
+      return;
+    }
+    renderUserSearchResults(json.data || [], resultEl, context);
+  } catch {
+    resultEl.innerHTML = '<li class="search-empty">검색 오류</li>';
+  }
+}
+
+document.getElementById("btnSearchAddMember").addEventListener("click", () => searchUsersInMemberPicker());
 document.getElementById("addMemberSearchInput").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") { e.preventDefault(); searchUsers("channelMember"); }
+  if (e.key === "Enter") {
+    e.preventDefault();
+    searchUsersInMemberPicker();
+  }
+});
+
+document.getElementById("btnOpenAddMemberPickerForCreateChannel")?.addEventListener("click", async () => {
+  openModal("modalAddMemberPicker");
+  // 멤버 추가는 팝업에서만 수행 (컨텍스트=member)
+  document.getElementById("addMemberSearchInput").value = "";
+  document.getElementById("addMemberSearchResults").innerHTML = "";
+  await loadOrgTree("member", "orgTreeEmbedAdd");
+});
+
+document.getElementById("btnOpenAddMemberPickerForCreateDm")?.addEventListener("click", async () => {
+  openModal("modalAddMemberPicker");
+  // DM 생성은 팝업에서만 수행 (컨텍스트=dm)
+  document.getElementById("addMemberSearchInput").value = "";
+  document.getElementById("addMemberSearchResults").innerHTML = "";
+  await loadOrgTree("dm", "orgTreeEmbedAdd");
 });
 document.getElementById("btnConfirmAddMembers").addEventListener("click", async () => {
   if (!activeChannelId) return;
