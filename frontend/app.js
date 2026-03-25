@@ -110,6 +110,8 @@ function showMain(user) {
   sidebarUserName.textContent = `${user.name}`;
   sidebarAvatar.textContent = avatarInitials(user.name);
 
+  // 로그인 계정이 바뀌어도 정확한 권한 상태를 반영하도록 항상 초기화 후 설정
+  document.getElementById("adminSection").classList.add("hidden");
   if (user.role === "ADMIN") {
     document.getElementById("adminSection").classList.remove("hidden");
   }
@@ -165,10 +167,15 @@ loginForm.addEventListener("submit", async (e) => {
 logoutBtn.addEventListener("click", () => {
   if (socket) { socket.disconnect(); socket = null; }
   activeChannelId = null;
+  currentUser     = null;
   clearSession();
+
+  // DOM 상태 완전 초기화 (다음 로그인 계정이 달라도 깨끗하게 시작)
   channelListEl.innerHTML = "";
   dmListEl.innerHTML      = "";
   messagesEl.innerHTML    = "";
+  document.getElementById("adminSection").classList.add("hidden");
+  showView("viewWelcome");
   showLogin();
 });
 
@@ -386,7 +393,8 @@ function initSocket() {
   });
 
   socket.on("message:new", (msg) => {
-    if (msg.channelId === activeChannelId) {
+    // pg bigint → string 가능성 대비 Number()로 비교
+    if (Number(msg.channelId) === activeChannelId) {
       appendMessage(msg);
     }
   });

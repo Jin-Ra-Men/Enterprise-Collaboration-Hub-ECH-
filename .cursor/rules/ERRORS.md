@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-03-25 — 실시간 메시지 수신 안됨 + 로그아웃 후 관리자 탭 잔류
+
+- **에러 요약 1**: 메시지 전송 후 새로고침해야만 보임 — 실시간 수신(socket `message:new`) 무시됨
+- **발생 위치 1**: `frontend/app.js` — `socket.on("message:new")`, `realtime/src/server.js` — broadcastPayload
+- **원인 1**: PostgreSQL `bigint` 컬럼을 `pg` 라이브러리가 **문자열**로 반환. 서버가 `channelId: "1"` (string)을 전송하는데 프론트엔드가 `msg.channelId === activeChannelId` (number)로 비교 → `"1" === 1` → `false` → 렌더링 건너뜀
+- **해결 1**: `server.js` broadcastPayload에 `Number()` 명시 변환 추가, `app.js` 비교에서 `Number(msg.channelId) === activeChannelId` 로 수정
+
+- **에러 요약 2**: 관리자 로그아웃 후 일반 사용자 로그인 시 관리자 탭 잔류 (새로고침 후 해소)
+- **발생 위치 2**: `frontend/app.js` — `logoutBtn` 이벤트 핸들러, `showMain()`
+- **원인 2**: 로그아웃 시 DOM 상태(adminSection)를 초기화하지 않아 다음 로그인 계정의 권한과 무관하게 이전 상태 유지
+- **해결 2**: 로그아웃 핸들러에서 `adminSection.classList.add("hidden")` 추가, `showMain()`에서도 항상 hidden 초기화 후 role 조건 적용
+
+---
+
 ## 2026-03-25 — 리얼타임 서버 메시지 전송 실패 (DB NOT NULL 제약 위반)
 
 - **에러 요약**: 채널에서 메시지 전송 시 "전송 실패: 메시지 저장 중 오류가 발생했습니다. 잠시 후 재시도해주세요." 반환

@@ -219,11 +219,12 @@ io.on("connection", (socket) => {
         body,
       });
 
+      // pg 라이브러리는 bigint를 문자열로 반환하므로 Number()로 명시 변환
       const broadcastPayload = {
-        messageId: saved.id,
-        channelId: saved.channel_id,
-        senderId: saved.sender_id,
-        senderName: saved.sender_name,
+        messageId: Number(saved.id),
+        channelId: Number(saved.channel_id),
+        senderId: Number(saved.sender_id),
+        senderName: saved.sender_name || null,
         text: saved.body,
         createdAt: saved.created_at,
       };
