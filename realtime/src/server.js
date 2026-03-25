@@ -231,14 +231,17 @@ io.on("connection", (socket) => {
       io.to(String(parsedChannelId)).emit("message:new", broadcastPayload);
       reply({ ok: true, messageId: saved.id, createdAt: saved.created_at });
     } catch (error) {
+      const isNotMember = error.code === "NOT_CHANNEL_MEMBER";
       const errPayload = {
         ok: false,
-        code: "DB_SAVE_FAILED",
-        message: "메시지 저장 중 오류가 발생했습니다. 잠시 후 재시도해주세요.",
+        code: isNotMember ? "NOT_CHANNEL_MEMBER" : "DB_SAVE_FAILED",
+        message: isNotMember
+          ? error.message
+          : "메시지 저장 중 오류가 발생했습니다. 잠시 후 재시도해주세요.",
       };
       socket.emit("message:error", errPayload);
       reply(errPayload);
-      console.error("[socket] message:send DB 저장 실패:", error.message);
+      console.error("[socket] message:send 실패:", error.code || error.message);
     }
   });
 });

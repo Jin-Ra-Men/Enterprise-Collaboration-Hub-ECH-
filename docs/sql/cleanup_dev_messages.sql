@@ -1,0 +1,13 @@
+-- 개발·디버깅 중 psql 등으로 직접 INSERT 한 메시지 정리용 (선택 실행)
+-- channel_members 에 없는 발신자가 남긴 행은 앱 규칙상 나오지 않아야 하나, SQL 직접 삽입 시 표시될 수 있음.
+--
+-- 예: 본문이 정확히 'test message' 인 행만 삭제 (필요 시 조건 수정)
+-- DELETE FROM messages WHERE body = 'test message';
+--
+-- 특정 채널에서 멤버가 아닌 사용자가 보낸 메시지 삭제:
+-- DELETE FROM messages m
+-- WHERE m.channel_id = :channel_id
+--   AND NOT EXISTS (
+--     SELECT 1 FROM channel_members cm
+--     WHERE cm.channel_id = m.channel_id AND cm.user_id = m.sender_id
+--   );

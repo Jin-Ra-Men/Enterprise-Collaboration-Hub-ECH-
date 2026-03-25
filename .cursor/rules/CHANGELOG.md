@@ -23,6 +23,9 @@
 - 메시지 보내기 — 채널 선택 후 소켓을 통해 정상 전송
 - 배포관리 탭 — 일반 사용자에게 노출되지 않도록 사이드바 ADMIN 전용 섹션으로 이동
 - 첨부파일 — 현재 채팅방에서만 업로드 (채널 ID 수동 입력 제거)
+- 연속 메시지(같은 발신자) UI — `.msg-continued`에 `padding-left`와 `msg-spacer`가 겹쳐 이중 들여쓰기 되던 문제 수정 (`styles.css`), `senderId` 숫자 정규화 및 채널 전환 시 `lastSenderId` 초기화 (`app.js`)
+- 리얼타임 — `saveMessage` 전 `channel_members` 멤버십 검사, 비멤버 시 `NOT_CHANNEL_MEMBER` (`db.js`, `server.js`)
+- 운영 참고 — 개발용 직접 INSERT 메시지 정리 예시 `docs/sql/cleanup_dev_messages.sql` 추가, `FEATURE_SPEC.md` 실시간 절 보완
 
 ## 2026-03-24 (2차)
 

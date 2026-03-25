@@ -124,17 +124,18 @@
 - 입력/출력:
   - 입력 payload: `channelId`, `senderId`, `text`
   - 저장 성공 출력: `messageId`, `channelId`, `senderId`, `text`, `createdAt`
-  - 저장 실패 출력: `code=DB_SAVE_FAILED` 오류 이벤트
+  - 저장 실패 출력: `code=DB_SAVE_FAILED` 또는 `code=NOT_CHANNEL_MEMBER` 오류 이벤트
 - 상태 전이/예외 케이스:
   - payload 유효성 실패 -> `message:error` (`INVALID_PAYLOAD`)
   - 본문 길이 초과 -> `message:error` (`MESSAGE_TOO_LARGE`, 기본 상한 `MAX_MESSAGE_BODY_LENGTH=4000`, Backend 메시지 API `@Size(max=4000)`과 정합)
+  - `channel_members`에 없는 사용자가 전송 -> `message:error` (`NOT_CHANNEL_MEMBER`, INSERT 전 검사)
   - DB 저장 실패 -> `message:error` (`DB_SAVE_FAILED`)
   - 저장 성공한 경우에만 `message:new` 브로드캐스트
 - 성능·메모리:
   - Socket.io `maxHttpBufferSize`로 비정상적으로 큰 패킷 완충 완화
   - `pg` Pool: `max`/`idleTimeoutMillis`/`connectionTimeoutMillis` 환경변수로 조정 가능
 - 권한/보안:
-  - 현재는 기본 입력 검증 중심, 인증 기반 sender 검증은 추후 RBAC 단계에서 보완
+  - 리얼타임 서버는 INSERT 전 `channel_members(channel_id, user_id)` 존재 여부로 발신자가 해당 채널 멤버인지 검사함 (직접 SQL로 넣은 메시지는 멤버가 아닌 발신자도 표시될 수 있음 — `docs/sql/cleanup_dev_messages.sql` 참고)
 - 로그/감사 포인트:
   - `messages` 테이블의 `created_at` 기반 메시지 생성 이력 추적 가능
 - 테스트 기준:

@@ -174,6 +174,7 @@ logoutBtn.addEventListener("click", () => {
   channelListEl.innerHTML = "";
   dmListEl.innerHTML      = "";
   messagesEl.innerHTML    = "";
+  lastSenderId            = null;
   document.getElementById("adminSection").classList.add("hidden");
   showView("viewWelcome");
   showLogin();
@@ -272,6 +273,7 @@ async function loadMessages(channelId) {
     const res  = await apiFetch(`/api/channels/${channelId}/messages?userId=${currentUser.userId}&limit=50`);
     const json = await res.json();
     messagesEl.innerHTML = "";
+    lastSenderId = null;
     if (!res.ok) { appendSystemMsg("메시지 로드 실패: " + (json.error?.message || "")); return; }
     const msgs = json.data || [];
     if (msgs.length === 0) {
@@ -315,12 +317,15 @@ async function loadChannelMembers(channelId) {
 let lastSenderId = null;
 
 function appendMessage(msg) {
-  const isMine    = currentUser && msg.senderId === currentUser.userId;
-  const senderName = msg.senderName || `user#${msg.senderId}`;
+  const senderIdNum = Number(msg.senderId);
+  const isMine =
+    currentUser && Number(currentUser.userId) === senderIdNum;
+  const senderName = msg.senderName || `user#${senderIdNum}`;
 
-  // 같은 발신자의 연속 메시지는 이름/아바타 생략
-  const isContinued = (lastSenderId === msg.senderId);
-  lastSenderId = msg.senderId;
+  // 같은 발신자의 연속 메시지는 이름/아바타 생략 (API number / 소켓 string 혼용 대비)
+  const isContinued =
+    lastSenderId !== null && Number(lastSenderId) === senderIdNum;
+  lastSenderId = senderIdNum;
 
   const div = document.createElement("div");
   div.className = `msg-row ${isMine ? "msg-mine" : "msg-other"} ${isContinued ? "msg-continued" : ""}`;
