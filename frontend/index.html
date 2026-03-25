@@ -316,41 +316,26 @@
           <button type="button" class="modal-close" data-modal="modalAddMemberPicker">✕</button>
         </div>
         <div class="modal-body">
+          <div class="member-picker-top-search">
+            <select id="addMemberTopSearchType" class="member-search-select">
+              <option value="NAME">이름</option>
+              <option value="DEPARTMENT">부서</option>
+              <option value="EMAIL">이메일</option>
+              <option value="EMP_NO">사번</option>
+            </select>
+            <input id="addMemberTopSearchInput" type="text" placeholder="검색어 입력" />
+            <button type="button" id="btnSearchTop" class="btn-search">검색</button>
+          </div>
+
           <div class="member-picker-popup">
             <div class="member-picker-tree">
               <div class="picker-org-title">조직도</div>
-
-              <div class="picker-pane-search">
-                <div class="member-search-wrap">
-                  <select id="addMemberOrgSearchType" class="member-search-select">
-                    <option value="NAME">이름</option>
-                    <option value="DEPARTMENT">부서</option>
-                    <option value="EMAIL">이메일</option>
-                    <option value="EMP_NO">사번</option>
-                  </select>
-                  <input id="addMemberOrgSearchInput" type="text" placeholder="검색어 입력" />
-                  <button type="button" id="btnSearchOrg" class="btn-search">검색</button>
-                </div>
-              </div>
 
               <div id="orgTreeEmbedAdd" class="org-tree-embedded"></div>
             </div>
 
             <div class="member-picker-members">
-              <div class="picker-pane-search">
-                <div class="picker-org-title" style="margin-bottom:10px;">선택 부서원</div>
-                <div class="member-search-wrap">
-                  <select id="addMemberMemberSearchType" class="member-search-select">
-                    <option value="NAME">이름</option>
-                    <option value="DEPARTMENT">부서</option>
-                    <option value="EMAIL">이메일</option>
-                    <option value="EMP_NO">사번</option>
-                  </select>
-                  <input id="addMemberMemberSearchInput" type="text" placeholder="선택 부서에서 검색" />
-                  <button type="button" id="btnSearchMembers" class="btn-search">검색</button>
-                </div>
-              </div>
-
+              <div class="picker-org-title" style="margin-bottom:10px;">선택 부서원</div>
               <ul id="addMemberMemberList" class="member-picker-member-list"></ul>
             </div>
           </div>

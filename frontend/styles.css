@@ -1336,14 +1336,14 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
   border-radius: 10px;
   background: var(--bg-input);
   padding: 10px 12px;
-  min-height: 380px;
-  max-height: 64vh;
+  min-height: 420px;
+  max-height: 72vh;
   overflow: hidden;
 }
 
 .member-picker-tree .org-tree-embedded {
   min-height: 0;
-  max-height: 52vh;
+  max-height: 62vh;
   overflow-y: auto;
 }
 
@@ -1352,11 +1352,43 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
   border-radius: 10px;
   background: var(--bg-input);
   padding: 10px 12px;
-  min-height: 380px;
-  max-height: 64vh;
+  min-height: 420px;
+  max-height: 72vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.member-picker-top-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--bg-input);
+}
+
+.member-picker-top-search .member-search-select {
+  flex-shrink: 0;
+}
+
+.member-picker-top-search input {
+  flex: 1;
+}
+
+.member-picker-top-search .btn-search {
+  flex-shrink: 0;
+}
+
+.member-picker-member-list {
+  margin-top: 0;
+}
+
+/* 이 팝업만 더 크게 */
+#modalAddMemberPicker .modal {
+  max-width: 920px;
 }
 
 .picker-pane-search {
