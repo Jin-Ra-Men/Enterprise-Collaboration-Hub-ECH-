@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ECH — Enterprise Collaboration Hub</title>
     <link rel="stylesheet" href="./styles.css" />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("ech_theme");
+          if (t === "light" || t === "blue") document.documentElement.setAttribute("data-theme", t);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
 
@@ -29,6 +37,14 @@
           <button type="submit" id="loginBtn" class="btn-login">로그인</button>
         </form>
         <p class="login-hint">테스트 계정 기본 비밀번호: <code>Test1234!</code></p>
+        <div class="login-theme" role="group" aria-label="화면 테마 선택">
+          <span class="login-theme-label">테마</span>
+          <div class="theme-chips">
+            <button type="button" class="theme-chip" data-theme="dark" title="검정">검정</button>
+            <button type="button" class="theme-chip" data-theme="light" title="하양">하양</button>
+            <button type="button" class="theme-chip" data-theme="blue" title="파랑">파랑</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -78,6 +94,15 @@
             <li class="sidebar-item" id="navReleases" data-view="releases">🚀 배포 관리</li>
             <li class="sidebar-item" id="navSettings" data-view="settings">⚙️ 설정</li>
           </ul>
+        </div>
+
+        <div class="sidebar-theme" role="group" aria-label="화면 테마 선택">
+          <span class="login-theme-label">테마</span>
+          <div class="theme-chips">
+            <button type="button" class="theme-chip" data-theme="dark" title="검정">검정</button>
+            <button type="button" class="theme-chip" data-theme="light" title="하양">하양</button>
+            <button type="button" class="theme-chip" data-theme="blue" title="파랑">파랑</button>
+          </div>
         </div>
 
         <!-- 사용자 프로필 -->

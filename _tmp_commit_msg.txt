@@ -1,0 +1,4 @@
+feat: 검정·하양·파랑 UI 테마 선택
+
+- data-theme·localStorage(ech_theme)로 유지, 로그인·사이드바 칩
+- 테마별 CSS 변수(라이트·다크 블루) 및 그라데이션 통일

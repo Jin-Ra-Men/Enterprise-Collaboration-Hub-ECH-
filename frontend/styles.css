@@ -2,15 +2,19 @@
  * ECH Frontend — styles.css (dark refined)
  * ============================================================ */
 
+/* 기본 = 검정(다크·보라 액센트). localStorage ech_theme 또는 data-theme 으로 전환 */
 :root {
   --bg-app: #0a0a0c;
   --bg-sidebar: #111113;
   --bg-sidebar-hover: rgba(255,255,255,.06);
   --bg-chat: #131316;
+  --bg-message-hover: rgba(255,255,255,.04);
+  --bg-channel-files-strip: rgba(0, 0, 0, 0.22);
   --bg-elevated: #1a1a1f;
   --bg-input: #1e1e24;
   --border-subtle: rgba(255,255,255,.09);
   --border-focus: rgba(167,139,250,.45);
+  --focus-ring: rgba(124, 58, 237, 0.15);
   --text-primary: #ececf1;
   --text-secondary: #9ca3af;
   --text-muted: #6b7280;
@@ -19,6 +23,103 @@
   --accent-pressed: #7c3aed;
   --success: #34d399;
   --sidebar-text: #c4c4cc;
+  --grad-login-page: radial-gradient(ellipse 120% 80% at 50% -20%, rgba(124,58,237,.35), transparent 55%),
+    linear-gradient(165deg, #0a0a0c 0%, #12121a 45%, #0c0c10 100%);
+  --grad-logo: linear-gradient(145deg, #7c3aed, #5b21b6);
+  --grad-btn-login: linear-gradient(180deg, #7c3aed 0%, #6d28d9 100%);
+  --grad-btn-primary: linear-gradient(180deg, #6d28d9 0%, #5b21b6 100%);
+  --grad-avatar: linear-gradient(145deg, #7c3aed, #5b21b6);
+  --grad-btn-search-sub: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+  --sidebar-border: rgba(255,255,255,.1);
+  --sidebar-search-bg: rgba(255,255,255,.1);
+  --sidebar-item-fg: #d1d2d3;
+  --sidebar-item-fg-strong: #fff;
+  --sidebar-item-hover-bg: rgba(255,255,255,.1);
+  --sidebar-active-bg: rgba(124,58,237,.35);
+  --sidebar-user-bg: #3f0e40;
+  --sidebar-avatar-bg: #611f69;
+  --workspace-btn-fg: #fff;
+  --sidebar-search-input-fg: #fff;
+  --sidebar-search-placeholder: rgba(255,255,255,.5);
+}
+
+html[data-theme="light"] {
+  --bg-app: #eef1f6;
+  --bg-sidebar: #ffffff;
+  --bg-sidebar-hover: rgba(15, 23, 42, 0.06);
+  --bg-chat: #f8fafc;
+  --bg-message-hover: rgba(15, 23, 42, 0.05);
+  --bg-channel-files-strip: #eef2f7;
+  --bg-elevated: #ffffff;
+  --bg-input: #f1f5f9;
+  --border-subtle: rgba(15, 23, 42, 0.09);
+  --border-focus: rgba(99, 102, 241, 0.45);
+  --focus-ring: rgba(99, 102, 241, 0.18);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --accent: #6366f1;
+  --accent-hover: #818cf8;
+  --accent-pressed: #4f46e5;
+  --success: #059669;
+  --sidebar-text: #334155;
+  --grad-login-page: linear-gradient(165deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
+  --grad-logo: linear-gradient(145deg, #6366f1, #4f46e5);
+  --grad-btn-login: linear-gradient(180deg, #4f46e5 0%, #4338ca 100%);
+  --grad-btn-primary: linear-gradient(180deg, #4f46e5 0%, #4338ca 100%);
+  --grad-avatar: linear-gradient(145deg, #6366f1, #4f46e5);
+  --grad-btn-search-sub: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+  --sidebar-border: rgba(15, 23, 42, 0.08);
+  --sidebar-search-bg: #f1f5f9;
+  --sidebar-item-fg: #475569;
+  --sidebar-item-fg-strong: #0f172a;
+  --sidebar-item-hover-bg: rgba(15, 23, 42, 0.06);
+  --sidebar-active-bg: rgba(99, 102, 241, 0.15);
+  --sidebar-user-bg: #f8fafc;
+  --sidebar-avatar-bg: #e0e7ff;
+  --workspace-btn-fg: #334155;
+  --sidebar-search-input-fg: #0f172a;
+  --sidebar-search-placeholder: rgba(15, 23, 42, 0.45);
+}
+
+html[data-theme="blue"] {
+  --bg-app: #080c14;
+  --bg-sidebar: #0c1422;
+  --bg-sidebar-hover: rgba(56, 189, 248, 0.08);
+  --bg-chat: #0a101c;
+  --bg-message-hover: rgba(56, 189, 248, 0.06);
+  --bg-channel-files-strip: rgba(14, 165, 233, 0.08);
+  --bg-elevated: #111a2e;
+  --bg-input: #152238;
+  --border-subtle: rgba(56, 189, 248, 0.12);
+  --border-focus: rgba(56, 189, 248, 0.45);
+  --focus-ring: rgba(14, 165, 233, 0.2);
+  --text-primary: #e8f4fc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent: #38bdf8;
+  --accent-hover: #7dd3fc;
+  --accent-pressed: #0ea5e9;
+  --success: #34d399;
+  --sidebar-text: #cbd5e1;
+  --grad-login-page: radial-gradient(ellipse 120% 80% at 50% -20%, rgba(14,165,233,.28), transparent 55%),
+    linear-gradient(165deg, #080c14 0%, #0c1526 45%, #0a1628 100%);
+  --grad-logo: linear-gradient(145deg, #0ea5e9, #0369a1);
+  --grad-btn-login: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+  --grad-btn-primary: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+  --grad-avatar: linear-gradient(145deg, #0ea5e9, #0369a1);
+  --grad-btn-search-sub: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+  --sidebar-border: rgba(56, 189, 248, 0.14);
+  --sidebar-search-bg: rgba(56, 189, 248, 0.1);
+  --sidebar-item-fg: #94a3b8;
+  --sidebar-item-fg-strong: #f0f9ff;
+  --sidebar-item-hover-bg: rgba(56, 189, 248, 0.1);
+  --sidebar-active-bg: rgba(14, 165, 233, 0.22);
+  --sidebar-user-bg: #0a2540;
+  --sidebar-avatar-bg: #155e75;
+  --workspace-btn-fg: #e0f2fe;
+  --sidebar-search-input-fg: #f0f9ff;
+  --sidebar-search-placeholder: rgba(224, 242, 254, 0.45);
 }
 
 /* ── 리셋 / 기본 ── */
@@ -37,8 +138,7 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   display: flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(ellipse 120% 80% at 50% -20%, rgba(124,58,237,.35), transparent 55%),
-    linear-gradient(165deg, #0a0a0c 0%, #12121a 45%, #0c0c10 100%);
+  background: var(--grad-login-page);
 }
 .login-card {
   background: var(--bg-elevated);
@@ -56,7 +156,7 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   justify-content: center;
   width: 60px; height: 60px;
   border-radius: 12px;
-  background: linear-gradient(145deg, #7c3aed, #5b21b6);
+  background: var(--grad-logo);
   color: #fff;
   font-size: 22px;
   font-weight: 700;
@@ -73,11 +173,11 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   background: var(--bg-input);
   transition: border-color .15s, box-shadow .15s;
 }
-.login-form input:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px rgba(124,58,237,.15); }
+.login-form input:focus { border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--focus-ring); }
 .login-error { color: #e01e5a; font-size: 13px; margin-bottom: 10px; }
 .btn-login {
   width: 100%; padding: 12px;
-  background: linear-gradient(180deg, #7c3aed 0%, #6d28d9 100%);
+  background: var(--grad-btn-login);
   color: #fff;
   border-radius: 8px; font-size: 16px; font-weight: 600;
   cursor: pointer; transition: filter .15s, transform .1s;
@@ -87,6 +187,57 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 .btn-login:disabled { opacity: .6; cursor: default; }
 .login-hint { text-align: center; font-size: 13px; color: var(--text-muted); margin-top: 18px; }
 .login-hint code { background: var(--bg-input); padding: 2px 6px; border-radius: 4px; color: var(--accent); }
+
+/* 로그인 화면 테마 선택 */
+.login-theme {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.login-theme-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  width: 100%;
+  text-align: center;
+}
+.theme-chips {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+.theme-chip {
+  min-width: 56px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  transition: border-color .15s, background .15s, color .15s;
+}
+.theme-chip:hover {
+  border-color: var(--border-focus);
+  color: var(--text-primary);
+}
+.theme-chip.active {
+  border-color: var(--accent);
+  background: rgba(167, 139, 250, 0.12);
+  color: var(--accent);
+}
+html[data-theme="light"] .theme-chip.active {
+  background: rgba(99, 102, 241, 0.12);
+}
+html[data-theme="blue"] .theme-chip.active {
+  background: rgba(56, 189, 248, 0.12);
+}
 
 /* ============================================================
  * 앱 레이아웃 (Slack-like)
@@ -115,31 +266,31 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
-  border-bottom: 1px solid rgba(255,255,255,.1);
+  border-bottom: 1px solid var(--sidebar-border);
   cursor: pointer;
   user-select: none;
 }
 .workspace-name { font-size: 17px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; }
-.workspace-menu-btn { color: #fff; font-size: 16px; cursor: pointer; }
+.workspace-menu-btn { color: var(--workspace-btn-fg); font-size: 16px; cursor: pointer; }
 
 /* 검색 */
 .sidebar-search-wrap { padding: 8px 12px; }
 .sidebar-search-wrap form {
   display: flex;
   align-items: center;
-  background: rgba(255,255,255,.1);
+  background: var(--sidebar-search-bg);
   border-radius: 6px;
   padding: 4px 8px;
   gap: 6px;
 }
-.sidebar-search-icon { color: #d1d2d3; font-size: 13px; cursor: pointer; background: none; }
+.sidebar-search-icon { color: var(--sidebar-item-fg); font-size: 13px; cursor: pointer; background: none; }
 .sidebar-search-input {
   flex: 1;
   background: none;
-  color: #fff;
+  color: var(--sidebar-search-input-fg);
   font-size: 13px;
 }
-.sidebar-search-input::placeholder { color: rgba(255,255,255,.5); }
+.sidebar-search-input::placeholder { color: var(--sidebar-search-placeholder); }
 
 /* 섹션 */
 .sidebar-section { flex-shrink: 0; padding: 4px 0; }
@@ -151,16 +302,16 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 }
 .section-toggle {
   flex: 1;
-  color: #d1d2d3;
+  color: var(--sidebar-item-fg);
   font-size: 13px;
   font-weight: 600;
   text-align: left;
   cursor: pointer;
   background: none;
 }
-.section-toggle:hover { color: #fff; }
+.section-toggle:hover { color: var(--sidebar-item-fg-strong); }
 .btn-add-item {
-  color: #d1d2d3;
+  color: var(--sidebar-item-fg);
   font-size: 18px;
   cursor: pointer;
   width: 22px; height: 22px;
@@ -168,7 +319,7 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   border-radius: 4px;
   transition: background .1s;
 }
-.btn-add-item:hover { background: rgba(255,255,255,.15); color: #fff; }
+.btn-add-item:hover { background: var(--sidebar-item-hover-bg); color: var(--sidebar-item-fg-strong); }
 
 /* 목록 */
 .sidebar-list { padding: 2px 0; overflow-y: auto; max-height: 220px; }
@@ -182,16 +333,25 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   border-radius: 4px;
   margin: 0 8px;
   font-size: 15px;
-  color: #d1d2d3;
+  color: var(--sidebar-item-fg);
   transition: background .1s;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.sidebar-item:hover { background: rgba(255,255,255,.1); color: #fff; }
-.sidebar-item.active { background: rgba(124,58,237,.35); color: #fff; font-weight: 600; border-left: 2px solid var(--accent); }
+.sidebar-item:hover { background: var(--sidebar-item-hover-bg); color: var(--sidebar-item-fg-strong); }
+.sidebar-item.active { background: var(--sidebar-active-bg); color: var(--sidebar-item-fg-strong); font-weight: 600; border-left: 2px solid var(--accent); }
 .item-icon { flex-shrink: 0; width: 18px; text-align: center; font-size: 13px; }
 .item-label { overflow: hidden; text-overflow: ellipsis; }
+
+/* 사이드바 테마 칩 (로그인과 동일 클래스 재사용) */
+.sidebar-theme {
+  flex-shrink: 0;
+  padding: 8px 12px 4px;
+  border-top: 1px solid var(--sidebar-border);
+}
+.sidebar-theme .login-theme-label { width: auto; text-align: left; margin-bottom: 6px; }
+.sidebar-theme .theme-chips { justify-content: flex-start; }
 
 /* 사용자 프로필 (하단) */
 .sidebar-user {
@@ -200,13 +360,13 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   align-items: center;
   gap: 10px;
   padding: 12px 14px;
-  border-top: 1px solid rgba(255,255,255,.1);
-  background: #3f0e40;
+  border-top: 1px solid var(--sidebar-border);
+  background: var(--sidebar-user-bg);
 }
 .user-avatar {
   width: 34px; height: 34px;
   border-radius: 8px;
-  background: #611f69;
+  background: var(--sidebar-avatar-bg);
   color: #fff;
   font-size: 13px;
   font-weight: 700;
@@ -215,18 +375,18 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   cursor: pointer;
 }
 .user-info { flex: 1; overflow: hidden; }
-.user-name { display: block; font-size: 14px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.user-status { font-size: 12px; color: #d1d2d3; }
-.user-status.online::before { content: "● "; color: #2bac76; }
+.user-name { display: block; font-size: 14px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-status { font-size: 12px; color: var(--text-muted); }
+.user-status.online::before { content: "● "; color: var(--success); }
 .btn-sidebar-logout {
-  color: #d1d2d3;
+  color: var(--sidebar-item-fg);
   font-size: 18px;
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
   transition: background .1s, color .1s;
 }
-.btn-sidebar-logout:hover { background: rgba(255,255,255,.15); color: #fff; }
+.btn-sidebar-logout:hover { background: var(--sidebar-item-hover-bg); color: var(--sidebar-item-fg-strong); }
 
 /* ── 채팅 영역 ── */
 .chat-area {
@@ -332,7 +492,7 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 .member-avatar-sm {
   width: 28px; height: 28px;
   border-radius: 6px;
-  background: linear-gradient(145deg, #7c3aed, #5b21b6);
+  background: var(--grad-avatar);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -396,7 +556,7 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 .msg-avatar {
   width: 36px; height: 36px;
   border-radius: 8px;
-  background: linear-gradient(145deg, #7c3aed, #5b21b6);
+  background: var(--grad-avatar);
   color: #fff;
   font-size: 12px;
   font-weight: 700;
@@ -501,7 +661,7 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   transition: border-color .15s, box-shadow .15s;
   overflow: hidden;
 }
-.composer-inner:focus-within { border-color: var(--border-focus); box-shadow: 0 0 0 2px rgba(124,58,237,.12); }
+.composer-inner:focus-within { border-color: var(--border-focus); box-shadow: 0 0 0 2px var(--focus-ring); }
 
 .composer-attach-btn {
   padding: 10px 12px;
@@ -525,7 +685,7 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 .composer-send-btn {
   padding: 8px 14px;
   color: #fff;
-  background: linear-gradient(180deg, #6d28d9 0%, #5b21b6 100%);
+  background: var(--grad-btn-primary);
   cursor: pointer;
   display: flex; align-items: center;
   transition: filter .12s;
@@ -692,7 +852,7 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 }
 .btn-save-setting {
   padding: 7px 14px;
-  background: linear-gradient(180deg, #6d28d9 0%, #5b21b6 100%);
+  background: var(--grad-btn-primary);
   color: #fff;
   border-radius: 6px;
   cursor: pointer;
@@ -770,11 +930,11 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   background: var(--bg-input);
 }
 .form-group input:focus,
-.form-group select:focus { border-color: var(--border-focus); box-shadow: 0 0 0 2px rgba(124,58,237,.12); }
+.form-group select:focus { border-color: var(--border-focus); box-shadow: 0 0 0 2px var(--focus-ring); }
 
 .btn-primary {
   padding: 9px 20px;
-  background: linear-gradient(180deg, #6d28d9 0%, #5b21b6 100%);
+  background: var(--grad-btn-primary);
   color: #fff;
   border-radius: 8px;
   font-weight: 600;
@@ -809,7 +969,7 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 }
 .btn-search {
   padding: 8px 16px;
-  background: linear-gradient(180deg, #6d28d9 0%, #5b21b6 100%);
+  background: var(--grad-btn-primary);
   color: #fff;
   border-radius: 8px;
   cursor: pointer;
@@ -817,7 +977,7 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   font-weight: 600;
 }
 .btn-search:hover { filter: brightness(1.08); }
-.btn-search-sub { background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%); }
+.btn-search-sub { background: var(--grad-btn-search-sub); }
 .btn-search-sub:hover { filter: brightness(1.08); }
 
 .user-search-results {
@@ -840,7 +1000,7 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 .user-search-avatar {
   width: 32px; height: 32px;
   border-radius: 8px;
-  background: linear-gradient(145deg, #7c3aed, #5b21b6);
+  background: var(--grad-avatar);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -921,7 +1081,7 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 .channel-files-block {
   flex-shrink: 0;
   border-bottom: 1px solid var(--border-subtle);
-  background: rgba(0,0,0,.2);
+  background: var(--bg-channel-files-strip);
   font-size: 13px;
 }
 .channel-files-block > summary {
@@ -1019,7 +1179,7 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
   width: 72px;
   height: 72px;
   border-radius: 12px;
-  background: linear-gradient(145deg, #7c3aed, #5b21b6);
+  background: var(--grad-avatar);
   color: #fff;
   font-size: 24px;
   font-weight: 700;

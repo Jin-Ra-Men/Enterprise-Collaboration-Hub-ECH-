@@ -14,6 +14,52 @@ const TOKEN_KEY  = "ech_token";
 const USER_KEY   = "ech_user";
 const WS_KEY     = "ECH"; // 기본 워크스페이스 키
 const MAX_MSGS   = 300;
+const THEME_KEY  = "ech_theme";
+const VALID_THEMES = ["dark", "light", "blue"];
+
+function getCurrentTheme() {
+  return document.documentElement.getAttribute("data-theme") || "dark";
+}
+
+function syncThemeChips() {
+  const cur = getCurrentTheme();
+  document.querySelectorAll(".theme-chip").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.theme === cur);
+  });
+}
+
+function applyTheme(theme) {
+  const t = VALID_THEMES.includes(theme) ? theme : "dark";
+  if (t === "dark") {
+    document.documentElement.removeAttribute("data-theme");
+  } else {
+    document.documentElement.setAttribute("data-theme", t);
+  }
+  try {
+    localStorage.setItem(THEME_KEY, t);
+  } catch (e) {
+    /* ignore */
+  }
+  syncThemeChips();
+}
+
+function initTheme() {
+  let saved = "dark";
+  try {
+    saved = localStorage.getItem(THEME_KEY) || "dark";
+  } catch (e) {
+    /* ignore */
+  }
+  if (!VALID_THEMES.includes(saved)) saved = "dark";
+  applyTheme(saved);
+}
+
+function onThemeChipClick(e) {
+  const chip = e.target.closest(".theme-chip");
+  if (!chip || !chip.dataset.theme) return;
+  e.preventDefault();
+  applyTheme(chip.dataset.theme);
+}
 
 /** userId(number) -> ONLINE | AWAY | OFFLINE */
 const presenceByUserId = new Map();
@@ -1508,3 +1554,6 @@ function initEvents() {
     showLogin();
   }
 })();
+
+document.addEventListener("click", onThemeChipClick);
+initTheme();
