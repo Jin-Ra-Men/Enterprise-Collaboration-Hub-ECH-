@@ -261,3 +261,62 @@
 - 운영 시 주의사항:
   - 무결성 검증 실패 파일은 즉시 폐기
   - 활성화 실패 시 복구 절차(자동 또는 수동) 문서화 필요
+
+## 8) 로컬·개발 환경 서버 재시작 (ECH 구성요소)
+
+### 구성요소·포트
+| 구성요소 | 포트 | 역할 |
+|----------|------|------|
+| PostgreSQL | 5432 | DB (백엔드·리얼타임 공통) |
+| 백엔드 (Spring Boot, 내장 Tomcat) | 8080 | REST API, 정적 프론트(`file:../frontend/` 등) |
+| 리얼타임 (Node.js + Socket.io) | 3001 | 실시간 메시지 저장·브로드캐스트 (`realtime/src/db.js` → PostgreSQL) |
+
+### 권장 기동 순서
+1. **PostgreSQL** — DB가 먼저 떠 있어야 함.
+2. **백엔드** — API·로그인·채널 등.
+3. **리얼타임** — 소켓 연결·`message:send` 처리.
+
+### 권장 중지 순서 (역순)
+1. **리얼타임** — 소켓·DB 풀 정리.
+2. **백엔드** — Tomcat 종료.
+3. **PostgreSQL** — 일상 개발에서는 **재시작하지 않아도 됨**. DB 스키마/복구가 필요할 때만 Windows 서비스에서 재시작.
+
+### 수동 재시작 (PowerShell 예시)
+
+**백엔드만** (실행 중 터미널에서 `Ctrl+C` 후):
+
+```powershell
+Set-Location "D:\Enterprise Collaboration Hub\Enterprise-Collaboration-Hub-ECH-\backend"
+.\gradlew.bat bootRun --no-daemon
+```
+
+**리얼타임만**:
+
+```powershell
+Set-Location "D:\Enterprise Collaboration Hub\Enterprise-Collaboration-Hub-ECH-\realtime"
+node src/server.js
+```
+
+**PostgreSQL** (서비스 이름은 설치본에 따라 다름, 관리자 권한 필요할 수 있음):
+
+```powershell
+Restart-Service postgresql-x64-16
+# 또는 services.msc 에서 PostgreSQL 서비스 재시작
+```
+
+**포트 점유 PID 확인 후 강제 종료** (백엔드·리얼타임이 응답 없을 때):
+
+```powershell
+netstat -ano | findstr ":8080"
+netstat -ano | findstr ":3001"
+Stop-Process -Id <PID> -Force
+```
+
+### 접속 확인
+- 웹 UI: `http://localhost:8080/index.html`
+- 리얼타임 헬스: `GET http://localhost:3001/health` (JSON, DB 풀 상태 포함)
+
+### 비고
+- 프론트는 별도 `npm` 서버 없이 백엔드가 정적 파일을 서빙하는 구성을 전제로 함 (`application.yml`의 `spring.web.resources.static-locations`).
+- 리얼타임 코드(`db.js`, `server.js`) 변경 후에는 **Node 프로세스 재시작**이 필요함.
+- 백엔드만 재시작해도 채팅은 동작하지만, **소켓·실시간 반영**을 쓰려면 리얼타임도 함께 기동되어 있어야 함.
