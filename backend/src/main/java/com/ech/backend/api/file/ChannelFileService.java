@@ -12,8 +12,10 @@ import com.ech.backend.domain.channel.ChannelRepository;
 import com.ech.backend.domain.file.ChannelFile;
 import com.ech.backend.domain.file.ChannelFileRepository;
 import com.ech.backend.domain.settings.AppSettingKey;
+import com.ech.backend.common.exception.NotFoundException;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
+import java.io.File;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -24,8 +26,8 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -142,15 +144,21 @@ public class ChannelFileService {
                 .orElseThrow(() -> new IllegalArgumentException("파일을 찾을 수 없습니다."));
 
         String baseDir = appSettingsService.getFileStorageDir();
-        Path filePath = Paths.get(baseDir, meta.getStorageKey().replace('/', java.io.File.separatorChar));
+        Path basePath = Paths.get(baseDir).normalize().toAbsolutePath();
+        Path filePath = basePath.resolve(meta.getStorageKey().replace('/', File.separatorChar)).normalize();
 
-        if (!Files.exists(filePath)) {
-            throw new IllegalStateException("파일이 스토리지에 존재하지 않습니다: " + meta.getStorageKey());
+        if (!filePath.startsWith(basePath)) {
+            throw new IllegalArgumentException("잘못된 스토리지 경로입니다.");
+        }
+        if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
+            throw new NotFoundException("파일이 스토리지에 존재하지 않습니다: " + meta.getStorageKey());
         }
 
-        Resource resource = new UrlResource(filePath.toUri());
+        Resource resource = new FileSystemResource(filePath);
         String encodedName = URLEncoder.encode(meta.getOriginalFilename(), StandardCharsets.UTF_8)
                 .replace("+", "%20");
+
+        MediaType mediaType = resolveDownloadMediaType(meta.getContentType());
 
         auditLogService.safeRecord(
                 AuditEventType.FILE_DOWNLOAD_INFO_ACCESSED,
@@ -158,12 +166,24 @@ public class ChannelFileService {
                 "channelId=" + channelId + " fileId=" + fileId, null
         );
 
+        long contentLen = Files.size(filePath);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename*=UTF-8''" + encodedName)
-                .contentType(MediaType.parseMediaType(meta.getContentType()))
-                .contentLength(meta.getSizeBytes())
+                .contentType(mediaType)
+                .contentLength(contentLen)
                 .body(resource);
+    }
+
+    private static MediaType resolveDownloadMediaType(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+        try {
+            return MediaType.parseMediaType(raw.trim());
+        } catch (Exception e) {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
     }
 
     public FileDownloadInfoResponse getDownloadInfo(Long channelId, Long fileId,
