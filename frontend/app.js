@@ -65,10 +65,13 @@ function escHtml(s) {
     .replace(/"/g,"&quot;");
 }
 
+/** 채팅 메시지 옆 시각 — 24시간제 HH:mm (오전/오후 문구 없음) */
 function fmtTime(iso) {
   if (!iso) return "";
   const d = new Date(iso);
-  return d.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+  const h = String(d.getHours()).padStart(2, "0");
+  const m = String(d.getMinutes()).padStart(2, "0");
+  return `${h}:${m}`;
 }
 
 function fmtDate(iso) {
@@ -362,8 +365,7 @@ function createMessageRowElement(msg, { showAvatar, showTime }) {
       <div class="msg-body">
         <div class="msg-meta"><span class="msg-sender">${escHtml(senderName)}</span></div>
         <div class="msg-content-row">
-          <p class="msg-text">${escHtml(msg.text)}</p>
-          ${timeHtml}
+          <span class="msg-text">${escHtml(msg.text)}</span>${timeHtml}
         </div>
       </div>`;
   } else {
@@ -371,8 +373,7 @@ function createMessageRowElement(msg, { showAvatar, showTime }) {
       <div class="msg-spacer"></div>
       <div class="msg-body">
         <div class="msg-content-row">
-          <p class="msg-text">${escHtml(msg.text)}</p>
-          ${timeHtml}
+          <span class="msg-text">${escHtml(msg.text)}</span>${timeHtml}
         </div>
       </div>`;
   }
