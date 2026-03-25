@@ -14,15 +14,15 @@
 ### 💬 실시간 커뮤니케이션
 - **채널 기반 메시징:** 프로젝트/부서별 공개 및 비공개 채널 운영
 - **스레드(Thread) 대화:** 대화 맥락을 유지하는 답글 및 반응 기능
-- **실시간 상태(Presence):** 온라인/자리비움/오프라인 상태 확인 및 업데이트
+- **실시간 상태(Presence):** 온라인/자리비움/오프라인 상태 확인 및 업데이트(채팅·멤버 목록 옆 표시)
 - **읽음 포인터:** 채널별 마지막으로 읽은 메시지 저장·조회(미읽음 UX 기반)
 
 ### 🤝 협업 및 데이터 관리
-- **파일 공유:** 외부 스토리지 연동 전제의 채널별 파일 메타데이터 등록·목록·다운로드 안내 API
+- **파일 공유:** 채널별 업로드(multipart)·목록·다운로드(JWT), 디스크 경로에 워크스페이스·채널 식별 세그먼트 포함
 - **칸반 보드:** 워크스페이스별 보드·컬럼·카드 CRUD, 담당자 지정, 상태/컬럼 이동 이력 API
 - **채팅→업무:** 메시지 ID 기준 업무 항목 생성·조회(메시지와 1:1 링크)
 - **통합 검색:** 대화 내역 및 공유 파일에 대한 고속 검색 지원
-- **조직도(부서) 기반 사용자 검색:** 이름/이메일/사번/부서 필터로 사용자 조회
+- **조직도·사용자 검색:** 이름/이메일/사번/부서/사용자 ID 검색, 부서별 조직도에서 멤버 선택, 동료 프로필 모달
 
 ### 🛠 관리자 시스템 (Admin Dashboard)
 - **그룹웨어 SSO 연동:** 별도 가입 없이 기존 사내 계정으로 즉시 로그인
@@ -85,12 +85,16 @@ graph LR
 - `GET /api/channels/{channelId}/read-state?userId=...`
 - `PUT /api/channels/{channelId}/read-state`
 - `GET /api/channels/{channelId}/files?userId=...`
+- `POST /api/channels/{channelId}/files/upload?userId=...` (multipart)
 - `POST /api/channels/{channelId}/files`
+- `GET /api/channels/{channelId}/files/{fileId}/download?userId=...`
 - `GET /api/channels/{channelId}/files/{fileId}/download-info?userId=...`
 - `POST /api/channels/{channelId}/messages`
 - `POST /api/channels/{channelId}/messages/{parentMessageId}/replies`
 - `GET /api/channels/{channelId}/messages/{parentMessageId}/replies`
 - `GET /api/users/search?q=...&department=...`
+- `GET /api/users/organization`
+- `GET /api/users/{userId}/profile`
 - `POST /api/kanban/boards`, `GET /api/kanban/boards`, `GET /api/kanban/boards/{boardId}`, `DELETE /api/kanban/boards/{boardId}`
 - `POST /api/kanban/boards/{boardId}/columns`, `PUT /api/kanban/boards/{boardId}/columns/{columnId}`, `DELETE .../columns/{columnId}`
 - `POST /api/kanban/boards/{boardId}/columns/{columnId}/cards`, `PUT /api/kanban/cards/{cardId}`, `DELETE /api/kanban/cards/{cardId}`

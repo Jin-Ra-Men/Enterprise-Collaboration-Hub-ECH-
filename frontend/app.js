@@ -15,6 +15,9 @@ const USER_KEY   = "ech_user";
 const WS_KEY     = "ECH"; // 기본 워크스페이스 키
 const MAX_MSGS   = 300;
 
+/** userId(number) -> ONLINE | AWAY | OFFLINE */
+const presenceByUserId = new Map();
+
 /* ── 전역 상태 ── */
 let socket         = null;
 let currentUser    = null;
@@ -84,6 +87,174 @@ function fmtSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024*1024) return `${(bytes/1024).toFixed(1)} KB`;
   return `${(bytes/1024/1024).toFixed(1)} MB`;
+}
+
+function presenceCssClass(status) {
+  const s = String(status || "").toUpperCase();
+  if (s === "ONLINE") return "presence-online";
+  if (s === "AWAY") return "presence-away";
+  return "presence-offline";
+}
+
+function presenceTitle(status) {
+  const s = String(status || "").toUpperCase();
+  if (s === "ONLINE") return "온라인";
+  if (s === "AWAY") return "자리비움";
+  return "오프라인";
+}
+
+async function fetchPresenceSnapshot() {
+  try {
+    const res = await fetch(`${SOCKET_URL}/presence`);
+    const json = await res.json();
+    (json.data || []).forEach((p) => {
+      presenceByUserId.set(Number(p.userId), String(p.status || "OFFLINE").toUpperCase());
+    });
+  } catch (e) {
+    console.warn("프레즌스 스냅샷 실패", e);
+  }
+}
+
+function refreshPresenceDots() {
+  document.querySelectorAll("[data-presence-user]").forEach((el) => {
+    const uid = Number(el.dataset.presenceUser);
+    const st = presenceByUserId.get(uid) || "OFFLINE";
+    el.className = `presence-dot ${presenceCssClass(st)}`;
+    el.title = presenceTitle(st);
+  });
+}
+
+async function openUserProfile(userId) {
+  if (!userId || !currentUser) return;
+  try {
+    const res  = await apiFetch(`/api/users/${userId}/profile`);
+    const json = await res.json();
+    if (!res.ok) {
+      alert(json.error?.message || "프로필을 불러올 수 없습니다.");
+      return;
+    }
+    const u = json.data;
+    document.getElementById("profileModalName").textContent = u.name || "-";
+    document.getElementById("profileAvatarLg").textContent = avatarInitials(u.name || "?");
+    document.getElementById("profileModalEmpNo").textContent = u.employeeNo || "-";
+    document.getElementById("profileModalEmail").textContent = u.email || "-";
+    document.getElementById("profileModalDept").textContent = u.department || "-";
+    document.getElementById("profileModalRole").textContent = u.role || "-";
+    document.getElementById("profileModalStatus").textContent = u.status || "-";
+    openModal("modalUserProfile");
+  } catch (e) {
+    console.error(e);
+    alert("프로필 요청 중 오류가 발생했습니다.");
+  }
+}
+
+async function loadChannelFiles(channelId) {
+  const listEl = document.getElementById("channelFilesList");
+  const emptyEl = document.getElementById("channelFilesEmpty");
+  const countEl = document.getElementById("channelFilesCount");
+  if (!currentUser || !listEl) return;
+  listEl.innerHTML = "";
+  if (emptyEl) emptyEl.classList.add("hidden");
+  try {
+    const res  = await apiFetch(`/api/channels/${channelId}/files?userId=${currentUser.userId}`);
+    const json = await res.json();
+    if (!res.ok) return;
+    const files = json.data || [];
+    if (countEl) countEl.textContent = files.length ? `(${files.length})` : "";
+    if (files.length === 0) {
+      if (emptyEl) emptyEl.classList.remove("hidden");
+      return;
+    }
+    files.forEach((f) => {
+      const li = document.createElement("li");
+      li.className = "channel-file-item";
+      const who = f.uploaderName ? escHtml(f.uploaderName) : `user#${f.uploadedByUserId}`;
+      li.innerHTML = `
+        <span class="channel-file-icon">📎</span>
+        <span class="channel-file-meta">
+          <span class="channel-file-name">${escHtml(f.originalFilename || "")}</span>
+          <span class="channel-file-sub">${who} · ${fmtSize(f.sizeBytes)} · ${fmtDate(f.createdAt)}</span>
+        </span>
+        <button type="button" class="btn-channel-file-dl" data-file-id="${f.id}">다운로드</button>`;
+      li.querySelector(".btn-channel-file-dl").addEventListener("click", () => {
+        downloadChannelFile(f.id, f.originalFilename);
+      });
+      listEl.appendChild(li);
+    });
+  } catch (e) {
+    console.error("첨부 목록 로드 실패", e);
+  }
+}
+
+async function downloadChannelFile(fileId, filename) {
+  if (!activeChannelId || !currentUser) return;
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/channels/${activeChannelId}/files/${fileId}/download?userId=${currentUser.userId}`,
+      { headers: { Authorization: `Bearer ${getToken()}` } }
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error?.message || "다운로드에 실패했습니다.");
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename || "download";
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error(e);
+    alert("다운로드 중 오류가 발생했습니다.");
+  }
+}
+
+async function loadOrgTree(containerId, context) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '<p class="empty-notice">불러오는 중...</p>';
+  try {
+    const res  = await apiFetch("/api/users/organization");
+    const json = await res.json();
+    if (!res.ok) {
+      el.innerHTML = `<p class="empty-notice">${escHtml(json.error?.message || "오류")}</p>`;
+      return;
+    }
+    const groups = json.data || [];
+    el.innerHTML = "";
+    if (groups.length === 0) {
+      el.innerHTML = '<p class="empty-notice">표시할 사용자가 없습니다.</p>';
+      return;
+    }
+    groups.forEach((g) => {
+      const det = document.createElement("details");
+      det.className = "org-dept";
+      det.innerHTML = `<summary>${escHtml(g.department)} <span class="org-dept-count">(${g.users.length})</span></summary>`;
+      const ul = document.createElement("ul");
+      ul.className = "org-user-list";
+      (g.users || []).forEach((u) => {
+        if (u.userId === currentUser?.userId) return;
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "org-user-btn";
+        btn.innerHTML = `<span class="org-user-name">${escHtml(u.name)}</span><span class="org-user-email">${escHtml(u.email || "")}</span>`;
+        btn.addEventListener("click", () => addSelectedMember(u, context));
+        li.appendChild(btn);
+        ul.appendChild(li);
+      });
+      if (ul.children.length === 0) {
+        return;
+      }
+      det.appendChild(ul);
+      el.appendChild(det);
+    });
+  } catch (e) {
+    console.error(e);
+    el.innerHTML = '<p class="empty-notice">조직도를 불러오지 못했습니다.</p>';
+  }
 }
 
 function avatarInitials(name) {
@@ -266,6 +437,8 @@ async function selectChannel(channelId, channelName, channelType) {
   // 멤버 목록 로드
   loadChannelMembers(channelId);
 
+  loadChannelFiles(channelId);
+
   messageInputEl.focus();
 }
 
@@ -299,14 +472,22 @@ async function loadChannelMembers(channelId) {
     const listEl = document.getElementById("memberList");
     listEl.innerHTML = "";
     members.forEach(m => {
+      const uid = Number(m.userId);
+      const pr = presenceByUserId.get(uid) || "OFFLINE";
+      const prCl = presenceCssClass(pr);
       const li = document.createElement("li");
       li.className = "member-list-item";
       li.innerHTML = `
-        <div class="member-avatar-sm">${avatarInitials(m.name || "?")}</div>
-        <span>${escHtml(m.name || "알 수 없음")}</span>
-        <span class="member-role-badge">${m.role || ""}</span>`;
+        <span class="presence-dot ${prCl}" data-presence-user="${uid}" title="${presenceTitle(pr)}"></span>
+        <button type="button" class="member-profile-btn" data-user-id="${uid}">
+          <span class="member-avatar-sm">${avatarInitials(m.name || "?")}</span>
+          <span class="member-name-txt">${escHtml(m.name || "알 수 없음")}</span>
+        </button>
+        <span class="member-role-badge">${escHtml(m.memberRole || m.role || "")}</span>`;
+      li.querySelector(".member-profile-btn").addEventListener("click", () => openUserProfile(uid));
       listEl.appendChild(li);
     });
+    refreshPresenceDots();
   } catch (err) {
     console.error("멤버 로드 실패", err);
   }
@@ -349,6 +530,9 @@ function createMessageRowElement(msg, { showAvatar, showTime }) {
   const isMine =
     currentUser && Number(currentUser.userId) === senderIdNum;
   const senderName = msg.senderName || `user#${senderIdNum}`;
+  const pr = presenceByUserId.get(senderIdNum) || "OFFLINE";
+  const prCl = presenceCssClass(pr);
+  const prTip = presenceTitle(pr);
   const div = document.createElement("div");
   div.className = `msg-row msg-chat ${isMine ? "msg-mine" : "msg-other"}${showAvatar ? "" : " msg-continued"}`;
   div.dataset.senderId = String(senderIdNum);
@@ -361,9 +545,12 @@ function createMessageRowElement(msg, { showAvatar, showTime }) {
   if (showAvatar) {
     const initials = avatarInitials(senderName);
     div.innerHTML = `
-      <div class="msg-avatar">${initials}</div>
+      <button type="button" class="msg-avatar msg-user-trigger" data-user-id="${senderIdNum}" title="프로필 보기">${initials}</button>
       <div class="msg-body">
-        <div class="msg-meta"><span class="msg-sender">${escHtml(senderName)}</span></div>
+        <div class="msg-meta">
+          <span class="presence-dot ${prCl}" data-presence-user="${senderIdNum}" title="${prTip}"></span>
+          <button type="button" class="msg-sender msg-user-trigger" data-user-id="${senderIdNum}">${escHtml(senderName)}</button>
+        </div>
         <div class="msg-content-row">
           <span class="msg-text">${escHtml(msg.text)}</span>${timeHtml}
         </div>
@@ -389,6 +576,7 @@ function renderMessages(msgs) {
     messagesEl.appendChild(createMessageRowElement(m, { showAvatar, showTime }));
   });
   trimMessages();
+  refreshPresenceDots();
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
@@ -409,6 +597,7 @@ function appendMessageRealtime(msg) {
     createMessageRowElement(msg, { showAvatar, showTime: true })
   );
   trimMessages();
+  refreshPresenceDots();
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
@@ -440,14 +629,26 @@ function initSocket() {
     timeout: 10000,
   });
 
-  socket.on("connect", () => {
+  socket.on("connect", async () => {
+    await fetchPresenceSnapshot();
     if (currentUser) socket.emit("presence:set", { userId: currentUser.userId, status: "ONLINE" });
     if (activeChannelId) socket.emit("channel:join", activeChannelId);
+    refreshPresenceDots();
+    if (activeChannelId) loadChannelMembers(activeChannelId);
   });
 
-  socket.on("reconnect", () => {
+  socket.on("reconnect", async () => {
+    await fetchPresenceSnapshot();
     if (currentUser) socket.emit("presence:set", { userId: currentUser.userId, status: "ONLINE" });
     if (activeChannelId) socket.emit("channel:join", activeChannelId);
+    refreshPresenceDots();
+    if (activeChannelId) loadChannelMembers(activeChannelId);
+  });
+
+  socket.on("presence:update", (p) => {
+    if (!p || p.userId == null) return;
+    presenceByUserId.set(Number(p.userId), String(p.status || "OFFLINE").toUpperCase());
+    refreshPresenceDots();
   });
 
   socket.on("disconnect", (reason) => {
@@ -544,6 +745,7 @@ async function uploadFile(file) {
     const json = await res.json();
     if (res.ok) {
       appendSystemMsg(`파일 업로드 완료: ${json.data?.originalFilename || file.name}`);
+      if (activeChannelId) loadChannelFiles(activeChannelId);
     } else {
       appendSystemMsg(`파일 업로드 실패: ${json.error?.message || "오류"}`);
     }
@@ -563,6 +765,7 @@ document.getElementById("btnCreateChannel").addEventListener("click", () => {
   document.getElementById("userSearchResults").innerHTML = "";
   document.getElementById("selectedMembersWrap").innerHTML = "";
   document.getElementById("memberSearchInput").value = "";
+  loadOrgTree("orgTreeChannel", "member");
   openModal("modalCreateChannel");
 });
 
@@ -600,7 +803,7 @@ function renderUserSearchResults(users, listEl, context) {
       <div class="user-search-avatar">${avatarInitials(u.name)}</div>
       <div class="user-search-info">
         <span class="user-search-name">${escHtml(u.name)}</span>
-        <span class="user-search-dept">${escHtml(u.department || "")}</span>
+        <span class="user-search-dept">${escHtml([u.department, u.email, u.employeeNo, "ID:" + u.userId].filter(Boolean).join(" · "))}</span>
       </div>
       <button class="btn-add-member">추가</button>`;
     li.querySelector(".btn-add-member").addEventListener("click", () => {
@@ -677,6 +880,7 @@ document.getElementById("btnCreateDm").addEventListener("click", () => {
   document.getElementById("dmSearchInput").value = "";
   document.getElementById("dmSearchResults").innerHTML = "";
   document.getElementById("selectedDmMembersWrap").innerHTML = "";
+  loadOrgTree("orgTreeDm", "dm");
   openModal("modalCreateDm");
 });
 
@@ -960,6 +1164,13 @@ function initEvents() {
       const target = document.getElementById(targetId);
       if (target) target.classList.toggle("hidden");
     });
+  });
+
+  messagesEl.addEventListener("click", (e) => {
+    const t = e.target.closest(".msg-user-trigger");
+    if (!t || t.dataset.userId == null) return;
+    e.preventDefault();
+    openUserProfile(Number(t.dataset.userId));
   });
 }
 

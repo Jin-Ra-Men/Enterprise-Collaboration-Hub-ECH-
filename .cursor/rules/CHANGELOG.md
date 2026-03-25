@@ -2,6 +2,19 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-03-25 (7차)
+
+### Added
+- 백엔드: `GET /api/users/organization` — ACTIVE 사용자를 부서별로 묶어 조직도 선택 UI에 사용
+- 백엔드: `GET /api/users/{userId}/profile` — 동료 프로필 조회(멤버 권한)
+- 프론트엔드: 채팅 화면 **첨부 파일** 목록(접기/펼치기) + JWT 기반 다운로드
+- 프론트엔드: 메시지 발신자·멤버 패널에서 **프로필 모달**, **프레즌스 점** 표시(소켓 `presence:update` + `GET /presence` 스냅샷)
+- 프론트엔드: 채널/DM 만들기 시 **조직도에서 선택**(부서별 접기)
+
+### Changed
+- 백엔드: `ChannelFileResponse`에 `uploaderName` 추가, 채널 파일 디스크 경로를 `channels/{workspaceKey}_ch{channelId}_{slug}/yyyy/mm/` 형태로 저장(기존 `channels/{channelId}/...` 경로의 `storageKey`는 그대로 다운로드 가능)
+- 백엔드: `GET /api/users/search` — 키워드에 부서 부분 일치, 숫자만 입력 시 사용자 ID 일치 포함
+
 ## 2026-03-25 (6차)
 
 ### Changed

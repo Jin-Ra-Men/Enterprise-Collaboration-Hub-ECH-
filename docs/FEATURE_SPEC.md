@@ -422,15 +422,18 @@
 ---
 
 ## 조직도(부서) 기반 사용자 검색
-- 목적: 부서/이름/이메일/사번 기준으로 사용자 검색 제공
-- 사용자: Admin, Manager
-- 관련 화면/경로: 사용자 검색 모달, 채널 초대 화면, 관리자 사용자 관리
+- 목적: 부서/이름/이메일/사번/사용자 ID 기준으로 사용자 검색 제공 및 부서별 조직도에서 멤버 선택
+- 사용자: 로그인한 멤버(`MEMBER` 이상)
+- 관련 화면/경로: 채널·DM 만들기 모달(검색 + 조직도), 관리자 사용자 관리(확장 시)
 - 관련 API:
   - `GET /api/users/search?q=...&department=...`
+  - `GET /api/users/organization` — ACTIVE 사용자를 부서명으로 그룹화(부서 미입력은 `미지정` 그룹)
+  - `GET /api/users/{userId}/profile` — 동료 프로필(이름·사원번호·이메일·부서·역할·상태)
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:
-  - 입력: `q`(이름/이메일/사번), `department`(부서명)
-  - 출력: `userId`, `employeeNo`, `name`, `email`, `department`, `role`, `status`
+  - 검색 입력: `q`(이름/이메일/사번/부서 부분 일치, 숫자만 입력 시 사용자 ID 일치), `department`(정확히 일치하는 부서명으로 추가 필터)
+  - 검색 출력: `userId`, `employeeNo`, `name`, `email`, `department`, `role`, `status`
+  - 조직도 출력: `[{ department, users: [...] }]`
 - 상태 전이/예외 케이스:
   - `q`/`department`가 비어 있으면 전체 사용자 또는 부서 필터 기준 조회
 - 권한/보안:
@@ -453,15 +456,18 @@
 ## 채널 파일 메타데이터 (업로드 기록·다운로드 안내)
 - 목적: 실제 파일은 NAS/S3 등 외부 스토리지에 두고, 채널 단위로 메타데이터만 DB에 기록·조회
 - 사용자: 채널 멤버
-- 관련 화면/경로: 채널 파일 목록, 업로드 완료 후 메타 등록
+- 관련 화면/경로: 채널 채팅 상단 **첨부 파일** 목록(프론트), 멀티파트 업로드, 다운로드
 - 관련 API:
-  - `POST /api/channels/{channelId}/files` (메타데이터 등록)
-  - `GET /api/channels/{channelId}/files?userId=...` (최신순 최대 100건)
+  - `POST /api/channels/{channelId}/files` (메타데이터만 등록, 하위 호환)
+  - `POST /api/channels/{channelId}/files/upload?userId=...` (multipart `file` — 디스크 저장 + DB 메타)
+  - `GET /api/channels/{channelId}/files?userId=...` (최신순 최대 100건, 응답에 `uploaderName` 포함)
+  - `GET /api/channels/{channelId}/files/{fileId}/download?userId=...` (바이너리 스트림, `Authorization: Bearer` 필요)
   - `GET /api/channels/{channelId}/files/{fileId}/download-info?userId=...` (멤버 검증 후 스토리지 키·안내 문구)
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:
   - 등록: `uploadedByUserId`, `originalFilename`, `contentType`, `sizeBytes`(1~512MiB), `storageKey`
-  - 목록/다운로드 안내: 파일 id, 원본명, 타입, 크기, `storageKey`, `downloadHint`(사전 서명 URL 도입 전 안내)
+  - 목록: 파일 id, `uploaderName`, 원본명, 타입, 크기, `storageKey`, 업로드 시각
+  - 디스크 저장 경로(신규 업로드): `channels/{workspaceKey}_ch{channelId}_{채널명슬러그}/yyyy/mm/{uuid}_{원본파일명}` (기존 `channels/{channelId}/...` 키는 DB에 남아 있으면 다운로드 시 그 경로로 조회)
 - 상태 전이/예외 케이스:
   - 비멤버 접근 불가
   - 파일명 경로 조각(`..` 등) 제거·검증
@@ -480,7 +486,7 @@
 ## 사용자 Presence 확인 기능
 - 목적: 온라인/자리비움/오프라인 상태를 실시간 확인
 - 사용자: 모든 사용자(조회), Admin/Manager(관리 화면 활용)
-- 관련 화면/경로: 채널 멤버 리스트, 사용자 검색 결과, 관리자 모니터링
+- 관련 화면/경로: 채팅 메시지 발신자 이름 옆·멤버 패널 옆 **프레즌스 점**, 프론트는 연결 시 `GET /presence`로 스냅샷 후 `presence:update`로 갱신
 - 관련 API:
   - `GET /presence` (현재 Presence 목록 조회)
 - 관련 Socket 이벤트:
