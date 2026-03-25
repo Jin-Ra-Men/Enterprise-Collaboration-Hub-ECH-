@@ -40,7 +40,7 @@ public class ChannelFileController {
 
     /**
      * 실제 파일을 업로드한다 (multipart/form-data).
-     * 파일은 현재 설정된 스토리지 경로에 channels/{channelId}/{YYYY}/{MM}/{UUID}_{filename} 구조로 저장된다.
+     * 파일은 스토리지 경로에 channels/{workspaceKey}_ch{channelId}_{nameSlug}/{YYYY}/{MM}/{UUID}_{filename} 구조로 저장된다.
      */
     @PostMapping(value = "/upload", consumes = "multipart/form-data")
     @ResponseStatus(HttpStatus.CREATED)

@@ -128,6 +128,11 @@
 
           <!-- 메시지 영역 -->
           <div class="messages-wrap">
+            <details class="channel-files-block" id="channelFilesBlock">
+              <summary>첨부 파일 <span id="channelFilesCount" class="channel-files-count"></span></summary>
+              <ul id="channelFilesList" class="channel-files-list"></ul>
+              <p id="channelFilesEmpty" class="channel-files-empty hidden">첨부 파일이 없습니다.</p>
+            </details>
             <div id="messages" class="messages"></div>
           </div>
 
@@ -220,10 +225,14 @@
           <div class="form-group">
             <label>구성원 추가</label>
             <div class="member-search-wrap">
-              <input id="memberSearchInput" type="text" placeholder="이름 또는 부서로 검색" />
+              <input id="memberSearchInput" type="text" placeholder="이름, 부서, 이메일, 사원번호, 사용자 ID" />
               <button type="button" id="btnSearchMember" class="btn-search">검색</button>
             </div>
             <ul id="userSearchResults" class="user-search-results"></ul>
+            <details class="org-picker-details" id="orgPickerChannel">
+              <summary>조직도에서 선택</summary>
+              <div id="orgTreeChannel" class="org-tree"></div>
+            </details>
             <div id="selectedMembersWrap" class="selected-members"></div>
           </div>
         </div>
@@ -245,16 +254,44 @@
           <div class="form-group">
             <label>대화 상대 검색</label>
             <div class="member-search-wrap">
-              <input id="dmSearchInput" type="text" placeholder="이름 또는 부서로 검색" />
+              <input id="dmSearchInput" type="text" placeholder="이름, 부서, 이메일, 사원번호, 사용자 ID" />
               <button type="button" id="btnDmSearch" class="btn-search">검색</button>
             </div>
             <ul id="dmSearchResults" class="user-search-results"></ul>
+            <details class="org-picker-details" id="orgPickerDm">
+              <summary>조직도에서 선택</summary>
+              <div id="orgTreeDm" class="org-tree"></div>
+            </details>
             <div id="selectedDmMembersWrap" class="selected-members"></div>
           </div>
         </div>
         <div class="modal-footer">
           <button class="btn-cancel" data-modal="modalCreateDm">취소</button>
           <button class="btn-primary" id="btnConfirmCreateDm">대화 시작</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 사용자 프로필 모달 ===================== -->
+    <div id="modalUserProfile" class="modal-overlay hidden">
+      <div class="modal modal-narrow">
+        <div class="modal-header">
+          <h3>프로필</h3>
+          <button type="button" class="modal-close" data-modal="modalUserProfile">✕</button>
+        </div>
+        <div class="modal-body profile-body">
+          <div class="profile-avatar-lg" id="profileAvatarLg">?</div>
+          <h4 id="profileModalName" class="profile-modal-name">-</h4>
+          <dl class="profile-dl">
+            <dt>사원번호</dt><dd id="profileModalEmpNo">-</dd>
+            <dt>이메일</dt><dd id="profileModalEmail">-</dd>
+            <dt>부서</dt><dd id="profileModalDept">-</dd>
+            <dt>역할</dt><dd id="profileModalRole">-</dd>
+            <dt>계정 상태</dt><dd id="profileModalStatus">-</dd>
+          </dl>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" data-modal="modalUserProfile">닫기</button>
         </div>
       </div>
     </div>

@@ -16,13 +16,23 @@ public interface UserRepository extends JpaRepository<User, Long> {
                 OR LOWER(u.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
                 OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
                 OR LOWER(u.employeeNo) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(COALESCE(u.department, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR (:idMatch IS NOT NULL AND u.id = :idMatch)
               )
             ORDER BY u.name ASC
             """)
     List<User> searchUsers(
             @Param("keyword") String keyword,
-            @Param("department") String department
+            @Param("department") String department,
+            @Param("idMatch") Long idMatch
     );
+
+    @Query("""
+            SELECT u FROM User u
+            WHERE u.status = 'ACTIVE'
+            ORDER BY u.department ASC NULLS LAST, u.name ASC
+            """)
+    List<User> findActiveUsersForOrganization();
 
     Optional<User> findByEmployeeNo(String employeeNo);
 

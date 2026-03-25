@@ -76,7 +76,7 @@ public class ChannelFileService {
      * 실제 파일을 디스크에 저장하고 메타데이터를 DB에 등록한다.
      *
      * <p>저장 경로 구조:
-     * <pre>{basedir}/channels/{channelId}/{YYYY}/{MM}/{UUID}_{sanitizedFilename}</pre>
+     * <pre>{basedir}/channels/{workspaceKey}_ch{channelId}_{nameSlug}/{YYYY}/{MM}/{UUID}_{sanitizedFilename}</pre>
      *
      * <p>저장 경로는 DB의 {@code file.storage.base-dir} 설정 값을 우선 사용하며,
      * 없을 경우 {@code application.yml}의 {@code app.file-storage-dir} 기본값을 사용한다.
@@ -95,11 +95,11 @@ public class ChannelFileService {
         String originalName = sanitizeOriginalFilename(
                 file.getOriginalFilename() != null ? file.getOriginalFilename() : "file");
 
-        // 저장 경로: {basedir}/channels/{channelId}/{YYYY}/{MM}/
+        // 저장 경로: {basedir}/channels/{workspaceKey}_ch{id}_{slug}/{YYYY}/{MM}/
         String baseDir = appSettingsService.getFileStorageDir();
         LocalDate now = LocalDate.now();
-        Path dirPath = Paths.get(baseDir, "channels",
-                String.valueOf(channelId),
+        String channelFolder = buildChannelFolderSegment(channel);
+        Path dirPath = Paths.get(baseDir, "channels", channelFolder,
                 String.valueOf(now.getYear()),
                 String.format("%02d", now.getMonthValue()));
         Files.createDirectories(dirPath);
@@ -110,8 +110,7 @@ public class ChannelFileService {
         Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
 
         // storageKey: 베이스 디렉토리를 제외한 상대 경로
-        String relativeKey = Paths.get("channels",
-                String.valueOf(channelId),
+        String relativeKey = Paths.get("channels", channelFolder,
                 String.valueOf(now.getYear()),
                 String.format("%02d", now.getMonthValue()),
                 storedName).toString().replace('\\', '/');
@@ -259,9 +258,38 @@ public class ChannelFileService {
     private ChannelFileResponse toResponse(ChannelFile file) {
         return new ChannelFileResponse(
                 file.getId(), file.getChannel().getId(),
-                file.getUploadedBy().getId(), file.getOriginalFilename(),
+                file.getUploadedBy().getId(),
+                file.getUploadedBy().getName(),
+                file.getOriginalFilename(),
                 file.getContentType(), file.getSizeBytes(),
                 file.getStorageKey(), file.getCreatedAt()
         );
+    }
+
+    /**
+     * 디스크 폴더명에 워크스페이스·채널 ID·채널명 슬러그를 넣어 탐색기에서도 채널을 식별하기 쉽게 한다.
+     */
+    private static String buildChannelFolderSegment(Channel channel) {
+        String ws = channel.getWorkspaceKey() != null ? channel.getWorkspaceKey().trim() : "WS";
+        ws = ws.replaceAll("[<>:\"/\\\\|?*\\s]", "_");
+        if (ws.length() > 32) {
+            ws = ws.substring(0, 32);
+        }
+        if (ws.isEmpty()) {
+            ws = "WS";
+        }
+        String slug = slugifyChannelName(channel.getName());
+        return ws + "_ch" + channel.getId() + "_" + slug;
+    }
+
+    private static String slugifyChannelName(String name) {
+        if (name == null || name.isBlank()) {
+            return "unnamed";
+        }
+        String s = name.trim().replaceAll("[<>:\"/\\\\|?*]", "_").replaceAll("\\s+", "_");
+        if (s.isEmpty()) {
+            return "unnamed";
+        }
+        return s.length() > 48 ? s.substring(0, 48) : s;
     }
 }

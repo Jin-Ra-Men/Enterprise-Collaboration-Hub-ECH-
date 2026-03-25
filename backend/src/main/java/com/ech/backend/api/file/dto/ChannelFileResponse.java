@@ -6,6 +6,7 @@ public record ChannelFileResponse(
         Long id,
         Long channelId,
         Long uploadedByUserId,
+        String uploaderName,
         String originalFilename,
         String contentType,
         long sizeBytes,

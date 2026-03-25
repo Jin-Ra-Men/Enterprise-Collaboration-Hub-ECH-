@@ -87,14 +87,18 @@
   - `GET /api/channels/{channelId}/read-state?userId=...`
   - `PUT /api/channels/{channelId}/read-state`
   - `GET /api/channels/{channelId}/files?userId=...`
-  - `POST /api/channels/{channelId}/files`
+  - `POST /api/channels/{channelId}/files/upload?userId=...` (multipart)
+  - `POST /api/channels/{channelId}/files` (메타만)
+  - `GET /api/channels/{channelId}/files/{fileId}/download?userId=...`
   - `GET /api/channels/{channelId}/files/{fileId}/download-info?userId=...`
 - 메시지/스레드:
   - `POST /api/channels/{channelId}/messages`
   - `POST /api/channels/{channelId}/messages/{parentMessageId}/replies`
   - `GET /api/channels/{channelId}/messages/{parentMessageId}/replies`
-- 사용자 검색:
+- 사용자 검색·프로필·조직도:
   - `GET /api/users/search?q=...&department=...`
+  - `GET /api/users/organization`
+  - `GET /api/users/{userId}/profile`
 - 칸반:
   - `POST/GET/GET{id}/DELETE /api/kanban/boards`, 컬럼·카드 CRUD, 담당자 추가/삭제, `GET /api/kanban/cards/{cardId}/history`
 - 메시지→업무:
