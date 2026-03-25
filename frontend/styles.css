@@ -1320,6 +1320,56 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
   min-height: 160px;
 }
 
+/* 구성원 선택 팝업: 좌측 조직도 + 우측 검색/결과 */
+.member-picker-popup {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 880px) {
+  .member-picker-popup { grid-template-columns: 1fr; }
+}
+
+.member-picker-tree {
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--bg-input);
+  padding: 10px 12px;
+  min-height: 380px;
+  max-height: 64vh;
+  overflow: hidden;
+}
+
+.member-picker-tree .org-tree-embedded {
+  min-height: 0;
+  max-height: 52vh;
+  overflow-y: auto;
+}
+
+.member-picker-search {
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--bg-input);
+  padding: 10px 12px;
+  min-height: 380px;
+  max-height: 64vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.member-picker-search .member-search-wrap {
+  margin-bottom: 10px;
+}
+
+.member-picker-search .user-search-results {
+  flex: 1;
+  margin-bottom: 0;
+  max-height: none;
+  overflow-y: auto;
+}
+
 /* 회사 > 본부 > 팀 (details/summary) */
 .org-lvl {
   border: 1px solid var(--border-subtle);

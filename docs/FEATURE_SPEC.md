@@ -424,10 +424,10 @@
 ## 조직도(부서) 기반 사용자 검색
 - 목적: 부서/이름/이메일/사번/사용자 ID 기준으로 사용자 검색 제공 및 부서별 조직도에서 멤버 선택
 - 사용자: 로그인한 멤버(`MEMBER` 이상)
-- 관련 화면/경로: 채널·DM 만들기 모달(검색 + 조직도), 관리자 사용자 관리(확장 시)
+- 관련 화면/경로: 채널·DM 만들기 및 구성원 추가에서 `+` 팝업(`modalAddMemberPicker`)으로 좌측 조직도 + 우측 검색/결과를 함께 사용, 관리자 사용자 관리(확장 시)
 - 관련 API:
   - `GET /api/users/search?q=...&department=...`
-  - `GET /api/user-directory/organization` — ACTIVE 사용자를 **회사 → 본부 → 팀** 3단계 트리로 그룹화. 응답 루트는 `data.companies[]`이며, 각 회사에 `divisions[]` → 각 본부에 `teams[]` → 각 팀에 `users[]`. `company_name`/`division_name`/`team_name`이 비어 있으면 각각 `미지정 회사`/`미지정 본부`/`미지정 팀` 등으로 폴백. (구) `/api/users/organization` 은 정적 `/**` 매핑과 겹칠 수 있어 분리. 백엔드는 `add-mappings: false` + 명시적 프론트 3파일만 서빙해 `/api/**` 404를 방지
+  - `GET /api/user-directory/organization` — ACTIVE 사용자를 **회사 → 본부 → 팀** 3단계 트리로 그룹화. 응답 루트는 `data.companies[]`이며, 각 회사에 `divisions[]` → 각 본부에 `teams[]` → 각 팀에 `users[]`. `company_name`은 기본값으로 폴백하고, `division_name`/`team_name`이 비어 있으면 `users.department` 문자열에서 본부/부서를 유추해 폴백(예: `운영본부-IT운영팀` 패턴). (구) `/api/users/organization` 은 정적 `/**` 매핑과 겹칠 수 있어 분리. 백엔드는 `add-mappings: false` + 명시적 프론트 3파일만 서빙해 `/api/**` 404를 방지
   - `GET /api/users/profile?userId=` — 동료 프로필(프론트 기본, 이름·사원번호·이메일·부서·직위; 직책(`dutyTitle`)은 값이 있을 때만 모달에 표시. **DM 보내기**로 DM 채널 생성·입장). 응답에 `role`/`status`가 있어도 프로필 모달에는 표시하지 않음
   - `GET /api/users/{userId}/profile` — 동일(경로형, 하위 호환)
 - 관련 Socket 이벤트: 해당 없음
@@ -580,7 +580,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - `GET /api/channels/{channelId}/files?userId=...`
   - `GET /api/channels/{channelId}/files/{fileId}/download?userId=...`
 - 입력/출력:
-  - **통합 피커**: 채널 생성·DM 생성·구성원 추가 모두 **동일한 `+` 버튼 기반 팝업**(`modalAddMemberPicker`)을 사용합니다. 팝업에서 검색과 조직도(회사>본부>팀)로 사용자 선택 후 상위 모달의 선택 태그에 반영됩니다.
+  - **통합 피커**: 채널 생성·DM 생성·구성원 추가 모두 **동일한 `+` 버튼 기반 팝업**(`modalAddMemberPicker`)을 사용합니다. 팝업에서 좌측 조직도(회사>본부>팀) + 우측 검색/결과로 사용자 선택 후 상위 모달의 선택 태그에 반영됩니다.
   - 멤버 패널: `department`·`jobRank`를 한 줄 요약, `dutyTitle`은 값이 있을 때만 추가 줄(직책 없으면 UI에 안 보임)
   - 파일 업로드 성공 시: 일반 텍스트 메시지와 동일한 **메시지 행**(아바타·발신자·시간) 안에 첨부 인라인(파일명·크기·다운로드) 표시
   - **날짜 구분선**: 스레드 첫 메시지 또는 로컬 날짜가 바뀔 때 채팅 영역에 날짜 pill 표시
