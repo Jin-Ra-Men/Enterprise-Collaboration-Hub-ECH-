@@ -427,14 +427,14 @@
 - 관련 화면/경로: 채널·DM 만들기 모달(검색 + 조직도), 관리자 사용자 관리(확장 시)
 - 관련 API:
   - `GET /api/users/search?q=...&department=...`
-  - `GET /api/user-directory/organization` — ACTIVE 사용자를 부서명으로 그룹화(부서 미입력은 `미지정` 그룹). (구) `/api/users/organization` 은 정적 `/**` 매핑과 겹칠 수 있어 분리. 백엔드는 `add-mappings: false` + 명시적 프론트 3파일만 서빙해 `/api/**` 404를 방지
+  - `GET /api/user-directory/organization` — ACTIVE 사용자를 **회사 → 본부 → 팀** 3단계 트리로 그룹화. 응답 루트는 `data.companies[]`이며, 각 회사에 `divisions[]` → 각 본부에 `teams[]` → 각 팀에 `users[]`. `company_name`/`division_name`/`team_name`이 비어 있으면 각각 `미지정 회사`/`미지정 본부`/`미지정 팀` 등으로 폴백. (구) `/api/users/organization` 은 정적 `/**` 매핑과 겹칠 수 있어 분리. 백엔드는 `add-mappings: false` + 명시적 프론트 3파일만 서빙해 `/api/**` 404를 방지
   - `GET /api/users/profile?userId=` — 동료 프로필(프론트 기본, 이름·사원번호·이메일·부서·직위; 직책(`dutyTitle`)은 값이 있을 때만 모달에 표시. **DM 보내기**로 DM 채널 생성·입장). 응답에 `role`/`status`가 있어도 프로필 모달에는 표시하지 않음
   - `GET /api/users/{userId}/profile` — 동일(경로형, 하위 호환)
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:
   - 검색 입력: `q`(이름/이메일/사번/부서 부분 일치, 숫자만 입력 시 사용자 ID 일치), `department`(정확히 일치하는 부서명으로 추가 필터)
   - 검색 출력: `userId`, `employeeNo`, `name`, `email`, `department`, `jobRank`, `dutyTitle`, `role`, `status`
-  - 조직도 출력: `[{ department, users: [...] }]`
+  - 조직도 출력: `{ companies: [{ companyId, name, divisions: [{ divisionId, name, teams: [{ teamId, name, users: [...] }] }] }] }` (사용자 객체는 검색 API와 동일 필드 위주)
 - 상태 전이/예외 케이스:
   - `q`/`department`가 비어 있으면 전체 사용자 또는 부서 필터 기준 조회
 - 권한/보안:
@@ -571,7 +571,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 ---
 
 ## 채널 멤버/첨부 UX 고도화 (프론트)
-- 목적: 채널 운영 중 구성원 추가, 조직도 다중 선택, 첨부 접근성을 개선
+- 목적: 채널 운영 중 구성원 추가, 조직도 다중 선택, 첨부 접근성을 개선, 채팅 날짜 구분선, 다크 톤 UI
 - 사용자: 로그인한 멤버
 - 관련 화면/경로: 채널 만들기 모달, 채널 헤더(구성원 추가/첨부파일 모아보기), 멤버 패널, 채팅 본문
 - 관련 API:
@@ -580,9 +580,11 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - `GET /api/channels/{channelId}/files?userId=...`
   - `GET /api/channels/{channelId}/files/{fileId}/download?userId=...`
 - 입력/출력:
-  - 조직도 팝업: 부서 트리 + 사용자 체크박스(다중 선택) 후 선택 일괄 추가
+  - **통합 피커**: 채널 생성·DM·구성원 추가 모달에서 사용자 검색과 조직도(회사>본부>팀)를 **한 모달 내 2열**로 표시, 체크박스로 다중 선택 후 태그 동기화(별도 조직도 전용 오버레이 없음)
   - 멤버 패널: `department`·`jobRank`를 한 줄 요약, `dutyTitle`은 값이 있을 때만 추가 줄(직책 없으면 UI에 안 보임)
-  - 파일 업로드 성공 시: 채팅 본문에 파일 카드(파일명/크기/다운로드 버튼) 표시
+  - 파일 업로드 성공 시: 일반 텍스트 메시지와 동일한 **메시지 행**(아바타·발신자·시간) 안에 첨부 인라인(파일명·크기·다운로드) 표시
+  - **날짜 구분선**: 스레드 첫 메시지 또는 로컬 날짜가 바뀔 때 채팅 영역에 날짜 pill 표시
+  - UI: CSS 변수 기반 **다크·보라 액센트** 톤(모달·관리자·검색·조직도 블록 포함)
 - 상태 전이/예외 케이스:
   - 중복 멤버 추가 시 서버 검증 메시지를 시스템 메시지로 노출
   - 로그아웃 클릭 시 즉시 종료하지 않고 사용자 확인 후 처리

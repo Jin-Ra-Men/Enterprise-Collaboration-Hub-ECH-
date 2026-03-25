@@ -2,6 +2,20 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-03-25 (13차)
+
+### Added
+- 백엔드: 사용자·조직 트리용 `company_name` / `division_name` / `team_name` 및 `GET /api/user-directory/organization` 응답 `{ companies: [...] }` (회사→본부→팀→사용자)
+- 프론트: 채팅 날짜 구분선, 첨부를 일반 메시지 행과 동일 레이아웃으로 표시, 구성원 추가·채널·DM용 **검색+조직도 통합 피커** (`.picker-unified`)
+- 프론트: 모달·관리자·검색·조직도·첨부 블록까지 이어지는 **다크 refined** 테마 (`styles.css` CSS 변수)
+
+### Changed
+- `docs/sql/seed_test_users.sql`, `postgresql_schema_draft.sql`: 회사/본부/팀 샘플·컬럼 반영
+- `UserDirectoryApiTest`: `$.data.companies` 기준 검증
+
+### Docs
+- `docs/FEATURE_SPEC.md`, `docs/HANDOVER.md`, `README.md` — 조직 API·UI 반영
+
 ## 2026-03-25 (12차)
 
 ### Added

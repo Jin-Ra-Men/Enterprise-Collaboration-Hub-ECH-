@@ -17,7 +17,7 @@ class UserDirectoryApiTest extends BaseIntegrationTest {
         mockMvc.perform(get("/api/user-directory/organization")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").isArray());
+                .andExpect(jsonPath("$.data.companies").isArray());
     }
 
     @Test

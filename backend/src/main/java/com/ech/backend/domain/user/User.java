@@ -28,6 +28,18 @@ public class User {
     @Column(length = 100)
     private String department;
 
+    /** 최상위 회사명(조직도 루트). */
+    @Column(name = "company_name", length = 120)
+    private String companyName;
+
+    /** 본부 단위. */
+    @Column(name = "division_name", length = 120)
+    private String divisionName;
+
+    /** 팀 단위. */
+    @Column(name = "team_name", length = 120)
+    private String teamName;
+
     /** 조직 직위(예: 대리, 과장). UI는 값이 없으면 `-` 등으로 표시. */
     @Column(name = "job_rank", length = 100)
     private String jobRank;
@@ -84,6 +96,18 @@ public class User {
 
     public String getDepartment() {
         return department;
+    }
+
+    public String getCompanyName() {
+        return companyName;
+    }
+
+    public String getDivisionName() {
+        return divisionName;
+    }
+
+    public String getTeamName() {
+        return teamName;
     }
 
     public String getJobRank() {
