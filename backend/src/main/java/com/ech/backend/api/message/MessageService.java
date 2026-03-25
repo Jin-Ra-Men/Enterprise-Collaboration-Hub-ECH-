@@ -12,8 +12,11 @@ import com.ech.backend.domain.message.Message;
 import com.ech.backend.domain.message.MessageRepository;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 public class MessageService {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
@@ -58,6 +63,51 @@ public class MessageService {
                 message.getId(),
                 channel.getWorkspaceKey(),
                 "channelId=" + channelId,
+                null
+        );
+
+        return toResponse(message);
+    }
+
+    /**
+     * 채널에 파일 첨부를 일반 메시지 목록에 남긴다(새로고침 후에도 동일하게 보이도록).
+     */
+    @Transactional
+    public MessageResponse createFileAttachmentMessage(
+            Long channelId,
+            Long senderId,
+            Long fileId,
+            String originalFilename,
+            long sizeBytes
+    ) {
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new IllegalArgumentException("채널을 찾을 수 없습니다."));
+        User sender = userRepository.findById(senderId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        if (!channelMemberRepository.existsByChannelIdAndUserId(channelId, senderId)) {
+            throw new ForbiddenException("채널에 참여한 사용자가 아닙니다.");
+        }
+        String body;
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("kind", "FILE");
+            payload.put("fileId", fileId);
+            payload.put("originalFilename", originalFilename != null ? originalFilename : "");
+            payload.put("sizeBytes", sizeBytes);
+            body = OBJECT_MAPPER.writeValueAsString(payload);
+        } catch (Exception e) {
+            throw new IllegalStateException("파일 메시지 본문 직렬화 실패", e);
+        }
+
+        Message message = messageRepository.save(new Message(channel, sender, null, body, "FILE"));
+
+        auditLogService.safeRecord(
+                AuditEventType.MESSAGE_SENT,
+                sender.getId(),
+                "MESSAGE",
+                message.getId(),
+                channel.getWorkspaceKey(),
+                "channelId=" + channelId + " type=FILE fileId=" + fileId,
                 null
         );
 
@@ -123,7 +173,8 @@ public class MessageService {
                 message.getSender().getName(),
                 parentMessageId,
                 message.getBody(),
-                message.getCreatedAt()
+                message.getCreatedAt(),
+                message.getMessageType()
         );
     }
 }

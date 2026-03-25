@@ -137,7 +137,7 @@
 
 ### 사용자 검색/Presence 인수인계 메모
 - 사용자 검색은 `users.department`를 조직도 속성으로 사용해 부서 필터를 지원합니다.
-- `GET /api/user-directory/organization` 응답은 `data.companies[]` → `divisions[]` → `teams[]` → `users[]` 3단계 트리이며, DB의 `company_name` / `division_name` / `team_name`(및 기존 `department` 폴백)을 사용합니다. 프론트는 채널·DM·구성원 추가 모달에서 검색과 조직도를 한 화면(`.picker-unified`)에 띄웁니다.
+- `GET /api/user-directory/organization` 응답은 `data.companies[]` → `divisions[]` → `teams[]` → `users[]` 3단계 트리이며, DB의 `company_name` / `division_name` / `team_name`(및 기존 `department` 폴백)을 사용합니다. 프론트는 채널·DM 생성 모달에서 검색과 조직도를 한 화면(`.picker-unified`)에 띄우고, **구성원 추가**는 메인 모달의 **+** 버튼으로 `modalAddMemberPicker` 오버레이를 열어 동일 피커를 사용합니다.
 - 검색 키워드(`q`)는 이름/이메일/사번에 대해 부분 일치 조회를 수행합니다.
 - Presence는 Realtime 서버 메모리 기반으로 관리됩니다.
 - 소켓별로 사용자를 추적하며, 해당 사용자의 **모든** 소켓이 끊기면 OFFLINE 브로드캐스트 후 메모리에서 제거합니다(유령 userId 누적 방지).
@@ -249,7 +249,7 @@
 - `download-info`는 멤버 검증 후 `storageKey`와 안내 문구를 돌려주며, 실제 사전 서명 URL은 스토리지 연동 단계에서 확장합니다.
 
 ### 프론트엔드 데모 UI 메모
-- 동료 **프로필 모달**(`modalUserProfile`): 역할·계정 상태는 표시하지 않음. **직위**(`jobRank`)는 항상 행(없으면 `-`), **직책**(`dutyTitle`)은 값이 있을 때만 `profileDutyTitleDt`/`profileModalDutyTitle` 행 표시. **DM 보내기**(`btnProfileDm`)는 `startDmWithUser`로 `POST /api/channels`(타입 `DM`) + 상대 `userId` 멤버 추가 후 `selectChannel`로 전환(자기 자신이면 버튼 비활성).
+- 동료 **프로필 모달**(`modalUserProfile`): 역할·계정 상태는 표시하지 않음. **직위**(`jobRank`)는 항상 행(없으면 `-`), **직책**(`dutyTitle`)은 값이 있을 때만 `profileDutyTitleDt`/`profileModalDutyTitle` 행 표시. **DM 보내기**(`btnProfileDm`)는 `startDmWithUser`로 `POST /api/channels`에 `channelType: DM`과 `dmPeerUserIds: [상대 userId]`를 한 번에 보내 서버가 내부 이름·멤버십을 처리한 뒤 `selectChannel`로 전환(자기 자신이면 버튼 비활성). DB `channels.channel_type`은 `DM` 문자열로 저장됩니다.
 - **프레즌스**: 채팅 메시지(`.msg-avatar-wrap`)·멤버 패널(`.member-avatar-wrap`)에서 점을 아바타 사각형 **우측 하단**에 겹쳐 표시(`refreshPresenceDots`가 `[data-presence-user]` 갱신).
 - `frontend/app.js`는 수신 메시지 DOM을 최대 200개로 유지해 브라우저 메모리·렌더 비용이 무한 증가하지 않도록 합니다.
 - 채팅 시각 표시: **동일 발신자·동일 분(로컬 캘린더 분)** 묶음에서는 **그 분의 마지막 메시지 줄에만** 시각을 붙이고, **분이 바뀌면** 각 메시지 줄에 시각을 붙인다(`minuteKey` / `renderMessages` / `appendMessageRealtime`). 시각은 **24시간제 `HH:mm`**이며 본문 바로 뒤에 약간 띄워 인라인으로 붙인다(`fmtTime`, `.msg-content-row`).

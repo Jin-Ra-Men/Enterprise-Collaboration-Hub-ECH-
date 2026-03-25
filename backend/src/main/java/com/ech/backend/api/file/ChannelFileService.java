@@ -1,6 +1,7 @@
 package com.ech.backend.api.file;
 
 import com.ech.backend.api.auditlog.AuditLogService;
+import com.ech.backend.api.message.MessageService;
 import com.ech.backend.api.file.dto.ChannelFileResponse;
 import com.ech.backend.api.file.dto.CreateChannelFileMetadataRequest;
 import com.ech.backend.api.file.dto.FileDownloadInfoResponse;
@@ -26,6 +27,8 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.PageRequest;
@@ -40,6 +43,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Transactional(readOnly = true)
 public class ChannelFileService {
 
+    private static final Logger log = LoggerFactory.getLogger(ChannelFileService.class);
     private static final int LIST_PAGE_SIZE = 100;
 
     private final ChannelRepository channelRepository;
@@ -48,6 +52,7 @@ public class ChannelFileService {
     private final ChannelFileRepository channelFileRepository;
     private final AuditLogService auditLogService;
     private final AppSettingsService appSettingsService;
+    private final MessageService messageService;
 
     public ChannelFileService(
             ChannelRepository channelRepository,
@@ -55,7 +60,8 @@ public class ChannelFileService {
             UserRepository userRepository,
             ChannelFileRepository channelFileRepository,
             AuditLogService auditLogService,
-            AppSettingsService appSettingsService
+            AppSettingsService appSettingsService,
+            MessageService messageService
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
@@ -63,6 +69,7 @@ public class ChannelFileService {
         this.channelFileRepository = channelFileRepository;
         this.auditLogService = auditLogService;
         this.appSettingsService = appSettingsService;
+        this.messageService = messageService;
     }
 
     public List<ChannelFileResponse> listFiles(Long channelId, Long requesterUserId) {
@@ -130,6 +137,7 @@ public class ChannelFileService {
                 "channelId=" + channelId + " filename=" + originalName + " size=" + file.getSize(),
                 null
         );
+        recordFileMessage(saved);
         return toResponse(saved);
     }
 
@@ -157,22 +165,37 @@ public class ChannelFileService {
         Resource resource = new FileSystemResource(filePath);
         String encodedName = URLEncoder.encode(meta.getOriginalFilename(), StandardCharsets.UTF_8)
                 .replace("+", "%20");
+        String asciiName = asciiContentDispositionFilename(meta.getOriginalFilename());
 
         MediaType mediaType = resolveDownloadMediaType(meta.getContentType());
 
+        String workspaceKey = meta.getChannel().getWorkspaceKey();
         auditLogService.safeRecord(
                 AuditEventType.FILE_DOWNLOAD_INFO_ACCESSED,
-                requesterUserId, "FILE", fileId, null,
+                requesterUserId, "FILE", fileId, workspaceKey,
                 "channelId=" + channelId + " fileId=" + fileId, null
         );
 
-        long contentLen = Files.size(filePath);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename*=UTF-8''" + encodedName)
+                        "attachment; filename=\"" + asciiName + "\"; filename*=UTF-8''" + encodedName)
                 .contentType(mediaType)
-                .contentLength(contentLen)
                 .body(resource);
+    }
+
+    private static String asciiContentDispositionFilename(String original) {
+        if (original == null || original.isBlank()) {
+            return "download";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (char c : original.toCharArray()) {
+            sb.append(c >= 0x20 && c <= 0x7e && c != '"' && c != '\\' ? c : '_');
+        }
+        String s = sb.toString().trim();
+        if (s.isEmpty()) {
+            return "download";
+        }
+        return s.length() > 80 ? s.substring(0, 80) : s;
     }
 
     private static MediaType resolveDownloadMediaType(String raw) {
@@ -231,7 +254,22 @@ public class ChannelFileService {
                 channel.getWorkspaceKey(),
                 "channelId=" + channelId + " filename=" + safeName, null
         );
+        recordFileMessage(saved);
         return toResponse(saved);
+    }
+
+    private void recordFileMessage(ChannelFile saved) {
+        try {
+            messageService.createFileAttachmentMessage(
+                    saved.getChannel().getId(),
+                    saved.getUploadedBy().getId(),
+                    saved.getId(),
+                    saved.getOriginalFilename(),
+                    saved.getSizeBytes()
+            );
+        } catch (Exception e) {
+            log.warn("파일 첨부 메시지 기록 실패 (fileId={}): {}", saved.getId(), e.getMessage());
+        }
     }
 
     // ── private helpers ──────────────────────────────────────────

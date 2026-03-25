@@ -58,10 +58,15 @@ public class Message {
     }
 
     public Message(Channel channel, User sender, Message parentMessage, String body) {
+        this(channel, sender, parentMessage, body, "TEXT");
+    }
+
+    public Message(Channel channel, User sender, Message parentMessage, String body, String messageType) {
         this.channel = channel;
         this.sender = sender;
         this.parentMessage = parentMessage;
         this.body = body;
+        this.messageType = messageType != null && !messageType.isBlank() ? messageType : "TEXT";
     }
 
     public Long getId() {
@@ -82,6 +87,10 @@ public class Message {
 
     public String getBody() {
         return body;
+    }
+
+    public String getMessageType() {
+        return messageType;
     }
 
     public OffsetDateTime getArchivedAt() {
