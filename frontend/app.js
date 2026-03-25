@@ -174,7 +174,6 @@ logoutBtn.addEventListener("click", () => {
   channelListEl.innerHTML = "";
   dmListEl.innerHTML      = "";
   messagesEl.innerHTML    = "";
-  lastSenderId            = null;
   document.getElementById("adminSection").classList.add("hidden");
   showView("viewWelcome");
   showLogin();
@@ -273,13 +272,12 @@ async function loadMessages(channelId) {
     const res  = await apiFetch(`/api/channels/${channelId}/messages?userId=${currentUser.userId}&limit=50`);
     const json = await res.json();
     messagesEl.innerHTML = "";
-    lastSenderId = null;
     if (!res.ok) { appendSystemMsg("메시지 로드 실패: " + (json.error?.message || "")); return; }
     const msgs = json.data || [];
     if (msgs.length === 0) {
       appendSystemMsg("아직 메시지가 없습니다. 첫 메시지를 보내보세요! 👋");
     } else {
-      msgs.forEach(m => appendMessage(m));
+      renderMessages(msgs);
     }
   } catch (err) {
     appendSystemMsg("메시지 로드 중 오류 발생");
@@ -312,50 +310,108 @@ async function loadChannelMembers(channelId) {
 }
 
 /* ==========================================================================
- * 메시지 렌더링
+ * 메시지 렌더링 (Slack 유사: 같은 분·같은 사람 묶음 → 시간은 마지막 줄만 / 분이 바뀌면 줄마다 시간)
  * ========================================================================== */
-let lastSenderId = null;
 
-function appendMessage(msg) {
+/** 로컬 시간 기준 동일 캘린더 분 키 */
+function minuteKey(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
+  const da = String(d.getDate()).padStart(2, "0");
+  const h = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${y}-${mo}-${da}T${h}:${mi}`;
+}
+
+/** 다음 줄이 같은 사람·같은 분이면 현재 줄에는 시각 미표시 */
+function shouldShowMessageTime(msgs, i) {
+  const cur = msgs[i];
+  const next = msgs[i + 1];
+  if (!next) return true;
+  if (Number(next.senderId) !== Number(cur.senderId)) return true;
+  if (minuteKey(next.createdAt) !== minuteKey(cur.createdAt)) return true;
+  return false;
+}
+
+/** 아바타+이름 행: 이전 메시지와 발신자가 다를 때만 */
+function shouldShowAvatarForMessage(msgs, i) {
+  if (i === 0) return true;
+  return Number(msgs[i - 1].senderId) !== Number(msgs[i].senderId);
+}
+
+function createMessageRowElement(msg, { showAvatar, showTime }) {
   const senderIdNum = Number(msg.senderId);
   const isMine =
     currentUser && Number(currentUser.userId) === senderIdNum;
   const senderName = msg.senderName || `user#${senderIdNum}`;
-
-  // 같은 발신자의 연속 메시지는 이름/아바타 생략 (API number / 소켓 string 혼용 대비)
-  const isContinued =
-    lastSenderId !== null && Number(lastSenderId) === senderIdNum;
-  lastSenderId = senderIdNum;
-
   const div = document.createElement("div");
-  div.className = `msg-row ${isMine ? "msg-mine" : "msg-other"} ${isContinued ? "msg-continued" : ""}`;
+  div.className = `msg-row msg-chat ${isMine ? "msg-mine" : "msg-other"}${showAvatar ? "" : " msg-continued"}`;
+  div.dataset.senderId = String(senderIdNum);
+  div.dataset.minuteKey = minuteKey(msg.createdAt);
 
-  if (isContinued) {
-    div.innerHTML = `
-      <div class="msg-spacer"></div>
-      <div class="msg-body">
-        <p class="msg-text">${escHtml(msg.text)}</p>
-      </div>`;
-  } else {
+  const timeHtml = showTime
+    ? `<span class="msg-time">${escHtml(fmtTime(msg.createdAt))}</span>`
+    : "";
+
+  if (showAvatar) {
     const initials = avatarInitials(senderName);
     div.innerHTML = `
       <div class="msg-avatar">${initials}</div>
       <div class="msg-body">
-        <div class="msg-meta">
-          <span class="msg-sender">${escHtml(senderName)}</span>
-          <span class="msg-time">${fmtTime(msg.createdAt)}</span>
+        <div class="msg-meta"><span class="msg-sender">${escHtml(senderName)}</span></div>
+        <div class="msg-content-row">
+          <p class="msg-text">${escHtml(msg.text)}</p>
+          ${timeHtml}
         </div>
-        <p class="msg-text">${escHtml(msg.text)}</p>
+      </div>`;
+  } else {
+    div.innerHTML = `
+      <div class="msg-spacer"></div>
+      <div class="msg-body">
+        <div class="msg-content-row">
+          <p class="msg-text">${escHtml(msg.text)}</p>
+          ${timeHtml}
+        </div>
       </div>`;
   }
+  return div;
+}
 
-  messagesEl.appendChild(div);
+function renderMessages(msgs) {
+  messagesEl.innerHTML = "";
+  if (!msgs.length) return;
+  msgs.forEach((m, i) => {
+    const showAvatar = shouldShowAvatarForMessage(msgs, i);
+    const showTime = shouldShowMessageTime(msgs, i);
+    messagesEl.appendChild(createMessageRowElement(m, { showAvatar, showTime }));
+  });
+  trimMessages();
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+/** 소켓으로 도착한 한 줄: 직전 줄과 같은 사람·같은 분이면 직전 줄에서 시각 제거 후 추가 */
+function appendMessageRealtime(msg) {
+  const sid = Number(msg.senderId);
+  const mk = minuteKey(msg.createdAt);
+  const rows = messagesEl.querySelectorAll(".msg-row.msg-chat");
+  const last = rows[rows.length - 1];
+
+  if (last && Number(last.dataset.senderId) === sid && last.dataset.minuteKey === mk) {
+    const timeEl = last.querySelector(".msg-time");
+    if (timeEl) timeEl.remove();
+  }
+
+  const showAvatar = !last || Number(last.dataset.senderId) !== sid;
+  messagesEl.appendChild(
+    createMessageRowElement(msg, { showAvatar, showTime: true })
+  );
   trimMessages();
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
 function appendSystemMsg(text) {
-  lastSenderId = null;
   const div = document.createElement("div");
   div.className = "msg-system";
   div.textContent = text;
@@ -400,7 +456,7 @@ function initSocket() {
   socket.on("message:new", (msg) => {
     // pg bigint → string 가능성 대비 Number()로 비교
     if (Number(msg.channelId) === activeChannelId) {
-      appendMessage(msg);
+      appendMessageRealtime(msg);
     }
   });
 

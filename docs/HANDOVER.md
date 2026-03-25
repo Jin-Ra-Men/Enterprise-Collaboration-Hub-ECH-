@@ -243,6 +243,7 @@
 
 ### 프론트엔드 데모 UI 메모
 - `frontend/app.js`는 수신 메시지 DOM을 최대 200개로 유지해 브라우저 메모리·렌더 비용이 무한 증가하지 않도록 합니다.
+- 채팅 시각 표시: **동일 발신자·동일 분(로컬 캘린더 분)** 묶음에서는 **그 분의 마지막 메시지 줄에만** 시각을 붙이고, **분이 바뀌면** 각 메시지 줄에 시각을 붙인다(`minuteKey` / `renderMessages` / `appendMessageRealtime`).
 
 ### Backend 커넥션 풀 메모
 - `application.yml`의 Hikari `maximum-pool-size`는 `DB_POOL_MAX`, `connection-timeout`은 `DB_POOL_CONNECT_TIMEOUT_MS`와 연동됩니다.
