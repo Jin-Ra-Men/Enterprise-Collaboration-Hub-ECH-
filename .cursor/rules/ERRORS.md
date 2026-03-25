@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-03-25 — Git 커밋 메시지 한글 인코딩 재발
+
+- **에러 요약**: `git commit --amend -F` 실행 후 커밋 메시지 한글이 모지바케(깨진 문자)로 저장됨
+- **발생 위치**: PowerShell에서 `Out-File -Encoding UTF8`로 생성한 `commit_msg.txt` 사용 시
+- **원인**: PowerShell `Out-File -Encoding UTF8`이 **UTF-8 BOM** 포함 파일을 생성함. Git이 BOM을 제거하지 않고 그대로 인코딩 처리하여 한글이 깨짐
+- **해결**: Python `pathlib.Path.write_bytes(msg.encode('utf-8'))`로 **BOM 없는 UTF-8** 파일 생성 후, `git -c i18n.commitEncoding=utf-8 commit --amend -F tools/commit_msg.txt` 실행
+- **재발 방지**: 커밋 메시지 파일 작성 시 반드시 Python `write_bytes(str.encode('utf-8'))` 사용할 것
+
+---
+
 ## 2026-03-24 — 프론트엔드 정적 파일 서빙 실패 (500 반환)
 
 - **에러 요약**: `http://localhost:8080/index.html` 접속 시 HTML 대신 `{"code":"INTERNAL_SERVER_ERROR"}` JSON 반환
