@@ -43,12 +43,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Modifying
     @Query(value = """
-            INSERT INTO users (employee_no, email, name, department, role, status, created_at, updated_at)
-            VALUES (:employeeNo, :email, :name, :department, :role, :status, NOW(), NOW())
+            INSERT INTO users (employee_no, email, name, department, job_rank, duty_title, role, status, created_at, updated_at)
+            VALUES (:employeeNo, :email, :name, :department, :jobRank, :dutyTitle, :role, :status, NOW(), NOW())
             ON CONFLICT (employee_no) DO UPDATE SET
                 email = EXCLUDED.email,
                 name = EXCLUDED.name,
                 department = EXCLUDED.department,
+                job_rank = EXCLUDED.job_rank,
+                duty_title = EXCLUDED.duty_title,
                 role = EXCLUDED.role,
                 status = EXCLUDED.status,
                 updated_at = NOW()
@@ -58,6 +60,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
             @Param("email") String email,
             @Param("name") String name,
             @Param("department") String department,
+            @Param("jobRank") String jobRank,
+            @Param("dutyTitle") String dutyTitle,
             @Param("role") String role,
             @Param("status") String status
     );

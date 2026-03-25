@@ -247,7 +247,8 @@
 - `download-info`는 멤버 검증 후 `storageKey`와 안내 문구를 돌려주며, 실제 사전 서명 URL은 스토리지 연동 단계에서 확장합니다.
 
 ### 프론트엔드 데모 UI 메모
-- 동료 **프로필 모달**(`modalUserProfile`): 역할·계정 상태는 표시하지 않음. **DM 보내기**(`btnProfileDm`)는 `startDmWithUser`로 `POST /api/channels`(타입 `DM`) + 상대 `userId` 멤버 추가 후 `selectChannel`로 전환(자기 자신이면 버튼 비활성).
+- 동료 **프로필 모달**(`modalUserProfile`): 역할·계정 상태는 표시하지 않음. **직위**(`jobRank`)는 항상 행(없으면 `-`), **직책**(`dutyTitle`)은 값이 있을 때만 `profileDutyTitleDt`/`profileModalDutyTitle` 행 표시. **DM 보내기**(`btnProfileDm`)는 `startDmWithUser`로 `POST /api/channels`(타입 `DM`) + 상대 `userId` 멤버 추가 후 `selectChannel`로 전환(자기 자신이면 버튼 비활성).
+- **프레즌스**: 채팅 메시지(`.msg-avatar-wrap`)·멤버 패널(`.member-avatar-wrap`)에서 점을 아바타 사각형 **우측 하단**에 겹쳐 표시(`refreshPresenceDots`가 `[data-presence-user]` 갱신).
 - `frontend/app.js`는 수신 메시지 DOM을 최대 200개로 유지해 브라우저 메모리·렌더 비용이 무한 증가하지 않도록 합니다.
 - 채팅 시각 표시: **동일 발신자·동일 분(로컬 캘린더 분)** 묶음에서는 **그 분의 마지막 메시지 줄에만** 시각을 붙이고, **분이 바뀌면** 각 메시지 줄에 시각을 붙인다(`minuteKey` / `renderMessages` / `appendMessageRealtime`). 시각은 **24시간제 `HH:mm`**이며 본문 바로 뒤에 약간 띄워 인라인으로 붙인다(`fmtTime`, `.msg-content-row`).
 

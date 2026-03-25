@@ -5,6 +5,8 @@ public record ExternalOrgUser(
         String email,
         String name,
         String department,
+        String jobRank,
+        String dutyTitle,
         String role,
         String status
 ) {

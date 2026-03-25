@@ -7,6 +7,8 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) NOT NULL UNIQUE,
     name VARCHAR(100) NOT NULL,
     department VARCHAR(100),
+    job_rank VARCHAR(100),
+    duty_title VARCHAR(100),
     role VARCHAR(30) NOT NULL DEFAULT 'MEMBER',
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     -- BCrypt 해시. 그룹웨어 연동 시 외부 인증 사용 → NULL 허용
@@ -16,6 +18,8 @@ CREATE TABLE IF NOT EXISTS users (
 );
 -- 기존 테이블에 컬럼 추가 (재실행 시 오류 무시)
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS job_rank VARCHAR(100);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS duty_title VARCHAR(100);
 
 CREATE TABLE IF NOT EXISTS channels (
     id BIGSERIAL PRIMARY KEY,

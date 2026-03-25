@@ -6,6 +6,8 @@ public record UserSearchResponse(
         String name,
         String email,
         String department,
+        String jobRank,
+        String dutyTitle,
         String role,
         String status
 ) {

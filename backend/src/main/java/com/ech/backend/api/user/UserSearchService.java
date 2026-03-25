@@ -57,6 +57,8 @@ public class UserSearchService {
                 user.getName(),
                 user.getEmail(),
                 user.getDepartment(),
+                user.getJobRank(),
+                user.getDutyTitle(),
                 user.getRole(),
                 user.getStatus()
         );
@@ -69,6 +71,8 @@ public class UserSearchService {
                 user.getName(),
                 user.getEmail(),
                 user.getDepartment(),
+                user.getJobRank(),
+                user.getDutyTitle(),
                 user.getRole(),
                 user.getStatus()
         );
