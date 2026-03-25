@@ -679,6 +679,8 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 .member-search-wrap input { flex: 1; padding: 8px 12px; border: 1.5px solid #ddd; border-radius: 6px; font-size: 14px; }
 .btn-search { padding: 8px 16px; background: #4a154b; color: #fff; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; }
 .btn-search:hover { background: #611f69; }
+.btn-search-sub { background: #1264a3; }
+.btn-search-sub:hover { background: #0f4f81; }
 
 .user-search-results {
   max-height: 180px;
@@ -852,6 +854,8 @@ button.msg-sender:hover { text-decoration: underline; }
   color: inherit;
 }
 .member-name-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.member-name-wrap { display: inline-flex; flex-direction: column; min-width: 0; }
+.member-org-txt { font-size: 12px; color: #868686; }
 
 /* 프로필 모달 */
 .profile-body { text-align: center; }
@@ -883,11 +887,26 @@ button.msg-sender:hover { text-decoration: underline; }
 .org-picker-details { margin-top: 12px; border: 1px solid #e8e8e8; border-radius: 8px; padding: 8px 12px; background: #fafafa; }
 .org-picker-details > summary { cursor: pointer; font-weight: 600; font-size: 14px; }
 .org-tree { margin-top: 10px; max-height: 220px; overflow-y: auto; font-size: 13px; }
+.org-tree-popup { max-height: 52vh; overflow-y: auto; font-size: 13px; }
 .org-dept { margin-bottom: 8px; border-radius: 6px; background: #fff; border: 1px solid #eee; }
 .org-dept > summary { padding: 8px 10px; cursor: pointer; font-weight: 600; }
 .org-dept-count { font-weight: 400; color: #616061; font-size: 12px; }
 .org-user-list { padding: 0 8px 8px; }
 .org-user-list li { margin: 4px 0; }
+.org-user-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: #f4f4f4;
+  cursor: pointer;
+}
+.org-user-check:hover { border-color: #ccc; background: #fff; }
+.org-user-checkbox { margin-top: 2px; }
 .org-user-btn {
   width: 100%;
   text-align: left;
@@ -901,6 +920,21 @@ button.msg-sender:hover { text-decoration: underline; }
 .org-user-btn:hover { border-color: #ccc; background: #fff; }
 .org-user-name { display: block; font-weight: 600; }
 .org-user-email { display: block; font-size: 12px; color: #616061; }
+
+.msg-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  margin: 6px 0;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  background: #fafafa;
+}
+.msg-file-icon { font-size: 18px; }
+.msg-file-body { flex: 1; min-width: 0; }
+.msg-file-name { font-size: 14px; font-weight: 600; word-break: break-all; }
+.msg-file-sub { font-size: 12px; color: #868686; margin-top: 2px; }
 
 /* 스크롤바 스타일 */
 ::-webkit-scrollbar { width: 6px; height: 6px; }

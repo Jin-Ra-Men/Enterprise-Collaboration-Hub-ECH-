@@ -427,8 +427,9 @@
 - 관련 화면/경로: 채널·DM 만들기 모달(검색 + 조직도), 관리자 사용자 관리(확장 시)
 - 관련 API:
   - `GET /api/users/search?q=...&department=...`
-  - `GET /api/users/organization` — ACTIVE 사용자를 부서명으로 그룹화(부서 미입력은 `미지정` 그룹)
-  - `GET /api/users/{userId}/profile` — 동료 프로필(이름·사원번호·이메일·부서·역할·상태)
+  - `GET /api/user-directory/organization` — ACTIVE 사용자를 부서명으로 그룹화(부서 미입력은 `미지정` 그룹). (구) `/api/users/organization` 은 정적 `/**` 매핑과 겹칠 수 있어 분리. 백엔드는 `add-mappings: false` + 명시적 프론트 3파일만 서빙해 `/api/**` 404를 방지
+  - `GET /api/users/profile?userId=` — 동료 프로필(프론트 기본, 이름·사원번호·이메일·부서; **DM 보내기**로 동일 플로우로 DM 채널 생성·입장). 응답에 `role`/`status`가 있어도 프로필 모달에는 표시하지 않음
+  - `GET /api/users/{userId}/profile` — 동일(경로형, 하위 호환)
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:
   - 검색 입력: `q`(이름/이메일/사번/부서 부분 일치, 숫자만 입력 시 사용자 ID 일치), `department`(정확히 일치하는 부서명으로 추가 필터)
@@ -566,3 +567,28 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - `backend/src/main/java/com/ech/backend/api/auditlog/AuditLogService.java`
   - `backend/src/main/java/com/ech/backend/api/auditlog/AuditLogController.java`
   - `backend/src/main/java/com/ech/backend/api/auditlog/dto/AuditLogResponse.java`
+
+---
+
+## 채널 멤버/첨부 UX 고도화 (프론트)
+- 목적: 채널 운영 중 구성원 추가, 조직도 다중 선택, 첨부 접근성을 개선
+- 사용자: 로그인한 멤버
+- 관련 화면/경로: 채널 만들기 모달, 채널 헤더(구성원 추가/첨부파일 모아보기), 멤버 패널, 채팅 본문
+- 관련 API:
+  - `GET /api/user-directory/organization` (조직도 트리 데이터)
+  - `POST /api/channels/{channelId}/members` (채널 생성 후 추가 멤버 등록)
+  - `GET /api/channels/{channelId}/files?userId=...`
+  - `GET /api/channels/{channelId}/files/{fileId}/download?userId=...`
+- 입력/출력:
+  - 조직도 팝업: 부서 트리 + 사용자 체크박스(다중 선택) 후 선택 일괄 추가
+  - 멤버 패널: 역할 대신 `department` 소형 텍스트 표시
+  - 파일 업로드 성공 시: 채팅 본문에 파일 카드(파일명/크기/다운로드 버튼) 표시
+- 상태 전이/예외 케이스:
+  - 중복 멤버 추가 시 서버 검증 메시지를 시스템 메시지로 노출
+  - 로그아웃 클릭 시 즉시 종료하지 않고 사용자 확인 후 처리
+- 구현 파일:
+  - `frontend/index.html`
+  - `frontend/app.js`
+  - `frontend/styles.css`
+  - `backend/src/main/java/com/ech/backend/api/channel/dto/ChannelMemberResponse.java`
+  - `backend/src/main/java/com/ech/backend/api/channel/ChannelService.java`

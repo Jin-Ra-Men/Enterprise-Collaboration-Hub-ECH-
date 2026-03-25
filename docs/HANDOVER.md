@@ -15,7 +15,7 @@
 ## 2) 로컬 실행 요약
 1. Realtime 실행: `cd realtime && npm install && npm run dev`
 2. Backend 실행: `cd backend && gradlew.bat bootRun` (Windows)
-3. Frontend 확인: `frontend/index.html` 브라우저 열기
+3. 프론트 확인: **`http://localhost:8080/`** (백엔드가 `index.html` / `styles.css` / `app.js` 만 정적 제공). `file://` 로 `frontend/index.html` 을 열면 API·쿠키·CORS 이슈가 날 수 있음.
 4. 환경 설정 상세: `docs/ENVIRONMENT_SETUP.md`
 
 ## 2-1) 개발자 / 운영·관리자 — 무엇부터 보면 되나
@@ -23,7 +23,7 @@
   - API·도메인 동작: `docs/FEATURE_SPEC.md`, 엔드포인트 목록은 아래 **6)**.
   - 앞으로의 기능 순서: `docs/ROADMAP.md`, 요구 배경: `docs/PROJECT_REQUIREMENTS.md`.
   - DB 구조: `docs/sql/postgresql_schema_draft.sql` 및 **3-1)**. 로컬에서 사람 데이터가 필요하면 `docs/sql/seed_test_users.sql` (`docs/ENVIRONMENT_SETUP.md` 5-1절).
-  - Java는 `backend/`, 실시간은 `realtime/`(Express 없이 `http`+Socket.io), 데모 UI는 `frontend/`.
+  - Java는 `backend/`, 실시간은 `realtime/`(Express 없이 `http`+Socket.io), 데모 UI 소스는 `frontend/`(로컬에서는 `bootRun` 시 8080에서 위 3개 파일만 서빙, **`/**` 전체를 정적으로 열지 않음** — `/api/**` 가 리소스 핸들러에 먹히는 404 방지).
 - **운영·관리자**
   - 구성 요소: Java API 서버, Node 실시간 서버, PostgreSQL, (첨부는 외부 스토리지 연동 전제).
   - 가용성 확인: Backend `GET /api/health`, Realtime `GET /health`(DB 연계 여부 포함).
@@ -97,8 +97,9 @@
   - `GET /api/channels/{channelId}/messages/{parentMessageId}/replies`
 - 사용자 검색·프로필·조직도:
   - `GET /api/users/search?q=...&department=...`
-  - `GET /api/users/organization`
-  - `GET /api/users/{userId}/profile`
+  - `GET /api/user-directory/organization`
+  - `GET /api/users/profile?userId=...`
+  - `GET /api/users/{userId}/profile` (호환)
 - 칸반:
   - `POST/GET/GET{id}/DELETE /api/kanban/boards`, 컬럼·카드 CRUD, 담당자 추가/삭제, `GET /api/kanban/cards/{cardId}/history`
 - 메시지→업무:
@@ -246,6 +247,7 @@
 - `download-info`는 멤버 검증 후 `storageKey`와 안내 문구를 돌려주며, 실제 사전 서명 URL은 스토리지 연동 단계에서 확장합니다.
 
 ### 프론트엔드 데모 UI 메모
+- 동료 **프로필 모달**(`modalUserProfile`): 역할·계정 상태는 표시하지 않음. **DM 보내기**(`btnProfileDm`)는 `startDmWithUser`로 `POST /api/channels`(타입 `DM`) + 상대 `userId` 멤버 추가 후 `selectChannel`로 전환(자기 자신이면 버튼 비활성).
 - `frontend/app.js`는 수신 메시지 DOM을 최대 200개로 유지해 브라우저 메모리·렌더 비용이 무한 증가하지 않도록 합니다.
 - 채팅 시각 표시: **동일 발신자·동일 분(로컬 캘린더 분)** 묶음에서는 **그 분의 마지막 메시지 줄에만** 시각을 붙이고, **분이 바뀌면** 각 메시지 줄에 시각을 붙인다(`minuteKey` / `renderMessages` / `appendMessageRealtime`). 시각은 **24시간제 `HH:mm`**이며 본문 바로 뒤에 약간 띄워 인라인으로 붙인다(`fmtTime`, `.msg-content-row`).
 
@@ -273,7 +275,7 @@
 | 구성요소 | 포트 | 역할 |
 |----------|------|------|
 | PostgreSQL | 5432 | DB (백엔드·리얼타임 공통) |
-| 백엔드 (Spring Boot, 내장 Tomcat) | 8080 | REST API, 정적 프론트(`file:../frontend/` 등) |
+| 백엔드 (Spring Boot, 내장 Tomcat) | 8080 | REST API, 정적 프론트(`../frontend` 의 `index.html`·`styles.css`·`app.js` 만 — `FrontendResourceConfig`) |
 | 리얼타임 (Node.js + Socket.io) | 3001 | 실시간 메시지 저장·브로드캐스트 (`realtime/src/db.js` → PostgreSQL) |
 
 ### 권장 기동 순서
@@ -318,10 +320,10 @@ Stop-Process -Id <PID> -Force
 ```
 
 ### 접속 확인
-- 웹 UI: `http://localhost:8080/index.html`
+- 웹 UI: `http://localhost:8080/` 또는 `http://localhost:8080/index.html`
 - 리얼타임 헬스: `GET http://localhost:3001/health` (JSON, DB 풀 상태 포함)
 
 ### 비고
-- 프론트는 별도 `npm` 서버 없이 백엔드가 정적 파일을 서빙하는 구성을 전제로 함 (`application.yml`의 `spring.web.resources.static-locations`).
+- 프론트는 별도 `npm` 서버 없이 백엔드가 정적 파일을 일부 서빙함 (`spring.web.resources.add-mappings: false`, `FrontendResourceConfig` — `/api/**` 가 정적 `/**` 에 먹히지 않도록).
 - 리얼타임 코드(`db.js`, `server.js`) 변경 후에는 **Node 프로세스 재시작**이 필요함.
 - 백엔드만 재시작해도 채팅은 동작하지만, **소켓·실시간 반영**을 쓰려면 리얼타임도 함께 기동되어 있어야 함.
