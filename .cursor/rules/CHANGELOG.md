@@ -2,6 +2,12 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-03-25 (15차)
+
+### Fixed
+- Windows/PowerShell에서 한글 커밋 메시지가 깨지던 `chore` 커밋을 UTF-8 메시지 파일 + `git commit --amend -F` 로 수정 후 원격 반영(`--force-with-lease`)
+- `.gitignore`에 `fix_msg_utf8.txt` 추가(에디터가 생성하는 임시 커밋 메시지 파일 추적 방지)
+
 ## 2026-03-25 (14차)
 
 ### Added
