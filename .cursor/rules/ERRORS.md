@@ -4,13 +4,12 @@
 
 ---
 
-## 2026-03-25 — Git 커밋 메시지 한글 인코딩 재발
+## 2026-03-25 — CI 테스트 실패: MEMBER 채널 생성 권한 변경 후 테스트 불일치
 
-- **에러 요약**: `git commit --amend -F` 실행 후 커밋 메시지 한글이 모지바케(깨진 문자)로 저장됨
-- **발생 위치**: PowerShell에서 `Out-File -Encoding UTF8`로 생성한 `commit_msg.txt` 사용 시
-- **원인**: PowerShell `Out-File -Encoding UTF8`이 **UTF-8 BOM** 포함 파일을 생성함. Git이 BOM을 제거하지 않고 그대로 인코딩 처리하여 한글이 깨짐
-- **해결**: Python `pathlib.Path.write_bytes(msg.encode('utf-8'))`로 **BOM 없는 UTF-8** 파일 생성 후, `git -c i18n.commitEncoding=utf-8 commit --amend -F tools/commit_msg.txt` 실행
-- **재발 방지**: 커밋 메시지 파일 작성 시 반드시 Python `write_bytes(str.encode('utf-8'))` 사용할 것
+- **에러 요약**: CI `./gradlew test` 실행 시 `채널 API 통합 테스트 > MEMBER 권한으로 채널 생성 시 403 반환 FAILED`
+- **발생 위치**: `backend/src/test/java/com/ech/backend/api/channel/ChannelApiTest.java:56`
+- **원인**: `ChannelController.createChannel()` 의 `@RequireRole`을 MANAGER → MEMBER로 변경하여 모든 사용자가 채널을 생성할 수 있게 됐으나, 기존 테스트는 여전히 MEMBER의 채널 생성이 403(Forbidden)을 반환해야 한다고 가정함
+- **해결**: `ChannelApiTest`의 `create_channel_as_member_forbidden()` 테스트를 `create_channel_as_member_success()`로 수정 — 기대 상태 코드 `isForbidden()` → `isOk()`로 변경
 
 ---
 
