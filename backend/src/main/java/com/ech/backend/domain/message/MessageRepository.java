@@ -23,6 +23,18 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
 
     Optional<Message> findByIdAndChannel_Id(Long id, Long channelId);
 
+    /** 채널의 최근 메시지 조회 (스레드 루트 메시지만, 아카이브/삭제 제외) */
+    @Query("""
+            SELECT m FROM Message m
+            JOIN FETCH m.sender s
+            WHERE m.channel.id = :channelId
+              AND m.parentMessage IS NULL
+              AND m.archivedAt IS NULL
+              AND m.isDeleted = false
+            ORDER BY m.createdAt DESC
+            """)
+    List<Message> findRecentByChannelId(@Param("channelId") Long channelId, Pageable pageable);
+
     /**
      * 통합 검색: 사용자가 속한 채널의 메시지 본문을 키워드로 검색.
      * 아카이브/삭제 메시지는 제외된다.

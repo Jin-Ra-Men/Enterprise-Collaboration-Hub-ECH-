@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/users")
-@RequireRole(AppRole.MANAGER)
+@RequireRole(AppRole.MEMBER)
 public class UserSearchController {
 
     private final UserSearchService userSearchService;
