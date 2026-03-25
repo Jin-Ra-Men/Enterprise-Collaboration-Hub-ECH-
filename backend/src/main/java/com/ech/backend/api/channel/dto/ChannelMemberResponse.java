@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 public record ChannelMemberResponse(
         Long userId,
         String name,
+        String department,
         String memberRole,
         OffsetDateTime joinedAt
 ) {

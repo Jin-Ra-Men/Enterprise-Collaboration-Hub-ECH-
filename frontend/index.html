@@ -113,6 +113,8 @@
             </div>
             <div class="chat-header-right">
               <span class="chat-member-count" id="chatMemberCount"></span>
+              <button class="btn-header-icon" id="btnOpenFileHub" title="첨부파일 모아보기">📎</button>
+              <button class="btn-header-icon" id="btnAddMembersLater" title="구성원 추가">➕</button>
               <button class="btn-header-icon" id="btnShowMembers" title="멤버 보기">👥</button>
             </div>
           </header>
@@ -128,11 +130,6 @@
 
           <!-- 메시지 영역 -->
           <div class="messages-wrap">
-            <details class="channel-files-block" id="channelFilesBlock">
-              <summary>첨부 파일 <span id="channelFilesCount" class="channel-files-count"></span></summary>
-              <ul id="channelFilesList" class="channel-files-list"></ul>
-              <p id="channelFilesEmpty" class="channel-files-empty hidden">첨부 파일이 없습니다.</p>
-            </details>
             <div id="messages" class="messages"></div>
           </div>
 
@@ -227,12 +224,9 @@
             <div class="member-search-wrap">
               <input id="memberSearchInput" type="text" placeholder="이름, 부서, 이메일, 사원번호, 사용자 ID" />
               <button type="button" id="btnSearchMember" class="btn-search">검색</button>
+              <button type="button" id="btnOpenOrgChannel" class="btn-search btn-search-sub">조직도</button>
             </div>
             <ul id="userSearchResults" class="user-search-results"></ul>
-            <details class="org-picker-details" id="orgPickerChannel">
-              <summary>조직도에서 선택</summary>
-              <div id="orgTreeChannel" class="org-tree"></div>
-            </details>
             <div id="selectedMembersWrap" class="selected-members"></div>
           </div>
         </div>
@@ -256,18 +250,75 @@
             <div class="member-search-wrap">
               <input id="dmSearchInput" type="text" placeholder="이름, 부서, 이메일, 사원번호, 사용자 ID" />
               <button type="button" id="btnDmSearch" class="btn-search">검색</button>
+              <button type="button" id="btnOpenOrgDm" class="btn-search btn-search-sub">조직도</button>
             </div>
             <ul id="dmSearchResults" class="user-search-results"></ul>
-            <details class="org-picker-details" id="orgPickerDm">
-              <summary>조직도에서 선택</summary>
-              <div id="orgTreeDm" class="org-tree"></div>
-            </details>
             <div id="selectedDmMembersWrap" class="selected-members"></div>
           </div>
         </div>
         <div class="modal-footer">
           <button class="btn-cancel" data-modal="modalCreateDm">취소</button>
           <button class="btn-primary" id="btnConfirmCreateDm">대화 시작</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 채널 구성원 추가 모달 ===================== -->
+    <div id="modalAddChannelMembers" class="modal-overlay hidden">
+      <div class="modal">
+        <div class="modal-header">
+          <h3>채널 구성원 추가</h3>
+          <button class="modal-close" data-modal="modalAddChannelMembers">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>구성원 검색</label>
+            <div class="member-search-wrap">
+              <input id="addMemberSearchInput" type="text" placeholder="이름, 부서, 이메일, 사원번호, 사용자 ID" />
+              <button type="button" id="btnSearchAddMember" class="btn-search">검색</button>
+              <button type="button" id="btnOpenOrgAddMember" class="btn-search btn-search-sub">조직도</button>
+            </div>
+            <ul id="addMemberSearchResults" class="user-search-results"></ul>
+            <div id="selectedAddMembersWrap" class="selected-members"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" data-modal="modalAddChannelMembers">취소</button>
+          <button class="btn-primary" id="btnConfirmAddMembers">추가</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 조직도 팝업 ===================== -->
+    <div id="modalOrgPicker" class="modal-overlay hidden">
+      <div class="modal modal-wide">
+        <div class="modal-header">
+          <h3 id="orgPickerTitle">조직도</h3>
+          <button class="modal-close" data-modal="modalOrgPicker">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="orgPickerTree" class="org-tree-popup"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" data-modal="modalOrgPicker">취소</button>
+          <button class="btn-primary" id="btnConfirmOrgPick">선택한 구성원 추가</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 첨부파일 모아보기 ===================== -->
+    <div id="modalFileHub" class="modal-overlay hidden">
+      <div class="modal modal-wide">
+        <div class="modal-header">
+          <h3>첨부파일 모아보기</h3>
+          <button class="modal-close" data-modal="modalFileHub">✕</button>
+        </div>
+        <div class="modal-body">
+          <ul id="channelFilesList" class="channel-files-list"></ul>
+          <p id="channelFilesEmpty" class="channel-files-empty hidden">첨부 파일이 없습니다.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" data-modal="modalFileHub">닫기</button>
         </div>
       </div>
     </div>
@@ -286,11 +337,10 @@
             <dt>사원번호</dt><dd id="profileModalEmpNo">-</dd>
             <dt>이메일</dt><dd id="profileModalEmail">-</dd>
             <dt>부서</dt><dd id="profileModalDept">-</dd>
-            <dt>역할</dt><dd id="profileModalRole">-</dd>
-            <dt>계정 상태</dt><dd id="profileModalStatus">-</dd>
           </dl>
         </div>
         <div class="modal-footer">
+          <button type="button" class="btn-primary" id="btnProfileDm">DM 보내기</button>
           <button type="button" class="btn-cancel" data-modal="modalUserProfile">닫기</button>
         </div>
       </div>

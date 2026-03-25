@@ -19,10 +19,12 @@
 
 ### 🤝 협업 및 데이터 관리
 - **파일 공유:** 채널별 업로드(multipart)·목록·다운로드(JWT), 디스크 경로에 워크스페이스·채널 식별 세그먼트 포함
+- **첨부 UX:** 업로드 즉시 채팅 본문에 파일 카드 표시 + 채널 헤더의 첨부파일 모아보기 지원
 - **칸반 보드:** 워크스페이스별 보드·컬럼·카드 CRUD, 담당자 지정, 상태/컬럼 이동 이력 API
 - **채팅→업무:** 메시지 ID 기준 업무 항목 생성·조회(메시지와 1:1 링크)
 - **통합 검색:** 대화 내역 및 공유 파일에 대한 고속 검색 지원
-- **조직도·사용자 검색:** 이름/이메일/사번/부서/사용자 ID 검색, 부서별 조직도에서 멤버 선택, 동료 프로필 모달
+- **조직도·사용자 검색:** 이름/이메일/사번/부서/사용자 ID 검색, 부서별 조직도에서 멤버 선택, 동료 프로필 모달(이름·사원번호·이메일·부서, **DM 보내기**로 즉시 DM 시작)
+- **멤버 관리:** 채널 생성 이후에도 구성원 추가 가능(검색 + 트리형 조직도 다중 선택)
 
 ### 🛠 관리자 시스템 (Admin Dashboard)
 - **그룹웨어 SSO 연동:** 별도 가입 없이 기존 사내 계정으로 즉시 로그인
@@ -93,8 +95,9 @@ graph LR
 - `POST /api/channels/{channelId}/messages/{parentMessageId}/replies`
 - `GET /api/channels/{channelId}/messages/{parentMessageId}/replies`
 - `GET /api/users/search?q=...&department=...`
-- `GET /api/users/organization`
-- `GET /api/users/{userId}/profile`
+- `GET /api/user-directory/organization`
+- `GET /api/users/profile?userId=...`
+- `GET /api/users/{userId}/profile` (경로형, 호환)
 - `POST /api/kanban/boards`, `GET /api/kanban/boards`, `GET /api/kanban/boards/{boardId}`, `DELETE /api/kanban/boards/{boardId}`
 - `POST /api/kanban/boards/{boardId}/columns`, `PUT /api/kanban/boards/{boardId}/columns/{columnId}`, `DELETE .../columns/{columnId}`
 - `POST /api/kanban/boards/{boardId}/columns/{columnId}/cards`, `PUT /api/kanban/cards/{cardId}`, `DELETE /api/kanban/cards/{cardId}`
@@ -196,5 +199,5 @@ cd backend
 ```
 
 ### 4) Frontend 확인
-- `frontend/index.html`을 브라우저에서 열어 UI를 확인합니다.
+- 백엔드를 띄운 뒤 **`http://localhost:8080/`** 로 접속해 UI를 확인합니다(백엔드가 `index.html` / `styles.css` / `app.js` 만 서빙).
 - 기본 소켓 서버 주소는 `http://localhost:3001`입니다.

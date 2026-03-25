@@ -26,6 +26,11 @@ let activeChannelType = null; // PUBLIC / PRIVATE / DM
 let pendingFile    = null;
 let selectedMembers = [];     // 채널/DM 생성 시 선택된 사용자
 let selectedDmMembers = [];
+let selectedAddMembers = [];  // 기존 채널에 추가할 사용자
+let orgPickerContext = null;  // member | dm | channelMember
+const orgPickerSelectedIds = new Set();
+/** 프로필 모달에 표시 중인 사용자 ID (DM 보내기용) */
+let profileViewUserId = null;
 
 /* ── DOM 참조 ── */
 const loginPage      = document.getElementById("loginPage");
@@ -127,20 +132,25 @@ function refreshPresenceDots() {
 async function openUserProfile(userId) {
   if (!userId || !currentUser) return;
   try {
-    const res  = await apiFetch(`/api/users/${userId}/profile`);
+    const res  = await apiFetch(`/api/users/profile?userId=${encodeURIComponent(userId)}`);
     const json = await res.json();
     if (!res.ok) {
       alert(json.error?.message || "프로필을 불러올 수 없습니다.");
       return;
     }
     const u = json.data;
+    profileViewUserId = u.userId != null ? u.userId : userId;
     document.getElementById("profileModalName").textContent = u.name || "-";
     document.getElementById("profileAvatarLg").textContent = avatarInitials(u.name || "?");
     document.getElementById("profileModalEmpNo").textContent = u.employeeNo || "-";
     document.getElementById("profileModalEmail").textContent = u.email || "-";
     document.getElementById("profileModalDept").textContent = u.department || "-";
-    document.getElementById("profileModalRole").textContent = u.role || "-";
-    document.getElementById("profileModalStatus").textContent = u.status || "-";
+    const dmBtn = document.getElementById("btnProfileDm");
+    if (dmBtn) {
+      const self = Number(profileViewUserId) === Number(currentUser.userId);
+      dmBtn.disabled = self;
+      dmBtn.title = self ? "자기 자신과는 DM을 시작할 수 없습니다." : "";
+    }
     openModal("modalUserProfile");
   } catch (e) {
     console.error(e);
@@ -148,10 +158,49 @@ async function openUserProfile(userId) {
   }
 }
 
+/** 프로필·기타에서 동일 플로우로 DM 채널 생성 후 입장 */
+async function startDmWithUser(userId, displayName) {
+  if (!currentUser || userId == null || userId === "") return;
+  const uid = Number(userId);
+  if (uid === Number(currentUser.userId)) {
+    alert("자기 자신과는 DM을 할 수 없습니다.");
+    return;
+  }
+  const dmName =
+    displayName && displayName !== "-" ? displayName : `user#${userId}`;
+  try {
+    const res = await apiFetch("/api/channels", {
+      method: "POST",
+      body: JSON.stringify({
+        workspaceKey: WS_KEY,
+        name: dmName,
+        description: "",
+        channelType: "DM",
+        createdByUserId: currentUser.userId,
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      alert("DM 생성 실패: " + (json.error?.message || ""));
+      return;
+    }
+    const channelId = json.data?.channelId;
+    await apiFetch(`/api/channels/${channelId}/members`, {
+      method: "POST",
+      body: JSON.stringify({ userId, memberRole: "MEMBER" }),
+    });
+    closeModal("modalUserProfile");
+    await loadMyChannels();
+    selectChannel(channelId, dmName, "DM");
+  } catch (e) {
+    console.error(e);
+    alert("DM 생성 중 오류 발생");
+  }
+}
+
 async function loadChannelFiles(channelId) {
   const listEl = document.getElementById("channelFilesList");
   const emptyEl = document.getElementById("channelFilesEmpty");
-  const countEl = document.getElementById("channelFilesCount");
   if (!currentUser || !listEl) return;
   listEl.innerHTML = "";
   if (emptyEl) emptyEl.classList.add("hidden");
@@ -160,7 +209,6 @@ async function loadChannelFiles(channelId) {
     const json = await res.json();
     if (!res.ok) return;
     const files = json.data || [];
-    if (countEl) countEl.textContent = files.length ? `(${files.length})` : "";
     if (files.length === 0) {
       if (emptyEl) emptyEl.classList.remove("hidden");
       return;
@@ -211,12 +259,14 @@ async function downloadChannelFile(fileId, filename) {
   }
 }
 
-async function loadOrgTree(containerId, context) {
-  const el = document.getElementById(containerId);
+async function loadOrgTree(context) {
+  const el = document.getElementById("orgPickerTree");
   if (!el) return;
+  orgPickerContext = context;
+  orgPickerSelectedIds.clear();
   el.innerHTML = '<p class="empty-notice">불러오는 중...</p>';
   try {
-    const res  = await apiFetch("/api/users/organization");
+    const res  = await apiFetch("/api/user-directory/organization");
     const json = await res.json();
     if (!res.ok) {
       el.innerHTML = `<p class="empty-notice">${escHtml(json.error?.message || "오류")}</p>`;
@@ -236,13 +286,23 @@ async function loadOrgTree(containerId, context) {
       ul.className = "org-user-list";
       (g.users || []).forEach((u) => {
         if (u.userId === currentUser?.userId) return;
+        const checked = isUserAlreadySelected(u.userId, context) ? "checked" : "";
         const li = document.createElement("li");
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "org-user-btn";
-        btn.innerHTML = `<span class="org-user-name">${escHtml(u.name)}</span><span class="org-user-email">${escHtml(u.email || "")}</span>`;
-        btn.addEventListener("click", () => addSelectedMember(u, context));
-        li.appendChild(btn);
+        li.innerHTML = `
+          <label class="org-user-check">
+            <input type="checkbox" class="org-user-checkbox" data-user-id="${u.userId}" ${checked}/>
+            <span>
+              <span class="org-user-name">${escHtml(u.name)}</span>
+              <span class="org-user-email">${escHtml([u.department, u.email].filter(Boolean).join(" · "))}</span>
+            </span>
+          </label>`;
+        const cb = li.querySelector(".org-user-checkbox");
+        if (cb.checked) orgPickerSelectedIds.add(Number(u.userId));
+        cb.addEventListener("change", () => {
+          const uid = Number(cb.dataset.userId);
+          if (cb.checked) orgPickerSelectedIds.add(uid);
+          else orgPickerSelectedIds.delete(uid);
+        });
         ul.appendChild(li);
       });
       if (ul.children.length === 0) {
@@ -255,6 +315,33 @@ async function loadOrgTree(containerId, context) {
     console.error(e);
     el.innerHTML = '<p class="empty-notice">조직도를 불러오지 못했습니다.</p>';
   }
+}
+
+function isUserAlreadySelected(userId, context) {
+  const ref = context === "dm"
+    ? selectedDmMembers
+    : (context === "channelMember" ? selectedAddMembers : selectedMembers);
+  return ref.some((u) => Number(u.userId) === Number(userId));
+}
+
+function applyOrgPickerSelection() {
+  const context = orgPickerContext;
+  if (!context) return;
+  const selectedIds = Array.from(orgPickerSelectedIds);
+  if (!selectedIds.length) {
+    alert("조직도에서 사용자를 선택하세요.");
+    return;
+  }
+  const targetListEl = context === "dm"
+    ? document.getElementById("dmSearchResults")
+    : (context === "channelMember"
+      ? document.getElementById("addMemberSearchResults")
+      : document.getElementById("userSearchResults"));
+  selectedIds.forEach((uid) => {
+    const btn = targetListEl?.querySelector(`.btn-add-member[data-uid="${uid}"]`);
+    if (btn) btn.click();
+  });
+  closeModal("modalOrgPicker");
 }
 
 function avatarInitials(name) {
@@ -339,6 +426,7 @@ loginForm.addEventListener("submit", async (e) => {
 });
 
 logoutBtn.addEventListener("click", () => {
+  if (!confirm("로그아웃 하시겠습니까?")) return;
   if (socket) { socket.disconnect(); socket = null; }
   activeChannelId = null;
   currentUser     = null;
@@ -481,9 +569,11 @@ async function loadChannelMembers(channelId) {
         <span class="presence-dot ${prCl}" data-presence-user="${uid}" title="${presenceTitle(pr)}"></span>
         <button type="button" class="member-profile-btn" data-user-id="${uid}">
           <span class="member-avatar-sm">${avatarInitials(m.name || "?")}</span>
-          <span class="member-name-txt">${escHtml(m.name || "알 수 없음")}</span>
-        </button>
-        <span class="member-role-badge">${escHtml(m.memberRole || m.role || "")}</span>`;
+          <span class="member-name-wrap">
+            <span class="member-name-txt">${escHtml(m.name || "알 수 없음")}</span>
+            <span class="member-org-txt">${escHtml(m.department || "조직 미지정")}</span>
+          </span>
+        </button>`;
       li.querySelector(".member-profile-btn").addEventListener("click", () => openUserProfile(uid));
       listEl.appendChild(li);
     });
@@ -606,6 +696,25 @@ function appendSystemMsg(text) {
   div.className = "msg-system";
   div.textContent = text;
   messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function appendUploadedFileMessage(fileMeta) {
+  if (!fileMeta || !fileMeta.id) return;
+  const div = document.createElement("div");
+  div.className = "msg-file";
+  div.innerHTML = `
+    <span class="msg-file-icon">📎</span>
+    <div class="msg-file-body">
+      <p class="msg-file-name">${escHtml(fileMeta.originalFilename || "첨부파일")}</p>
+      <p class="msg-file-sub">${fmtSize(fileMeta.sizeBytes || 0)} · 업로더 ${escHtml(fileMeta.uploaderName || "")}</p>
+    </div>
+    <button type="button" class="btn-channel-file-dl">다운로드</button>`;
+  div.querySelector(".btn-channel-file-dl").addEventListener("click", () => {
+    downloadChannelFile(fileMeta.id, fileMeta.originalFilename);
+  });
+  messagesEl.appendChild(div);
+  trimMessages();
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
@@ -745,6 +854,7 @@ async function uploadFile(file) {
     const json = await res.json();
     if (res.ok) {
       appendSystemMsg(`파일 업로드 완료: ${json.data?.originalFilename || file.name}`);
+      appendUploadedFileMessage(json.data);
       if (activeChannelId) loadChannelFiles(activeChannelId);
     } else {
       appendSystemMsg(`파일 업로드 실패: ${json.error?.message || "오류"}`);
@@ -765,23 +875,40 @@ document.getElementById("btnCreateChannel").addEventListener("click", () => {
   document.getElementById("userSearchResults").innerHTML = "";
   document.getElementById("selectedMembersWrap").innerHTML = "";
   document.getElementById("memberSearchInput").value = "";
-  loadOrgTree("orgTreeChannel", "member");
   openModal("modalCreateChannel");
 });
 
 document.getElementById("btnSearchMember").addEventListener("click", () => searchUsers("member"));
+document.getElementById("btnOpenOrgChannel").addEventListener("click", async () => {
+  await searchUsers("member", "__all__");
+  await loadOrgTree("member");
+  document.getElementById("orgPickerTitle").textContent = "조직도 선택 - 채널 구성원";
+  openModal("modalOrgPicker");
+});
 document.getElementById("memberSearchInput").addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); searchUsers("member"); }
 });
 
-async function searchUsers(context) {
-  const inputEl   = context === "dm" ? document.getElementById("dmSearchInput") : document.getElementById("memberSearchInput");
-  const resultEl  = context === "dm" ? document.getElementById("dmSearchResults") : document.getElementById("userSearchResults");
-  const keyword   = inputEl.value.trim();
-  if (!keyword) return;
+async function searchUsers(context, forcedKeyword = null) {
+  const inputEl =
+    context === "dm"
+      ? document.getElementById("dmSearchInput")
+      : (context === "channelMember"
+        ? document.getElementById("addMemberSearchInput")
+        : document.getElementById("memberSearchInput"));
+  const resultEl =
+    context === "dm"
+      ? document.getElementById("dmSearchResults")
+      : (context === "channelMember"
+        ? document.getElementById("addMemberSearchResults")
+        : document.getElementById("userSearchResults"));
+  const isAll = forcedKeyword === "__all__";
+  const keyword = isAll ? "" : (forcedKeyword ?? inputEl.value.trim());
+  if (!isAll && !keyword) return;
 
   try {
-    const res  = await apiFetch(`/api/users/search?q=${encodeURIComponent(keyword)}`);
+    const queryPart = keyword ? `?q=${encodeURIComponent(keyword)}` : "";
+    const res  = await apiFetch(`/api/users/search${queryPart}`);
     const json = await res.json();
     renderUserSearchResults(json.data || [], resultEl, context);
   } catch {
@@ -805,7 +932,7 @@ function renderUserSearchResults(users, listEl, context) {
         <span class="user-search-name">${escHtml(u.name)}</span>
         <span class="user-search-dept">${escHtml([u.department, u.email, u.employeeNo, "ID:" + u.userId].filter(Boolean).join(" · "))}</span>
       </div>
-      <button class="btn-add-member">추가</button>`;
+      <button class="btn-add-member" data-uid="${u.userId}">추가</button>`;
     li.querySelector(".btn-add-member").addEventListener("click", () => {
       addSelectedMember(u, context);
       li.remove();
@@ -815,8 +942,12 @@ function renderUserSearchResults(users, listEl, context) {
 }
 
 function addSelectedMember(user, context) {
-  const listRef = context === "dm" ? selectedDmMembers : selectedMembers;
-  const wrapId  = context === "dm" ? "selectedDmMembersWrap" : "selectedMembersWrap";
+  const listRef = context === "dm"
+    ? selectedDmMembers
+    : (context === "channelMember" ? selectedAddMembers : selectedMembers);
+  const wrapId = context === "dm"
+    ? "selectedDmMembersWrap"
+    : (context === "channelMember" ? "selectedAddMembersWrap" : "selectedMembersWrap");
 
   if (listRef.find(m => m.userId === user.userId)) return;
   listRef.push(user);
@@ -880,11 +1011,16 @@ document.getElementById("btnCreateDm").addEventListener("click", () => {
   document.getElementById("dmSearchInput").value = "";
   document.getElementById("dmSearchResults").innerHTML = "";
   document.getElementById("selectedDmMembersWrap").innerHTML = "";
-  loadOrgTree("orgTreeDm", "dm");
   openModal("modalCreateDm");
 });
 
 document.getElementById("btnDmSearch").addEventListener("click", () => searchUsers("dm"));
+document.getElementById("btnOpenOrgDm").addEventListener("click", async () => {
+  await searchUsers("dm", "__all__");
+  await loadOrgTree("dm");
+  document.getElementById("orgPickerTitle").textContent = "조직도 선택 - DM 대상";
+  openModal("modalOrgPicker");
+});
 document.getElementById("dmSearchInput").addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); searchUsers("dm"); }
 });
@@ -934,6 +1070,61 @@ document.getElementById("btnShowMembers").addEventListener("click", () => {
 });
 document.getElementById("btnCloseMemberPanel").addEventListener("click", () => {
   document.getElementById("memberPanel").classList.add("hidden");
+});
+document.getElementById("btnOpenFileHub").addEventListener("click", async () => {
+  if (!activeChannelId) return;
+  await loadChannelFiles(activeChannelId);
+  openModal("modalFileHub");
+});
+
+document.getElementById("btnAddMembersLater").addEventListener("click", () => {
+  if (!activeChannelId) {
+    alert("채널을 먼저 선택하세요.");
+    return;
+  }
+  selectedAddMembers = [];
+  document.getElementById("addMemberSearchInput").value = "";
+  document.getElementById("addMemberSearchResults").innerHTML = "";
+  document.getElementById("selectedAddMembersWrap").innerHTML = "";
+  openModal("modalAddChannelMembers");
+});
+document.getElementById("btnSearchAddMember").addEventListener("click", () => searchUsers("channelMember"));
+document.getElementById("addMemberSearchInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); searchUsers("channelMember"); }
+});
+document.getElementById("btnOpenOrgAddMember").addEventListener("click", async () => {
+  await searchUsers("channelMember", "__all__");
+  await loadOrgTree("channelMember");
+  document.getElementById("orgPickerTitle").textContent = "조직도 선택 - 채널 구성원 추가";
+  openModal("modalOrgPicker");
+});
+document.getElementById("btnConfirmAddMembers").addEventListener("click", async () => {
+  if (!activeChannelId) return;
+  if (!selectedAddMembers.length) {
+    alert("추가할 사용자를 선택하세요.");
+    return;
+  }
+  const failed = [];
+  for (const u of selectedAddMembers) {
+    const res = await apiFetch(`/api/channels/${activeChannelId}/members`, {
+      method: "POST",
+      body: JSON.stringify({ userId: u.userId, memberRole: "MEMBER" }),
+    });
+    if (!res.ok) failed.push(u.name);
+  }
+  closeModal("modalAddChannelMembers");
+  await loadChannelMembers(activeChannelId);
+  if (failed.length) {
+    appendSystemMsg(`일부 구성원 추가 실패: ${failed.join(", ")}`);
+  } else {
+    appendSystemMsg("구성원 추가 완료");
+  }
+});
+document.getElementById("btnConfirmOrgPick").addEventListener("click", applyOrgPickerSelection);
+
+document.getElementById("btnProfileDm").addEventListener("click", async () => {
+  const name = document.getElementById("profileModalName")?.textContent?.trim() || "";
+  await startDmWithUser(profileViewUserId, name);
 });
 
 /* ==========================================================================

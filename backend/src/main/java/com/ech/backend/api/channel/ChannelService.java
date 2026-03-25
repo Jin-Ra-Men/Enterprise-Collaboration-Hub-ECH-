@@ -129,6 +129,7 @@ public class ChannelService {
                 .map(member -> new ChannelMemberResponse(
                         member.getUser().getId(),
                         member.getUser().getName(),
+                        member.getUser().getDepartment(),
                         member.getMemberRole().name(),
                         member.getJoinedAt()
                 ))
