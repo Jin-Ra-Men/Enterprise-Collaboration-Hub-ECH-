@@ -2,6 +2,17 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-03-25 (14차)
+
+### Added
+- 프론트: **테마 선택** — 검정(기본 다크)·하양(라이트)·파랑(다크 블루/시안), `localStorage`(`ech_theme`) + `data-theme` 연동, 로그인·사이드바에 칩 UI
+
+### Changed
+- `styles.css`: 테마별 CSS 변수 세트(`html[data-theme="light"]` / `blue`), 그라데이션·사이드바·포커스 링을 변수로 통일
+
+### Docs
+- `docs/FEATURE_SPEC.md`, `README.md`, `docs/HANDOVER.md`
+
 ## 2026-03-25 (13차)
 
 ### Added

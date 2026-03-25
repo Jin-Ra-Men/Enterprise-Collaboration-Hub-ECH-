@@ -16,6 +16,7 @@
 1. Realtime 실행: `cd realtime && npm install && npm run dev`
 2. Backend 실행: `cd backend && gradlew.bat bootRun` (Windows)
 3. 프론트 확인: **`http://localhost:8080/`** (백엔드가 `index.html` / `styles.css` / `app.js` 만 정적 제공). `file://` 로 `frontend/index.html` 을 열면 API·쿠키·CORS 이슈가 날 수 있음.
+   - UI 테마(검정/하양/파랑)는 `localStorage` 키 `ech_theme`(`dark`|`light`|`blue`) 및 `<html data-theme>` 로 유지되며, `<head>` 인라인 스크립트가 최초 페인트 전 라이트·블루 선택을 반영합니다.
 4. 환경 설정 상세: `docs/ENVIRONMENT_SETUP.md`
 
 ## 2-1) 개발자 / 운영·관리자 — 무엇부터 보면 되나
