@@ -38,8 +38,8 @@ class ChannelApiTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("MEMBER 권한으로 채널 생성 시 403 반환")
-    void create_channel_as_member_forbidden() throws Exception {
+    @DisplayName("MEMBER 권한으로 채널 생성 성공 (모든 사용자 채널 생성 허용)")
+    void create_channel_as_member_success() throws Exception {
         String body = """
                 {
                   "name": "멤버채널",
@@ -53,7 +53,9 @@ class ChannelApiTest extends BaseIntegrationTest {
                         .header("Authorization", "Bearer " + userToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.channelId", notNullValue()))
+                .andExpect(jsonPath("$.error", nullValue()));
     }
 
     @Test
