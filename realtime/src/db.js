@@ -32,16 +32,25 @@ pool.on("remove", () => {
  */
 async function saveMessage({ channelId, senderId, body }, retries = 3) {
   const query = `
-    INSERT INTO messages (channel_id, sender_id, body)
-    VALUES ($1, $2, $3)
+    INSERT INTO messages (channel_id, sender_id, body, message_type, is_deleted, is_edited, created_at, updated_at)
+    VALUES ($1, $2, $3, 'TEXT', false, false, NOW(), NOW())
     RETURNING id, channel_id, sender_id, body, created_at
   `;
+  const senderQuery = `SELECT name FROM users WHERE id = $1`;
   const values = [channelId, senderId, body];
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const result = await pool.query(query, values);
-      return result.rows[0];
+      const row = result.rows[0];
+      // 발신자 이름 조회 (프론트엔드 표시용)
+      try {
+        const senderResult = await pool.query(senderQuery, [senderId]);
+        row.sender_name = senderResult.rows[0]?.name || null;
+      } catch (_) {
+        row.sender_name = null;
+      }
+      return row;
     } catch (err) {
       const isRetryable = isRetryableError(err);
       if (!isRetryable || attempt === retries) {
