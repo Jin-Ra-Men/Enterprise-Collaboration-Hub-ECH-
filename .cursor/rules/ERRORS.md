@@ -146,3 +146,12 @@
 - **발생 위치(파일/명령/기능)**: `UserDirectoryApiTest` — `org-sync` 동기화 호출(@BeforeEach), `UserRepository.upsertByEmployeeNo(...)`
 - **원인**: H2 인메모리 DB는 PostgreSQL의 `INSERT ... ON CONFLICT` 문법을 지원하지 않아 `SQLState: 42000` 문법 오류
 - **해결/현재 상태**: 테스트를 `org-sync` 호출 대신 Java 로 `org_groups/org_group_members`를 직접 시드하도록 수정하여 테스트 통과
+
+---
+
+## 2026-03-26 — OrgGroupCodes API 변경 후 테스트 컴파일 실패
+
+- **에러 요약**: `./gradlew test` 실행 시 `UserDirectoryApiTest`에서 `fingerprintCompany/prettyCompany` 등 메서드 미존재 컴파일 오류 발생
+- **발생 위치(파일/명령/기능)**: `backend/src/test/java/com/ech/backend/api/user/UserDirectoryApiTest.java`, 명령 `./gradlew test --no-daemon`
+- **원인**: `OrgGroupCodes`를 난수형 코드 생성에서 가독 코드 생성 API(`companyCode/divisionCode/teamCode`)로 변경했지만 테스트 코드가 구 메서드를 호출
+- **해결/현재 상태**: 테스트 코드를 신규 API 호출로 교체 완료

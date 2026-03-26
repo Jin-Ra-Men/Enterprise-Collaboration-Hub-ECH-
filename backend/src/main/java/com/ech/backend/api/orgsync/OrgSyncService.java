@@ -81,24 +81,23 @@ public class OrgSyncService {
             String companyCodeNormalized,
             Map<String, OrgGroup> groupCache
     ) {
+        ensureSharedRoots(groupCache);
         String companyDisplayName = resolveCompanyDisplayName(external.companyName(), companyCodeNormalized);
         String divisionDisplayName = resolveOrDefault(external.divisionName(), "미지정 본부");
         String teamDisplayName = resolveOrDefault(external.teamName(), "미지정 팀");
 
-        String companyFp = OrgGroupCodes.fingerprintCompany(companyCodeNormalized, companyDisplayName);
-        String companyGroupCode = OrgGroupCodes.prettyCompany(companyCodeNormalized, companyFp);
+        String companyGroupCode = OrgGroupCodes.companyCode(companyCodeNormalized);
         OrgGroup companyGroup = upsertGroup(
                 groupCache,
                 "COMPANY",
                 companyGroupCode,
                 companyDisplayName,
-                null,
-                companyGroupCode
+                OrgGroupCodes.ORG_ROOT_CODE,
+                OrgGroupCodes.ORG_ROOT_CODE + ";" + companyGroupCode
         );
 
-        String divisionFp = OrgGroupCodes.fingerprintDivision(companyFp, divisionDisplayName);
-        String divisionGroupCode = OrgGroupCodes.prettyDivision(companyFp, divisionFp);
-        String divisionPath = companyGroupCode + ";" + divisionGroupCode;
+        String divisionGroupCode = OrgGroupCodes.divisionCode(companyCodeNormalized, divisionDisplayName);
+        String divisionPath = OrgGroupCodes.ORG_ROOT_CODE + ";" + companyGroupCode + ";" + divisionGroupCode;
         OrgGroup divisionGroup = upsertGroup(
                 groupCache,
                 "DIVISION",
@@ -108,8 +107,7 @@ public class OrgSyncService {
                 divisionPath
         );
 
-        String teamFp = OrgGroupCodes.fingerprintTeam(divisionFp, teamDisplayName);
-        String teamGroupCode = OrgGroupCodes.prettyTeam(divisionFp, teamFp);
+        String teamGroupCode = OrgGroupCodes.teamCode(divisionGroupCode, teamDisplayName);
         String teamPath = divisionPath + ";" + teamGroupCode;
         OrgGroup teamGroup = upsertGroup(
                 groupCache,
@@ -124,48 +122,80 @@ public class OrgSyncService {
 
         String jobLevel = trimOrNull(external.jobLevel());
         if (jobLevel != null) {
-            String jobFp = OrgGroupCodes.fingerprintJobLevel(jobLevel);
-            String jobCode = OrgGroupCodes.prettyJobLevel(jobFp);
-            OrgGroup jobGroup = upsertGroup(
+            String jobCode = OrgGroupCodes.jobLevelCode(jobLevel);
+            upsertGroup(
                     groupCache,
                     "JOB_LEVEL",
                     jobCode,
                     jobLevel,
-                    null,
-                    null
+                    OrgGroupCodes.JOB_LEVEL_PARENT_CODE,
+                    OrgGroupCodes.ORG_ROOT_CODE + ";" + OrgGroupCodes.JOB_LEVEL_PARENT_CODE + ";" + jobCode
             );
             upsertMembership(employeeNo, jobCode, "JOB_LEVEL");
         }
 
         String jobPosition = trimOrNull(external.jobPosition());
         if (jobPosition != null) {
-            String posFp = OrgGroupCodes.fingerprintJobPosition(jobPosition);
-            String posCode = OrgGroupCodes.prettyJobPosition(posFp);
-            OrgGroup posGroup = upsertGroup(
+            String posCode = OrgGroupCodes.jobPositionCode(jobPosition);
+            upsertGroup(
                     groupCache,
                     "JOB_POSITION",
                     posCode,
                     jobPosition,
-                    null,
-                    null
+                    OrgGroupCodes.JOB_POSITION_PARENT_CODE,
+                    OrgGroupCodes.ORG_ROOT_CODE + ";" + OrgGroupCodes.JOB_POSITION_PARENT_CODE + ";" + posCode
             );
             upsertMembership(employeeNo, posCode, "JOB_POSITION");
         }
 
         String jobTitle = trimOrNull(external.jobTitle());
         if (jobTitle != null) {
-            String titleFp = OrgGroupCodes.fingerprintJobTitle(jobTitle);
-            String titleCode = OrgGroupCodes.prettyJobTitle(titleFp);
-            OrgGroup titleGroup = upsertGroup(
+            String titleCode = OrgGroupCodes.jobTitleCode(jobTitle);
+            upsertGroup(
                     groupCache,
                     "JOB_TITLE",
                     titleCode,
                     jobTitle,
-                    null,
-                    null
+                    OrgGroupCodes.JOB_TITLE_PARENT_CODE,
+                    OrgGroupCodes.ORG_ROOT_CODE + ";" + OrgGroupCodes.JOB_TITLE_PARENT_CODE + ";" + titleCode
             );
             upsertMembership(employeeNo, titleCode, "JOB_TITLE");
         }
+    }
+
+    private void ensureSharedRoots(Map<String, OrgGroup> groupCache) {
+        upsertGroup(
+                groupCache,
+                "ROOT",
+                OrgGroupCodes.ORG_ROOT_CODE,
+                "그룹사(공용)",
+                null,
+                OrgGroupCodes.ORG_ROOT_CODE
+        );
+        upsertGroup(
+                groupCache,
+                "JOB_LEVEL",
+                OrgGroupCodes.JOB_LEVEL_PARENT_CODE,
+                "직급",
+                OrgGroupCodes.ORG_ROOT_CODE,
+                OrgGroupCodes.ORG_ROOT_CODE + ";" + OrgGroupCodes.JOB_LEVEL_PARENT_CODE
+        );
+        upsertGroup(
+                groupCache,
+                "JOB_POSITION",
+                OrgGroupCodes.JOB_POSITION_PARENT_CODE,
+                "직위",
+                OrgGroupCodes.ORG_ROOT_CODE,
+                OrgGroupCodes.ORG_ROOT_CODE + ";" + OrgGroupCodes.JOB_POSITION_PARENT_CODE
+        );
+        upsertGroup(
+                groupCache,
+                "JOB_TITLE",
+                OrgGroupCodes.JOB_TITLE_PARENT_CODE,
+                "직책",
+                OrgGroupCodes.ORG_ROOT_CODE,
+                OrgGroupCodes.ORG_ROOT_CODE + ";" + OrgGroupCodes.JOB_TITLE_PARENT_CODE
+        );
     }
 
     private void upsertMembership(String employeeNo, String groupCode, String memberGroupType) {
