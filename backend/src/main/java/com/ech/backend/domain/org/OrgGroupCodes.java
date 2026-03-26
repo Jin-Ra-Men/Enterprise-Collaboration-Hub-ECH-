@@ -30,7 +30,12 @@ public final class OrgGroupCodes {
     }
 
     public static String teamCode(String divisionCode, String teamDisplayName) {
-        return compact(divisionCode, slugSegment(teamDisplayName, 12));
+        String team = slugSegment(teamDisplayName, 12);
+        String division = divisionCode == null ? "" : divisionCode.trim().toUpperCase();
+        if (!division.isBlank() && (team.equals(division) || team.startsWith(division + "_"))) {
+            return team;
+        }
+        return compact(divisionCode, team);
     }
 
     public static String jobLevelCode(String jobLevelDisplayName) {
