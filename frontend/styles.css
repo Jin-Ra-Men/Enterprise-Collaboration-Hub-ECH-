@@ -1466,7 +1466,159 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
   background: rgba(167, 139, 250, 0.3);
 }
 
-/* 회사 > 본부 > 팀 (details/summary) */
+/* 조직도 팝업: 회사 셀렉트 + AXTree 유사 계층 */
+.ech-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.split_filter.member-picker-company-filter {
+  margin-bottom: 12px;
+}
+
+.split_filter .ui_select_field.full {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.ech-ui-tree {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.ech-tree-scroll {
+  max-height: 62vh;
+  overflow-y: auto;
+}
+
+.ech-tree-root {
+  min-width: 0;
+}
+
+.ech-tree-co {
+  margin-bottom: 4px;
+}
+
+.ech-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 8px 4px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ech-tree-row--lv1 {
+  padding-left: 8px;
+  font-weight: 700;
+}
+
+.ech-tree-row--lv2 {
+  font-weight: 600;
+}
+
+.ech-tree-row--lv3 {
+  cursor: pointer;
+}
+
+.ech-tree-line {
+  flex: 0 0 14px;
+  width: 14px;
+  height: 1px;
+  align-self: center;
+}
+
+.ech-tree-line--root {
+  opacity: 0.35;
+}
+
+.ech-tree-line--branch {
+  border-left: 1px solid rgba(167, 139, 250, 0.35);
+  margin-left: 2px;
+  padding-left: 6px;
+  height: 100%;
+  min-height: 18px;
+  align-self: stretch;
+}
+
+.ech-tree-ico {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  text-align: center;
+  line-height: 18px;
+  font-size: 14px;
+  opacity: 0.92;
+}
+
+.ech-tree-ico--building::before { content: "🏢"; }
+.ech-tree-ico--sitemap::before { content: "🗂️"; }
+.ech-tree-ico--users::before { content: "👥"; }
+
+.ech-tree-label {
+  flex: 1;
+  min-width: 0;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.ech-tree-count {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.ech-tree-details--div {
+  margin: 0 0 2px;
+}
+
+.ech-tree-details--div > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.ech-tree-details--div > summary::-webkit-details-marker {
+  display: none;
+}
+
+.ech-tree-div-body {
+  padding-left: 8px;
+  margin-left: 4px;
+  border-left: 1px solid rgba(167, 139, 250, 0.22);
+}
+
+.ech-tree-team:hover {
+  border-color: var(--border-subtle);
+  background: var(--bg-sidebar-hover);
+}
+
+.ech-tree-team.is-selected {
+  border-color: var(--border-focus);
+  background: rgba(167, 139, 250, 0.18);
+}
+
+/* 회사 > 본부 > 팀 (details/summary) — 레거시 호환 */
 .org-lvl {
   border: 1px solid var(--border-subtle);
   border-radius: 8px;

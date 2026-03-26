@@ -6,6 +6,7 @@ import com.ech.backend.common.rbac.AppRole;
 import com.ech.backend.common.rbac.RequireRole;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -24,7 +25,8 @@ public class UserDirectoryController {
     }
 
     @GetMapping("/organization")
-    public ApiResponse<OrganizationTreeResponse> organization() {
-        return ApiResponse.success(userSearchService.getOrganizationTree());
+    public ApiResponse<OrganizationTreeResponse> organization(
+            @RequestParam(name = "companyKey", required = false) String companyKey) {
+        return ApiResponse.success(userSearchService.getOrganizationTree(companyKey));
     }
 }

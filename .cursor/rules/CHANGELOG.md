@@ -7,10 +7,16 @@
 ### Added
 - `docs/sql/migrate_users_add_org_columns.sql`: `users`에 `company_name` / `division_name` / `team_name` 컬럼 추가(기존 DB용 idempotent `ALTER`)
 - `docs/sql/backfill_users_org_hierarchy.sql`: 시드와 동일한 사번별 조직 값 백필(외부 계정·미등록 사번 보조 로직 포함)
+- `docs/sql/update_users_org_from_seed.sql`: `seed_test_users.sql` 과 동일한 사번별 회사/본부/팀만 `UPDATE` (다른 컬럼 미변경)
+- `users.company_key`(조직도 회사 필터) 및 `GET /api/user-directory/organization?companyKey=` — `ORGROOT`/미지정 시 전체, `GENERAL`/`EXTERNAL`/`COVIM365` 등으로 ACTIVE 사용자 제한
+- `docs/sql/migrate_users_company_key.sql`, `docs/sql/update_users_company_key_from_seed.sql`
+- 프론트 `modalAddMemberPicker`: 회사 셀렉트 + AXTree 스타일 좌측 조직도
 
 ### Changed
-- `docs/DB_SCHEMA.md`: `users` 명세에 조직 3컬럼 반영
-- `README.md`, `docs/HANDOVER.md`, `docs/ENVIRONMENT_SETUP.md`, `docs/FEATURE_SPEC.md`: 마이그레이션·백필 절차 안내
+- `docs/DB_SCHEMA.md`: `users` 명세에 조직 3컬럼·`company_key` 반영
+- `docs/sql/seed_test_users.sql`, `docs/sql/postgresql_schema_draft.sql`: `company_key` 포함
+- `ExternalOrgUser` / 조직 동기화 UPSERT: `company_key` 반영
+- `README.md`, `docs/HANDOVER.md`, `docs/ENVIRONMENT_SETUP.md`, `docs/FEATURE_SPEC.md`: 마이그레이션·백필·회사 필터 절차 안내
 
 ## 2026-03-25 (17차)
 

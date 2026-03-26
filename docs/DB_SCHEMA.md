@@ -140,6 +140,7 @@ CREATE TABLE users (
     company_name    VARCHAR(120),
     division_name   VARCHAR(120),
     team_name       VARCHAR(120),
+    company_key     VARCHAR(40),
     job_rank        VARCHAR(100),
     duty_title      VARCHAR(100),
     role            VARCHAR(30)  NOT NULL DEFAULT 'MEMBER',
@@ -160,6 +161,7 @@ CREATE TABLE users (
 | `company_name` | VARCHAR(120) | ❌ | NULL | 조직도 최상위(회사). `GET /api/user-directory/organization` 트리 루트 |
 | `division_name` | VARCHAR(120) | ❌ | NULL | 본부 단위 |
 | `team_name` | VARCHAR(120) | ❌ | NULL | 팀 단위 |
+| `company_key` | VARCHAR(40) | ❌ | NULL | 그룹사/테넌트 키(조직도 상단 필터). 예: `GENERAL`, `EXTERNAL`, `COVIM365`. null 은 레거시 호환으로 `GENERAL` 필터에 포함 |
 | `job_rank` | VARCHAR(100) | ❌ | NULL | 직위(위계). UI에서 없으면 `-` 등으로 표시 |
 | `duty_title` | VARCHAR(100) | ❌ | NULL | 직책(담당 역할명). 없으면 프로필·채널 멤버 UI에서 행 자체를 숨김 |
 | `role` | VARCHAR(30) | ✅ | `'MEMBER'` | 앱 역할. → [역할 Enum 참고](#roles) |

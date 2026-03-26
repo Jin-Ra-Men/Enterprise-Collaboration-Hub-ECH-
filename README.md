@@ -98,7 +98,7 @@ graph LR
 - `POST /api/channels/{channelId}/messages/{parentMessageId}/replies`
 - `GET /api/channels/{channelId}/messages/{parentMessageId}/replies`
 - `GET /api/users/search?q=...&department=...`
-- `GET /api/user-directory/organization`
+- `GET /api/user-directory/organization?companyKey=` (선택: `ORGROOT` 전체, `GENERAL`/`EXTERNAL`/`COVIM365` 등 `users.company_key` 필터)
 - `GET /api/users/profile?userId=...`
 - `GET /api/users/{userId}/profile` (경로형, 호환)
 - `POST /api/kanban/boards`, `GET /api/kanban/boards`, `GET /api/kanban/boards/{boardId}`, `DELETE /api/kanban/boards/{boardId}`

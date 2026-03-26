@@ -43,6 +43,7 @@ public class OrgSyncService {
                     user.companyName(),
                     user.divisionName(),
                     user.teamName(),
+                    safeCompanyKey(user.companyKey()),
                     user.jobRank(),
                     user.dutyTitle(),
                     safeRole(user.role()),
@@ -69,6 +70,13 @@ public class OrgSyncService {
             throw new IllegalArgumentException("지원하지 않는 조직 동기화 소스입니다.");
         }
         return provider;
+    }
+
+    private static String safeCompanyKey(String companyKey) {
+        if (companyKey == null || companyKey.isBlank()) {
+            return "GENERAL";
+        }
+        return companyKey.trim().toUpperCase();
     }
 
     private static String safeRole(String role) {

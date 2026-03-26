@@ -38,9 +38,13 @@ public class UserSearchService {
         /**
          * 회사 → 본부 → 팀(부서) → 사용자.
          * company/division/team 컬럼이 비어 있으면 해당 레벨을 "미지정" 버킷으로 분류한다.
+         *
+         * @param companyKeyFilter UI 회사 셀렉트 값. null 또는 빈 문자열, {@code ORGROOT} 는 필터 없음(전체).
+         *                         그 외 {@code GENERAL}, {@code EXTERNAL}, {@code COVIM365} 등은 users.company_key 와 일치하는 행만.
          */
-    public OrganizationTreeResponse getOrganizationTree() {
-        List<User> users = userRepository.findActiveUsersForOrganization();
+    public OrganizationTreeResponse getOrganizationTree(String companyKeyFilter) {
+        String repoKey = resolveCompanyKeyForRepository(companyKeyFilter);
+        List<User> users = userRepository.findActiveUsersForOrganization(repoKey);
         Map<String, Map<String, Map<String, List<User>>>> byCompany = new LinkedHashMap<>();
         for (User u : users) {
             String co = resolveCompany(u);
@@ -67,6 +71,24 @@ public class UserSearchService {
             companies.add(new OrgCompanyResponse(coEntry.getKey(), divisions));
         }
         return new OrganizationTreeResponse(companies);
+    }
+
+    /**
+     * null / 공백 / ORGROOT → 전체 조회(null). 그 외 대문자 정규화.
+     */
+    private static String resolveCompanyKeyForRepository(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String t = raw.trim();
+        if (t.isEmpty()) {
+            return null;
+        }
+        String u = t.toUpperCase();
+        if ("ORGROOT".equals(u)) {
+            return null;
+        }
+        return u;
     }
 
     private static String resolveCompany(User u) {

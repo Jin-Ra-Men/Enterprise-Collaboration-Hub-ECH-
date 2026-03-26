@@ -21,6 +21,16 @@ class UserDirectoryApiTest extends BaseIntegrationTest {
     }
 
     @Test
+    @DisplayName("organization 에 companyKey 쿼리 시 200")
+    void organization_with_company_key() throws Exception {
+        mockMvc.perform(get("/api/user-directory/organization")
+                        .param("companyKey", "GENERAL")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.companies").isArray());
+    }
+
+    @Test
     @DisplayName("토큰 없이 organization 호출 시 401")
     void organization_without_token() throws Exception {
         mockMvc.perform(get("/api/user-directory/organization"))
