@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-03-26 — 첨부파일 다운로드 시 감사로그 INSERT 실패 (read-only 트랜잭션)
+
+- **에러 요약**: 첨부파일 다운로드 시 서버 내부 오류가 발생하고, DB 로그에 `SQLState: 25006` / `read-only transaction` INSERT 실패가 기록됨
+- **발생 위치(파일/명령/기능)**: `backend/src/main/java/com/ech/backend/api/file/ChannelFileService.java` (`downloadFile`, `getDownloadInfo` 경로에서 `auditLogService.safeRecord` 호출)
+- **원인**: `safeRecord()`가 같은 클래스 내부 `record()`를 직접 호출(자기호출)하여 `@Transactional(REQUIRES_NEW)`가 적용되지 않았고, 상위 read-only 트랜잭션 문맥에서 `audit_logs` INSERT가 실행됨
+- **해결/현재 상태**: `AuditLogService.safeRecord()` 자체에 `@Transactional(propagation = Propagation.REQUIRES_NEW)`를 부여해 독립 쓰기 트랜잭션으로 실행되도록 수정
+
+---
+
 ## 2026-03-25 — 백엔드 컴파일 실패 (`ChannelType.DM` 누락)
 
 - **에러 요약**: `./gradlew test` 시 `:compileJava` 실패 — `cannot find symbol: variable DM` (`ChannelService.java`)
