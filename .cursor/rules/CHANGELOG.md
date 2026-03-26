@@ -7,6 +7,19 @@
 ### Changed
 - 조직도 회사 셀렉트·트리: `company_key`만 묶지 않고 **`company_key` + `company_name` 조합**별 옵션 및 `GET /organization?companyKey=&companyName=` 필터(빈 `companyName`은 회사명 미입력 행만)
 
+## 2026-03-26 (4차)
+
+### Added
+- `org_groups` / `org_group_members` DDL·백필 스크립트(`docs/sql/create_org_groups.sql`, `create_org_group_members.sql`, `backfill_org_groups_from_users.sql`, `backfill_org_group_members_from_users.sql`)
+
+### Changed
+- 조직도/조직도 회사 셀렉트: `company_key/company_name` 기반에서 `org_groups` 기반으로 전환 및 `GET /api/user-directory/organization?companyGroupCode=` 계약 적용
+- 사용자 검색(department): `users.department` 대신 `org_group_members(TEAM)` + `org_groups.display_name` 조인 기반으로 변경
+- 로그인/채널 멤버 응답의 `department` 값을 `org_group_members(TEAM)`의 팀 표시명으로 주입
+- `OrgSyncService.syncUsers()`: 외부 사용자 동기화 시 `org_groups`/`org_group_members`까지 함께 upsert하도록 확장
+- 프론트 `frontend/app.js`의 조직도 회사 셀렉트/트리 요청 파라미터를 `companyGroupCode`로 수정
+- `UserDirectoryApiTest`를 H2 제약(ON CONFLICT 미지원) 하에서 org 테이블을 직접 시드하도록 보강
+
 ## 2026-03-26 (2차)
 
 ### Added

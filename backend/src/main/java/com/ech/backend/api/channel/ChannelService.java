@@ -14,6 +14,8 @@ import com.ech.backend.domain.channel.ChannelMemberRole;
 import com.ech.backend.domain.channel.ChannelMemberRepository;
 import com.ech.backend.domain.channel.ChannelRepository;
 import com.ech.backend.domain.channel.ChannelType;
+import com.ech.backend.domain.org.OrgGroupMember;
+import com.ech.backend.domain.org.OrgGroupMemberRepository;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
 import java.nio.charset.StandardCharsets;
@@ -22,6 +24,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -34,17 +37,20 @@ public class ChannelService {
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
     private final UserRepository userRepository;
+    private final OrgGroupMemberRepository orgGroupMemberRepository;
     private final AuditLogService auditLogService;
 
     public ChannelService(
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
             UserRepository userRepository,
+            OrgGroupMemberRepository orgGroupMemberRepository,
             AuditLogService auditLogService
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
         this.userRepository = userRepository;
+        this.orgGroupMemberRepository = orgGroupMemberRepository;
         this.auditLogService = auditLogService;
     }
 
@@ -232,11 +238,27 @@ public class ChannelService {
     }
 
     private ChannelResponse toResponse(Channel channel, List<ChannelMember> members) {
+        List<Long> userIds = members.stream()
+                .map(m -> m.getUser().getId())
+                .distinct()
+                .toList();
+
+        List<OrgGroupMember> teamMembers = userIds.isEmpty()
+                ? List.of()
+                : orgGroupMemberRepository.findMembersByMemberGroupTypeAndUserIds("TEAM", userIds);
+
+        Map<Long, String> departmentByUserId = teamMembers.stream()
+                .collect(Collectors.toMap(
+                        m -> m.getUser().getId(),
+                        m -> m.getGroup().getDisplayName(),
+                        (a, b) -> a
+                ));
+
         List<ChannelMemberResponse> memberResponses = members.stream()
                 .map(member -> new ChannelMemberResponse(
                         member.getUser().getId(),
                         member.getUser().getName(),
-                        member.getUser().getDepartment(),
+                        departmentByUserId.getOrDefault(member.getUser().getId(), member.getUser().getDepartment()),
                         member.getUser().getJobRank(),
                         member.getUser().getDutyTitle(),
                         member.getMemberRole().name(),

@@ -427,8 +427,11 @@
 - 관련 화면/경로: 채널·DM 만들기 및 구성원 추가에서 `+` 팝업(`modalAddMemberPicker`)으로 **상단 회사 셀렉트**(그룹사 공용·코비젼·프리랜서·M365 등) + 좌측 조직도(AXTree 유사 계층) + 우측 검색/결과를 함께 사용, 관리자 사용자 관리(확장 시)
 - 관련 API:
   - `GET /api/users/search?q=...&department=...`
-  - `GET /api/user-directory/organization-filters` — ACTIVE 사용자의 **`company_key` + `company_name` 고유 조합**마다 셀렉트 옵션(`label`, `companyKey`, `companyName`). 첫 항목은 전체(`companyKey`/`companyName` null). `company_name` 이 비어 있으면 옵션 라벨은 `"{키별 기본문구} (회사명 없음)"` 이고 API에는 `companyName` 빈 문자열로 필터.
-  - `GET /api/user-directory/organization?companyKey=&companyName=`(선택) — ACTIVE 사용자를 **회사 → 본부 → 팀(부서)** 3단계 트리로 그룹화. **회사 필터**: `companyKey`/`companyName` 모두 생략 또는 `ORGROOT`면 전체. `companyKey`만 주면 해당 키(및 레거시 null 키는 `GENERAL`과 동일) 전체. `companyName`까지 주면 `users.company_name` 트림 일치 행만(빈 문자열 파라미터는 회사명 null/공백 행만). 셀렉트에서 특정 회사를 고르면 좌측 트리에는 **그 조합에 속한 사용자만** 나와 해당 회사 노드만 보이게 된다. DB에 조직 컬럼이 없으면 `docs/sql/migrate_users_add_org_columns.sql`·`migrate_users_company_key.sql` 적용 후 시드/백필. (구) `/api/users/organization` 은 정적 `/**` 매핑과 겹칠 수 있어 분리.
+  - `GET /api/user-directory/organization-filters` — `org_groups`에서 **`group_type=COMPANY` + `is_active=true`** 인 회사 그룹들을 기준으로 셀렉트 옵션(`label`, `companyGroupCode`). 첫 항목은 전체이며 `companyGroupCode=null`로 반환.
+  - `GET /api/user-directory/organization?companyGroupCode=`(선택) — ACTIVE 사용자를 **COMPANY → DIVISION → TEAM** 3단계 트리로 그룹화한다. `companyGroupCode`를 생략하거나 전체 옵션을 선택하면 전체를 반환하고, 특정 `companyGroupCode`가 오면 해당 회사 트리만 반환한다.  
+    - 조직 노드/계층은 `org_groups` 계층( `parent_group_id` )과 `company_group_id` 연결을 사용한다.
+    - 사용자 목록은 `org_group_members`에서 `member_group_type='TEAM'`에 해당하는 유저를 사용한다.
+    - 각 사용자의 `department` 값은 `TEAM` 그룹의 `display_name`으로 채운다. (잡레벨/직책은 `org_group_members(JOB_LEVEL/DUTY_TITLE)`가 채워진 경우 우선, 미구성 시 `users.job_rank`/`users.duty_title` fallback)
   - `GET /api/users/profile?userId=` — 동료 프로필(프론트 기본, 이름·사원번호·이메일·부서·직위; 직책(`dutyTitle`)은 값이 있을 때만 모달에 표시. **DM 보내기**로 DM 채널 생성·입장). 응답에 `role`/`status`가 있어도 프로필 모달에는 표시하지 않음
   - `GET /api/users/{userId}/profile` — 동일(경로형, 하위 호환)
 - 관련 Socket 이벤트: 해당 없음

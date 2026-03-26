@@ -27,12 +27,11 @@ public class UserDirectoryController {
 
     @GetMapping("/organization")
     public ApiResponse<OrganizationTreeResponse> organization(
-            @RequestParam(name = "companyKey", required = false) String companyKey,
-            @RequestParam(name = "companyName", required = false) String companyName) {
-        return ApiResponse.success(userSearchService.getOrganizationTree(companyKey, companyName));
+            @RequestParam(name = "companyGroupCode", required = false) String companyGroupCode) {
+        return ApiResponse.success(userSearchService.getOrganizationTree(companyGroupCode));
     }
 
-    /** 조직도 팝업 상단 회사 셀렉트 — DB {@code company_key}+{@code company_name} 조합별 옵션. */
+    /** 조직도 팝업 상단 회사 셀렉트 — org_groups(COMPANY)에서 가져온 옵션. */
     @GetMapping("/organization-filters")
     public ApiResponse<OrganizationCompanyFiltersResponse> organizationFilters() {
         return ApiResponse.success(userSearchService.getOrganizationCompanyFilters());

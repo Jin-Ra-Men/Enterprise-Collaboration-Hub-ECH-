@@ -388,31 +388,17 @@ function ensureOrgCompanySelectListener() {
   });
 }
 
-/** 셀렉트 값 → 조직도 API 쿼리 (company_key + company_name 조합) */
-function orgPickerScopeFromSelectValue(v) {
-  if (!v || v === "ORGROOT") return { companyKey: null, companyName: null };
-  try {
-    const o = JSON.parse(v);
-    return {
-      companyKey: o.companyKey != null ? o.companyKey : null,
-      companyName: Object.prototype.hasOwnProperty.call(o, "companyName") ? o.companyName : null,
-    };
-  } catch {
-    return { companyKey: null, companyName: null };
-  }
+function buildOrganizationTreeUrlByCompanyGroupCode(companyGroupCode) {
+  const code = companyGroupCode === undefined || companyGroupCode === null
+    ? "ORGROOT"
+    : String(companyGroupCode);
+  if (!code || code === "ORGROOT") return "/api/user-directory/organization";
+  const trimmed = code.trim();
+  if (!trimmed) return "/api/user-directory/organization";
+  return `/api/user-directory/organization?companyGroupCode=${encodeURIComponent(trimmed)}`;
 }
 
-function buildOrganizationTreeUrl(scope) {
-  const params = new URLSearchParams();
-  if (scope.companyKey) params.set("companyKey", scope.companyKey);
-  if (scope.companyName !== null && scope.companyName !== undefined) {
-    params.set("companyName", scope.companyName);
-  }
-  const q = params.toString();
-  return `/api/user-directory/organization${q ? `?${q}` : ""}`;
-}
-
-/** DB 기반 회사 셀렉트 — (company_key, company_name) 조합별 옵션 */
+/** DB 기반 회사 셀렉트 — org_groups(COMPANY) 기준 옵션 */
 async function loadOrganizationCompanyFiltersIntoSelect() {
   const sel = document.getElementById("companySelect");
   if (!sel) return;
@@ -428,14 +414,7 @@ async function loadOrganizationCompanyFiltersIntoSelect() {
     sel.innerHTML = "";
     opts.forEach((o) => {
       const opt = document.createElement("option");
-      if (o.companyKey == null && o.companyName == null) {
-        opt.value = "ORGROOT";
-      } else {
-        opt.value = JSON.stringify({
-          companyKey: o.companyKey,
-          companyName: o.companyName === "" ? "" : o.companyName ?? null,
-        });
-      }
+      opt.value = o.companyGroupCode == null ? "ORGROOT" : String(o.companyGroupCode);
       opt.textContent = o.label || "";
       sel.appendChild(opt);
     });
@@ -604,8 +583,7 @@ async function loadOrgTree(context, embedElIdOverride = null) {
 
   try {
     const rawSel = document.getElementById("companySelect")?.value || "ORGROOT";
-    const scope = orgPickerScopeFromSelectValue(rawSel);
-    const res  = await apiFetch(buildOrganizationTreeUrl(scope));
+    const res = await apiFetch(buildOrganizationTreeUrlByCompanyGroupCode(rawSel));
     const json = await res.json();
     if (!res.ok) {
       const treeEl = document.getElementById("orgTreeEmbedAdd");

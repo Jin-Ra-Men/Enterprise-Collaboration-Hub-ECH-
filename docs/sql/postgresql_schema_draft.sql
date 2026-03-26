@@ -272,3 +272,39 @@ CREATE TABLE IF NOT EXISTS deployment_history (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_deployment_history_created_at ON deployment_history(created_at DESC);
+
+-- ============================================================
+-- 조직도 정규화 (org_groups / org_group_members)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS org_groups (
+    id BIGSERIAL PRIMARY KEY,
+    group_type VARCHAR(30) NOT NULL,
+    group_code VARCHAR(32) NOT NULL,
+    display_name VARCHAR(200) NOT NULL,
+    parent_group_id BIGINT NULL REFERENCES org_groups(id) ON DELETE CASCADE,
+    company_group_id BIGINT NULL REFERENCES org_groups(id) ON DELETE CASCADE,
+    group_path VARCHAR(500) NULL,
+    sort_order INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_org_groups_type_code UNIQUE (group_type, group_code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_org_groups_type_parent ON org_groups(group_type, parent_group_id);
+CREATE INDEX IF NOT EXISTS idx_org_groups_type_company ON org_groups(group_type, company_group_id);
+CREATE INDEX IF NOT EXISTS idx_org_groups_group_code ON org_groups(group_code);
+
+CREATE TABLE IF NOT EXISTS org_group_members (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    group_id BIGINT NOT NULL REFERENCES org_groups(id) ON DELETE CASCADE,
+    member_group_type VARCHAR(30) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_org_group_members_user_type UNIQUE (user_id, member_group_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_org_group_members_user ON org_group_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_org_group_members_group ON org_group_members(group_id);
+CREATE INDEX IF NOT EXISTS idx_org_group_members_type ON org_group_members(member_group_type);
