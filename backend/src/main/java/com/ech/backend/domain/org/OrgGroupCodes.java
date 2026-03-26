@@ -1,64 +1,101 @@
 package com.ech.backend.domain.org;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
-
 /**
- * Stable org group_code values: ASCII-only (A–Z, 0–9, underscore).
- * Fingerprints are full 32-char MD5 hex (unchained semantics); pretty codes embed an 8- or 12-char prefix of that hash for uniqueness.
+ * Human-readable org group_code generator.
  */
 public final class OrgGroupCodes {
 
+    public static final String ORG_ROOT_CODE = "ORGROOT";
+    public static final String JOB_LEVEL_PARENT_CODE = "0_JobLevel";
+    public static final String JOB_POSITION_PARENT_CODE = "0_JobPosition";
+    public static final String JOB_TITLE_PARENT_CODE = "0_JobTitle";
+
     private OrgGroupCodes() {}
 
-    public static String fingerprintCompany(String companyCodeNormalized, String companyDisplayName) {
-        return md5Hex("COMPANY;" + companyCodeNormalized + ";" + companyDisplayName);
+    public static String companyCode(String companyCodeNormalized) {
+        return compact("C", slugSegment(companyCodeNormalized, 20));
     }
 
-    public static String fingerprintDivision(String companyFingerprint32, String divisionDisplayName) {
-        return md5Hex("DIVISION;" + companyFingerprint32 + ";" + divisionDisplayName);
+    public static String divisionCode(String companyCodeNormalized, String divisionDisplayName) {
+        return compact("D", slugSegment(companyCodeNormalized, 8), slugSegment(divisionDisplayName, 20));
     }
 
-    public static String fingerprintTeam(String divisionFingerprint32, String teamDisplayName) {
-        return md5Hex("TEAM;" + divisionFingerprint32 + ";" + teamDisplayName);
+    public static String teamCode(String divisionCode, String teamDisplayName) {
+        return compact("T", tailSegment(divisionCode, 10), slugSegment(teamDisplayName, 18));
     }
 
-    public static String fingerprintJobLevel(String jobLevelTrimmed) {
-        return md5Hex("JOB_LEVEL;" + jobLevelTrimmed);
+    public static String jobLevelCode(String jobLevelDisplayName) {
+        String mapped = switch (normalize(jobLevelDisplayName)) {
+            case "대표이사" -> "0_L100";
+            case "사장" -> "0_L110";
+            case "부사장" -> "0_L120";
+            case "전무" -> "0_L130";
+            case "상무" -> "0_L140";
+            case "이사" -> "0_L150";
+            case "부장" -> "0_L200";
+            case "차장" -> "0_L300";
+            case "과장" -> "0_L400";
+            case "대리" -> "0_L500";
+            case "사원" -> "0_L600";
+            case "인턴" -> "0_L700";
+            default -> null;
+        };
+        return mapped != null ? mapped : compact("0L", slugSegment(jobLevelDisplayName, 20));
     }
 
-    public static String fingerprintJobPosition(String jobPositionTrimmed) {
-        return md5Hex("JOB_POSITION;" + jobPositionTrimmed);
+    public static String jobPositionCode(String jobPositionDisplayName) {
+        String mapped = switch (normalize(jobPositionDisplayName)) {
+            case "대표이사" -> "0_P100";
+            case "사장" -> "0_P110";
+            case "부사장" -> "0_P120";
+            default -> null;
+        };
+        return mapped != null ? mapped : compact("0P", slugSegment(jobPositionDisplayName, 20));
     }
 
-    public static String fingerprintJobTitle(String jobTitleTrimmed) {
-        return md5Hex("JOB_TITLE;" + jobTitleTrimmed);
+    public static String jobTitleCode(String jobTitleDisplayName) {
+        String mapped = switch (normalize(jobTitleDisplayName)) {
+            case "대표이사" -> "0_T100";
+            case "사장" -> "0_T110";
+            case "부사장" -> "0_T120";
+            case "팀장" -> "0_T200";
+            case "팀원" -> "0_T300";
+            default -> null;
+        };
+        return mapped != null ? mapped : compact("0T", slugSegment(jobTitleDisplayName, 20));
     }
 
-    public static String prettyCompany(String companyCodeNormalized, String companyFingerprint32) {
-        return "COMP_" + slugSegment(companyCodeNormalized, 12) + "_" + fp8(companyFingerprint32);
+    private static String compact(String... segments) {
+        StringBuilder sb = new StringBuilder();
+        for (String s : segments) {
+            if (s == null || s.isBlank()) {
+                continue;
+            }
+            if (!sb.isEmpty()) {
+                sb.append('_');
+            }
+            sb.append(s);
+        }
+        if (sb.isEmpty()) {
+            return "ORG_UNKNOWN";
+        }
+        if (sb.length() <= 32) {
+            return sb.toString();
+        }
+        return sb.substring(0, 32);
     }
 
-    public static String prettyDivision(String companyFingerprint32, String divisionFingerprint32) {
-        return "DIV_" + fp8(companyFingerprint32) + "_" + fp8(divisionFingerprint32);
-    }
-
-    public static String prettyTeam(String divisionFingerprint32, String teamFingerprint32) {
-        return "TEAM_" + fp8(divisionFingerprint32) + "_" + fp8(teamFingerprint32);
-    }
-
-    public static String prettyJobLevel(String jobFingerprint32) {
-        return "JOB_" + fp12(jobFingerprint32);
-    }
-
-    public static String prettyJobPosition(String positionFingerprint32) {
-        return "JPOS_" + fp12(positionFingerprint32);
-    }
-
-    public static String prettyJobTitle(String titleFingerprint32) {
-        return "JTIT_" + fp12(titleFingerprint32);
+    private static String tailSegment(String raw, int maxLen) {
+        if (raw == null || raw.isBlank()) {
+            return "BASE";
+        }
+        String normalized = raw.replaceAll("[^A-Za-z0-9_]", "");
+        if (normalized.isBlank()) {
+            return "BASE";
+        }
+        return normalized.length() <= maxLen
+                ? normalized
+                : normalized.substring(normalized.length() - maxLen);
     }
 
     private static String slugSegment(String raw, int maxLen) {
@@ -66,31 +103,21 @@ public final class OrgGroupCodes {
             return "GEN";
         }
         String upper = raw.trim().toUpperCase();
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < upper.length() && sb.length() < maxLen; i++) {
+        StringBuilder ascii = new StringBuilder();
+        for (int i = 0; i < upper.length() && ascii.length() < maxLen; i++) {
             char c = upper.charAt(i);
             if ((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
-                sb.append(c);
+                ascii.append(c);
             }
         }
-        return sb.length() == 0 ? "GEN" : sb.toString();
-    }
-
-    private static String fp8(String fingerprint32) {
-        return fingerprint32.substring(0, 8).toUpperCase();
-    }
-
-    private static String fp12(String fingerprint32) {
-        return fingerprint32.substring(0, 12).toUpperCase();
-    }
-
-    private static String md5Hex(String input) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("MD5 algorithm not available", e);
+        if (!ascii.isEmpty()) {
+            return ascii.toString();
         }
+        int h = Math.abs(upper.hashCode());
+        return "N" + Integer.toString(h, 36).toUpperCase();
+    }
+
+    private static String normalize(String value) {
+        return value == null ? "" : value.trim();
     }
 }

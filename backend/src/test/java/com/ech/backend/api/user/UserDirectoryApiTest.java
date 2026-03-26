@@ -36,18 +36,15 @@ class UserDirectoryApiTest extends BaseIntegrationTest {
 
         String companyCodeNormalized = "GENERAL";
         String companyDisplayName = "ECH 통합테스트";
-        String companyFp = OrgGroupCodes.fingerprintCompany(companyCodeNormalized, companyDisplayName);
-        String companyGroupCode = OrgGroupCodes.prettyCompany(companyCodeNormalized, companyFp);
+        String companyGroupCode = OrgGroupCodes.companyCode(companyCodeNormalized);
         OrgGroup company = findOrCreateCompany(companyGroupCode, companyDisplayName);
 
         String divisionDisplayName = "통합테스트본부";
-        String divisionFp = OrgGroupCodes.fingerprintDivision(companyFp, divisionDisplayName);
-        String divisionGroupCode = OrgGroupCodes.prettyDivision(companyFp, divisionFp);
+        String divisionGroupCode = OrgGroupCodes.divisionCode(companyCodeNormalized, divisionDisplayName);
         OrgGroup division = findOrCreateDivision(company, divisionGroupCode, divisionDisplayName);
 
         String teamDisplayName = "통합테스트팀";
-        String teamFp = OrgGroupCodes.fingerprintTeam(divisionFp, teamDisplayName);
-        String teamGroupCode = OrgGroupCodes.prettyTeam(divisionFp, teamFp);
+        String teamGroupCode = OrgGroupCodes.teamCode(divisionGroupCode, teamDisplayName);
         OrgGroup team = findOrCreateTeam(company, division, teamGroupCode, teamDisplayName);
 
         for (User u : userRepository.findAll()) {
