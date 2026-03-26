@@ -140,12 +140,12 @@ public final class OrgGroupCodes {
         if ("감사본부".equals(normalizedUpperText)) return "AUDIT";
         if ("미지정 본부".equals(normalizedUpperText) || "미지정본부".equals(normalizedUpperText)) return "RETIREDEPT";
         if ("IT운영팀".equals(normalizedUpperText)) return "ITOPS";
-        if ("테스트팀".equals(normalizedUpperText)) return "QA";
+        if ("테스트팀".equals(normalizedUpperText)) return "QA_TEAM";
         if ("개발1팀".equals(normalizedUpperText)) return "DEV1";
         if ("개발2팀".equals(normalizedUpperText)) return "DEV2";
         if ("인사총무팀".equals(normalizedUpperText)) return "HR";
         if ("영업1팀".equals(normalizedUpperText)) return "SALES1";
-        if ("기획전략팀".equals(normalizedUpperText)) return "PLAN";
+        if ("기획전략팀".equals(normalizedUpperText)) return "PLAN_TEAM";
         if ("보안감사팀".equals(normalizedUpperText)) return "SECAUDIT";
         if ("미지정 팀".equals(normalizedUpperText) || "미지정팀".equals(normalizedUpperText)) return "RETIRETEAM";
         return null;
