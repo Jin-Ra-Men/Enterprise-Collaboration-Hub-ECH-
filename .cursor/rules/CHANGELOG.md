@@ -18,6 +18,7 @@
 - 조직도 트리: 부서 인원수 표시(`ech-tree-count`) 제거
 - 조직도 팝업: 구성원 선택 결과(내가 고른 사용자) 표시 및 선택 취소 버튼(X) 추가
 - 조직도 팝업: 선택 사용자 목록을 본문에서 하단 `선택 완료` 버튼 라인으로 이동하고 별도 제목 텍스트 제거
+- 채팅: 시스템 메시지(`msg-system`)가 사이에 끼면 다음 사용자 메시지를 새 발화로 처리(아바타/이름 재노출)
 
 ### Added
 - PostgreSQL 마이그레이션: `migrate_users_drop_org_columns.sql`, `migrate_org_group_members_user_id_to_employee_no.sql`, `migrate_org_duty_title_to_job_title.sql`

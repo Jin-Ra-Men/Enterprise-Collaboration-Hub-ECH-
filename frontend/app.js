@@ -1194,21 +1194,30 @@ function appendMessageRealtime(msg) {
   const sid = Number(msg.senderId);
   const mk = minuteKey(msg.createdAt);
   const dk = dateKeyLocal(msg.createdAt);
-  let rows = messagesEl.querySelectorAll(".msg-row.msg-chat");
-  let last = rows[rows.length - 1];
-  const lastDk = last ? last.dataset.dateKey : null;
-  if (!last || lastDk !== dk) {
+  const isChatRow = (el) =>
+    !!el && el.classList?.contains("msg-row") && el.classList.contains("msg-chat");
+
+  const prevEl = messagesEl.lastElementChild;
+  const prevChat = isChatRow(prevEl) ? prevEl : null;
+  const prevChatDateKey = prevChat ? prevChat.dataset.dateKey : null;
+  if (!prevChat || prevChatDateKey !== dk) {
     messagesEl.appendChild(createDateDividerElement(msg.createdAt));
   }
-  rows = messagesEl.querySelectorAll(".msg-row.msg-chat");
-  last = rows[rows.length - 1];
-  if (last && Number(last.dataset.senderId) === sid && last.dataset.minuteKey === mk) {
-    const timeEl = last.querySelector(".msg-time");
+
+  const adjacentPrevEl = messagesEl.lastElementChild;
+  const adjacentPrevChat = isChatRow(adjacentPrevEl) ? adjacentPrevEl : null;
+  if (
+    adjacentPrevChat &&
+    Number(adjacentPrevChat.dataset.senderId) === sid &&
+    adjacentPrevChat.dataset.minuteKey === mk
+  ) {
+    const timeEl = adjacentPrevChat.querySelector(".msg-time");
     if (timeEl) timeEl.remove();
   }
-  rows = messagesEl.querySelectorAll(".msg-row.msg-chat");
-  last = rows[rows.length - 1];
-  const showAvatar = !last || Number(last.dataset.senderId) !== sid;
+
+  const beforeAppendEl = messagesEl.lastElementChild;
+  const beforeAppendChat = isChatRow(beforeAppendEl) ? beforeAppendEl : null;
+  const showAvatar = !beforeAppendChat || Number(beforeAppendChat.dataset.senderId) !== sid;
   messagesEl.appendChild(
     createMessageRowElement(msg, { showAvatar, showTime: true })
   );
