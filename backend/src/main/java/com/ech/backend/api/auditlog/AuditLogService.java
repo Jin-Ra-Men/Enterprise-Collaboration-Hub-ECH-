@@ -54,6 +54,7 @@ public class AuditLogService {
     }
 
     /** 예외를 삼키는 안전 래퍼 — 감사 로깅 실패가 응답 흐름을 막지 않게 한다. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void safeRecord(
             AuditEventType eventType,
             Long actorUserId,
