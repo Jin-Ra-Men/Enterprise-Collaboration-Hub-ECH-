@@ -45,7 +45,7 @@
 ## 3-1) 데이터베이스 스키마 인수인계 메모
 - 현재 기준 DB: PostgreSQL
 - 1차 확정 테이블:
-  - `users`: 사용자 기본 정보/권한/상태(조직도는 `company_name` / `division_name` / `team_name`; 기존 DB에 컬럼이 없으면 `docs/sql/migrate_users_add_org_columns.sql` 후 `seed_test_users.sql` 또는 `backfill_users_org_hierarchy.sql`)
+  - `users`: 사용자 기본 정보/권한/상태(조직도는 `company_name` / `division_name` / `team_name` 및 회사 필터용 `company_key`; 컬럼이 없으면 `migrate_users_add_org_columns.sql`·`migrate_users_company_key.sql` 후 `seed_test_users.sql` 또는 백필 스크립트)
   - `channels`: 채널 메타/타입/생성자
   - `channel_members`: 채널 멤버십 및 멤버 권한
   - `channel_read_states`: 채널별 사용자 마지막 읽은 메시지(`last_read_message_id`)
@@ -137,7 +137,7 @@
 
 ### 사용자 검색/Presence 인수인계 메모
 - 사용자 검색은 `users.department`를 조직도 속성으로 사용해 부서 필터를 지원합니다.
-- `GET /api/user-directory/organization` 응답은 `data.companies[]` → `divisions[]` → `teams[]` → `users[]` 3단계 트리이며, DB의 `company_name` / `division_name` / `team_name`(조직 깊이: 회사코드/본부코드/부서코드)을 그대로 사용합니다. 프론트는 채널·DM 생성 모달과 구성원 추가에서 모두 메인 모달의 **+** 버튼으로 `modalAddMemberPicker` 오버레이를 열고, 좌측 조직도 + 우측 검색/결과에서 선택한 사용자를 상위 모달의 선택 태그에 반영합니다.
+- `GET /api/user-directory/organization?companyKey=` 응답은 `data.companies[]` → `divisions[]` → `teams[]` → `users[]` 3단계 트리이며, DB의 `company_name` / `division_name` / `team_name`을 그대로 사용합니다. `companyKey`는 `ORGROOT`/미지정이면 전체, 그 외 `GENERAL`·`EXTERNAL`·`COVIM365` 등은 `users.company_key`로 필터합니다. 프론트는 **회사 셀렉트** + 좌측 조직도(AXTree 유사) + 우측 검색/결과에서 선택한 사용자를 상위 모달의 선택 태그에 반영합니다.
 - 검색 키워드(`q`)는 이름/이메일/사번에 대해 부분 일치 조회를 수행합니다.
 - Presence는 Realtime 서버 메모리 기반으로 관리됩니다.
 - 소켓별로 사용자를 추적하며, 해당 사용자의 **모든** 소켓이 끊기면 OFFLINE 브로드캐스트 후 메모리에서 제거합니다(유령 userId 누적 방지).

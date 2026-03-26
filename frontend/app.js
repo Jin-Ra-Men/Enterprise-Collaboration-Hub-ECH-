@@ -379,60 +379,92 @@ function getMemberPickerRightSearchKeyword() {
   return document.getElementById("addMemberTopSearchInput")?.value || "";
 }
 
+function ensureOrgCompanySelectListener() {
+  const sel = document.getElementById("companySelect");
+  if (!sel || sel.dataset.echOrgBound) return;
+  sel.dataset.echOrgBound = "1";
+  sel.addEventListener("change", () => {
+    loadOrgTree(orgPickerContext, orgPickerEmbedElId);
+  });
+}
+
 function renderOrgTreeLeft() {
   const treeEl = document.getElementById("orgTreeEmbedAdd");
   if (!treeEl) return;
   treeEl.innerHTML = "";
+  treeEl.className = "org-tree-embedded ech-ui-tree";
 
   if (!orgPickerCompanies.length) {
-    treeEl.innerHTML = '<p class="empty-notice">표시할 사용자가 없습니다.</p>';
+    treeEl.innerHTML = '<p class="empty-notice">표시할 조직이 없습니다.</p>';
     return;
   }
 
   const selectedKey = orgPickerSelectedTeamKey;
+  const scroll = document.createElement("div");
+  scroll.className = "ech-tree-scroll";
+  const root = document.createElement("div");
+  root.className = "ech-tree-root";
 
   orgPickerCompanies.forEach((co) => {
-    const detCo = document.createElement("details");
-    detCo.className = "org-lvl org-lvl-company";
-    detCo.open = true;
-    detCo.innerHTML = `<summary><span class="org-lvl-label">${escHtml(co.name)}</span></summary>`;
-    const wrapCo = document.createElement("div");
-    wrapCo.className = "org-lvl-body";
+    const coBlock = document.createElement("div");
+    coBlock.className = "ech-tree-co";
+
+    const row1 = document.createElement("div");
+    row1.className = "ech-tree-row ech-tree-row--lv1";
+    row1.innerHTML = `
+      <span class="ech-tree-line ech-tree-line--root" aria-hidden="true"></span>
+      <span class="ech-tree-ico ech-tree-ico--building" aria-hidden="true"></span>
+      <span class="ech-tree-label">${escHtml(co.name)}</span>`;
+    coBlock.appendChild(row1);
+
+    const divWrap = document.createElement("div");
+    divWrap.className = "ech-tree-co-children";
 
     (co.divisions || []).forEach((div) => {
-      const detDiv = document.createElement("details");
-      detDiv.className = "org-lvl org-lvl-division";
-      detDiv.open = true;
-      detDiv.innerHTML = `<summary><span class="org-lvl-label">${escHtml(div.name)}</span></summary>`;
-      const wrapDiv = document.createElement("div");
-      wrapDiv.className = "org-lvl-body";
+      const det = document.createElement("details");
+      det.className = "ech-tree-details ech-tree-details--div";
+      det.open = true;
+      const sum = document.createElement("summary");
+      sum.className = "ech-tree-summary ech-tree-row ech-tree-row--lv2";
+      sum.innerHTML = `
+        <span class="ech-tree-line ech-tree-line--branch" aria-hidden="true"></span>
+        <span class="ech-tree-ico ech-tree-ico--sitemap" aria-hidden="true"></span>
+        <span class="ech-tree-label">${escHtml(div.name)}</span>`;
+      det.appendChild(sum);
+
+      const teamBox = document.createElement("div");
+      teamBox.className = "ech-tree-div-body";
 
       (div.teams || []).forEach((team) => {
         const teamKey = buildTeamKey(co.name, div.name, team.name);
         const uCount = (team.users || []).length;
         const btn = document.createElement("button");
         btn.type = "button";
-        btn.className = `org-team-select${teamKey === selectedKey ? " active" : ""}`;
+        btn.className = `ech-tree-row ech-tree-row--lv3 ech-tree-team${teamKey === selectedKey ? " is-selected" : ""}`;
         btn.dataset.teamKey = teamKey;
         btn.innerHTML = `
-          <span>${escHtml(team.name)}</span>
-          <span class="org-team-count">(${uCount})</span>
-        `;
+          <span class="ech-tree-line ech-tree-line--branch" aria-hidden="true"></span>
+          <span class="ech-tree-ico ech-tree-ico--users" aria-hidden="true"></span>
+          <span class="ech-tree-label">${escHtml(team.name)}</span>
+          <span class="ech-tree-count">(${uCount})</span>`;
         btn.addEventListener("click", () => {
           orgPickerSelectedTeamKey = teamKey;
           renderOrgTreeLeft();
           renderMemberListRight();
         });
-        wrapDiv.appendChild(btn);
+        teamBox.appendChild(btn);
       });
 
-      detDiv.appendChild(wrapDiv);
-      wrapCo.appendChild(detDiv);
+      det.appendChild(teamBox);
+      divWrap.appendChild(det);
     });
 
-    detCo.appendChild(wrapCo);
-    treeEl.appendChild(detCo);
+    coBlock.appendChild(divWrap);
+    root.appendChild(coBlock);
   });
+
+  scroll.appendChild(root);
+  treeEl.appendChild(scroll);
 }
 
 function renderMemberListRight() {
@@ -504,8 +536,13 @@ async function loadOrgTree(context, embedElIdOverride = null) {
   if (topInput) topInput.value = "";
   if (topTypeEl) topTypeEl.value = "NAME";
 
+  ensureOrgCompanySelectListener();
+
   try {
-    const res  = await apiFetch("/api/user-directory/organization");
+    const companyKey = document.getElementById("companySelect")?.value || "ORGROOT";
+    const res  = await apiFetch(
+      `/api/user-directory/organization?companyKey=${encodeURIComponent(companyKey)}`
+    );
     const json = await res.json();
     if (!res.ok) {
       const treeEl = document.getElementById("orgTreeEmbedAdd");

@@ -30,13 +30,18 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("""
             SELECT u FROM User u
             WHERE u.status = 'ACTIVE'
+              AND (
+                :companyKey IS NULL
+                OR u.companyKey = :companyKey
+                OR (:companyKey = 'GENERAL' AND u.companyKey IS NULL)
+              )
             ORDER BY COALESCE(u.companyName, '') ASC,
                      COALESCE(u.divisionName, '') ASC,
                      COALESCE(u.teamName, '') ASC,
                      COALESCE(u.department, '') ASC,
                      u.name ASC
             """)
-    List<User> findActiveUsersForOrganization();
+    List<User> findActiveUsersForOrganization(@Param("companyKey") String companyKey);
 
     Optional<User> findByEmployeeNo(String employeeNo);
 
@@ -48,9 +53,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Modifying
     @Query(value = """
             INSERT INTO users (employee_no, email, name, department, company_name, division_name, team_name,
-                job_rank, duty_title, role, status, created_at, updated_at)
+                company_key, job_rank, duty_title, role, status, created_at, updated_at)
             VALUES (:employeeNo, :email, :name, :department, :companyName, :divisionName, :teamName,
-                :jobRank, :dutyTitle, :role, :status, NOW(), NOW())
+                :companyKey, :jobRank, :dutyTitle, :role, :status, NOW(), NOW())
             ON CONFLICT (employee_no) DO UPDATE SET
                 email = EXCLUDED.email,
                 name = EXCLUDED.name,
@@ -58,6 +63,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
                 company_name = EXCLUDED.company_name,
                 division_name = EXCLUDED.division_name,
                 team_name = EXCLUDED.team_name,
+                company_key = EXCLUDED.company_key,
                 job_rank = EXCLUDED.job_rank,
                 duty_title = EXCLUDED.duty_title,
                 role = EXCLUDED.role,
@@ -72,6 +78,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
             @Param("companyName") String companyName,
             @Param("divisionName") String divisionName,
             @Param("teamName") String teamName,
+            @Param("companyKey") String companyKey,
             @Param("jobRank") String jobRank,
             @Param("dutyTitle") String dutyTitle,
             @Param("role") String role,

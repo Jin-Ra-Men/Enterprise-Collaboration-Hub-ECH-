@@ -316,6 +316,15 @@
           <button type="button" class="modal-close" data-modal="modalAddMemberPicker">✕</button>
         </div>
         <div class="modal-body">
+          <div class="split_filter member-picker-company-filter">
+            <label for="companySelect" class="ech-visually-hidden">회사</label>
+            <select id="companySelect" class="ui_select_field full" title="회사">
+              <option value="ORGROOT">그룹사(공용)</option>
+              <option value="GENERAL">코비젼</option>
+              <option value="EXTERNAL">코비젼(프리랜서)</option>
+              <option value="COVIM365">코비젼M365</option>
+            </select>
+          </div>
           <div class="member-picker-top-search">
             <select id="addMemberTopSearchType" class="member-search-select">
               <option value="NAME">이름</option>
