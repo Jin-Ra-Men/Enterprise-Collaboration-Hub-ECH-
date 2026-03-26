@@ -1351,10 +1351,29 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
 
 .member-picker-top-search .member-search-select {
   flex-shrink: 0;
+  min-width: 112px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: 14px;
 }
 
-.member-picker-top-search input {
+.member-picker-top-search input[type="text"] {
   flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.member-picker-top-search input[type="text"]::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
 }
 
 .member-picker-top-search .btn-search {
