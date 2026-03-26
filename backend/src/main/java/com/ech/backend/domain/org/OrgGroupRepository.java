@@ -10,9 +10,9 @@ public interface OrgGroupRepository extends JpaRepository<OrgGroup, Long> {
 
     List<OrgGroup> findAllByGroupTypeAndIsActiveOrderByDisplayNameAsc(String groupType, boolean isActive);
 
-    List<OrgGroup> findAllByGroupTypeAndCompanyGroup_IdAndIsActiveOrderByDisplayNameAsc(
+    List<OrgGroup> findAllByGroupTypeAndMemberOfGroupCodeAndIsActiveOrderByDisplayNameAsc(
             String groupType,
-            Long companyGroupId,
+            String memberOfGroupCode,
             boolean isActive
     );
 }

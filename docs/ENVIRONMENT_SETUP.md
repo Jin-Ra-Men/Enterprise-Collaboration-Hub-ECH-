@@ -54,7 +54,7 @@ psql -h localhost -p 5432 -U ech_user -d ech -f docs/sql/seed_test_users.sql
 ```
 
 스키마 초안 적용 후(`postgresql_schema_draft.sql` 등) 실행하는 것을 권장합니다.  
-이미 만들어 둔 `users` 테이블에 `company_name` / `division_name` / `team_name` 또는 `company_key` 컬럼이 없다면 먼저 `docs/sql/migrate_users_add_org_columns.sql`·`docs/sql/migrate_users_company_key.sql`을 실행한 뒤 시드를 적용합니다.
+이미 만들어 둔 `users` 테이블에 `company_name` / `division_name` / `team_name` 또는 `company_code` 컬럼이 없다면 먼저 `docs/sql/migrate_users_add_org_columns.sql`·`docs/sql/migrate_users_company_key.sql`을 실행한 뒤 시드를 적용합니다.
 
 그 다음 조직도 API를 동작시키려면 `org_groups`/`org_group_members`를 백필해야 합니다.
 ```bash

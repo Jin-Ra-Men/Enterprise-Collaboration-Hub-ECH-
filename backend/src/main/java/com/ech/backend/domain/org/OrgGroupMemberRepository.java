@@ -16,11 +16,11 @@ public interface OrgGroupMemberRepository extends JpaRepository<OrgGroupMember, 
             JOIN FETCH m.user u
             JOIN FETCH m.group g
             WHERE m.memberGroupType = :memberGroupType
-              AND g.id IN :groupIds
+              AND g.groupCode IN :groupCodes
             """)
-    List<OrgGroupMember> findMembersByMemberGroupTypeAndGroupIds(
+    List<OrgGroupMember> findMembersByMemberGroupTypeAndGroupCodes(
             @Param("memberGroupType") String memberGroupType,
-            @Param("groupIds") Collection<Long> groupIds
+            @Param("groupCodes") Collection<String> groupCodes
     );
 
     @Query("""

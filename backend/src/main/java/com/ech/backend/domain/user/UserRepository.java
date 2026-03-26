@@ -47,10 +47,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
             SELECT u FROM User u
             WHERE u.status = 'ACTIVE'
               AND (
-                :companyKey IS NULL
-                OR u.companyKey = :companyKey
-                OR (:companyKey = 'GENERAL'
-                    AND (u.companyKey IS NULL OR TRIM(COALESCE(u.companyKey, '')) = ''))
+                :companyCode IS NULL
+                OR u.companyCode = :companyCode
+                OR (:companyCode = 'GENERAL'
+                    AND (u.companyCode IS NULL OR TRIM(COALESCE(u.companyCode, '')) = ''))
               )
               AND (
                 :companyName IS NULL
@@ -67,16 +67,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
                      u.name ASC
             """)
     List<User> findActiveUsersForOrganization(
-            @Param("companyKey") String companyKey, @Param("companyName") String companyName);
+            @Param("companyCode") String companyCode, @Param("companyName") String companyName);
 
     /**
-     * ACTIVE 사용자 기준 (company_key, company_name) 고유 조합 — 셀렉트 옵션용.
+     * ACTIVE 사용자 기준 (company_code, company_name) 고유 조합 — 셀렉트 옵션용.
      */
     @Query("""
-            SELECT DISTINCT u.companyKey, u.companyName
+            SELECT DISTINCT u.companyCode, u.companyName
             FROM User u
             WHERE u.status = 'ACTIVE'
-            ORDER BY u.companyKey, u.companyName
+            ORDER BY u.companyCode, u.companyName
             """)
     List<Object[]> findActiveDistinctCompanyScopes();
 
@@ -90,9 +90,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Modifying
     @Query(value = """
             INSERT INTO users (employee_no, email, name, department, company_name, division_name, team_name,
-                company_key, job_rank, duty_title, role, status, created_at, updated_at)
+                company_code, job_rank, duty_title, role, status, created_at, updated_at)
             VALUES (:employeeNo, :email, :name, :department, :companyName, :divisionName, :teamName,
-                :companyKey, :jobRank, :dutyTitle, :role, :status, NOW(), NOW())
+                :companyCode, :jobRank, :dutyTitle, :role, :status, NOW(), NOW())
             ON CONFLICT (employee_no) DO UPDATE SET
                 email = EXCLUDED.email,
                 name = EXCLUDED.name,
@@ -100,7 +100,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
                 company_name = EXCLUDED.company_name,
                 division_name = EXCLUDED.division_name,
                 team_name = EXCLUDED.team_name,
-                company_key = EXCLUDED.company_key,
+                company_code = EXCLUDED.company_code,
                 job_rank = EXCLUDED.job_rank,
                 duty_title = EXCLUDED.duty_title,
                 role = EXCLUDED.role,
@@ -115,7 +115,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
             @Param("companyName") String companyName,
             @Param("divisionName") String divisionName,
             @Param("teamName") String teamName,
-            @Param("companyKey") String companyKey,
+            @Param("companyCode") String companyCode,
             @Param("jobRank") String jobRank,
             @Param("dutyTitle") String dutyTitle,
             @Param("role") String role,

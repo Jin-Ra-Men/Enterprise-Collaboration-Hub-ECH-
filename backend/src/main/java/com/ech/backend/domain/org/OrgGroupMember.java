@@ -25,7 +25,7 @@ public class OrgGroupMember {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_id", nullable = false)
+    @JoinColumn(name = "group_code", referencedColumnName = "group_code", nullable = false)
     private OrgGroup group;
 
     @Column(name = "member_group_type", nullable = false, length = 30)

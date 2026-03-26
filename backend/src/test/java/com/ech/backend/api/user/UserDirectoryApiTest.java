@@ -34,9 +34,9 @@ class UserDirectoryApiTest extends BaseIntegrationTest {
                 continue;
             }
 
-            String companyKeyNormalized = safeCompanyKey(u.getCompanyKey());
-            String companyDisplayName = resolveCompanyDisplayName(u.getCompanyName(), companyKeyNormalized);
-            String companyCode = md5("COMPANY;" + companyKeyNormalized + ";" + companyDisplayName);
+            String companyCodeNormalized = safeCompanyCode(u.getCompanyCode());
+            String companyDisplayName = resolveCompanyDisplayName(u.getCompanyName(), companyCodeNormalized);
+            String companyCode = md5("COMPANY;" + companyCodeNormalized + ";" + companyDisplayName);
 
             OrgGroup company = findOrCreateCompany(companyCode, companyDisplayName);
 
@@ -73,7 +73,6 @@ class UserDirectoryApiTest extends BaseIntegrationTest {
                         companyCode,
                         companyDisplayName,
                         null,
-                        null,
                         companyCode
                 )));
     }
@@ -84,8 +83,7 @@ class UserDirectoryApiTest extends BaseIntegrationTest {
                         "DIVISION",
                         divisionCode,
                         divisionDisplayName,
-                        company,
-                        company,
+                        company.getGroupCode(),
                         company.getGroupCode() + ";" + divisionCode
                 )));
     }
@@ -96,25 +94,24 @@ class UserDirectoryApiTest extends BaseIntegrationTest {
                         "TEAM",
                         teamCode,
                         teamDisplayName,
-                        division,
-                        company,
+                        division.getGroupCode(),
                         company.getGroupCode() + ";" + division.getGroupCode() + ";" + teamCode
                 )));
     }
 
-    private static String safeCompanyKey(String companyKey) {
-        if (companyKey == null || companyKey.isBlank()) {
+    private static String safeCompanyCode(String companyCode) {
+        if (companyCode == null || companyCode.isBlank()) {
             return "GENERAL";
         }
-        return companyKey.trim().toUpperCase();
+        return companyCode.trim().toUpperCase();
     }
 
-    private static String resolveCompanyDisplayName(String companyName, String companyKeyNormalized) {
+    private static String resolveCompanyDisplayName(String companyName, String companyCodeNormalized) {
         String cn = companyName == null ? null : companyName.trim();
         if (cn != null && !cn.isEmpty()) {
             return cn;
         }
-        return switch (companyKeyNormalized) {
+        return switch (companyCodeNormalized) {
             case "EXTERNAL" -> "외부인력";
             case "COVIM365" -> "M365";
             default -> "내부";

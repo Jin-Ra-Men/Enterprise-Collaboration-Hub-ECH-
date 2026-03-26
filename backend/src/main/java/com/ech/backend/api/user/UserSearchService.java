@@ -72,53 +72,40 @@ public class UserSearchService {
             return new OrganizationTreeResponse(List.of());
         }
 
-        Map<Long, OrgGroup> divisionById = new HashMap<>();
-        Map<Long, List<OrgGroup>> teamsByDivisionId = new HashMap<>();
+        Map<String, List<OrgGroup>> teamsByDivisionCode = new HashMap<>();
         List<OrgGroup> allTeams = new ArrayList<>();
 
         for (OrgGroup company : companies) {
-            List<OrgGroup> divisions = orgGroupRepository.findAllByGroupTypeAndCompanyGroup_IdAndIsActiveOrderByDisplayNameAsc(
+            List<OrgGroup> divisions = orgGroupRepository.findAllByGroupTypeAndMemberOfGroupCodeAndIsActiveOrderByDisplayNameAsc(
                     "DIVISION",
-                    company.getId(),
+                    company.getGroupCode(),
                     true
             );
-            for (OrgGroup div : divisions) {
-                divisionById.put(div.getId(), div);
-                teamsByDivisionId.put(div.getId(), new ArrayList<>());
+            for (OrgGroup division : divisions) {
+                teamsByDivisionCode.putIfAbsent(division.getGroupCode(), new ArrayList<>());
+                List<OrgGroup> teams = orgGroupRepository.findAllByGroupTypeAndMemberOfGroupCodeAndIsActiveOrderByDisplayNameAsc(
+                        "TEAM",
+                        division.getGroupCode(),
+                        true
+                );
+                teamsByDivisionCode.get(division.getGroupCode()).addAll(teams);
+                allTeams.addAll(teams);
             }
-
-            List<OrgGroup> teams = orgGroupRepository.findAllByGroupTypeAndCompanyGroup_IdAndIsActiveOrderByDisplayNameAsc(
-                    "TEAM",
-                    company.getId(),
-                    true
-            );
-            for (OrgGroup team : teams) {
-                OrgGroup parent = team.getParentGroup();
-                if (parent == null) {
-                    continue;
-                }
-                Long divisionId = parent.getId();
-                teamsByDivisionId.computeIfAbsent(divisionId, k -> new ArrayList<>()).add(team);
-            }
-            allTeams.addAll(teams);
         }
 
-        List<Long> teamIds = allTeams.stream().map(OrgGroup::getId).toList();
-        List<OrgGroupMember> teamMembers = teamIds.isEmpty()
+        List<String> teamCodes = allTeams.stream().map(OrgGroup::getGroupCode).toList();
+        List<OrgGroupMember> teamMembers = teamCodes.isEmpty()
                 ? List.of()
-                : orgGroupMemberRepository.findMembersByMemberGroupTypeAndGroupIds("TEAM", teamIds);
+                : orgGroupMemberRepository.findMembersByMemberGroupTypeAndGroupCodes("TEAM", teamCodes);
 
-        Map<Long, List<User>> usersByTeamId = new HashMap<>();
-        Set<Long> userIds;
-        if (teamMembers.isEmpty()) {
-            userIds = Set.of();
-        } else {
-            userIds = teamMembers.stream().map(m -> m.getUser().getId()).collect(Collectors.toSet());
-        }
+        Map<String, List<User>> usersByTeamCode = new HashMap<>();
+        Set<Long> userIds = teamMembers.isEmpty()
+                ? Set.of()
+                : teamMembers.stream().map(m -> m.getUser().getId()).collect(Collectors.toSet());
 
         for (OrgGroupMember m : teamMembers) {
-            Long teamId = m.getGroup().getId();
-            usersByTeamId.computeIfAbsent(teamId, k -> new ArrayList<>()).add(m.getUser());
+            String teamCode = m.getGroup().getGroupCode();
+            usersByTeamCode.computeIfAbsent(teamCode, k -> new ArrayList<>()).add(m.getUser());
         }
 
         Map<Long, String> jobRankByUserId;
@@ -144,21 +131,21 @@ public class UserSearchService {
 
         List<OrgCompanyResponse> companiesResponse = new ArrayList<>();
         for (OrgGroup company : companies) {
-            List<OrgGroup> divisions = orgGroupRepository.findAllByGroupTypeAndCompanyGroup_IdAndIsActiveOrderByDisplayNameAsc(
+            List<OrgGroup> divisions = orgGroupRepository.findAllByGroupTypeAndMemberOfGroupCodeAndIsActiveOrderByDisplayNameAsc(
                     "DIVISION",
-                    company.getId(),
+                    company.getGroupCode(),
                     true
             );
 
             List<OrgDivisionResponse> divisionsResponse = new ArrayList<>();
             for (OrgGroup division : divisions) {
-                List<OrgGroup> teams = teamsByDivisionId.getOrDefault(division.getId(), List.of());
+                List<OrgGroup> teams = teamsByDivisionCode.getOrDefault(division.getGroupCode(), List.of());
                 teams = teams.stream()
                         .sorted(Comparator.comparing(OrgGroup::getDisplayName, String.CASE_INSENSITIVE_ORDER))
                         .toList();
 
                 List<OrgTeamResponse> teamsResponse = teams.stream().map(team -> {
-                    List<User> users = usersByTeamId.getOrDefault(team.getId(), List.of());
+                    List<User> users = usersByTeamCode.getOrDefault(team.getGroupCode(), List.of());
                     List<UserSearchResponse> members = users.stream()
                             .sorted(Comparator.comparing(User::getName, String.CASE_INSENSITIVE_ORDER))
                             .map(u -> toTreeSearchResponse(

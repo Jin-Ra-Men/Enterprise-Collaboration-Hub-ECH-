@@ -45,7 +45,7 @@
 ## 3-1) 데이터베이스 스키마 인수인계 메모
 - 현재 기준 DB: PostgreSQL
 - 1차 확정 테이블:
-  - `users`: 사용자 기본 정보/권한/상태(조직도는 `company_name` / `division_name` / `team_name` 및 회사 필터용 `company_key`; 컬럼이 없으면 `migrate_users_add_org_columns.sql`·`migrate_users_company_key.sql` 후 `seed_test_users.sql` 또는 백필 스크립트)
+- `users`: 사용자 기본 정보/권한/상태(조직도는 `company_name` / `division_name` / `team_name` 및 회사 필터용 `company_code`; 컬럼이 없으면 `migrate_users_add_org_columns.sql`·`migrate_users_company_key.sql` 후 `seed_test_users.sql` 또는 백필 스크립트)
   - `channels`: 채널 메타/타입/생성자
   - `channel_members`: 채널 멤버십 및 멤버 권한
   - `channel_read_states`: 채널별 사용자 마지막 읽은 메시지(`last_read_message_id`)

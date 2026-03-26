@@ -65,7 +65,7 @@ public class OrgSyncService {
                     user.companyName(),
                     user.divisionName(),
                     user.teamName(),
-                    safeCompanyKey(user.companyKey()),
+                    safeCompanyCode(user.companyCode()),
                     user.jobRank(),
                     user.dutyTitle(),
                     safeRole(user.role()),
@@ -78,7 +78,7 @@ public class OrgSyncService {
             upsertOrgAndMembership(
                     saved,
                     user,
-                    safeCompanyKey(user.companyKey()),
+                    safeCompanyCode(user.companyCode()),
                     groupCache
             );
         }
@@ -88,20 +88,19 @@ public class OrgSyncService {
     private void upsertOrgAndMembership(
             User user,
             ExternalOrgUser external,
-            String companyKeyNormalized,
+            String companyCodeNormalized,
             Map<String, OrgGroup> groupCache
     ) {
-        String companyDisplayName = resolveCompanyDisplayName(external.companyName(), companyKeyNormalized);
+        String companyDisplayName = resolveCompanyDisplayName(external.companyName(), companyCodeNormalized);
         String divisionDisplayName = resolveOrDefault(external.divisionName(), "미지정 본부");
         String teamDisplayName = resolveOrDefault(external.teamName(), "미지정 팀");
 
-        String companyCode = md5("COMPANY;" + companyKeyNormalized + ";" + companyDisplayName);
+        String companyCode = md5("COMPANY;" + companyCodeNormalized + ";" + companyDisplayName);
         OrgGroup companyGroup = upsertGroup(
                 groupCache,
                 "COMPANY",
                 companyCode,
                 companyDisplayName,
-                null,
                 null,
                 companyCode
         );
@@ -113,8 +112,7 @@ public class OrgSyncService {
                 "DIVISION",
                 divisionCode,
                 divisionDisplayName,
-                companyGroup,
-                companyGroup,
+                companyCode,
                 divisionPath
         );
 
@@ -125,12 +123,11 @@ public class OrgSyncService {
                 "TEAM",
                 teamCode,
                 teamDisplayName,
-                divisionGroup,
-                companyGroup,
+                divisionCode,
                 teamPath
         );
 
-        upsertMembership(user.getId(), teamGroup.getId(), "TEAM");
+        upsertMembership(user.getId(), teamCode, "TEAM");
 
         String jobRank = trimOrNull(external.jobRank());
         if (jobRank != null) {
@@ -141,10 +138,9 @@ public class OrgSyncService {
                     jobCode,
                     jobRank,
                     null,
-                    null,
                     null
             );
-            upsertMembership(user.getId(), jobGroup.getId(), "JOB_LEVEL");
+            upsertMembership(user.getId(), jobCode, "JOB_LEVEL");
         }
 
         String dutyTitle = trimOrNull(external.dutyTitle());
@@ -156,28 +152,25 @@ public class OrgSyncService {
                     dutyCode,
                     dutyTitle,
                     null,
-                    null,
                     null
             );
-            upsertMembership(user.getId(), dutyGroup.getId(), "DUTY_TITLE");
+            upsertMembership(user.getId(), dutyCode, "DUTY_TITLE");
         }
     }
 
-    private void upsertMembership(Long userId, Long groupId, String memberGroupType) {
+    private void upsertMembership(Long userId, String groupCode, String memberGroupType) {
+        OrgGroup group = orgGroupRepository.findByGroupTypeAndGroupCode(memberGroupType, groupCode)
+                .orElseThrow(() -> new IllegalStateException("org_group not found: type=" + memberGroupType + ", code=" + groupCode));
+
         Optional<OrgGroupMember> existing = orgGroupMemberRepository.findByUser_IdAndMemberGroupType(userId, memberGroupType);
         if (existing.isPresent()) {
             OrgGroupMember m = existing.get();
-            if (!m.getGroup().getId().equals(groupId)) {
-                OrgGroupMember updated = existing.get();
-                // group_id 갱신
-                updated.setGroup(orgGroupRepository.findById(groupId).orElseThrow());
-                orgGroupMemberRepository.save(updated);
+            if (!m.getGroup().getGroupCode().equals(groupCode)) {
+                m.setGroup(group);
+                orgGroupMemberRepository.save(m);
             }
             return;
         }
-
-        // group_id는 외부에서 이미 유효한 값이므로 findById 1회로만 해결
-        OrgGroup group = orgGroupRepository.findById(groupId).orElseThrow();
         orgGroupMemberRepository.save(new OrgGroupMember(nullSafeUser(userId), group, memberGroupType));
     }
 
@@ -192,8 +185,7 @@ public class OrgSyncService {
             String groupType,
             String groupCode,
             String displayName,
-            OrgGroup parentGroup,
-            OrgGroup companyGroup,
+            String memberOfGroupCode,
             String groupPath
     ) {
         String cacheKey = groupType + ":" + groupCode;
@@ -208,15 +200,13 @@ public class OrgSyncService {
                         groupType,
                         groupCode,
                         displayName,
-                        parentGroup,
-                        companyGroup,
+                        memberOfGroupCode,
                         groupPath
                 )
         );
 
         group.setDisplayName(displayName);
-        group.setParentGroup(parentGroup);
-        group.setCompanyGroup(companyGroup);
+        group.setMemberOfGroupCode(memberOfGroupCode);
         group.setGroupPath(groupPath);
 
         OrgGroup saved = orgGroupRepository.save(group);
@@ -224,15 +214,15 @@ public class OrgSyncService {
         return saved;
     }
 
-    private static String resolveCompanyDisplayName(String companyName, String companyKeyNormalized) {
+    private static String resolveCompanyDisplayName(String companyName, String companyCodeNormalized) {
         String cn = trimOrNull(companyName);
         if (cn != null) {
             return cn;
         }
-        if ("EXTERNAL".equals(companyKeyNormalized)) {
+        if ("EXTERNAL".equals(companyCodeNormalized)) {
             return "외부인력";
         }
-        if ("COVIM365".equals(companyKeyNormalized)) {
+        if ("COVIM365".equals(companyCodeNormalized)) {
             return "M365";
         }
         return "내부";
@@ -280,11 +270,11 @@ public class OrgSyncService {
         return provider;
     }
 
-    private static String safeCompanyKey(String companyKey) {
-        if (companyKey == null || companyKey.isBlank()) {
+    private static String safeCompanyCode(String companyCode) {
+        if (companyCode == null || companyCode.isBlank()) {
             return "GENERAL";
         }
-        return companyKey.trim().toUpperCase();
+        return companyCode.trim().toUpperCase();
     }
 
     private static String safeRole(String role) {

@@ -142,7 +142,7 @@ CREATE TABLE users (
     company_name    VARCHAR(120),
     division_name   VARCHAR(120),
     team_name       VARCHAR(120),
-    company_key     VARCHAR(40),
+    company_code    VARCHAR(40),
     job_rank        VARCHAR(100),
     duty_title      VARCHAR(100),
     role            VARCHAR(30)  NOT NULL DEFAULT 'MEMBER',
@@ -163,7 +163,7 @@ CREATE TABLE users (
 | `company_name` | VARCHAR(120) | ❌ | NULL | 레거시(백필/호환). 조직도는 `org_groups(COMPANY).display_name` 기준 |
 | `division_name` | VARCHAR(120) | ❌ | NULL | 레거시(백필/호환). 조직도는 `org_groups(DIVISION).display_name` 기준 |
 | `team_name` | VARCHAR(120) | ❌ | NULL | 레거시(백필/호환). 조직도는 `org_groups(TEAM).display_name` 기준 |
-| `company_key` | VARCHAR(40) | ❌ | NULL | 레거시(테넌트/필터용). 조직도 회사 필터는 `org_groups.group_code` 기반 |
+| `company_code` | VARCHAR(40) | ❌ | NULL | 레거시(테넌트/필터용). 조직도 회사 필터는 `org_groups.group_code` 기반 |
 | `job_rank` | VARCHAR(100) | ❌ | NULL | 레거시(백필/호환). 직위는 `org_group_members(JOB_LEVEL)`로 확장 가능(미구성 시 users 값 fallback) |
 | `duty_title` | VARCHAR(100) | ❌ | NULL | 레거시(백필/호환). 직책은 `org_group_members(DUTY_TITLE)`로 확장 가능(미구성 시 users 값 fallback) |
 | `role` | VARCHAR(30) | ✅ | `'MEMBER'` | 앱 역할. → [역할 Enum 참고](#roles) |
@@ -190,14 +190,13 @@ CREATE TABLE IF NOT EXISTS org_groups (
     group_type VARCHAR(30) NOT NULL,
     group_code VARCHAR(32) NOT NULL,
     display_name VARCHAR(200) NOT NULL,
-    parent_group_id BIGINT NULL REFERENCES org_groups(id) ON DELETE CASCADE,
-    company_group_id BIGINT NULL REFERENCES org_groups(id) ON DELETE CASCADE,
+    member_of_group_code VARCHAR(32) NULL REFERENCES org_groups(group_code) ON DELETE CASCADE,
     group_path VARCHAR(500) NULL,
     sort_order INT NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT uq_org_groups_type_code UNIQUE (group_type, group_code)
+    CONSTRAINT uq_org_groups_group_code UNIQUE (group_code)
 );
 ```
 
@@ -206,8 +205,7 @@ CREATE TABLE IF NOT EXISTS org_groups (
 | `group_type` | VARCHAR(30) | `COMPANY`, `DIVISION`, `TEAM`, `JOB_LEVEL`, `DUTY_TITLE` |
 | `group_code` | VARCHAR(32) | 안정적 유니크 코드(md5 기반) |
 | `display_name` | VARCHAR(200) | UI 표시명 |
-| `parent_group_id` | BIGINT | COMPANY→DIVISION→TEAM 계층 연결 |
-| `company_group_id` | BIGINT | DIVISION/TEAM이 속한 COMPANY 연결 |
+| `member_of_group_code` | VARCHAR(32) | 상위 조직 `group_code` (COMPANY는 NULL) |
 
 ---
 
@@ -219,7 +217,7 @@ CREATE TABLE IF NOT EXISTS org_groups (
 CREATE TABLE IF NOT EXISTS org_group_members (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    group_id BIGINT NOT NULL REFERENCES org_groups(id) ON DELETE CASCADE,
+    group_code VARCHAR(32) NOT NULL REFERENCES org_groups(group_code) ON DELETE CASCADE,
     member_group_type VARCHAR(30) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -230,7 +228,7 @@ CREATE TABLE IF NOT EXISTS org_group_members (
 | 컬럼명 | 타입 | 설명 |
 |--------|------|------|
 | `member_group_type` | VARCHAR(30) | TEAM/JOB_LEVEL/DUTY_TITLE |
-| `group_id` | BIGINT | 해당 타입의 `org_groups` PK |
+| `group_code` | VARCHAR(32) | 해당 조직 식별자(`org_groups.group_code`) |
 
 ---
 
