@@ -430,6 +430,7 @@
   - `GET /api/user-directory/organization-filters` — `org_groups`에서 **`group_type=COMPANY` + `is_active=true`** 인 회사 그룹들을 기준으로 셀렉트 옵션(`label`, `companyGroupCode`). 첫 항목은 전체이며 `companyGroupCode=null`로 반환.
   - `GET /api/user-directory/organization?companyGroupCode=`(선택) — ACTIVE 사용자를 **COMPANY → DIVISION → TEAM** 3단계 트리로 그룹화한다. `companyGroupCode`를 생략하거나 전체 옵션을 선택하면 전체를 반환하고, 특정 `companyGroupCode`가 오면 해당 회사 트리만 반환한다.  
     - 조직 노드/계층은 `org_groups.member_of_group_code` 기반으로 구성한다.
+    - `org_groups.group_code` / `companyGroupCode` 값은 **ASCII 전용** pretty 코드(예: `COMP_*`, `DIV_*`, `TEAM_*`)이며, 표시명(`display_name`)은 한글을 유지한다.
     - 사용자 목록은 `org_group_members`에서 `member_group_type='TEAM'`에 해당하는 유저를 사용한다.
     - 각 사용자의 `department` 값은 `TEAM` 그룹의 `display_name`으로 채운다. (잡레벨/직책은 `org_group_members(JOB_LEVEL/DUTY_TITLE)`가 채워진 경우 우선, 미구성 시 `users.job_rank`/`users.duty_title` fallback)
   - `GET /api/users/profile?userId=` — 동료 프로필(프론트 기본, 이름·사원번호·이메일·부서·직위; 직책(`dutyTitle`)은 값이 있을 때만 모달에 표시. **DM 보내기**로 DM 채널 생성·입장). 응답에 `role`/`status`가 있어도 프로필 모달에는 표시하지 않음

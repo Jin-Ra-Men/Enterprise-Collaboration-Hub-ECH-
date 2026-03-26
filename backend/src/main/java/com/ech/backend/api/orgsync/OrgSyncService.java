@@ -5,20 +5,17 @@ import com.ech.backend.api.orgsync.dto.OrgSyncPreviewResponse;
 import com.ech.backend.api.orgsync.dto.OrgSyncResultResponse;
 import com.ech.backend.api.orgsync.dto.OrgSyncSource;
 import com.ech.backend.domain.org.OrgGroup;
+import com.ech.backend.domain.org.OrgGroupCodes;
 import com.ech.backend.domain.org.OrgGroupMember;
 import com.ech.backend.domain.org.OrgGroupMemberRepository;
 import com.ech.backend.domain.org.OrgGroupRepository;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.HexFormat;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -95,43 +92,47 @@ public class OrgSyncService {
         String divisionDisplayName = resolveOrDefault(external.divisionName(), "미지정 본부");
         String teamDisplayName = resolveOrDefault(external.teamName(), "미지정 팀");
 
-        String companyCode = md5("COMPANY;" + companyCodeNormalized + ";" + companyDisplayName);
+        String companyFp = OrgGroupCodes.fingerprintCompany(companyCodeNormalized, companyDisplayName);
+        String companyGroupCode = OrgGroupCodes.prettyCompany(companyCodeNormalized, companyFp);
         OrgGroup companyGroup = upsertGroup(
                 groupCache,
                 "COMPANY",
-                companyCode,
+                companyGroupCode,
                 companyDisplayName,
                 null,
-                companyCode
+                companyGroupCode
         );
 
-        String divisionCode = md5("DIVISION;" + companyCode + ";" + divisionDisplayName);
-        String divisionPath = companyCode + ";" + divisionCode;
+        String divisionFp = OrgGroupCodes.fingerprintDivision(companyFp, divisionDisplayName);
+        String divisionGroupCode = OrgGroupCodes.prettyDivision(companyFp, divisionFp);
+        String divisionPath = companyGroupCode + ";" + divisionGroupCode;
         OrgGroup divisionGroup = upsertGroup(
                 groupCache,
                 "DIVISION",
-                divisionCode,
+                divisionGroupCode,
                 divisionDisplayName,
-                companyCode,
+                companyGroupCode,
                 divisionPath
         );
 
-        String teamCode = md5("TEAM;" + divisionCode + ";" + teamDisplayName);
-        String teamPath = divisionPath + ";" + teamCode;
+        String teamFp = OrgGroupCodes.fingerprintTeam(divisionFp, teamDisplayName);
+        String teamGroupCode = OrgGroupCodes.prettyTeam(divisionFp, teamFp);
+        String teamPath = divisionPath + ";" + teamGroupCode;
         OrgGroup teamGroup = upsertGroup(
                 groupCache,
                 "TEAM",
-                teamCode,
+                teamGroupCode,
                 teamDisplayName,
-                divisionCode,
+                divisionGroupCode,
                 teamPath
         );
 
-        upsertMembership(user.getId(), teamCode, "TEAM");
+        upsertMembership(user.getId(), teamGroupCode, "TEAM");
 
         String jobRank = trimOrNull(external.jobRank());
         if (jobRank != null) {
-            String jobCode = md5("JOB_LEVEL;" + jobRank);
+            String jobFp = OrgGroupCodes.fingerprintJobLevel(jobRank);
+            String jobCode = OrgGroupCodes.prettyJobLevel(jobFp);
             OrgGroup jobGroup = upsertGroup(
                     groupCache,
                     "JOB_LEVEL",
@@ -145,7 +146,8 @@ public class OrgSyncService {
 
         String dutyTitle = trimOrNull(external.dutyTitle());
         if (dutyTitle != null) {
-            String dutyCode = md5("DUTY_TITLE;" + dutyTitle);
+            String dutyFp = OrgGroupCodes.fingerprintDutyTitle(dutyTitle);
+            String dutyCode = OrgGroupCodes.prettyDutyTitle(dutyFp);
             OrgGroup dutyGroup = upsertGroup(
                     groupCache,
                     "DUTY_TITLE",
@@ -239,16 +241,6 @@ public class OrgSyncService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
-    }
-
-    private static String md5(String input) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("MD5 algorithm not available", e);
-        }
     }
 
     @Transactional

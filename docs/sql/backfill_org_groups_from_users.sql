@@ -4,13 +4,13 @@
 -- 실행 예:
 --   psql -h localhost -U ech_user -d ech -f docs/sql/backfill_org_groups_from_users.sql
 --
--- 기대:
---   - docs/sql/create_org_groups.sql 실행 후 사용
---   - org_groups.group_code 유니크 제약을 사용하므로 ON CONFLICT (group_code) 기반으로 갱신
---   - 계층:
---       COMPANY.member_of_group_code = NULL
---       DIVISION.member_of_group_code = COMPANY.group_code
---       TEAM.member_of_group_code = DIVISION.group_code
+-- group_code 규칙 (ASCII 전용, 백엔드 OrgGroupCodes 와 동일):
+--   COMPANY: COMP_{tenantSlug}_{FP8}
+--   DIVISION: DIV_{FP8}_{FP8} (회사/본부 지문 앞 8자)
+--   TEAM: TEAM_{FP8}_{FP8}
+--   JOB_LEVEL: JOB_{FP12}
+--   DUTY_TITLE: DUT_{FP12}
+--   FP* 는 동일 시드 문자열에 대한 md5(hex) 접두부 (대문자)
 --
 DO $$
 BEGIN
@@ -21,39 +21,40 @@ BEGIN
   )
   SELECT
     'COMPANY' AS group_type,
-    md5('COMPANY;' || COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') || ';' ||
-        CASE
-          WHEN COALESCE(TRIM(u.company_name), '') <> '' THEN TRIM(u.company_name)
-          WHEN COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') = 'EXTERNAL' THEN '외부인력'
-          WHEN COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') = 'COVIM365' THEN 'M365'
-          ELSE '내부'
-        END
-    ) AS group_code,
-    CASE
-      WHEN COALESCE(TRIM(u.company_name), '') <> '' THEN TRIM(u.company_name)
-      WHEN COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') = 'EXTERNAL' THEN '외부인력'
-      WHEN COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') = 'COVIM365' THEN 'M365'
-      ELSE '내부'
-    END AS display_name,
+    'COMP_' || COALESCE(
+      NULLIF(
+        upper(left(
+          regexp_replace(upper(cc_n), '[^A-Z0-9]', '', 'g'),
+          12
+        )),
+        ''
+      ),
+      'GEN'
+    ) || '_' || upper(substring(md5('COMPANY;' || cc_n || ';' || cd_n) from 1 for 8)) AS group_code,
+    cd_n AS display_name,
     NULL AS member_of_group_code,
-    md5('COMPANY;' || COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') || ';' ||
-        CASE
-          WHEN COALESCE(TRIM(u.company_name), '') <> '' THEN TRIM(u.company_name)
-          WHEN COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') = 'EXTERNAL' THEN '외부인력'
-          WHEN COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') = 'COVIM365' THEN 'M365'
-          ELSE '내부'
-        END
-    ) AS group_path
-  FROM users u
-  WHERE u.status = 'ACTIVE'
-  GROUP BY
-    COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL'),
-    CASE
-      WHEN COALESCE(TRIM(u.company_name), '') <> '' THEN TRIM(u.company_name)
-      WHEN COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') = 'EXTERNAL' THEN '외부인력'
-      WHEN COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') = 'COVIM365' THEN 'M365'
-      ELSE '내부'
-    END
+    'COMP_' || COALESCE(
+      NULLIF(
+        upper(left(
+          regexp_replace(upper(cc_n), '[^A-Z0-9]', '', 'g'),
+          12
+        )),
+        ''
+      ),
+      'GEN'
+    ) || '_' || upper(substring(md5('COMPANY;' || cc_n || ';' || cd_n) from 1 for 8)) AS group_path
+  FROM (
+    SELECT DISTINCT
+      COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') AS cc_n,
+      CASE
+        WHEN COALESCE(TRIM(u.company_name), '') <> '' THEN TRIM(u.company_name)
+        WHEN COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') = 'EXTERNAL' THEN '외부인력'
+        WHEN COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') = 'COVIM365' THEN 'M365'
+        ELSE '내부'
+      END AS cd_n
+    FROM users u
+    WHERE u.status = 'ACTIVE'
+  ) x
   ON CONFLICT (group_code) DO UPDATE
   SET
     display_name = EXCLUDED.display_name,
@@ -67,31 +68,48 @@ BEGIN
   )
   SELECT
     'DIVISION' AS group_type,
-    md5(
-      'DIVISION;' ||
-      md5('COMPANY;' || c.company_code_n || ';' || c.company_display_name) || ';' ||
-      c.division_display_name
-    ) AS group_code,
+    'DIV_' || upper(substring(c.company_fp from 1 for 8)) || '_' || upper(substring(c.division_fp from 1 for 8)) AS group_code,
     c.division_display_name AS display_name,
-    md5('COMPANY;' || c.company_code_n || ';' || c.company_display_name) AS member_of_group_code,
-    md5('COMPANY;' || c.company_code_n || ';' || c.company_display_name) || ';' ||
-    md5(
-      'DIVISION;' ||
-      md5('COMPANY;' || c.company_code_n || ';' || c.company_display_name) || ';' ||
-      c.division_display_name
-    ) AS group_path
+    c.company_pretty AS member_of_group_code,
+    c.company_pretty || ';' || c.division_pretty AS group_path
   FROM (
-    SELECT DISTINCT
-      COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') AS company_code_n,
-      CASE
-        WHEN COALESCE(TRIM(u.company_name), '') <> '' THEN TRIM(u.company_name)
-        WHEN COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') = 'EXTERNAL' THEN '외부인력'
-        WHEN COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') = 'COVIM365' THEN 'M365'
-        ELSE '내부'
-      END AS company_display_name,
-      COALESCE(NULLIF(TRIM(u.division_name), ''), '미지정 본부') AS division_display_name
-    FROM users u
-    WHERE u.status = 'ACTIVE'
+    SELECT
+      d.company_code_n,
+      d.company_display_name,
+      d.division_display_name,
+      md5('COMPANY;' || d.company_code_n || ';' || d.company_display_name) AS company_fp,
+      md5(
+        'DIVISION;' ||
+        md5('COMPANY;' || d.company_code_n || ';' || d.company_display_name) || ';' ||
+        d.division_display_name
+      ) AS division_fp,
+      'COMP_' || COALESCE(
+        NULLIF(
+          upper(left(regexp_replace(upper(d.company_code_n), '[^A-Z0-9]', '', 'g'), 12)),
+          ''
+        ),
+        'GEN'
+      ) || '_' || upper(substring(md5('COMPANY;' || d.company_code_n || ';' || d.company_display_name) from 1 for 8)) AS company_pretty,
+      'DIV_' || upper(substring(md5('COMPANY;' || d.company_code_n || ';' || d.company_display_name) from 1 for 8)) || '_' || upper(substring(
+        md5(
+          'DIVISION;' ||
+          md5('COMPANY;' || d.company_code_n || ';' || d.company_display_name) || ';' ||
+           d.division_display_name
+        ) from 1 for 8
+      )) AS division_pretty
+    FROM (
+      SELECT DISTINCT
+        COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') AS company_code_n,
+        CASE
+          WHEN COALESCE(TRIM(u.company_name), '') <> '' THEN TRIM(u.company_name)
+          WHEN COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') = 'EXTERNAL' THEN '외부인력'
+          WHEN COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') = 'COVIM365' THEN 'M365'
+          ELSE '내부'
+        END AS company_display_name,
+        COALESCE(NULLIF(TRIM(u.division_name), ''), '미지정 본부') AS division_display_name
+      FROM users u
+      WHERE u.status = 'ACTIVE'
+    ) d
   ) c
   ON CONFLICT (group_code) DO UPDATE
   SET
@@ -106,49 +124,74 @@ BEGIN
   )
   SELECT
     'TEAM' AS group_type,
-    md5(
-      'TEAM;' ||
-      md5(
-        'DIVISION;' ||
-        md5('COMPANY;' || t.company_code_n || ';' || t.company_display_name) || ';' ||
-        t.division_display_name
-      ) || ';' ||
-      t.team_display_name
-    ) AS group_code,
+    'TEAM_' || upper(substring(t.division_fp from 1 for 8)) || '_' || upper(substring(t.team_fp from 1 for 8)) AS group_code,
     t.team_display_name AS display_name,
-    md5(
-      'DIVISION;' ||
-      md5('COMPANY;' || t.company_code_n || ';' || t.company_display_name) || ';' ||
-      t.division_display_name
-    ) AS member_of_group_code,
-    md5('COMPANY;' || t.company_code_n || ';' || t.company_display_name) || ';' ||
-    md5(
-      'DIVISION;' ||
-      md5('COMPANY;' || t.company_code_n || ';' || t.company_display_name) || ';' ||
-      t.division_display_name
-    ) || ';' ||
-    md5(
-      'TEAM;' ||
+    t.division_pretty AS member_of_group_code,
+    t.company_pretty || ';' || t.division_pretty || ';' || t.team_pretty AS group_path
+  FROM (
+    SELECT
+      s.company_code_n,
+      s.company_display_name,
+      s.division_display_name,
+      s.team_display_name,
+      md5('COMPANY;' || s.company_code_n || ';' || s.company_display_name) AS company_fp,
       md5(
         'DIVISION;' ||
-        md5('COMPANY;' || t.company_code_n || ';' || t.company_display_name) || ';' ||
-        t.division_display_name
-      ) || ';' ||
-      t.team_display_name
-    ) AS group_path
-  FROM (
-    SELECT DISTINCT
-      COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') AS company_code_n,
-      CASE
-        WHEN COALESCE(TRIM(u.company_name), '') <> '' THEN TRIM(u.company_name)
-        WHEN COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') = 'EXTERNAL' THEN '외부인력'
-        WHEN COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') = 'COVIM365' THEN 'M365'
-        ELSE '내부'
-      END AS company_display_name,
-      COALESCE(NULLIF(TRIM(u.division_name), ''), '미지정 본부') AS division_display_name,
-      COALESCE(NULLIF(TRIM(u.team_name), ''), '미지정 팀') AS team_display_name
-    FROM users u
-    WHERE u.status = 'ACTIVE'
+        md5('COMPANY;' || s.company_code_n || ';' || s.company_display_name) || ';' ||
+        s.division_display_name
+      ) AS division_fp,
+      md5(
+        'TEAM;' ||
+        md5(
+          'DIVISION;' ||
+          md5('COMPANY;' || s.company_code_n || ';' || s.company_display_name) || ';' ||
+          s.division_display_name
+        ) || ';' || s.team_display_name
+      ) AS team_fp,
+      'COMP_' || COALESCE(
+        NULLIF(
+          upper(left(regexp_replace(upper(s.company_code_n), '[^A-Z0-9]', '', 'g'), 12)),
+          ''
+        ),
+        'GEN'
+      ) || '_' || upper(substring(md5('COMPANY;' || s.company_code_n || ';' || s.company_display_name) from 1 for 8)) AS company_pretty,
+      'DIV_' || upper(substring(md5('COMPANY;' || s.company_code_n || ';' || s.company_display_name) from 1 for 8)) || '_' || upper(substring(
+        md5(
+          'DIVISION;' ||
+          md5('COMPANY;' || s.company_code_n || ';' || s.company_display_name) || ';' ||
+          s.division_display_name
+        ) from 1 for 8
+      )) AS division_pretty,
+      'TEAM_' || upper(substring(
+        md5(
+          'DIVISION;' ||
+          md5('COMPANY;' || s.company_code_n || ';' || s.company_display_name) || ';' ||
+          s.division_display_name
+        ) from 1 for 8
+      )) || '_' || upper(substring(
+        md5(
+          'TEAM;' ||
+          md5(
+            'DIVISION;' ||
+            md5('COMPANY;' || s.company_code_n || ';' || s.company_display_name) || ';' ||
+            s.division_display_name
+          ) || ';' || s.team_display_name
+        ) from 1 for 8
+      )) AS team_pretty
+    FROM (
+      SELECT DISTINCT
+        COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') AS company_code_n,
+        CASE
+          WHEN COALESCE(TRIM(u.company_name), '') <> '' THEN TRIM(u.company_name)
+          WHEN COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') = 'EXTERNAL' THEN '외부인력'
+          WHEN COALESCE(NULLIF(TRIM(u.company_code), ''), 'GENERAL') = 'COVIM365' THEN 'M365'
+          ELSE '내부'
+        END AS company_display_name,
+        COALESCE(NULLIF(TRIM(u.division_name), ''), '미지정 본부') AS division_display_name,
+        COALESCE(NULLIF(TRIM(u.team_name), ''), '미지정 팀') AS team_display_name
+      FROM users u
+      WHERE u.status = 'ACTIVE'
+    ) s
   ) t
   ON CONFLICT (group_code) DO UPDATE
   SET
@@ -163,7 +206,7 @@ BEGIN
   )
   SELECT
     'JOB_LEVEL' AS group_type,
-    md5('JOB_LEVEL;' || TRIM(u.job_rank)) AS group_code,
+    'JOB_' || upper(substring(md5('JOB_LEVEL;' || TRIM(u.job_rank)) from 1 for 12)) AS group_code,
     TRIM(u.job_rank) AS display_name,
     NULL AS member_of_group_code,
     NULL AS group_path
@@ -185,7 +228,7 @@ BEGIN
   )
   SELECT
     'DUTY_TITLE' AS group_type,
-    md5('DUTY_TITLE;' || TRIM(u.duty_title)) AS group_code,
+    'DUT_' || upper(substring(md5('DUTY_TITLE;' || TRIM(u.duty_title)) from 1 for 12)) AS group_code,
     TRIM(u.duty_title) AS display_name,
     NULL AS member_of_group_code,
     NULL AS group_path
@@ -202,4 +245,3 @@ BEGIN
     updated_at = NOW();
 
 END$$;
-

@@ -27,6 +27,11 @@
 - `org_groups` 부모관계를 `parent_group_id/company_group_id`에서 `member_of_group_code`로 단순화
 - `org_group_members.group_id`를 `org_group_members.group_code`로 교체
 
+## 2026-03-26 (6차)
+
+### Changed
+- `org_groups.group_code`: 순수 MD5(hex) 대신 **ASCII pretty 코드**(COMP/DIV/TEAM/JOB/DUT + MD5 접두)로 통일(`OrgGroupCodes`, `OrgSyncService`, org 백필 SQL)
+
 ## 2026-03-26 (2차)
 
 ### Added
