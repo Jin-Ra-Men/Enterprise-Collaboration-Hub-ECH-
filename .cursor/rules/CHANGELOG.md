@@ -15,6 +15,8 @@
 - 팀 코드 중복 표기 정리 (`QA_QA`/`PLAN_PLAN` -> `QA_QA_TEAM`/`PLAN_PLAN_TEAM`)
 - 팀 코드 생성 시 본부 코드와 중복되는 접두는 제거하여 단일화 (`PLAN_PLAN_TEAM` -> `PLAN_TEAM`, `QA_QA_TEAM` -> `QA_TEAM`)
 - 조직도 팝업 멤버 검색: 검색어가 있으면 "선택된 회사" 내 전체 팀 구성원을 대상으로 필터링 (팀 선택 의존 제거)
+- 조직도 트리: 부서 인원수 표시(`ech-tree-count`) 제거
+- 조직도 팝업: 구성원 선택 결과(내가 고른 사용자) 표시 및 선택 취소 버튼(X) 추가
 
 ### Added
 - PostgreSQL 마이그레이션: `migrate_users_drop_org_columns.sql`, `migrate_org_group_members_user_id_to_employee_no.sql`, `migrate_org_duty_title_to_job_title.sql`
