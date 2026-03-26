@@ -2,6 +2,7 @@ package com.ech.backend.api.user;
 
 import com.ech.backend.BaseIntegrationTest;
 import com.ech.backend.domain.org.OrgGroup;
+import com.ech.backend.domain.org.OrgGroupCodes;
 import com.ech.backend.domain.org.OrgGroupMemberRepository;
 import com.ech.backend.domain.org.OrgGroupRepository;
 import com.ech.backend.domain.org.OrgGroupMember;
@@ -36,17 +37,20 @@ class UserDirectoryApiTest extends BaseIntegrationTest {
 
             String companyCodeNormalized = safeCompanyCode(u.getCompanyCode());
             String companyDisplayName = resolveCompanyDisplayName(u.getCompanyName(), companyCodeNormalized);
-            String companyCode = md5("COMPANY;" + companyCodeNormalized + ";" + companyDisplayName);
+            String companyFp = OrgGroupCodes.fingerprintCompany(companyCodeNormalized, companyDisplayName);
+            String companyGroupCode = OrgGroupCodes.prettyCompany(companyCodeNormalized, companyFp);
 
-            OrgGroup company = findOrCreateCompany(companyCode, companyDisplayName);
+            OrgGroup company = findOrCreateCompany(companyGroupCode, companyDisplayName);
 
             String divisionDisplayName = resolveOrDefault(u.getDivisionName(), "미지정 본부");
-            String divisionCode = md5("DIVISION;" + companyCode + ";" + divisionDisplayName);
-            OrgGroup division = findOrCreateDivision(company, divisionCode, divisionDisplayName);
+            String divisionFp = OrgGroupCodes.fingerprintDivision(companyFp, divisionDisplayName);
+            String divisionGroupCode = OrgGroupCodes.prettyDivision(companyFp, divisionFp);
+            OrgGroup division = findOrCreateDivision(company, divisionGroupCode, divisionDisplayName);
 
             String teamDisplayName = resolveOrDefault(u.getTeamName(), "미지정 팀");
-            String teamCode = md5("TEAM;" + divisionCode + ";" + teamDisplayName);
-            OrgGroup team = findOrCreateTeam(company, division, teamCode, teamDisplayName);
+            String teamFp = OrgGroupCodes.fingerprintTeam(divisionFp, teamDisplayName);
+            String teamGroupCode = OrgGroupCodes.prettyTeam(divisionFp, teamFp);
+            OrgGroup team = findOrCreateTeam(company, division, teamGroupCode, teamDisplayName);
 
             orgGroupMemberRepository.findByUser_IdAndMemberGroupType(u.getId(), "TEAM").ifPresentOrElse(
                     existing -> {
@@ -121,16 +125,6 @@ class UserDirectoryApiTest extends BaseIntegrationTest {
     private static String resolveOrDefault(String value, String defaultValue) {
         String v = value == null ? null : value.trim();
         return (v == null || v.isEmpty()) ? defaultValue : v;
-    }
-
-    private static String md5(String input) {
-        try {
-            var md = java.security.MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(input.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            return java.util.HexFormat.of().formatHex(digest);
-        } catch (java.security.NoSuchAlgorithmException e) {
-            throw new IllegalStateException("MD5 algorithm not available", e);
-        }
     }
 
     @Test

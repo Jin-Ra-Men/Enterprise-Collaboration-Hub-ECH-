@@ -7,13 +7,7 @@
 --   - docs/sql/backfill_org_groups_from_users.sql
 --   가 먼저 실행되어 org_groups.group_code가 생성되어 있어야 한다.
 --
--- 매핑 규칙:
---   - TEAM: org_group_members.member_group_type='TEAM' 으로 TEAM group_code에 매핑
---   - JOB_LEVEL: member_group_type='JOB_LEVEL' 으로 JOB_LEVEL group_code에 매핑
---   - DUTY_TITLE: member_group_type='DUTY_TITLE' 으로 DUTY_TITLE group_code에 매핑
---
--- UPSERT:
---   - 유니크키 (user_id, member_group_type) 기준으로 group_code 갱신
+-- group_code 는 OrgGroupCodes 규칙(ASCII)과 동일한 pretty 코드를 사용한다.
 
 /* TEAM 멤버 매핑 */
 WITH scoped AS (
@@ -40,12 +34,12 @@ named AS (
 codes AS (
   SELECT
     n.user_id,
-    md5('COMPANY;' || n.company_code_n || ';' || n.company_display_name) AS company_code,
+    md5('COMPANY;' || n.company_code_n || ';' || n.company_display_name) AS company_fp,
     md5(
       'DIVISION;' ||
       md5('COMPANY;' || n.company_code_n || ';' || n.company_display_name) || ';' ||
       n.division_display_name
-    ) AS division_code,
+    ) AS division_fp,
     md5(
       'TEAM;' ||
       md5(
@@ -53,17 +47,23 @@ codes AS (
         md5('COMPANY;' || n.company_code_n || ';' || n.company_display_name) || ';' ||
         n.division_display_name
       ) || ';' || n.team_display_name
-    ) AS team_code
+    ) AS team_fp
   FROM named n
+),
+pretty AS (
+  SELECT
+    c.user_id,
+    'TEAM_' || upper(substring(c.division_fp from 1 for 8)) || '_' || upper(substring(c.team_fp from 1 for 8)) AS team_code
+  FROM codes c
 )
 INSERT INTO org_group_members (user_id, group_code, member_group_type, created_at, updated_at)
 SELECT
-  c.user_id,
-  c.team_code AS group_code,
+  p.user_id,
+  p.team_code AS group_code,
   'TEAM' AS member_group_type,
   NOW(),
   NOW()
-FROM codes c
+FROM pretty p
 ON CONFLICT (user_id, member_group_type) DO UPDATE
 SET
   group_code = EXCLUDED.group_code,
@@ -73,7 +73,7 @@ SET
 INSERT INTO org_group_members (user_id, group_code, member_group_type, created_at, updated_at)
 SELECT
   u.id AS user_id,
-  md5('JOB_LEVEL;' || TRIM(u.job_rank)) AS group_code,
+  'JOB_' || upper(substring(md5('JOB_LEVEL;' || TRIM(u.job_rank)) from 1 for 12)) AS group_code,
   'JOB_LEVEL' AS member_group_type,
   NOW(),
   NOW()
@@ -90,7 +90,7 @@ SET
 INSERT INTO org_group_members (user_id, group_code, member_group_type, created_at, updated_at)
 SELECT
   u.id AS user_id,
-  md5('DUTY_TITLE;' || TRIM(u.duty_title)) AS group_code,
+  'DUT_' || upper(substring(md5('DUTY_TITLE;' || TRIM(u.duty_title)) from 1 for 12)) AS group_code,
   'DUTY_TITLE' AS member_group_type,
   NOW(),
   NOW()
@@ -102,4 +102,3 @@ ON CONFLICT (user_id, member_group_type) DO UPDATE
 SET
   group_code = EXCLUDED.group_code,
   updated_at = NOW();
-

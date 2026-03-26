@@ -182,7 +182,7 @@ CREATE TABLE users (
 ### 4-1-1. `org_groups` — 조직 룩업/계층
 
 **목적**: 조직도 트리를 구성하는 룩업/계층 데이터(회사→본부→팀, 그리고 잡레벨/직책 lookup)를 저장한다.  
-**표시명**은 `display_name`이며, `group_code`는 (parent + DisplayName) 기반 md5로 안정적으로 생성한다.
+**표시명**은 `display_name`이며, `group_code`는 **ASCII 전용**(대문자 영숫자·`_`) pretty 코드이며 내부적으로는 동일 시드에 대한 MD5 지문 접두부로 충돌을 피한다(백엔드 `OrgGroupCodes` 규칙과 동일).
 
 ```sql
 CREATE TABLE IF NOT EXISTS org_groups (
@@ -203,7 +203,7 @@ CREATE TABLE IF NOT EXISTS org_groups (
 | 컬럼명 | 타입 | 설명 |
 |--------|------|------|
 | `group_type` | VARCHAR(30) | `COMPANY`, `DIVISION`, `TEAM`, `JOB_LEVEL`, `DUTY_TITLE` |
-| `group_code` | VARCHAR(32) | 안정적 유니크 코드(md5 기반) |
+| `group_code` | VARCHAR(32) | 안정적 유니크 코드(ASCII pretty; 예: `COMP_GENERAL_XXXX`, `DIV_XXXX_YYYY`, `TEAM_XXXX_YYYY`, `JOB_...`, `DUT_...`) |
 | `display_name` | VARCHAR(200) | UI 표시명 |
 | `member_of_group_code` | VARCHAR(32) | 상위 조직 `group_code` (COMPANY는 NULL) |
 
