@@ -4,6 +4,7 @@ import com.ech.backend.BaseIntegrationTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -31,13 +32,15 @@ class UserDirectoryApiTest extends BaseIntegrationTest {
     }
 
     @Test
-    @DisplayName("GET /api/user-directory/organization-filters 200 및 ORGROOT 첫 옵션")
+    @DisplayName("GET /api/user-directory/organization-filters 200 및 전체 옵션(null 키)")
     void organization_filters_ok() throws Exception {
         mockMvc.perform(get("/api/user-directory/organization-filters")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.options").isArray())
-                .andExpect(jsonPath("$.data.options[0].filterValue").value("ORGROOT"));
+                .andExpect(jsonPath("$.data.options[0].label").value("전체 (그룹사 공용)"))
+                .andExpect(jsonPath("$.data.options[0].companyKey").value(nullValue()))
+                .andExpect(jsonPath("$.data.options[0].companyName").value(nullValue()));
     }
 
     @Test

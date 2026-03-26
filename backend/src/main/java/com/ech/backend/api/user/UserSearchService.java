@@ -44,11 +44,13 @@ public class UserSearchService {
          * company/division/team 컬럼이 비어 있으면 해당 레벨을 "미지정" 버킷으로 분류한다.
          *
          * @param companyKeyFilter UI 회사 셀렉트 값. null 또는 빈 문자열, {@code ORGROOT} 는 필터 없음(전체).
-         *                         그 외 {@code GENERAL}, {@code EXTERNAL}, {@code COVIM365} 등은 users.company_key 와 일치하는 행만.
+         * @param companyNameFilter {@code company_name} 정확 일치(트림). null 이면 회사명 필터 없음.
+         *                          빈 문자열({@code ""})이면 {@code company_name} 이 비어 있는 행만.
          */
-    public OrganizationTreeResponse getOrganizationTree(String companyKeyFilter) {
+    public OrganizationTreeResponse getOrganizationTree(String companyKeyFilter, String companyNameFilter) {
         String repoKey = resolveCompanyKeyForRepository(companyKeyFilter);
-        List<User> users = userRepository.findActiveUsersForOrganization(repoKey);
+        String repoName = resolveCompanyNameForRepository(companyNameFilter);
+        List<User> users = userRepository.findActiveUsersForOrganization(repoKey, repoName);
         Map<String, Map<String, Map<String, List<User>>>> byCompany = new LinkedHashMap<>();
         for (User u : users) {
             String co = resolveCompany(u);
@@ -78,40 +80,41 @@ public class UserSearchService {
     }
 
     /**
-     * ACTIVE 사용자 기준으로 {@code company_key} 그룹별 대표 {@code company_name}을 수집해
-     * 조직도 팝업 상단 셀렉트 옵션을 만든다. 라벨은 DB 값 우선, 없으면 키별 기본 문구.
+     * ACTIVE 사용자 기준 {@code (company_key, company_name)} 고유 조합마다 셀렉트 옵션을 만든다.
+     * 같은 키라도 회사명이 다르면 별도 항목으로 나온다.
      */
     public OrganizationCompanyFiltersResponse getOrganizationCompanyFilters() {
-        List<Object[]> rows = userRepository.findActiveCompanyFilterGroups();
-        Map<String, String> keyToLabel = new LinkedHashMap<>();
+        List<Object[]> rows = userRepository.findActiveDistinctCompanyScopes();
+        List<OrganizationCompanyFilterOption> rest = new ArrayList<>();
         for (Object[] row : rows) {
             String rawKey = row[0] instanceof String s ? s.trim() : null;
-            String nameAgg = row[1] instanceof String s ? s.trim() : null;
+            String rawName = row[1] instanceof String s ? s : null;
+            String nameTrimmed = rawName != null ? rawName.trim() : "";
             boolean blankKey = rawKey == null || rawKey.isEmpty();
-            String fv = blankKey ? "GENERAL" : rawKey.toUpperCase(Locale.ROOT);
-            String label = (nameAgg != null && !nameAgg.isEmpty()) ? nameAgg : defaultFilterLabel(fv);
-            keyToLabel.merge(fv, label, UserSearchService::pickRicherLabel);
+            String apiKey = blankKey ? "GENERAL" : rawKey.toUpperCase(Locale.ROOT);
+            String apiName;
+            String label;
+            if (!nameTrimmed.isEmpty()) {
+                label = nameTrimmed;
+                apiName = nameTrimmed;
+            } else {
+                label = defaultFilterLabel(apiKey) + " (회사명 없음)";
+                apiName = "";
+            }
+            rest.add(new OrganizationCompanyFilterOption(label, apiKey, apiName));
         }
+        rest.sort(Comparator.comparing(OrganizationCompanyFilterOption::label, String.CASE_INSENSITIVE_ORDER));
         List<OrganizationCompanyFilterOption> options = new ArrayList<>();
-        options.add(new OrganizationCompanyFilterOption("ORGROOT", "전체 (그룹사 공용)"));
-        keyToLabel.entrySet().stream()
-                .sorted(Comparator.comparing(Map.Entry::getValue, String.CASE_INSENSITIVE_ORDER))
-                .forEach(e -> options.add(new OrganizationCompanyFilterOption(e.getKey(), e.getValue())));
+        options.add(new OrganizationCompanyFilterOption("전체 (그룹사 공용)", null, null));
+        options.addAll(rest);
         return new OrganizationCompanyFiltersResponse(options);
-    }
-
-    private static String pickRicherLabel(String a, String b) {
-        if (a.equals(b)) {
-            return a;
-        }
-        return a.length() >= b.length() ? a : b;
     }
 
     private static String defaultFilterLabel(String filterValue) {
         return switch (filterValue) {
             case "EXTERNAL" -> "외부";
             case "COVIM365" -> "M365";
-            case "GENERAL" -> "내부 (미분류)";
+            case "GENERAL" -> "내부";
             default -> filterValue;
         };
     }
@@ -132,6 +135,16 @@ public class UserSearchService {
             return null;
         }
         return u;
+    }
+
+    /**
+     * null → 회사명 필터 없음. 빈 문자열은 "이름 없음" 행만.
+     */
+    private static String resolveCompanyNameForRepository(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        return raw.trim();
     }
 
     private static String resolveCompany(User u) {

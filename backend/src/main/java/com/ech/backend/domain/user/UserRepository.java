@@ -33,7 +33,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
               AND (
                 :companyKey IS NULL
                 OR u.companyKey = :companyKey
-                OR (:companyKey = 'GENERAL' AND u.companyKey IS NULL)
+                OR (:companyKey = 'GENERAL'
+                    AND (u.companyKey IS NULL OR TRIM(COALESCE(u.companyKey, '')) = ''))
+              )
+              AND (
+                :companyName IS NULL
+                OR (
+                  :companyName = ''
+                  AND (u.companyName IS NULL OR TRIM(COALESCE(u.companyName, '')) = '')
+                )
+                OR TRIM(COALESCE(u.companyName, '')) = :companyName
               )
             ORDER BY COALESCE(u.companyName, '') ASC,
                      COALESCE(u.divisionName, '') ASC,
@@ -41,18 +50,19 @@ public interface UserRepository extends JpaRepository<User, Long> {
                      COALESCE(u.department, '') ASC,
                      u.name ASC
             """)
-    List<User> findActiveUsersForOrganization(@Param("companyKey") String companyKey);
+    List<User> findActiveUsersForOrganization(
+            @Param("companyKey") String companyKey, @Param("companyName") String companyName);
 
     /**
-     * ACTIVE 사용자 기준 (company_key, 대표 company_name) 쌍. JPQL은 null 을 그룹으로 묶는다.
+     * ACTIVE 사용자 기준 (company_key, company_name) 고유 조합 — 셀렉트 옵션용.
      */
     @Query("""
-            SELECT u.companyKey, MAX(u.companyName)
+            SELECT DISTINCT u.companyKey, u.companyName
             FROM User u
             WHERE u.status = 'ACTIVE'
-            GROUP BY u.companyKey
+            ORDER BY u.companyKey, u.companyName
             """)
-    List<Object[]> findActiveCompanyFilterGroups();
+    List<Object[]> findActiveDistinctCompanyScopes();
 
     Optional<User> findByEmployeeNo(String employeeNo);
 

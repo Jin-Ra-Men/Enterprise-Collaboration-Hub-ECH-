@@ -137,8 +137,8 @@
 
 ### 사용자 검색/Presence 인수인계 메모
 - 사용자 검색은 `users.department`를 조직도 속성으로 사용해 부서 필터를 지원합니다.
-- `GET /api/user-directory/organization-filters`는 ACTIVE 사용자를 `company_key`로 묶어 대표 `company_name`을 라벨로 한 셀렉트 옵션을 줍니다(첫 항목 `ORGROOT` 전체).
-- `GET /api/user-directory/organization?companyKey=` 응답은 `data.companies[]` → `divisions[]` → `teams[]` → `users[]` 3단계 트리이며, DB의 `company_name` / `division_name` / `team_name`을 그대로 사용합니다. `companyKey`는 `ORGROOT`/미지정이면 전체, 그 외는 `users.company_key`로 필터합니다. 프론트 조직도 팝업은 그룹웨어식 **윈도우 크롬**(제목·툴바·body_root) + 회사 셀렉트 + 좌측 조직도 + 우측 검색/결과입니다.
+- `GET /api/user-directory/organization-filters`는 ACTIVE 사용자의 **`company_key`+`company_name` 고유 조합**마다 셀렉트 옵션을 줍니다(첫 항목 전체).
+- `GET /api/user-directory/organization?companyKey=&companyName=`로 같은 조합만 트리에 넣어, 상단에서 고른 회사와 좌측 트리가 일치합니다. `companyName` 빈 값은 회사명 미입력 행 전용 필터.
 - 검색 키워드(`q`)는 이름/이메일/사번에 대해 부분 일치 조회를 수행합니다.
 - Presence는 Realtime 서버 메모리 기반으로 관리됩니다.
 - 소켓별로 사용자를 추적하며, 해당 사용자의 **모든** 소켓이 끊기면 OFFLINE 브로드캐스트 후 메모리에서 제거합니다(유령 userId 누적 방지).
