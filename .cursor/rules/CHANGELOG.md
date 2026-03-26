@@ -20,6 +20,13 @@
 - 프론트 `frontend/app.js`의 조직도 회사 셀렉트/트리 요청 파라미터를 `companyGroupCode`로 수정
 - `UserDirectoryApiTest`를 H2 제약(ON CONFLICT 미지원) 하에서 org 테이블을 직접 시드하도록 보강
 
+## 2026-03-26 (5차)
+
+### Changed
+- `users.company_key` -> `users.company_code`로 컬럼/코드 명칭 교체
+- `org_groups` 부모관계를 `parent_group_id/company_group_id`에서 `member_of_group_code`로 단순화
+- `org_group_members.group_id`를 `org_group_members.group_code`로 교체
+
 ## 2026-03-26 (2차)
 
 ### Added

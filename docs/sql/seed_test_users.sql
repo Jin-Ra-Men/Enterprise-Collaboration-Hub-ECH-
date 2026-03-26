@@ -6,7 +6,7 @@
 --
 -- 운영 DB에는 실행하지 마세요.
 
-INSERT INTO users (employee_no, email, name, department, company_name, division_name, team_name, company_key, job_rank, duty_title, role, status, created_at, updated_at)
+INSERT INTO users (employee_no, email, name, department, company_name, division_name, team_name, company_code, job_rank, duty_title, role, status, created_at, updated_at)
 VALUES
     -- 관리자 1명 (API·화면에서 관리자 시나리오 테스트용)
     ('ECH-ADM-001', 'admin.ech@ech-test.local', '시스템 관리자', 'IT운영팀', 'ECH 주식회사', '운영본부', 'IT운영팀', 'GENERAL', '부장', NULL, 'ADMIN', 'ACTIVE', NOW(), NOW()),
@@ -41,7 +41,7 @@ ON CONFLICT (employee_no) DO UPDATE SET
     company_name   = EXCLUDED.company_name,
     division_name  = EXCLUDED.division_name,
     team_name      = EXCLUDED.team_name,
-    company_key    = EXCLUDED.company_key,
+    company_code   = EXCLUDED.company_code,
     job_rank       = EXCLUDED.job_rank,
     duty_title     = EXCLUDED.duty_title,
     role           = EXCLUDED.role,

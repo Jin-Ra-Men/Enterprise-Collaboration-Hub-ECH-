@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     company_name VARCHAR(120),
     division_name VARCHAR(120),
     team_name VARCHAR(120),
-    company_key VARCHAR(40),
+    company_code VARCHAR(40),
     job_rank VARCHAR(100),
     duty_title VARCHAR(100),
     role VARCHAR(30) NOT NULL DEFAULT 'MEMBER',
@@ -27,7 +27,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS duty_title VARCHAR(100);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS company_name VARCHAR(120);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS division_name VARCHAR(120);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS team_name VARCHAR(120);
-ALTER TABLE users ADD COLUMN IF NOT EXISTS company_key VARCHAR(40);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS company_code VARCHAR(40);
 
 CREATE TABLE IF NOT EXISTS channels (
     id BIGSERIAL PRIMARY KEY,
@@ -281,24 +281,25 @@ CREATE TABLE IF NOT EXISTS org_groups (
     group_type VARCHAR(30) NOT NULL,
     group_code VARCHAR(32) NOT NULL,
     display_name VARCHAR(200) NOT NULL,
-    parent_group_id BIGINT NULL REFERENCES org_groups(id) ON DELETE CASCADE,
-    company_group_id BIGINT NULL REFERENCES org_groups(id) ON DELETE CASCADE,
+    -- 상위 조직을 식별하는 부모 groupCode.
+    -- COMPANY는 null, DIVISION은 COMPANY의 groupCode, TEAM은 DIVISION의 groupCode
+    member_of_group_code VARCHAR(32) NULL REFERENCES org_groups(group_code) ON DELETE CASCADE,
     group_path VARCHAR(500) NULL,
     sort_order INT NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT uq_org_groups_type_code UNIQUE (group_type, group_code)
+    CONSTRAINT uq_org_groups_group_code UNIQUE (group_code)
 );
 
-CREATE INDEX IF NOT EXISTS idx_org_groups_type_parent ON org_groups(group_type, parent_group_id);
-CREATE INDEX IF NOT EXISTS idx_org_groups_type_company ON org_groups(group_type, company_group_id);
+CREATE INDEX IF NOT EXISTS idx_org_groups_type_member_of ON org_groups(group_type, member_of_group_code);
 CREATE INDEX IF NOT EXISTS idx_org_groups_group_code ON org_groups(group_code);
 
 CREATE TABLE IF NOT EXISTS org_group_members (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    group_id BIGINT NOT NULL REFERENCES org_groups(id) ON DELETE CASCADE,
+    -- org_groups.group_code (조직 식별자)
+    group_code VARCHAR(32) NOT NULL REFERENCES org_groups(group_code) ON DELETE CASCADE,
     member_group_type VARCHAR(30) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -306,5 +307,5 @@ CREATE TABLE IF NOT EXISTS org_group_members (
 );
 
 CREATE INDEX IF NOT EXISTS idx_org_group_members_user ON org_group_members(user_id);
-CREATE INDEX IF NOT EXISTS idx_org_group_members_group ON org_group_members(group_id);
+CREATE INDEX IF NOT EXISTS idx_org_group_members_group ON org_group_members(group_code);
 CREATE INDEX IF NOT EXISTS idx_org_group_members_type ON org_group_members(member_group_type);

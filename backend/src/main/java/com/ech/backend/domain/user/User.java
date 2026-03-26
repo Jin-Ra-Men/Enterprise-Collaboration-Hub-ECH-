@@ -41,11 +41,11 @@ public class User {
     private String teamName;
 
     /**
-     * 그룹사/테넌트 구분 키(조직도 상단 필터). 예: ORGROOT(전체), GENERAL, EXTERNAL, COVIM365.
-     * null 은 레거시 호환으로 조직도에서 GENERAL 과 동일하게 취급할 수 있다.
+     * 그룹사/테넌트 구분 코드(조직도 상단 필터). 예: ORGROOT(전체), GENERAL, EXTERNAL, COVIM365.
+     * null 은 레거시 호환으로 organization filter에서 GENERAL 과 동일하게 취급할 수 있다.
      */
-    @Column(name = "company_key", length = 40)
-    private String companyKey;
+    @Column(name = "company_code", length = 40)
+    private String companyCode;
 
     /** 조직 직위(예: 대리, 과장). UI는 값이 없으면 `-` 등으로 표시. */
     @Column(name = "job_rank", length = 100)
@@ -117,12 +117,12 @@ public class User {
         return teamName;
     }
 
-    public String getCompanyKey() {
-        return companyKey;
+    public String getCompanyCode() {
+        return companyCode;
     }
 
-    public void setCompanyKey(String companyKey) {
-        this.companyKey = companyKey;
+    public void setCompanyCode(String companyCode) {
+        this.companyCode = companyCode;
     }
 
     public String getJobRank() {

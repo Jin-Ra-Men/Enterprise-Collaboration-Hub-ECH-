@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS org_group_members (
     id BIGSERIAL PRIMARY KEY,
 
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    group_id BIGINT NOT NULL REFERENCES org_groups(id) ON DELETE CASCADE,
+    -- org_groups.group_code (조직 식별자)
+    group_code VARCHAR(32) NOT NULL REFERENCES org_groups(group_code) ON DELETE CASCADE,
 
     -- 유저가 속한 타입(매핑 용도).
     -- 예: 'TEAM', 'JOB_LEVEL', 'DUTY_TITLE'
@@ -23,6 +24,6 @@ CREATE TABLE IF NOT EXISTS org_group_members (
 );
 
 CREATE INDEX IF NOT EXISTS idx_org_group_members_user ON org_group_members(user_id);
-CREATE INDEX IF NOT EXISTS idx_org_group_members_group ON org_group_members(group_id);
+CREATE INDEX IF NOT EXISTS idx_org_group_members_group ON org_group_members(group_code);
 CREATE INDEX IF NOT EXISTS idx_org_group_members_type ON org_group_members(member_group_type);
 
