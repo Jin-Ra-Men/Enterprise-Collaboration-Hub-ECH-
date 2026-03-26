@@ -388,6 +388,38 @@ function ensureOrgCompanySelectListener() {
   });
 }
 
+/** DB 기반 회사(테넌트) 셀렉트 옵션 — 라벨은 users.company_name 대표값 */
+async function loadOrganizationCompanyFiltersIntoSelect() {
+  const sel = document.getElementById("companySelect");
+  if (!sel) return;
+  const previous = sel.value || "ORGROOT";
+  sel.innerHTML = '<option value="ORGROOT">불러오는 중…</option>';
+  try {
+    const res = await apiFetch("/api/user-directory/organization-filters");
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.error?.message || "회사 목록을 불러오지 못했습니다.");
+    }
+    const opts = json.data?.options || [];
+    sel.innerHTML = "";
+    opts.forEach((o) => {
+      const opt = document.createElement("option");
+      opt.value = o.filterValue != null ? o.filterValue : "ORGROOT";
+      opt.textContent = o.label || o.filterValue || "";
+      sel.appendChild(opt);
+    });
+    const valid = Array.from(sel.options).some((o) => o.value === previous);
+    sel.value = valid ? previous : "ORGROOT";
+  } catch (e) {
+    console.error(e);
+    sel.innerHTML = "";
+    const o = document.createElement("option");
+    o.value = "ORGROOT";
+    o.textContent = "전체 (그룹사 공용)";
+    sel.appendChild(o);
+  }
+}
+
 function renderOrgTreeLeft() {
   const treeEl = document.getElementById("orgTreeEmbedAdd");
   if (!treeEl) return;
@@ -537,6 +569,7 @@ async function loadOrgTree(context, embedElIdOverride = null) {
   if (topTypeEl) topTypeEl.value = "NAME";
 
   ensureOrgCompanySelectListener();
+  await loadOrganizationCompanyFiltersIntoSelect();
 
   try {
     const companyKey = document.getElementById("companySelect")?.value || "ORGROOT";

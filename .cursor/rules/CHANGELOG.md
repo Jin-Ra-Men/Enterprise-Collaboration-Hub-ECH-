@@ -2,6 +2,16 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-03-26 (2차)
+
+### Added
+- `GET /api/user-directory/organization-filters` — ACTIVE 사용자 기준 `company_key` 그룹별 대표 `company_name`으로 조직도 팝업 회사 셀렉트 옵션 생성
+- 조직도 팝업 HTML/CSS를 그룹웨어 `ui_window`(제목바·툴바·body_root·푸터) 형태로 정렬
+
+### Changed
+- 회사 셀렉트 고정 라벨(코비젼 등) 제거 → API로 DB 반영 라벨 사용
+- `docs/FEATURE_SPEC.md`, `docs/HANDOVER.md`, `README.md`
+
 ## 2026-03-26
 
 ### Added
