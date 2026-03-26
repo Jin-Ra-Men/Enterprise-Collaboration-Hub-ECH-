@@ -2,6 +2,11 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-03-26 (3차)
+
+### Changed
+- 조직도 회사 셀렉트·트리: `company_key`만 묶지 않고 **`company_key` + `company_name` 조합**별 옵션 및 `GET /organization?companyKey=&companyName=` 필터(빈 `companyName`은 회사명 미입력 행만)
+
 ## 2026-03-26 (2차)
 
 ### Added

@@ -99,7 +99,7 @@ graph LR
 - `GET /api/channels/{channelId}/messages/{parentMessageId}/replies`
 - `GET /api/users/search?q=...&department=...`
 - `GET /api/user-directory/organization-filters` (조직도 팝업 회사 셀렉트 — DB `company_name` 라벨)
-- `GET /api/user-directory/organization?companyKey=` (선택: `ORGROOT` 전체, `GENERAL`/`EXTERNAL`/`COVIM365` 등 `users.company_key` 필터)
+- `GET /api/user-directory/organization?companyKey=&companyName=` (선택: 전체 또는 `company_key`+`company_name` 조합 필터)
 - `GET /api/users/profile?userId=...`
 - `GET /api/users/{userId}/profile` (경로형, 호환)
 - `POST /api/kanban/boards`, `GET /api/kanban/boards`, `GET /api/kanban/boards/{boardId}`, `DELETE /api/kanban/boards/{boardId}`
