@@ -84,4 +84,15 @@ public interface UserRepository extends JpaRepository<User, Long> {
             @Param("employeeNo") String employeeNo,
             @Param("status") String status
     );
+
+    @Modifying
+    @Query("""
+            UPDATE User u
+            SET u.themePreference = :themePreference
+            WHERE u.id = :userId
+            """)
+    int updateThemePreferenceById(
+            @Param("userId") Long userId,
+            @Param("themePreference") String themePreference
+    );
 }

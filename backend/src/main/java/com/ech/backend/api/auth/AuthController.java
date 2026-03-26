@@ -3,12 +3,14 @@ package com.ech.backend.api.auth;
 import com.ech.backend.api.auth.dto.LoginRequest;
 import com.ech.backend.api.auth.dto.LoginResponse;
 import com.ech.backend.api.auth.dto.MeResponse;
+import com.ech.backend.api.auth.dto.UpdateThemePreferenceRequest;
 import com.ech.backend.common.api.ApiResponse;
 import com.ech.backend.common.security.UserPrincipal;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,13 +40,23 @@ public class AuthController {
      */
     @GetMapping("/me")
     public ApiResponse<MeResponse> me(@AuthenticationPrincipal UserPrincipal principal) {
+        String themePreference = authService.getThemePreference(principal.userId());
         return ApiResponse.success(new MeResponse(
                 principal.userId(),
                 principal.employeeNo(),
                 principal.email(),
                 principal.name(),
                 principal.department(),
-                principal.role().name()
+                principal.role().name(),
+                themePreference
         ));
+    }
+
+    @PutMapping("/me/theme")
+    public ApiResponse<String> updateTheme(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody UpdateThemePreferenceRequest request
+    ) {
+        return ApiResponse.success(authService.updateThemePreference(principal.userId(), request.theme()));
     }
 }
