@@ -11,6 +11,7 @@
 - API/프론트: `jobRank`/`dutyTitle` → `jobLevel`/`jobPosition`/`jobTitle` (`department`는 TEAM 표시명 유지)
 - org code 생성 규칙을 난수/해시 기반에서 가독 코드 기반으로 변경 (`ORGROOT`, `0_JobLevel`, `0_L100` 등)
 - `JOB_LEVEL`/`JOB_POSITION`/`JOB_TITLE` 그룹에 `member_of_group_code`/`group_path` 계층을 부여하도록 동기화 로직 변경
+- company/division/team 코드를 더 짧은 형태로 축약 (`ORG`, `EXT`, `INFRA`, `OPS_ITOPS` 등)
 
 ### Added
 - PostgreSQL 마이그레이션: `migrate_users_drop_org_columns.sql`, `migrate_org_group_members_user_id_to_employee_no.sql`, `migrate_org_duty_title_to_job_title.sql`

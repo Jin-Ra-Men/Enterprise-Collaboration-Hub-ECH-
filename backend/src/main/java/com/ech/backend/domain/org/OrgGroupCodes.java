@@ -13,15 +13,24 @@ public final class OrgGroupCodes {
     private OrgGroupCodes() {}
 
     public static String companyCode(String companyCodeNormalized) {
-        return compact("C", slugSegment(companyCodeNormalized, 20));
+        String normalized = normalize(companyCodeNormalized).toUpperCase();
+        if ("GENERAL".equals(normalized)) return "ORG";
+        if ("EXTERNAL".equals(normalized)) return "EXT";
+        if ("COVIM365".equals(normalized)) return "M365";
+        return slugSegment(companyCodeNormalized, 12);
     }
 
     public static String divisionCode(String companyCodeNormalized, String divisionDisplayName) {
-        return compact("D", slugSegment(companyCodeNormalized, 8), slugSegment(divisionDisplayName, 20));
+        String company = companyCode(companyCodeNormalized);
+        String division = slugSegment(divisionDisplayName, 16);
+        if ("ORG".equals(company)) {
+            return division;
+        }
+        return compact(company, division);
     }
 
     public static String teamCode(String divisionCode, String teamDisplayName) {
-        return compact("T", tailSegment(divisionCode, 10), slugSegment(teamDisplayName, 18));
+        return compact(divisionCode, slugSegment(teamDisplayName, 12));
     }
 
     public static String jobLevelCode(String jobLevelDisplayName) {
@@ -122,22 +131,22 @@ public final class OrgGroupCodes {
     }
 
     private static String aliasFor(String normalizedUpperText) {
-        if ("운영본부".equals(normalizedUpperText)) return "OPS_HQ";
-        if ("품질본부".equals(normalizedUpperText)) return "QA_HQ";
+        if ("운영본부".equals(normalizedUpperText)) return "OPS";
+        if ("품질본부".equals(normalizedUpperText)) return "QA";
         if ("기술본부".equals(normalizedUpperText)) return "INFRA";
-        if ("경영지원본부".equals(normalizedUpperText)) return "MGMT_HQ";
-        if ("영업본부".equals(normalizedUpperText)) return "SALES_HQ";
-        if ("기획본부".equals(normalizedUpperText)) return "PLAN_HQ";
-        if ("감사본부".equals(normalizedUpperText)) return "AUDIT_HQ";
+        if ("경영지원본부".equals(normalizedUpperText)) return "MGMT";
+        if ("영업본부".equals(normalizedUpperText)) return "SALES";
+        if ("기획본부".equals(normalizedUpperText)) return "PLAN";
+        if ("감사본부".equals(normalizedUpperText)) return "AUDIT";
         if ("미지정 본부".equals(normalizedUpperText) || "미지정본부".equals(normalizedUpperText)) return "RETIREDEPT";
         if ("IT운영팀".equals(normalizedUpperText)) return "ITOPS";
-        if ("테스트팀".equals(normalizedUpperText)) return "QA_TEAM";
-        if ("개발1팀".equals(normalizedUpperText)) return "DEV_TEAM1";
-        if ("개발2팀".equals(normalizedUpperText)) return "DEV_TEAM2";
-        if ("인사총무팀".equals(normalizedUpperText)) return "HR_TEAM";
-        if ("영업1팀".equals(normalizedUpperText)) return "SALES_TEAM1";
-        if ("기획전략팀".equals(normalizedUpperText)) return "PLAN_TEAM";
-        if ("보안감사팀".equals(normalizedUpperText)) return "SEC_AUDIT";
+        if ("테스트팀".equals(normalizedUpperText)) return "QA";
+        if ("개발1팀".equals(normalizedUpperText)) return "DEV1";
+        if ("개발2팀".equals(normalizedUpperText)) return "DEV2";
+        if ("인사총무팀".equals(normalizedUpperText)) return "HR";
+        if ("영업1팀".equals(normalizedUpperText)) return "SALES1";
+        if ("기획전략팀".equals(normalizedUpperText)) return "PLAN";
+        if ("보안감사팀".equals(normalizedUpperText)) return "SECAUDIT";
         if ("미지정 팀".equals(normalizedUpperText) || "미지정팀".equals(normalizedUpperText)) return "RETIRETEAM";
         return null;
     }
