@@ -90,7 +90,7 @@
 - 입력/출력:
   - 생성 입력: `workspaceKey`, `name`, `description`, `channelType`(`PUBLIC`|`PRIVATE`|`DM`), `createdByUserId`, 선택 `dmPeerUserIds`(DM일 때 상대·그룹 참가자 userId — 서버가 내부 고유 `name`(`__dm__…`)과 표시용 `description`을 구성하고, 동일 참가자 조합이면 기존 채널 반환 후 누락 멤버만 추가)
   - 참여 입력: `userId`, `memberRole`
-  - 출력: 채널 기본 정보 + 멤버 목록(`members`: `userId`, `name`, `department`, `jobRank`, `dutyTitle`, `memberRole`, `joinedAt`)
+  - 출력: 채널 기본 정보 + 멤버 목록(`members`: `userId`, `name`, `department`, `jobLevel`, `jobPosition`, `jobTitle`, `memberRole`, `joinedAt`)
 - 상태 전이/예외 케이스:
   - 중복 채널명(`workspaceKey + name`) 생성 시 예외
   - 없는 사용자/채널 조회 시 예외
@@ -432,13 +432,13 @@
     - 조직 노드/계층은 `org_groups.member_of_group_code` 기반으로 구성한다.
     - `org_groups.group_code` / `companyGroupCode` 값은 **ASCII 전용** pretty 코드(예: `COMP_*`, `DIV_*`, `TEAM_*`)이며, 표시명(`display_name`)은 한글을 유지한다.
     - 사용자 목록은 `org_group_members`에서 `member_group_type='TEAM'`에 해당하는 유저를 사용한다.
-    - 각 사용자의 `department` 값은 `TEAM` 그룹의 `display_name`으로 채운다. (잡레벨/직책은 `org_group_members(JOB_LEVEL/DUTY_TITLE)`가 채워진 경우 우선, 미구성 시 `users.job_rank`/`users.duty_title` fallback)
-  - `GET /api/users/profile?userId=` — 동료 프로필(프론트 기본, 이름·사원번호·이메일·부서·직위; 직책(`dutyTitle`)은 값이 있을 때만 모달에 표시. **DM 보내기**로 DM 채널 생성·입장). 응답에 `role`/`status`가 있어도 프로필 모달에는 표시하지 않음
+    - 각 사용자의 `department` 값은 `TEAM` 그룹의 `display_name`으로 채운다. 직급·직위·직책은 `org_group_members`의 `JOB_LEVEL` / `JOB_POSITION` / `JOB_TITLE` 매핑만 사용한다(`users` 컬럼 fallback 없음).
+  - `GET /api/users/profile?userId=` — 동료 프로필(프론트 기본, 이름·사원번호·이메일·부서·직급; 직위(`jobPosition`)·직책(`jobTitle`)은 값이 있을 때만 모달에 표시. **DM 보내기**로 DM 채널 생성·입장). 응답에 `role`/`status`가 있어도 프로필 모달에는 표시하지 않음
   - `GET /api/users/{userId}/profile` — 동일(경로형, 하위 호환)
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:
   - 검색 입력: `q`(이름/이메일/사번/부서 부분 일치, 숫자만 입력 시 사용자 ID 일치), `department`(정확히 일치하는 부서명으로 추가 필터)
-  - 검색 출력: `userId`, `employeeNo`, `name`, `email`, `department`, `jobRank`, `dutyTitle`, `role`, `status`
+  - 검색 출력: `userId`, `employeeNo`, `name`, `email`, `department`, `jobLevel`, `jobPosition`, `jobTitle`, `role`, `status`
   - 조직도 출력: `{ companies: [{ companyId, name, divisions: [{ divisionId, name, teams: [{ teamId, name, users: [...] }] }] }] }` (사용자 객체는 검색 API와 동일 필드 위주)
 - 상태 전이/예외 케이스:
   - `q`/`department`가 비어 있으면 전체 사용자 또는 부서 필터 기준 조회
@@ -586,7 +586,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - `GET /api/channels/{channelId}/files/{fileId}/download?userId=...`
 - 입력/출력:
   - **통합 피커**: 채널 생성·DM 생성·구성원 추가 모두 **동일한 `+` 버튼 기반 팝업**(`modalAddMemberPicker`)을 사용합니다. 팝업에서 좌측 조직도(회사>본부>팀) + 우측 검색/결과로 사용자 선택 후 상위 모달의 선택 태그에 반영됩니다.
-  - 멤버 패널: `department`·`jobRank`를 한 줄 요약, `dutyTitle`은 값이 있을 때만 추가 줄(직책 없으면 UI에 안 보임)
+  - 멤버 패널: `department`·`jobLevel`을 한 줄 요약, `jobPosition`·`jobTitle`은 값이 있을 때만 추가 표시
   - 파일 업로드 성공 시: 일반 텍스트 메시지와 동일한 **메시지 행**(아바타·발신자·시간) 안에 첨부 인라인(파일명·크기·다운로드) 표시
   - **날짜 구분선**: 스레드 첫 메시지 또는 로컬 날짜가 바뀔 때 채팅 영역에 날짜 pill 표시
   - UI: CSS 변수 기반 **다크·보라 액센트** 톤(모달·관리자·검색·조직도 블록 포함)

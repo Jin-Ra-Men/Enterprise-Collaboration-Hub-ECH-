@@ -3,12 +3,12 @@ package com.ech.backend.api.user;
 import com.ech.backend.BaseIntegrationTest;
 import com.ech.backend.domain.org.OrgGroup;
 import com.ech.backend.domain.org.OrgGroupCodes;
+import com.ech.backend.domain.org.OrgGroupMember;
 import com.ech.backend.domain.org.OrgGroupMemberRepository;
 import com.ech.backend.domain.org.OrgGroupRepository;
-import com.ech.backend.domain.org.OrgGroupMember;
 import com.ech.backend.domain.user.User;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -23,52 +23,49 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisplayName("사용자 조직도 API (user-directory)")
 class UserDirectoryApiTest extends BaseIntegrationTest {
 
-    @BeforeEach
-    void seedOrgGroupsForTestData() {
-        orgGroupMemberRepository.deleteAll();
-        orgGroupRepository.deleteAll();
-
-        // org_groups/org_group_members는 H2에서 Postgres upsert 로직(ON CONFLICT)을 그대로 돌리기 어렵기 때문에,
-        // users 시드 데이터를 기반으로 테스트용 최소 조직 매핑을 직접 생성한다.
-        for (User u : userRepository.findAll()) {
-            if (!"ACTIVE".equalsIgnoreCase(u.getStatus())) {
-                continue;
-            }
-
-            String companyCodeNormalized = safeCompanyCode(u.getCompanyCode());
-            String companyDisplayName = resolveCompanyDisplayName(u.getCompanyName(), companyCodeNormalized);
-            String companyFp = OrgGroupCodes.fingerprintCompany(companyCodeNormalized, companyDisplayName);
-            String companyGroupCode = OrgGroupCodes.prettyCompany(companyCodeNormalized, companyFp);
-
-            OrgGroup company = findOrCreateCompany(companyGroupCode, companyDisplayName);
-
-            String divisionDisplayName = resolveOrDefault(u.getDivisionName(), "미지정 본부");
-            String divisionFp = OrgGroupCodes.fingerprintDivision(companyFp, divisionDisplayName);
-            String divisionGroupCode = OrgGroupCodes.prettyDivision(companyFp, divisionFp);
-            OrgGroup division = findOrCreateDivision(company, divisionGroupCode, divisionDisplayName);
-
-            String teamDisplayName = resolveOrDefault(u.getTeamName(), "미지정 팀");
-            String teamFp = OrgGroupCodes.fingerprintTeam(divisionFp, teamDisplayName);
-            String teamGroupCode = OrgGroupCodes.prettyTeam(divisionFp, teamFp);
-            OrgGroup team = findOrCreateTeam(company, division, teamGroupCode, teamDisplayName);
-
-            orgGroupMemberRepository.findByUser_IdAndMemberGroupType(u.getId(), "TEAM").ifPresentOrElse(
-                    existing -> {
-                        if (!existing.getGroup().getId().equals(team.getId())) {
-                            existing.setGroup(team);
-                            orgGroupMemberRepository.save(existing);
-                        }
-                    },
-                    () -> orgGroupMemberRepository.save(new OrgGroupMember(u, team, "TEAM"))
-            );
-        }
-    }
-
     @Autowired
     private OrgGroupRepository orgGroupRepository;
 
     @Autowired
     private OrgGroupMemberRepository orgGroupMemberRepository;
+
+    @BeforeEach
+    void seedOrgGroupsForTestData() {
+        orgGroupMemberRepository.deleteAll();
+        orgGroupRepository.deleteAll();
+
+        String companyCodeNormalized = "GENERAL";
+        String companyDisplayName = "ECH 통합테스트";
+        String companyFp = OrgGroupCodes.fingerprintCompany(companyCodeNormalized, companyDisplayName);
+        String companyGroupCode = OrgGroupCodes.prettyCompany(companyCodeNormalized, companyFp);
+        OrgGroup company = findOrCreateCompany(companyGroupCode, companyDisplayName);
+
+        String divisionDisplayName = "통합테스트본부";
+        String divisionFp = OrgGroupCodes.fingerprintDivision(companyFp, divisionDisplayName);
+        String divisionGroupCode = OrgGroupCodes.prettyDivision(companyFp, divisionFp);
+        OrgGroup division = findOrCreateDivision(company, divisionGroupCode, divisionDisplayName);
+
+        String teamDisplayName = "통합테스트팀";
+        String teamFp = OrgGroupCodes.fingerprintTeam(divisionFp, teamDisplayName);
+        String teamGroupCode = OrgGroupCodes.prettyTeam(divisionFp, teamFp);
+        OrgGroup team = findOrCreateTeam(company, division, teamGroupCode, teamDisplayName);
+
+        for (User u : userRepository.findAll()) {
+            if (!"ACTIVE".equalsIgnoreCase(u.getStatus())) {
+                continue;
+            }
+            orgGroupMemberRepository.findByUser_EmployeeNoAndMemberGroupType(u.getEmployeeNo(), "TEAM")
+                    .ifPresentOrElse(
+                            existing -> {
+                                if (!existing.getGroup().getId().equals(team.getId())) {
+                                    existing.setGroup(team);
+                                    orgGroupMemberRepository.save(existing);
+                                }
+                            },
+                            () -> orgGroupMemberRepository.save(new OrgGroupMember(u, team, "TEAM"))
+                    );
+        }
+    }
 
     private OrgGroup findOrCreateCompany(String companyCode, String companyDisplayName) {
         return orgGroupRepository.findByGroupTypeAndGroupCode("COMPANY", companyCode)
@@ -101,30 +98,6 @@ class UserDirectoryApiTest extends BaseIntegrationTest {
                         division.getGroupCode(),
                         company.getGroupCode() + ";" + division.getGroupCode() + ";" + teamCode
                 )));
-    }
-
-    private static String safeCompanyCode(String companyCode) {
-        if (companyCode == null || companyCode.isBlank()) {
-            return "GENERAL";
-        }
-        return companyCode.trim().toUpperCase();
-    }
-
-    private static String resolveCompanyDisplayName(String companyName, String companyCodeNormalized) {
-        String cn = companyName == null ? null : companyName.trim();
-        if (cn != null && !cn.isEmpty()) {
-            return cn;
-        }
-        return switch (companyCodeNormalized) {
-            case "EXTERNAL" -> "외부인력";
-            case "COVIM365" -> "M365";
-            default -> "내부";
-        };
-    }
-
-    private static String resolveOrDefault(String value, String defaultValue) {
-        String v = value == null ? null : value.trim();
-        return (v == null || v.isEmpty()) ? defaultValue : v;
     }
 
     @Test

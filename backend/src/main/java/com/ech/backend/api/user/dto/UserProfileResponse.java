@@ -6,8 +6,9 @@ public record UserProfileResponse(
         String name,
         String email,
         String department,
-        String jobRank,
-        String dutyTitle,
+        String jobLevel,
+        String jobPosition,
+        String jobTitle,
         String role,
         String status
 ) {

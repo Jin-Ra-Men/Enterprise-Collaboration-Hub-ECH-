@@ -191,20 +191,34 @@ async function openUserProfile(userId) {
     document.getElementById("profileModalEmpNo").textContent = u.employeeNo || "-";
     document.getElementById("profileModalEmail").textContent = u.email || "-";
     document.getElementById("profileModalDept").textContent = u.department || "-";
-    const jr = u.jobRank != null && String(u.jobRank).trim() !== "";
-    document.getElementById("profileModalJobRank").textContent = jr ? String(u.jobRank).trim() : "-";
-    const dutyDt = document.getElementById("profileDutyTitleDt");
-    const dutyDd = document.getElementById("profileModalDutyTitle");
-    const hasDuty = u.dutyTitle != null && String(u.dutyTitle).trim() !== "";
-    if (dutyDt && dutyDd) {
-      if (hasDuty) {
-        dutyDt.classList.remove("hidden");
-        dutyDd.classList.remove("hidden");
-        dutyDd.textContent = String(u.dutyTitle).trim();
+    const jl = u.jobLevel != null && String(u.jobLevel).trim() !== "";
+    document.getElementById("profileModalJobLevel").textContent = jl ? String(u.jobLevel).trim() : "-";
+    const posDt = document.getElementById("profileJobPositionDt");
+    const posDd = document.getElementById("profileModalJobPosition");
+    const hasPos = u.jobPosition != null && String(u.jobPosition).trim() !== "";
+    if (posDt && posDd) {
+      if (hasPos) {
+        posDt.classList.remove("hidden");
+        posDd.classList.remove("hidden");
+        posDd.textContent = String(u.jobPosition).trim();
       } else {
-        dutyDt.classList.add("hidden");
-        dutyDd.classList.add("hidden");
-        dutyDd.textContent = "";
+        posDt.classList.add("hidden");
+        posDd.classList.add("hidden");
+        posDd.textContent = "";
+      }
+    }
+    const titleDt = document.getElementById("profileJobTitleDt");
+    const titleDd = document.getElementById("profileModalJobTitle");
+    const hasTitle = u.jobTitle != null && String(u.jobTitle).trim() !== "";
+    if (titleDt && titleDd) {
+      if (hasTitle) {
+        titleDt.classList.remove("hidden");
+        titleDd.classList.remove("hidden");
+        titleDd.textContent = String(u.jobTitle).trim();
+      } else {
+        titleDt.classList.add("hidden");
+        titleDd.classList.add("hidden");
+        titleDd.textContent = "";
       }
     }
     const dmBtn = document.getElementById("btnProfileDm");
@@ -895,11 +909,15 @@ async function loadChannelMembers(channelId) {
       const uid = Number(m.userId);
       const pr = presenceByUserId.get(uid) || "OFFLINE";
       const prCl = presenceCssClass(pr);
-      const deptParts = [m.department, m.jobRank].filter(x => x != null && String(x).trim() !== "");
+      const deptParts = [m.department, m.jobLevel].filter(x => x != null && String(x).trim() !== "");
       const orgLine = deptParts.length ? deptParts.map(x => String(x).trim()).join(" · ") : "조직 미지정";
+      const posHtml =
+        m.jobPosition != null && String(m.jobPosition).trim() !== ""
+          ? `<span class="member-position-txt">${escHtml(String(m.jobPosition).trim())}</span>`
+          : "";
       const dutyHtml =
-        m.dutyTitle != null && String(m.dutyTitle).trim() !== ""
-          ? `<span class="member-duty-txt">${escHtml(String(m.dutyTitle).trim())}</span>`
+        m.jobTitle != null && String(m.jobTitle).trim() !== ""
+          ? `<span class="member-duty-txt">${escHtml(String(m.jobTitle).trim())}</span>`
           : "";
       const li = document.createElement("li");
       li.className = "member-list-item";
@@ -912,6 +930,7 @@ async function loadChannelMembers(channelId) {
           <span class="member-name-wrap">
             <span class="member-name-txt">${escHtml(m.name || "알 수 없음")}</span>
             <span class="member-org-txt">${escHtml(orgLine)}</span>
+            ${posHtml}
             ${dutyHtml}
           </span>
         </button>`;

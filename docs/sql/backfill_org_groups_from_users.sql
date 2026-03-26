@@ -1,5 +1,9 @@
--- org_groups 백필 (users.company_code -> COMPANY/DIVISION/TEAM/JOB_LEVEL/DUTY_TITLE)
+-- org_groups 백필 (레거시: users 의 회사/본부/팀/직무 컬럼 기준)
 -- PostgreSQL
+--
+-- **[2025-03] 사용 중단 안내**: `users` 에서 `company_name`, `division_name`, `team_name`,
+-- `job_rank`, `duty_title` 등이 제거되었습니다. 신규 환경에서는 **조직 동기화(OrgSync)** 로
+-- `org_groups` / `org_group_members` 를 채우거나, 별도 시드 SQL 을 사용하세요.
 --
 -- 실행 예:
 --   psql -h localhost -U ech_user -d ech -f docs/sql/backfill_org_groups_from_users.sql

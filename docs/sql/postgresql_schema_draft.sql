@@ -6,13 +6,6 @@ CREATE TABLE IF NOT EXISTS users (
     employee_no VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL UNIQUE,
     name VARCHAR(100) NOT NULL,
-    department VARCHAR(100),
-    company_name VARCHAR(120),
-    division_name VARCHAR(120),
-    team_name VARCHAR(120),
-    company_code VARCHAR(40),
-    job_rank VARCHAR(100),
-    duty_title VARCHAR(100),
     role VARCHAR(30) NOT NULL DEFAULT 'MEMBER',
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     -- BCrypt 해시. 그룹웨어 연동 시 외부 인증 사용 → NULL 허용
@@ -20,14 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
--- 기존 테이블에 컬럼 추가 (재실행 시 오류 무시)
 ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
-ALTER TABLE users ADD COLUMN IF NOT EXISTS job_rank VARCHAR(100);
-ALTER TABLE users ADD COLUMN IF NOT EXISTS duty_title VARCHAR(100);
-ALTER TABLE users ADD COLUMN IF NOT EXISTS company_name VARCHAR(120);
-ALTER TABLE users ADD COLUMN IF NOT EXISTS division_name VARCHAR(120);
-ALTER TABLE users ADD COLUMN IF NOT EXISTS team_name VARCHAR(120);
-ALTER TABLE users ADD COLUMN IF NOT EXISTS company_code VARCHAR(40);
 
 CREATE TABLE IF NOT EXISTS channels (
     id BIGSERIAL PRIMARY KEY,
@@ -297,15 +283,15 @@ CREATE INDEX IF NOT EXISTS idx_org_groups_group_code ON org_groups(group_code);
 
 CREATE TABLE IF NOT EXISTS org_group_members (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    employee_no VARCHAR(50) NOT NULL REFERENCES users(employee_no) ON DELETE CASCADE,
     -- org_groups.group_code (조직 식별자)
     group_code VARCHAR(32) NOT NULL REFERENCES org_groups(group_code) ON DELETE CASCADE,
     member_group_type VARCHAR(30) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT uq_org_group_members_user_type UNIQUE (user_id, member_group_type)
+    CONSTRAINT uq_org_group_members_emp_type UNIQUE (employee_no, member_group_type)
 );
 
-CREATE INDEX IF NOT EXISTS idx_org_group_members_user ON org_group_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_org_group_members_employee_no ON org_group_members(employee_no);
 CREATE INDEX IF NOT EXISTS idx_org_group_members_group ON org_group_members(group_code);
 CREATE INDEX IF NOT EXISTS idx_org_group_members_type ON org_group_members(member_group_type);
