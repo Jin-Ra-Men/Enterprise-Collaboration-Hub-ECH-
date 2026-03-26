@@ -25,12 +25,16 @@ public final class OrgGroupCodes {
         return md5Hex("TEAM;" + divisionFingerprint32 + ";" + teamDisplayName);
     }
 
-    public static String fingerprintJobLevel(String jobRankTrimmed) {
-        return md5Hex("JOB_LEVEL;" + jobRankTrimmed);
+    public static String fingerprintJobLevel(String jobLevelTrimmed) {
+        return md5Hex("JOB_LEVEL;" + jobLevelTrimmed);
     }
 
-    public static String fingerprintDutyTitle(String dutyTitleTrimmed) {
-        return md5Hex("DUTY_TITLE;" + dutyTitleTrimmed);
+    public static String fingerprintJobPosition(String jobPositionTrimmed) {
+        return md5Hex("JOB_POSITION;" + jobPositionTrimmed);
+    }
+
+    public static String fingerprintJobTitle(String jobTitleTrimmed) {
+        return md5Hex("JOB_TITLE;" + jobTitleTrimmed);
     }
 
     public static String prettyCompany(String companyCodeNormalized, String companyFingerprint32) {
@@ -49,8 +53,12 @@ public final class OrgGroupCodes {
         return "JOB_" + fp12(jobFingerprint32);
     }
 
-    public static String prettyDutyTitle(String dutyFingerprint32) {
-        return "DUT_" + fp12(dutyFingerprint32);
+    public static String prettyJobPosition(String positionFingerprint32) {
+        return "JPOS_" + fp12(positionFingerprint32);
+    }
+
+    public static String prettyJobTitle(String titleFingerprint32) {
+        return "JTIT_" + fp12(titleFingerprint32);
     }
 
     private static String slugSegment(String raw, int maxLen) {

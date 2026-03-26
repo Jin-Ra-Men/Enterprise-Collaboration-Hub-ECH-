@@ -1,4 +1,9 @@
 -- org_group_members 백필 (users -> org_groups 매핑) (PostgreSQL)
+--
+-- **[2025-03] 사용 중단 안내**: `users.user_id` 기반 및 `users` 조직 컬럼 기반 백필은
+-- 스키마 변경(`org_group_members.employee_no`, users 슬림화) 이후 적용하지 않습니다.
+-- `employee_no` FK 및 OrgSync 흐름을 사용하세요.
+--
 -- 실행 예:
 --   psql -h localhost -U ech_user -d ech -f docs/sql/backfill_org_group_members_from_users.sql
 --

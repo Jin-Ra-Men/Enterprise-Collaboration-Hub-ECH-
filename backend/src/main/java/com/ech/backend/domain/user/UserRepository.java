@@ -16,16 +16,21 @@ public interface UserRepository extends JpaRepository<User, Long> {
                 u.name,
                 u.email,
                 teamGroup.displayName,
-                u.jobRank,
-                u.dutyTitle,
+                jlGroup.displayName,
+                jpGroup.displayName,
+                jtGroup.displayName,
                 u.role,
                 u.status
             )
             FROM User u
-            JOIN OrgGroupMember m
-              ON m.user = u
-             AND m.memberGroupType = 'TEAM'
-            JOIN m.group teamGroup
+            JOIN OrgGroupMember mTeam ON mTeam.user = u AND mTeam.memberGroupType = 'TEAM'
+            JOIN mTeam.group teamGroup
+            LEFT JOIN OrgGroupMember mJl ON mJl.user = u AND mJl.memberGroupType = 'JOB_LEVEL'
+            LEFT JOIN mJl.group jlGroup
+            LEFT JOIN OrgGroupMember mJp ON mJp.user = u AND mJp.memberGroupType = 'JOB_POSITION'
+            LEFT JOIN mJp.group jpGroup
+            LEFT JOIN OrgGroupMember mJt ON mJt.user = u AND mJt.memberGroupType = 'JOB_TITLE'
+            LEFT JOIN mJt.group jtGroup
             WHERE (:department IS NULL OR teamGroup.displayName = :department)
               AND (
                 :keyword IS NULL
@@ -43,43 +48,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
             @Param("idMatch") Long idMatch
     );
 
-    @Query("""
-            SELECT u FROM User u
-            WHERE u.status = 'ACTIVE'
-              AND (
-                :companyCode IS NULL
-                OR u.companyCode = :companyCode
-                OR (:companyCode = 'GENERAL'
-                    AND (u.companyCode IS NULL OR TRIM(COALESCE(u.companyCode, '')) = ''))
-              )
-              AND (
-                :companyName IS NULL
-                OR (
-                  :companyName = ''
-                  AND (u.companyName IS NULL OR TRIM(COALESCE(u.companyName, '')) = '')
-                )
-                OR TRIM(COALESCE(u.companyName, '')) = :companyName
-              )
-            ORDER BY COALESCE(u.companyName, '') ASC,
-                     COALESCE(u.divisionName, '') ASC,
-                     COALESCE(u.teamName, '') ASC,
-                     COALESCE(u.department, '') ASC,
-                     u.name ASC
-            """)
-    List<User> findActiveUsersForOrganization(
-            @Param("companyCode") String companyCode, @Param("companyName") String companyName);
-
-    /**
-     * ACTIVE 사용자 기준 (company_code, company_name) 고유 조합 — 셀렉트 옵션용.
-     */
-    @Query("""
-            SELECT DISTINCT u.companyCode, u.companyName
-            FROM User u
-            WHERE u.status = 'ACTIVE'
-            ORDER BY u.companyCode, u.companyName
-            """)
-    List<Object[]> findActiveDistinctCompanyScopes();
-
     Optional<User> findByEmployeeNo(String employeeNo);
 
     Optional<User> findByEmail(String email);
@@ -89,20 +57,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Modifying
     @Query(value = """
-            INSERT INTO users (employee_no, email, name, department, company_name, division_name, team_name,
-                company_code, job_rank, duty_title, role, status, created_at, updated_at)
-            VALUES (:employeeNo, :email, :name, :department, :companyName, :divisionName, :teamName,
-                :companyCode, :jobRank, :dutyTitle, :role, :status, NOW(), NOW())
+            INSERT INTO users (employee_no, email, name, role, status, created_at, updated_at)
+            VALUES (:employeeNo, :email, :name, :role, :status, NOW(), NOW())
             ON CONFLICT (employee_no) DO UPDATE SET
                 email = EXCLUDED.email,
                 name = EXCLUDED.name,
-                department = EXCLUDED.department,
-                company_name = EXCLUDED.company_name,
-                division_name = EXCLUDED.division_name,
-                team_name = EXCLUDED.team_name,
-                company_code = EXCLUDED.company_code,
-                job_rank = EXCLUDED.job_rank,
-                duty_title = EXCLUDED.duty_title,
                 role = EXCLUDED.role,
                 status = EXCLUDED.status,
                 updated_at = NOW()
@@ -111,13 +70,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
             @Param("employeeNo") String employeeNo,
             @Param("email") String email,
             @Param("name") String name,
-            @Param("department") String department,
-            @Param("companyName") String companyName,
-            @Param("divisionName") String divisionName,
-            @Param("teamName") String teamName,
-            @Param("companyCode") String companyCode,
-            @Param("jobRank") String jobRank,
-            @Param("dutyTitle") String dutyTitle,
             @Param("role") String role,
             @Param("status") String status
     );

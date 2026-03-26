@@ -11,8 +11,8 @@ import com.ech.backend.domain.org.OrgGroupMemberRepository;
 import com.ech.backend.domain.org.OrgGroupRepository;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
-import java.util.HashMap;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -58,13 +58,6 @@ public class OrgSyncService {
                     user.employeeNo(),
                     user.email(),
                     user.name(),
-                    user.department(),
-                    user.companyName(),
-                    user.divisionName(),
-                    user.teamName(),
-                    safeCompanyCode(user.companyCode()),
-                    user.jobRank(),
-                    user.dutyTitle(),
                     safeRole(user.role()),
                     safeStatus(user.status())
             );
@@ -73,7 +66,7 @@ public class OrgSyncService {
                     .orElseThrow(() -> new IllegalStateException("upsert 이후 사용자 조회 실패: " + user.employeeNo()));
 
             upsertOrgAndMembership(
-                    saved,
+                    saved.getEmployeeNo(),
                     user,
                     safeCompanyCode(user.companyCode()),
                     groupCache
@@ -83,7 +76,7 @@ public class OrgSyncService {
     }
 
     private void upsertOrgAndMembership(
-            User user,
+            String employeeNo,
             ExternalOrgUser external,
             String companyCodeNormalized,
             Map<String, OrgGroup> groupCache
@@ -127,44 +120,62 @@ public class OrgSyncService {
                 teamPath
         );
 
-        upsertMembership(user.getId(), teamGroupCode, "TEAM");
+        upsertMembership(employeeNo, teamGroupCode, "TEAM");
 
-        String jobRank = trimOrNull(external.jobRank());
-        if (jobRank != null) {
-            String jobFp = OrgGroupCodes.fingerprintJobLevel(jobRank);
+        String jobLevel = trimOrNull(external.jobLevel());
+        if (jobLevel != null) {
+            String jobFp = OrgGroupCodes.fingerprintJobLevel(jobLevel);
             String jobCode = OrgGroupCodes.prettyJobLevel(jobFp);
             OrgGroup jobGroup = upsertGroup(
                     groupCache,
                     "JOB_LEVEL",
                     jobCode,
-                    jobRank,
+                    jobLevel,
                     null,
                     null
             );
-            upsertMembership(user.getId(), jobCode, "JOB_LEVEL");
+            upsertMembership(employeeNo, jobCode, "JOB_LEVEL");
         }
 
-        String dutyTitle = trimOrNull(external.dutyTitle());
-        if (dutyTitle != null) {
-            String dutyFp = OrgGroupCodes.fingerprintDutyTitle(dutyTitle);
-            String dutyCode = OrgGroupCodes.prettyDutyTitle(dutyFp);
-            OrgGroup dutyGroup = upsertGroup(
+        String jobPosition = trimOrNull(external.jobPosition());
+        if (jobPosition != null) {
+            String posFp = OrgGroupCodes.fingerprintJobPosition(jobPosition);
+            String posCode = OrgGroupCodes.prettyJobPosition(posFp);
+            OrgGroup posGroup = upsertGroup(
                     groupCache,
-                    "DUTY_TITLE",
-                    dutyCode,
-                    dutyTitle,
+                    "JOB_POSITION",
+                    posCode,
+                    jobPosition,
                     null,
                     null
             );
-            upsertMembership(user.getId(), dutyCode, "DUTY_TITLE");
+            upsertMembership(employeeNo, posCode, "JOB_POSITION");
+        }
+
+        String jobTitle = trimOrNull(external.jobTitle());
+        if (jobTitle != null) {
+            String titleFp = OrgGroupCodes.fingerprintJobTitle(jobTitle);
+            String titleCode = OrgGroupCodes.prettyJobTitle(titleFp);
+            OrgGroup titleGroup = upsertGroup(
+                    groupCache,
+                    "JOB_TITLE",
+                    titleCode,
+                    jobTitle,
+                    null,
+                    null
+            );
+            upsertMembership(employeeNo, titleCode, "JOB_TITLE");
         }
     }
 
-    private void upsertMembership(Long userId, String groupCode, String memberGroupType) {
+    private void upsertMembership(String employeeNo, String groupCode, String memberGroupType) {
         OrgGroup group = orgGroupRepository.findByGroupTypeAndGroupCode(memberGroupType, groupCode)
                 .orElseThrow(() -> new IllegalStateException("org_group not found: type=" + memberGroupType + ", code=" + groupCode));
 
-        Optional<OrgGroupMember> existing = orgGroupMemberRepository.findByUser_IdAndMemberGroupType(userId, memberGroupType);
+        Optional<OrgGroupMember> existing = orgGroupMemberRepository.findByUser_EmployeeNoAndMemberGroupType(
+                employeeNo,
+                memberGroupType
+        );
         if (existing.isPresent()) {
             OrgGroupMember m = existing.get();
             if (!m.getGroup().getGroupCode().equals(groupCode)) {
@@ -173,13 +184,12 @@ public class OrgSyncService {
             }
             return;
         }
-        orgGroupMemberRepository.save(new OrgGroupMember(nullSafeUser(userId), group, memberGroupType));
+        orgGroupMemberRepository.save(new OrgGroupMember(nullSafeUserByEmployeeNo(employeeNo), group, memberGroupType));
     }
 
-    private User nullSafeUser(Long userId) {
-        // org_group_members.user_id FK는 JPA가 flush 시점에 참조하므로, user 엔티티가 필요하다.
-        // 여기서는 findById를 한 번 수행한다.
-        return userRepository.findById(userId).orElseThrow(() -> new IllegalStateException("user not found: " + userId));
+    private User nullSafeUserByEmployeeNo(String employeeNo) {
+        return userRepository.findByEmployeeNo(employeeNo)
+                .orElseThrow(() -> new IllegalStateException("user not found: " + employeeNo));
     }
 
     private OrgGroup upsertGroup(

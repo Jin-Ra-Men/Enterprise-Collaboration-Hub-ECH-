@@ -2,13 +2,14 @@ package com.ech.backend.domain.org;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface OrgGroupMemberRepository extends JpaRepository<OrgGroupMember, Long> {
 
-    java.util.Optional<OrgGroupMember> findByUser_IdAndMemberGroupType(Long userId, String memberGroupType);
+    Optional<OrgGroupMember> findByUser_EmployeeNoAndMemberGroupType(String employeeNo, String memberGroupType);
 
     @Query("""
             SELECT m
@@ -29,11 +30,10 @@ public interface OrgGroupMemberRepository extends JpaRepository<OrgGroupMember, 
             JOIN FETCH m.user u
             JOIN FETCH m.group g
             WHERE m.memberGroupType = :memberGroupType
-              AND u.id IN :userIds
+              AND u.employeeNo IN :employeeNos
             """)
-    List<OrgGroupMember> findMembersByMemberGroupTypeAndUserIds(
+    List<OrgGroupMember> findMembersByMemberGroupTypeAndEmployeeNos(
             @Param("memberGroupType") String memberGroupType,
-            @Param("userIds") Collection<Long> userIds
+            @Param("employeeNos") Collection<String> employeeNos
     );
 }
-

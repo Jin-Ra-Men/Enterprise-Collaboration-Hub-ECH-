@@ -56,7 +56,7 @@ public abstract class BaseIntegrationTest {
                 .map(User::getId)
                 .findFirst()
                 .orElseGet(() -> {
-                    User admin = new User("TADM001", TEST_ADMIN_EMAIL, "테스트관리자", "IT", "ADMIN");
+                    User admin = new User("TADM001", TEST_ADMIN_EMAIL, "테스트관리자", "ADMIN");
                     admin.setPasswordHash(passwordEncoder.encode(TEST_PASSWORD));
                     return userRepository.saveAndFlush(admin).getId();
                 });
@@ -66,7 +66,7 @@ public abstract class BaseIntegrationTest {
                 .map(User::getId)
                 .findFirst()
                 .orElseGet(() -> {
-                    User user = new User("TUSR001", TEST_USER_EMAIL, "테스트사용자", "개발팀", "MEMBER");
+                    User user = new User("TUSR001", TEST_USER_EMAIL, "테스트사용자", "MEMBER");
                     user.setPasswordHash(passwordEncoder.encode(TEST_PASSWORD));
                     return userRepository.saveAndFlush(user).getId();
                 });

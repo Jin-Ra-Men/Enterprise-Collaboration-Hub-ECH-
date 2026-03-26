@@ -4,12 +4,12 @@
 --
     -- 목적:
     --   - 회사(COMPANY) / 본부(DIVISION) / 부서(TEAM)를 group_code 기반 memberOf로 계층화
-    --   - 잡 레벨(JOB_LEVEL) / 잡 타이틀(DUTY_TITLE)은 lookup 용으로만 보관(트리에는 미표시)
+    --   - 직급(JOB_LEVEL) / 직위(JOB_POSITION) / 직책(JOB_TITLE)은 lookup 용으로만 보관(트리에는 미표시)
 
 CREATE TABLE IF NOT EXISTS org_groups (
     id BIGSERIAL PRIMARY KEY,
 
-    -- COMPANY, DIVISION, TEAM, JOB_LEVEL, DUTY_TITLE 등
+    -- COMPANY, DIVISION, TEAM, JOB_LEVEL, JOB_POSITION, JOB_TITLE 등
     group_type VARCHAR(30) NOT NULL,
 
     -- md5 기반 코드(uniqueness의 핵심). VARCHAR(32) (md5 hex length)

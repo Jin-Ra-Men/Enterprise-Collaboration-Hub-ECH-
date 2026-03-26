@@ -75,14 +75,14 @@ public class AuthService {
     }
 
     private String resolveDepartmentFromTeam(User user) {
-        List<OrgGroupMember> members = orgGroupMemberRepository.findMembersByMemberGroupTypeAndUserIds(
+        List<OrgGroupMember> members = orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos(
                 "TEAM",
-                List.of(user.getId())
+                List.of(user.getEmployeeNo())
         );
         if (members == null || members.isEmpty()) {
-            return user.getDepartment();
+            return "";
         }
         String displayName = members.get(0).getGroup().getDisplayName();
-        return (displayName != null && !displayName.isBlank()) ? displayName : user.getDepartment();
+        return (displayName != null && !displayName.isBlank()) ? displayName : "";
     }
 }

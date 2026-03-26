@@ -17,7 +17,6 @@ import com.ech.backend.domain.user.UserRepository;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -99,34 +98,32 @@ public class UserSearchService {
                 : orgGroupMemberRepository.findMembersByMemberGroupTypeAndGroupCodes("TEAM", teamCodes);
 
         Map<String, List<User>> usersByTeamCode = new HashMap<>();
-        Set<Long> userIds = teamMembers.isEmpty()
+        Set<String> employeeNos = teamMembers.isEmpty()
                 ? Set.of()
-                : teamMembers.stream().map(m -> m.getUser().getId()).collect(Collectors.toSet());
+                : teamMembers.stream().map(m -> m.getUser().getEmployeeNo()).collect(Collectors.toSet());
 
         for (OrgGroupMember m : teamMembers) {
             String teamCode = m.getGroup().getGroupCode();
             usersByTeamCode.computeIfAbsent(teamCode, k -> new ArrayList<>()).add(m.getUser());
         }
 
-        Map<Long, String> jobRankByUserId;
-        Map<Long, String> dutyTitleByUserId;
-        if (userIds.isEmpty()) {
-            jobRankByUserId = Map.of();
-            dutyTitleByUserId = Map.of();
+        Map<Long, String> jobLevelByUserId;
+        Map<Long, String> jobPositionByUserId;
+        Map<Long, String> jobTitleByUserId;
+        if (employeeNos.isEmpty()) {
+            jobLevelByUserId = Map.of();
+            jobPositionByUserId = Map.of();
+            jobTitleByUserId = Map.of();
         } else {
-            List<OrgGroupMember> jobMembers = orgGroupMemberRepository.findMembersByMemberGroupTypeAndUserIds("JOB_LEVEL", userIds);
-            jobRankByUserId = jobMembers.stream().collect(Collectors.toMap(
-                    m -> m.getUser().getId(),
-                    m -> m.getGroup().getDisplayName(),
-                    (a, b) -> a
-            ));
-
-            List<OrgGroupMember> dutyMembers = orgGroupMemberRepository.findMembersByMemberGroupTypeAndUserIds("DUTY_TITLE", userIds);
-            dutyTitleByUserId = dutyMembers.stream().collect(Collectors.toMap(
-                    m -> m.getUser().getId(),
-                    m -> m.getGroup().getDisplayName(),
-                    (a, b) -> a
-            ));
+            jobLevelByUserId = toDisplayByUserId(
+                    orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos("JOB_LEVEL", employeeNos)
+            );
+            jobPositionByUserId = toDisplayByUserId(
+                    orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos("JOB_POSITION", employeeNos)
+            );
+            jobTitleByUserId = toDisplayByUserId(
+                    orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos("JOB_TITLE", employeeNos)
+            );
         }
 
         List<OrgCompanyResponse> companiesResponse = new ArrayList<>();
@@ -151,8 +148,9 @@ public class UserSearchService {
                             .map(u -> toTreeSearchResponse(
                                     u,
                                     team.getDisplayName(),
-                                    jobRankByUserId.get(u.getId()),
-                                    dutyTitleByUserId.get(u.getId())
+                                    jobLevelByUserId.get(u.getId()),
+                                    jobPositionByUserId.get(u.getId()),
+                                    jobTitleByUserId.get(u.getId())
                             ))
                             .toList();
                     return new OrgTeamResponse(team.getDisplayName(), members);
@@ -165,6 +163,14 @@ public class UserSearchService {
         }
 
         return new OrganizationTreeResponse(companiesResponse);
+    }
+
+    private static Map<Long, String> toDisplayByUserId(List<OrgGroupMember> members) {
+        return members.stream().collect(Collectors.toMap(
+                m -> m.getUser().getId(),
+                m -> m.getGroup().getDisplayName(),
+                (a, b) -> a
+        ));
     }
 
     /**
@@ -184,21 +190,19 @@ public class UserSearchService {
     private static UserSearchResponse toTreeSearchResponse(
             User user,
             String department,
-            String jobRank,
-            String dutyTitle
+            String jobLevel,
+            String jobPosition,
+            String jobTitle
     ) {
-        String resolvedJobRank = (jobRank != null && !jobRank.isBlank()) ? jobRank : user.getJobRank();
-        String resolvedDutyTitle = (dutyTitle != null && !dutyTitle.isBlank()) ? dutyTitle : user.getDutyTitle();
-        String resolvedDepartment = (department != null) ? department : user.getDepartment();
-
         return new UserSearchResponse(
                 user.getId(),
                 user.getEmployeeNo(),
                 user.getName(),
                 user.getEmail(),
-                resolvedDepartment,
-                resolvedJobRank,
-                resolvedDutyTitle,
+                department,
+                jobLevel,
+                jobPosition,
+                jobTitle,
                 user.getRole(),
                 user.getStatus()
         );
@@ -207,31 +211,29 @@ public class UserSearchService {
     public UserProfileResponse getProfile(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        String emp = user.getEmployeeNo();
+        String department = lookupDisplayName(emp, "TEAM");
+        String jobLevel = lookupDisplayName(emp, "JOB_LEVEL");
+        String jobPosition = lookupDisplayName(emp, "JOB_POSITION");
+        String jobTitle = lookupDisplayName(emp, "JOB_TITLE");
         return new UserProfileResponse(
                 user.getId(),
                 user.getEmployeeNo(),
                 user.getName(),
                 user.getEmail(),
-                user.getDepartment(),
-                user.getJobRank(),
-                user.getDutyTitle(),
+                department,
+                jobLevel,
+                jobPosition,
+                jobTitle,
                 user.getRole(),
                 user.getStatus()
         );
     }
 
-    private UserSearchResponse toSearchResponse(User user) {
-        return new UserSearchResponse(
-                user.getId(),
-                user.getEmployeeNo(),
-                user.getName(),
-                user.getEmail(),
-                user.getDepartment(),
-                user.getJobRank(),
-                user.getDutyTitle(),
-                user.getRole(),
-                user.getStatus()
-        );
+    private String lookupDisplayName(String employeeNo, String memberGroupType) {
+        return orgGroupMemberRepository.findByUser_EmployeeNoAndMemberGroupType(employeeNo, memberGroupType)
+                .map(m -> m.getGroup().getDisplayName())
+                .orElse(null);
     }
 
     /**

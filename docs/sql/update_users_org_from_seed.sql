@@ -1,3 +1,5 @@
+-- **[2025-03] 레거시]** `users.company_name` 등 컬럼이 제거된 스키마에서는 사용하지 않습니다. OrgSync 사용.
+--
 -- users.company_name / division_name / team_name 을 `seed_test_users.sql` 과 동일 값으로 갱신 (PostgreSQL)
 -- 다른 컬럼(이메일, department, job_rank 등)은 변경하지 않습니다.
 -- 컬럼이 없으면 먼저 `migrate_users_add_org_columns.sql` 을 실행하세요.

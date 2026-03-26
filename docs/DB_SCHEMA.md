@@ -103,7 +103,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 |---|---------|--------|-----------|
 | 1 | `users` | 사용자 | 사용자 계정 (사번, 이메일, 역할, 비밀번호 해시) |
 | 2 | `org_groups` | 조직도 | 조직 룩업/계층(회사→본부→팀, 잡 lookup) |
-| 3 | `org_group_members` | 조직도 | 유저-조직 매핑 (TEAM/JOB_LEVEL/DUTY_TITLE) |
+| 3 | `org_group_members` | 조직도 | 유저-조직 매핑 (TEAM/JOB_LEVEL/JOB_POSITION/JOB_TITLE, FK=`employee_no`) |
 | 4 | `channels` | 채널 | 대화/협업 공간 (PUBLIC/PRIVATE/DM) |
 | 5 | `channel_members` | 채널 | 채널-사용자 M:N 매핑 및 채널 내 역할 |
 | 6 | `messages` | 메시지 | 채팅 메시지 및 스레드 답글 |
@@ -138,13 +138,6 @@ CREATE TABLE users (
     employee_no     VARCHAR(50)  NOT NULL UNIQUE,
     email           VARCHAR(255) NOT NULL UNIQUE,
     name            VARCHAR(100) NOT NULL,
-    department      VARCHAR(100),
-    company_name    VARCHAR(120),
-    division_name   VARCHAR(120),
-    team_name       VARCHAR(120),
-    company_code    VARCHAR(40),
-    job_rank        VARCHAR(100),
-    duty_title      VARCHAR(100),
     role            VARCHAR(30)  NOT NULL DEFAULT 'MEMBER',
     status          VARCHAR(20)  NOT NULL DEFAULT 'ACTIVE',
     password_hash   VARCHAR(255),
@@ -159,13 +152,6 @@ CREATE TABLE users (
 | `employee_no` | VARCHAR(50) | ✅ | - | 사번 (사내 고유식별자). UNIQUE |
 | `email` | VARCHAR(255) | ✅ | - | 이메일. 로그인 식별자. UNIQUE |
 | `name` | VARCHAR(100) | ✅ | - | 표시 이름 |
-| `department` | VARCHAR(100) | ❌ | NULL | 부서명(레거시·표시용). 조직도/검색은 `org_group_members(TEAM)` + `org_groups.display_name` 기반 |
-| `company_name` | VARCHAR(120) | ❌ | NULL | 레거시(백필/호환). 조직도는 `org_groups(COMPANY).display_name` 기준 |
-| `division_name` | VARCHAR(120) | ❌ | NULL | 레거시(백필/호환). 조직도는 `org_groups(DIVISION).display_name` 기준 |
-| `team_name` | VARCHAR(120) | ❌ | NULL | 레거시(백필/호환). 조직도는 `org_groups(TEAM).display_name` 기준 |
-| `company_code` | VARCHAR(40) | ❌ | NULL | 레거시(테넌트/필터용). 조직도 회사 필터는 `org_groups.group_code` 기반 |
-| `job_rank` | VARCHAR(100) | ❌ | NULL | 레거시(백필/호환). 직위는 `org_group_members(JOB_LEVEL)`로 확장 가능(미구성 시 users 값 fallback) |
-| `duty_title` | VARCHAR(100) | ❌ | NULL | 레거시(백필/호환). 직책은 `org_group_members(DUTY_TITLE)`로 확장 가능(미구성 시 users 값 fallback) |
 | `role` | VARCHAR(30) | ✅ | `'MEMBER'` | 앱 역할. → [역할 Enum 참고](#roles) |
 | `status` | VARCHAR(20) | ✅ | `'ACTIVE'` | 계정 상태. → [상태 Enum 참고](#user-status) |
 | `password_hash` | VARCHAR(255) | ❌ | NULL | BCrypt 해시. 그룹웨어 연동 시 NULL 허용 |
@@ -181,7 +167,7 @@ CREATE TABLE users (
 
 ### 4-1-1. `org_groups` — 조직 룩업/계층
 
-**목적**: 조직도 트리를 구성하는 룩업/계층 데이터(회사→본부→팀, 그리고 잡레벨/직책 lookup)를 저장한다.  
+**목적**: 조직도 트리를 구성하는 룩업/계층 데이터(회사→본부→팀, 그리고 직급·직위·직책 lookup)를 저장한다.  
 **표시명**은 `display_name`이며, `group_code`는 **ASCII 전용**(대문자 영숫자·`_`) pretty 코드이며 내부적으로는 동일 시드에 대한 MD5 지문 접두부로 충돌을 피한다(백엔드 `OrgGroupCodes` 규칙과 동일).
 
 ```sql
@@ -202,8 +188,8 @@ CREATE TABLE IF NOT EXISTS org_groups (
 
 | 컬럼명 | 타입 | 설명 |
 |--------|------|------|
-| `group_type` | VARCHAR(30) | `COMPANY`, `DIVISION`, `TEAM`, `JOB_LEVEL`, `DUTY_TITLE` |
-| `group_code` | VARCHAR(32) | 안정적 유니크 코드(ASCII pretty; 예: `COMP_GENERAL_XXXX`, `DIV_XXXX_YYYY`, `TEAM_XXXX_YYYY`, `JOB_...`, `DUT_...`) |
+| `group_type` | VARCHAR(30) | `COMPANY`, `DIVISION`, `TEAM`, `JOB_LEVEL`, `JOB_POSITION`, `JOB_TITLE` (레거시 DB는 `DUTY_TITLE` 행을 `migrate_org_duty_title_to_job_title.sql`로 `JOB_TITLE`로 통일 가능) |
+| `group_code` | VARCHAR(32) | 안정적 유니크 코드(ASCII pretty; 예: `COMP_GENERAL_XXXX`, `DIV_XXXX_YYYY`, `TEAM_XXXX_YYYY`, `JOB_...`, `JPOS_...`, `JTIT_...`) |
 | `display_name` | VARCHAR(200) | UI 표시명 |
 | `member_of_group_code` | VARCHAR(32) | 상위 조직 `group_code` (COMPANY는 NULL) |
 
@@ -211,23 +197,24 @@ CREATE TABLE IF NOT EXISTS org_groups (
 
 ### 4-1-2. `org_group_members` — 유저 매핑
 
-**목적**: `users`와 `org_groups`를 연결해, 유저가 어느 `TEAM`/`JOB_LEVEL`/`DUTY_TITLE`에 속하는지 저장한다.
+**목적**: `users`와 `org_groups`를 연결해, 유저가 어느 `TEAM`/`JOB_LEVEL`/`JOB_POSITION`/`JOB_TITLE`에 속하는지 저장한다. **FK는 `users.id`가 아니라 `users.employee_no`** 이다.
 
 ```sql
 CREATE TABLE IF NOT EXISTS org_group_members (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    employee_no VARCHAR(50) NOT NULL REFERENCES users(employee_no) ON DELETE CASCADE,
     group_code VARCHAR(32) NOT NULL REFERENCES org_groups(group_code) ON DELETE CASCADE,
     member_group_type VARCHAR(30) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT uq_org_group_members_user_type UNIQUE (user_id, member_group_type)
+    CONSTRAINT uq_org_group_members_emp_type UNIQUE (employee_no, member_group_type)
 );
 ```
 
 | 컬럼명 | 타입 | 설명 |
 |--------|------|------|
-| `member_group_type` | VARCHAR(30) | TEAM/JOB_LEVEL/DUTY_TITLE |
+| `employee_no` | VARCHAR(50) | 사용자 사번 (`users.employee_no`) |
+| `member_group_type` | VARCHAR(30) | TEAM/JOB_LEVEL/JOB_POSITION/JOB_TITLE |
 | `group_code` | VARCHAR(32) | 해당 조직 식별자(`org_groups.group_code`) |
 
 ---

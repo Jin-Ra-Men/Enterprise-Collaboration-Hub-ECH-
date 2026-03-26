@@ -25,36 +25,6 @@ public class User {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(length = 100)
-    private String department;
-
-    /** 최상위 회사명(조직도 루트). */
-    @Column(name = "company_name", length = 120)
-    private String companyName;
-
-    /** 본부 단위. */
-    @Column(name = "division_name", length = 120)
-    private String divisionName;
-
-    /** 팀 단위. */
-    @Column(name = "team_name", length = 120)
-    private String teamName;
-
-    /**
-     * 그룹사/테넌트 구분 코드(조직도 상단 필터). 예: ORGROOT(전체), GENERAL, EXTERNAL, COVIM365.
-     * null 은 레거시 호환으로 organization filter에서 GENERAL 과 동일하게 취급할 수 있다.
-     */
-    @Column(name = "company_code", length = 40)
-    private String companyCode;
-
-    /** 조직 직위(예: 대리, 과장). UI는 값이 없으면 `-` 등으로 표시. */
-    @Column(name = "job_rank", length = 100)
-    private String jobRank;
-
-    /** 조직 직책(예: 팀장, PM). 없으면 API는 null, UI에서는 행 자체를 숨김. */
-    @Column(name = "duty_title", length = 100)
-    private String dutyTitle;
-
     @Column(nullable = false, length = 30)
     private String role = "MEMBER";
 
@@ -77,11 +47,10 @@ public class User {
     /**
      * 테스트 및 신규 사용자 생성용 생성자.
      */
-    public User(String employeeNo, String email, String name, String department, String role) {
+    public User(String employeeNo, String email, String name, String role) {
         this.employeeNo = employeeNo;
         this.email = email;
         this.name = name;
-        this.department = department;
         this.role = role != null ? role : "MEMBER";
     }
 
@@ -99,38 +68,6 @@ public class User {
 
     public String getName() {
         return name;
-    }
-
-    public String getDepartment() {
-        return department;
-    }
-
-    public String getCompanyName() {
-        return companyName;
-    }
-
-    public String getDivisionName() {
-        return divisionName;
-    }
-
-    public String getTeamName() {
-        return teamName;
-    }
-
-    public String getCompanyCode() {
-        return companyCode;
-    }
-
-    public void setCompanyCode(String companyCode) {
-        this.companyCode = companyCode;
-    }
-
-    public String getJobRank() {
-        return jobRank;
-    }
-
-    public String getDutyTitle() {
-        return dutyTitle;
     }
 
     public String getRole() {

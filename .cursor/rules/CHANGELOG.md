@@ -2,6 +2,17 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-03-26 (7차)
+
+### Changed
+- `users`에서 회사·본부·팀·직무 중복 컬럼 제거(조직은 `org_groups`/`org_group_members` 단일 출처)
+- `org_group_members` FK를 `users.id` 대신 **`users.employee_no`** 로 변경
+- 조직 그룹 타입: `JOB_LEVEL`(직급), **`JOB_POSITION`**(직위), **`JOB_TITLE`**(직책) — `DUTY_TITLE` 제거(마이그레이션 스크립트로 이행 가능)
+- API/프론트: `jobRank`/`dutyTitle` → `jobLevel`/`jobPosition`/`jobTitle` (`department`는 TEAM 표시명 유지)
+
+### Added
+- PostgreSQL 마이그레이션: `migrate_users_drop_org_columns.sql`, `migrate_org_group_members_user_id_to_employee_no.sql`, `migrate_org_duty_title_to_job_title.sql`
+
 ## 2026-03-26 (3차)
 
 ### Changed

@@ -21,7 +21,7 @@ public class OrgGroupMember {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "employee_no", referencedColumnName = "employee_no", nullable = false)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -65,4 +65,3 @@ public class OrgGroupMember {
         this.group = group;
     }
 }
-

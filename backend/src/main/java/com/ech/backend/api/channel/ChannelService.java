@@ -238,32 +238,30 @@ public class ChannelService {
     }
 
     private ChannelResponse toResponse(Channel channel, List<ChannelMember> members) {
-        List<Long> userIds = members.stream()
-                .map(m -> m.getUser().getId())
+        List<String> employeeNos = members.stream()
+                .map(m -> m.getUser().getEmployeeNo())
                 .distinct()
                 .toList();
 
-        List<OrgGroupMember> teamMembers = userIds.isEmpty()
-                ? List.of()
-                : orgGroupMemberRepository.findMembersByMemberGroupTypeAndUserIds("TEAM", userIds);
-
-        Map<Long, String> departmentByUserId = teamMembers.stream()
-                .collect(Collectors.toMap(
-                        m -> m.getUser().getId(),
-                        m -> m.getGroup().getDisplayName(),
-                        (a, b) -> a
-                ));
+        Map<String, String> departmentByEmp = membershipDisplayByEmp("TEAM", employeeNos);
+        Map<String, String> levelByEmp = membershipDisplayByEmp("JOB_LEVEL", employeeNos);
+        Map<String, String> positionByEmp = membershipDisplayByEmp("JOB_POSITION", employeeNos);
+        Map<String, String> titleByEmp = membershipDisplayByEmp("JOB_TITLE", employeeNos);
 
         List<ChannelMemberResponse> memberResponses = members.stream()
-                .map(member -> new ChannelMemberResponse(
-                        member.getUser().getId(),
-                        member.getUser().getName(),
-                        departmentByUserId.getOrDefault(member.getUser().getId(), member.getUser().getDepartment()),
-                        member.getUser().getJobRank(),
-                        member.getUser().getDutyTitle(),
-                        member.getMemberRole().name(),
-                        member.getJoinedAt()
-                ))
+                .map(member -> {
+                    String emp = member.getUser().getEmployeeNo();
+                    return new ChannelMemberResponse(
+                            member.getUser().getId(),
+                            member.getUser().getName(),
+                            departmentByEmp.getOrDefault(emp, ""),
+                            levelByEmp.getOrDefault(emp, null),
+                            positionByEmp.getOrDefault(emp, null),
+                            titleByEmp.getOrDefault(emp, null),
+                            member.getMemberRole().name(),
+                            member.getJoinedAt()
+                    );
+                })
                 .toList();
 
         return new ChannelResponse(
@@ -276,5 +274,20 @@ public class ChannelService {
                 channel.getCreatedAt(),
                 memberResponses
         );
+    }
+
+    private Map<String, String> membershipDisplayByEmp(String memberGroupType, List<String> employeeNos) {
+        if (employeeNos.isEmpty()) {
+            return Map.of();
+        }
+        List<OrgGroupMember> rows = orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos(
+                memberGroupType,
+                employeeNos
+        );
+        return rows.stream().collect(Collectors.toMap(
+                m -> m.getUser().getEmployeeNo(),
+                m -> m.getGroup().getDisplayName(),
+                (a, b) -> a
+        ));
     }
 }
