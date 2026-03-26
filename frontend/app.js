@@ -493,7 +493,6 @@ function renderOrgTreeLeft() {
 
       (div.teams || []).forEach((team) => {
         const teamKey = buildTeamKey(co.name, div.name, team.name);
-        const uCount = (team.users || []).length;
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = `ech-tree-row ech-tree-row--lv3 ech-tree-team${teamKey === selectedKey ? " is-selected" : ""}`;
@@ -502,7 +501,7 @@ function renderOrgTreeLeft() {
           <span class="ech-tree-line ech-tree-line--branch" aria-hidden="true"></span>
           <span class="ech-tree-ico ech-tree-ico--users" aria-hidden="true"></span>
           <span class="ech-tree-label">${escHtml(team.name)}</span>
-          <span class="ech-tree-count">(${uCount})</span>`;
+          `;
         btn.addEventListener("click", () => {
           orgPickerSelectedTeamKey = teamKey;
           renderOrgTreeLeft();
@@ -591,6 +590,27 @@ function renderMemberListRight() {
     });
 }
 
+function renderPickerSelectedMembers(context) {
+  const wrap = document.getElementById("pickerSelectedMembersWrap");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+
+  const listRef = context === "dm"
+    ? selectedDmMembers
+    : (context === "channelMember" ? selectedAddMembers : selectedMembers);
+
+  (listRef || []).forEach((user) => {
+    const tag = document.createElement("span");
+    tag.className = "member-tag";
+    tag.dataset.uid = user.userId;
+    tag.innerHTML = `${escHtml(user.name)} <button type="button" data-uid="${user.userId}">✕</button>`;
+    tag.querySelector("button").addEventListener("click", () => {
+      removeSelectedMember(user.userId, context);
+    });
+    wrap.appendChild(tag);
+  });
+}
+
 async function loadOrgTree(context, embedElIdOverride = null) {
   orgPickerContext = context;
 
@@ -676,6 +696,7 @@ async function loadOrgTree(context, embedElIdOverride = null) {
 
     renderOrgTreeLeft();
     renderMemberListRight();
+    renderPickerSelectedMembers(context);
   } catch (e) {
     console.error(e);
     const treeEl = document.getElementById("orgTreeEmbedAdd");
@@ -1438,6 +1459,7 @@ function addSelectedMember(user, context) {
   });
   wrap.appendChild(tag);
   syncOrgCheckbox(user.userId, context, true);
+  renderPickerSelectedMembers(context);
 }
 
 function removeSelectedMember(userId, context) {
@@ -1453,6 +1475,7 @@ function removeSelectedMember(userId, context) {
   const tag = wrap?.querySelector(`.member-tag[data-uid="${userId}"]`);
   if (tag) tag.remove();
   syncOrgCheckbox(userId, context, false);
+  renderPickerSelectedMembers(context);
 }
 
 document.getElementById("btnConfirmCreateChannel").addEventListener("click", async () => {
