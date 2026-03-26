@@ -137,7 +137,8 @@
 
 ### 사용자 검색/Presence 인수인계 메모
 - 사용자 검색은 `users.department`를 조직도 속성으로 사용해 부서 필터를 지원합니다.
-- `GET /api/user-directory/organization?companyKey=` 응답은 `data.companies[]` → `divisions[]` → `teams[]` → `users[]` 3단계 트리이며, DB의 `company_name` / `division_name` / `team_name`을 그대로 사용합니다. `companyKey`는 `ORGROOT`/미지정이면 전체, 그 외 `GENERAL`·`EXTERNAL`·`COVIM365` 등은 `users.company_key`로 필터합니다. 프론트는 **회사 셀렉트** + 좌측 조직도(AXTree 유사) + 우측 검색/결과에서 선택한 사용자를 상위 모달의 선택 태그에 반영합니다.
+- `GET /api/user-directory/organization-filters`는 ACTIVE 사용자를 `company_key`로 묶어 대표 `company_name`을 라벨로 한 셀렉트 옵션을 줍니다(첫 항목 `ORGROOT` 전체).
+- `GET /api/user-directory/organization?companyKey=` 응답은 `data.companies[]` → `divisions[]` → `teams[]` → `users[]` 3단계 트리이며, DB의 `company_name` / `division_name` / `team_name`을 그대로 사용합니다. `companyKey`는 `ORGROOT`/미지정이면 전체, 그 외는 `users.company_key`로 필터합니다. 프론트 조직도 팝업은 그룹웨어식 **윈도우 크롬**(제목·툴바·body_root) + 회사 셀렉트 + 좌측 조직도 + 우측 검색/결과입니다.
 - 검색 키워드(`q`)는 이름/이메일/사번에 대해 부분 일치 조회를 수행합니다.
 - Presence는 Realtime 서버 메모리 기반으로 관리됩니다.
 - 소켓별로 사용자를 추적하며, 해당 사용자의 **모든** 소켓이 끊기면 OFFLINE 브로드캐스트 후 메모리에서 제거합니다(유령 userId 누적 방지).

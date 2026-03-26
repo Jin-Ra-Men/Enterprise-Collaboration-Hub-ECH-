@@ -308,49 +308,54 @@
       </div>
     </div>
 
-    <!-- 구성원 추가: 조직도·검색 팝업 (상위 모달 위에 표시) -->
-    <div id="modalAddMemberPicker" class="modal-overlay modal-stacked hidden">
-      <div class="modal modal-wide">
-        <div class="modal-header">
-          <h3>조직도</h3>
-          <button type="button" class="modal-close" data-modal="modalAddMemberPicker">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="split_filter member-picker-company-filter">
-            <label for="companySelect" class="ech-visually-hidden">회사</label>
-            <select id="companySelect" class="ui_select_field full" title="회사">
-              <option value="ORGROOT">그룹사(공용)</option>
-              <option value="GENERAL">코비젼</option>
-              <option value="EXTERNAL">코비젼(프리랜서)</option>
-              <option value="COVIM365">코비젼M365</option>
-            </select>
-          </div>
-          <div class="member-picker-top-search">
-            <select id="addMemberTopSearchType" class="member-search-select">
-              <option value="NAME">이름</option>
-              <option value="DEPARTMENT">부서</option>
-              <option value="EMAIL">이메일</option>
-              <option value="EMP_NO">사번</option>
-            </select>
-            <input id="addMemberTopSearchInput" type="text" placeholder="검색어 입력" />
-            <button type="button" id="btnSearchTop" class="btn-search">검색</button>
-          </div>
-
-          <div class="member-picker-popup">
-            <div class="member-picker-tree">
-              <div class="picker-org-title">조직도</div>
-
-              <div id="orgTreeEmbedAdd" class="org-tree-embedded"></div>
+    <!-- 구성원 추가: 조직도·검색 팝업 (그룹웨어 ui_window 형태, 본문은 iframe 대신 SPA) -->
+    <div id="modalAddMemberPicker" class="modal-overlay modal-stacked ech-orgmap-overlay hidden">
+      <div class="ech-ui-window ech-orgmap-window" role="dialog" aria-labelledby="orgmapPopTitle" aria-modal="true">
+        <div class="ech-window-container">
+          <div class="ech-window-head">
+            <div class="ech-window-title">
+              <div id="orgmapPopTitle" class="ech-window-main-label">조직도</div>
+              <div id="orgmapPopSubTitle" class="ech-window-sub-label"></div>
             </div>
-
-            <div class="member-picker-members">
-              <div class="picker-org-title" style="margin-bottom:10px;">선택 부서원</div>
-              <ul id="addMemberMemberList" class="member-picker-member-list"></ul>
+            <div class="ech-window-toolbar">
+              <button type="button" class="ech-window-tool-btn modal-close" data-modal="modalAddMemberPicker" aria-label="닫기">✕</button>
             </div>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn-primary" id="btnCloseAddMemberPicker">선택 완료</button>
+          <div class="ech-window-body">
+            <div id="orgmapPopBodyRoot" class="ech-body-root">
+              <div class="split_filter member-picker-company-filter">
+                <label for="companySelect" class="ech-visually-hidden">회사</label>
+                <select id="companySelect" class="ui_select_field full" title="회사">
+                  <option value="ORGROOT">불러오는 중…</option>
+                </select>
+              </div>
+              <div class="member-picker-top-search">
+                <select id="addMemberTopSearchType" class="member-search-select">
+                  <option value="NAME">이름</option>
+                  <option value="DEPARTMENT">부서</option>
+                  <option value="EMAIL">이메일</option>
+                  <option value="EMP_NO">사번</option>
+                </select>
+                <input id="addMemberTopSearchInput" type="text" placeholder="검색어 입력" />
+                <button type="button" id="btnSearchTop" class="btn-search">검색</button>
+              </div>
+
+              <div class="member-picker-popup">
+                <div class="member-picker-tree">
+                  <div class="picker-org-title">조직</div>
+                  <div id="orgTreeEmbedAdd" class="org-tree-embedded"></div>
+                </div>
+
+                <div class="member-picker-members">
+                  <div class="picker-org-title" style="margin-bottom:10px;">선택 부서원</div>
+                  <ul id="addMemberMemberList" class="member-picker-member-list"></ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="ech-window-footer">
+            <button type="button" class="btn-primary" id="btnCloseAddMemberPicker">선택 완료</button>
+          </div>
         </div>
       </div>
     </div>

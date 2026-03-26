@@ -2,6 +2,8 @@ package com.ech.backend.api.user;
 
 import com.ech.backend.api.user.dto.OrgCompanyResponse;
 import com.ech.backend.api.user.dto.OrgDivisionResponse;
+import com.ech.backend.api.user.dto.OrganizationCompanyFilterOption;
+import com.ech.backend.api.user.dto.OrganizationCompanyFiltersResponse;
 import com.ech.backend.api.user.dto.OrganizationTreeResponse;
 import com.ech.backend.api.user.dto.OrgTeamResponse;
 import com.ech.backend.api.user.dto.UserProfileResponse;
@@ -9,8 +11,10 @@ import com.ech.backend.api.user.dto.UserSearchResponse;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -71,6 +75,45 @@ public class UserSearchService {
             companies.add(new OrgCompanyResponse(coEntry.getKey(), divisions));
         }
         return new OrganizationTreeResponse(companies);
+    }
+
+    /**
+     * ACTIVE 사용자 기준으로 {@code company_key} 그룹별 대표 {@code company_name}을 수집해
+     * 조직도 팝업 상단 셀렉트 옵션을 만든다. 라벨은 DB 값 우선, 없으면 키별 기본 문구.
+     */
+    public OrganizationCompanyFiltersResponse getOrganizationCompanyFilters() {
+        List<Object[]> rows = userRepository.findActiveCompanyFilterGroups();
+        Map<String, String> keyToLabel = new LinkedHashMap<>();
+        for (Object[] row : rows) {
+            String rawKey = row[0] instanceof String s ? s.trim() : null;
+            String nameAgg = row[1] instanceof String s ? s.trim() : null;
+            boolean blankKey = rawKey == null || rawKey.isEmpty();
+            String fv = blankKey ? "GENERAL" : rawKey.toUpperCase(Locale.ROOT);
+            String label = (nameAgg != null && !nameAgg.isEmpty()) ? nameAgg : defaultFilterLabel(fv);
+            keyToLabel.merge(fv, label, UserSearchService::pickRicherLabel);
+        }
+        List<OrganizationCompanyFilterOption> options = new ArrayList<>();
+        options.add(new OrganizationCompanyFilterOption("ORGROOT", "전체 (그룹사 공용)"));
+        keyToLabel.entrySet().stream()
+                .sorted(Comparator.comparing(Map.Entry::getValue, String.CASE_INSENSITIVE_ORDER))
+                .forEach(e -> options.add(new OrganizationCompanyFilterOption(e.getKey(), e.getValue())));
+        return new OrganizationCompanyFiltersResponse(options);
+    }
+
+    private static String pickRicherLabel(String a, String b) {
+        if (a.equals(b)) {
+            return a;
+        }
+        return a.length() >= b.length() ? a : b;
+    }
+
+    private static String defaultFilterLabel(String filterValue) {
+        return switch (filterValue) {
+            case "EXTERNAL" -> "외부";
+            case "COVIM365" -> "M365";
+            case "GENERAL" -> "내부 (미분류)";
+            default -> filterValue;
+        };
     }
 
     /**

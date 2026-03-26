@@ -1,5 +1,6 @@
 package com.ech.backend.api.user;
 
+import com.ech.backend.api.user.dto.OrganizationCompanyFiltersResponse;
 import com.ech.backend.api.user.dto.OrganizationTreeResponse;
 import com.ech.backend.common.api.ApiResponse;
 import com.ech.backend.common.rbac.AppRole;
@@ -28,5 +29,11 @@ public class UserDirectoryController {
     public ApiResponse<OrganizationTreeResponse> organization(
             @RequestParam(name = "companyKey", required = false) String companyKey) {
         return ApiResponse.success(userSearchService.getOrganizationTree(companyKey));
+    }
+
+    /** 조직도 팝업 상단 회사(테넌트) 셀렉트 — 라벨은 DB {@code company_name} 기준. */
+    @GetMapping("/organization-filters")
+    public ApiResponse<OrganizationCompanyFiltersResponse> organizationFilters() {
+        return ApiResponse.success(userSearchService.getOrganizationCompanyFilters());
     }
 }

@@ -43,6 +43,17 @@ public interface UserRepository extends JpaRepository<User, Long> {
             """)
     List<User> findActiveUsersForOrganization(@Param("companyKey") String companyKey);
 
+    /**
+     * ACTIVE 사용자 기준 (company_key, 대표 company_name) 쌍. JPQL은 null 을 그룹으로 묶는다.
+     */
+    @Query("""
+            SELECT u.companyKey, MAX(u.companyName)
+            FROM User u
+            WHERE u.status = 'ACTIVE'
+            GROUP BY u.companyKey
+            """)
+    List<Object[]> findActiveCompanyFilterGroups();
+
     Optional<User> findByEmployeeNo(String employeeNo);
 
     Optional<User> findByEmail(String email);

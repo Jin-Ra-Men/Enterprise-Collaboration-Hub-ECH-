@@ -1386,9 +1386,126 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
   margin-top: 0;
 }
 
-/* 이 팝업만 더 크게 */
-#modalAddMemberPicker .modal {
-  max-width: 920px;
+/* 조직도 팝업: 그룹웨어 ui_window 스타일 (orgmap_pop 유사) */
+.ech-orgmap-overlay {
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.ech-ui-window.ech-orgmap-window {
+  width: min(1176px, 98vw);
+  max-height: min(739px, 92vh);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.65);
+  overflow: hidden;
+}
+
+.ech-window-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  max-height: min(739px, 92vh);
+}
+
+.ech-window-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent);
+  flex-shrink: 0;
+}
+
+.ech-window-title {
+  min-width: 0;
+  flex: 1;
+}
+
+.ech-window-main-label {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.ech-window-sub-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  min-height: 14px;
+}
+
+.ech-window-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.ech-window-tool-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ech-window-tool-btn:hover {
+  background: var(--bg-sidebar-hover);
+  color: var(--text-primary);
+}
+
+.ech-window-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.ech-body-root {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.ech-body-root .member-picker-popup {
+  flex: 1;
+  min-height: 0;
+}
+
+.ech-body-root .member-picker-tree,
+.ech-body-root .member-picker-members {
+  min-height: 0;
+}
+
+.ech-window-footer {
+  flex-shrink: 0;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: var(--bg-input);
 }
 
 .picker-pane-search {

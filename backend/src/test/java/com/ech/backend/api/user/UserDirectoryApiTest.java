@@ -31,6 +31,16 @@ class UserDirectoryApiTest extends BaseIntegrationTest {
     }
 
     @Test
+    @DisplayName("GET /api/user-directory/organization-filters 200 및 ORGROOT 첫 옵션")
+    void organization_filters_ok() throws Exception {
+        mockMvc.perform(get("/api/user-directory/organization-filters")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.options").isArray())
+                .andExpect(jsonPath("$.data.options[0].filterValue").value("ORGROOT"));
+    }
+
+    @Test
     @DisplayName("토큰 없이 organization 호출 시 401")
     void organization_without_token() throws Exception {
         mockMvc.perform(get("/api/user-directory/organization"))
