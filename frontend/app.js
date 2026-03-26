@@ -21,26 +21,28 @@ function getCurrentTheme() {
   return document.documentElement.getAttribute("data-theme") || "dark";
 }
 
-function syncThemeChips() {
+function syncThemeOptions() {
   const cur = getCurrentTheme();
-  document.querySelectorAll(".theme-chip").forEach((btn) => {
+  document.querySelectorAll(".theme-option-btn").forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.theme === cur);
   });
 }
 
-function applyTheme(theme) {
+function applyTheme(theme, { persistLocal = true } = {}) {
   const t = VALID_THEMES.includes(theme) ? theme : "dark";
   if (t === "dark") {
     document.documentElement.removeAttribute("data-theme");
   } else {
     document.documentElement.setAttribute("data-theme", t);
   }
-  try {
-    localStorage.setItem(THEME_KEY, t);
-  } catch (e) {
-    /* ignore */
+  if (persistLocal) {
+    try {
+      localStorage.setItem(THEME_KEY, t);
+    } catch (e) {
+      /* ignore */
+    }
   }
-  syncThemeChips();
+  syncThemeOptions();
 }
 
 function initTheme() {
@@ -54,11 +56,21 @@ function initTheme() {
   applyTheme(saved);
 }
 
-function onThemeChipClick(e) {
-  const chip = e.target.closest(".theme-chip");
-  if (!chip || !chip.dataset.theme) return;
-  e.preventDefault();
-  applyTheme(chip.dataset.theme);
+async function saveThemePreference(theme) {
+  if (!currentUser) return;
+  try {
+    const res = await apiFetch("/api/auth/me/theme", {
+      method: "PUT",
+      body: JSON.stringify({ theme }),
+    });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      alert(json.error?.message || "테마 저장에 실패했습니다.");
+    }
+  } catch (e) {
+    console.error("테마 저장 실패", e);
+    alert("테마 저장 중 오류가 발생했습니다.");
+  }
 }
 
 /** userId(number) -> ONLINE | AWAY | OFFLINE */
@@ -85,6 +97,7 @@ const loginForm      = document.getElementById("loginForm");
 const loginErrorEl   = document.getElementById("loginError");
 const loginBtn       = document.getElementById("loginBtn");
 const logoutBtn      = document.getElementById("logoutBtn");
+const themeSettingsBtn = document.getElementById("themeSettingsBtn");
 const sidebarAvatar  = document.getElementById("sidebarAvatar");
 const sidebarUserName = document.getElementById("sidebarUserName");
 const channelListEl  = document.getElementById("channelList");
@@ -745,6 +758,10 @@ function showMain(user) {
   currentUser = user;
   loginPage.classList.add("hidden");
   mainApp.classList.remove("hidden");
+  const preferredTheme = VALID_THEMES.includes(user?.themePreference)
+    ? user.themePreference
+    : (localStorage.getItem(THEME_KEY) || "dark");
+  applyTheme(preferredTheme);
 
   sidebarUserName.textContent = `${user.name}`;
   sidebarAvatar.textContent = avatarInitials(user.name);
@@ -817,6 +834,11 @@ logoutBtn.addEventListener("click", () => {
   document.getElementById("adminSection").classList.add("hidden");
   showView("viewWelcome");
   showLogin();
+});
+
+themeSettingsBtn?.addEventListener("click", () => {
+  syncThemeOptions();
+  openModal("modalThemePicker");
 });
 
 function showLoginError(msg) {
@@ -1662,6 +1684,21 @@ document.querySelectorAll(".modal-overlay").forEach(overlay => {
   });
 });
 
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest(".theme-option-btn");
+  if (!t || !t.dataset.theme) return;
+  e.preventDefault();
+  const theme = VALID_THEMES.includes(t.dataset.theme) ? t.dataset.theme : "dark";
+  applyTheme(theme);
+  if (currentUser) {
+    currentUser.themePreference = theme;
+    const token = getToken();
+    if (token) saveSession(token, currentUser);
+    await saveThemePreference(theme);
+  }
+  closeModal("modalThemePicker");
+});
+
 /* ==========================================================================
  * 관리자: 배포 관리 / 설정
  * ========================================================================== */
@@ -1893,7 +1930,10 @@ function initEvents() {
   try {
     const res = await apiFetch("/api/auth/me");
     if (res.ok) {
-      showMain(user);
+      const json = await res.json();
+      const meUser = json?.data ? { ...user, ...json.data } : user;
+      saveSession(token, meUser);
+      showMain(meUser);
     } else {
       clearSession();
       showLogin();
@@ -1903,6 +1943,4 @@ function initEvents() {
     showLogin();
   }
 })();
-
-document.addEventListener("click", onThemeChipClick);
 initTheme();

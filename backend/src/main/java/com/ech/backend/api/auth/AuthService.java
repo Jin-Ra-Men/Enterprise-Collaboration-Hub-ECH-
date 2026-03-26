@@ -9,24 +9,31 @@ import com.ech.backend.common.security.UserPrincipal;
 import com.ech.backend.domain.org.OrgGroupMember;
 import com.ech.backend.domain.org.OrgGroupMemberRepository;
 import com.ech.backend.domain.user.User;
+import com.ech.backend.domain.user.UserRepository;
 import java.util.List;
+import java.util.Set;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
+    private static final Set<String> ALLOWED_THEMES = Set.of("dark", "light", "blue");
 
     private final List<AuthProvider> authProviders;
     private final JwtUtil jwtUtil;
     private final OrgGroupMemberRepository orgGroupMemberRepository;
+    private final UserRepository userRepository;
 
     public AuthService(
             List<AuthProvider> authProviders,
             JwtUtil jwtUtil,
-            OrgGroupMemberRepository orgGroupMemberRepository
+            OrgGroupMemberRepository orgGroupMemberRepository,
+            UserRepository userRepository
     ) {
         this.authProviders = authProviders;
         this.jwtUtil = jwtUtil;
         this.orgGroupMemberRepository = orgGroupMemberRepository;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -70,8 +77,26 @@ public class AuthService {
                 user.getEmail(),
                 user.getName(),
                 resolvedDepartment,
-                role.name()
+                role.name(),
+                normalizeThemeOrDefault(user.getThemePreference())
         );
+    }
+
+    @Transactional
+    public String updateThemePreference(Long userId, String rawTheme) {
+        String normalized = normalizeThemeOrDefault(rawTheme);
+        if (userRepository.updateThemePreferenceById(userId, normalized) <= 0) {
+            throw new UnauthorizedException("사용자 정보를 찾을 수 없습니다.");
+        }
+        return normalized;
+    }
+
+    @Transactional(readOnly = true)
+    public String getThemePreference(Long userId) {
+        return userRepository.findById(userId)
+                .map(User::getThemePreference)
+                .map(this::normalizeThemeOrDefault)
+                .orElse("dark");
     }
 
     private String resolveDepartmentFromTeam(User user) {
@@ -84,5 +109,13 @@ public class AuthService {
         }
         String displayName = members.get(0).getGroup().getDisplayName();
         return (displayName != null && !displayName.isBlank()) ? displayName : "";
+    }
+
+    private String normalizeThemeOrDefault(String rawTheme) {
+        if (rawTheme == null || rawTheme.isBlank()) {
+            return "dark";
+        }
+        String normalized = rawTheme.trim().toLowerCase();
+        return ALLOWED_THEMES.contains(normalized) ? normalized : "dark";
     }
 }

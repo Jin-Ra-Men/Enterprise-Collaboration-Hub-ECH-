@@ -6,6 +6,7 @@ public record MeResponse(
         String email,
         String name,
         String department,
-        String role
+        String role,
+        String themePreference
 ) {
 }

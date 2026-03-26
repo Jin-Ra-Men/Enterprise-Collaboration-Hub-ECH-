@@ -5,6 +5,8 @@
 ## 2026-03-26 (7차)
 
 ### Changed
+- 테마 설정 UI를 로그인 사용자 라인(로그아웃 옆 톱니바퀴) 팝업 방식으로 변경하고, 선택 즉시 적용되도록 수정
+- 사용자별 테마를 DB(`users.theme_preference`)에 저장하도록 변경 (`PUT /api/auth/me/theme`, `GET /api/auth/me`/로그인 응답에 `themePreference` 포함)
 - 감사로그: `safeRecord`를 `REQUIRES_NEW` 트랜잭션으로 실행해 read-only 요청 흐름(첨부파일 다운로드/다운로드정보 조회)에서도 INSERT 실패 없이 기록되도록 수정
 - `users`에서 회사·본부·팀·직무 중복 컬럼 제거(조직은 `org_groups`/`org_group_members` 단일 출처)
 - `org_group_members` FK를 `users.id` 대신 **`users.employee_no`** 로 변경
@@ -23,6 +25,7 @@
 
 ### Added
 - PostgreSQL 마이그레이션: `migrate_users_drop_org_columns.sql`, `migrate_org_group_members_user_id_to_employee_no.sql`, `migrate_org_duty_title_to_job_title.sql`
+- PostgreSQL 마이그레이션: `migrate_users_add_theme_preference.sql`
 
 ## 2026-03-26 (3차)
 

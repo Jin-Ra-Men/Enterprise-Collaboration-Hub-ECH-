@@ -7,6 +7,7 @@ public record LoginResponse(
         String email,
         String name,
         String department,
-        String role
+        String role,
+        String themePreference
 ) {
 }

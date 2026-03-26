@@ -187,57 +187,6 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 .login-hint { text-align: center; font-size: 13px; color: var(--text-muted); margin-top: 18px; }
 .login-hint code { background: var(--bg-input); padding: 2px 6px; border-radius: 4px; color: var(--accent); }
 
-/* 로그인 화면 테마 선택 */
-.login-theme {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.login-theme-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-muted);
-  width: 100%;
-  text-align: center;
-}
-.theme-chips {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-}
-.theme-chip {
-  min-width: 56px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-input);
-  color: var(--text-secondary);
-  transition: border-color .15s, background .15s, color .15s;
-}
-.theme-chip:hover {
-  border-color: var(--border-focus);
-  color: var(--text-primary);
-}
-.theme-chip.active {
-  border-color: var(--accent);
-  background: rgba(167, 139, 250, 0.12);
-  color: var(--accent);
-}
-html[data-theme="light"] .theme-chip.active {
-  background: rgba(99, 102, 241, 0.12);
-}
-html[data-theme="blue"] .theme-chip.active {
-  background: rgba(56, 189, 248, 0.12);
-}
-
 /* ============================================================
  * 앱 레이아웃 (Slack-like)
  * ============================================================ */
@@ -343,15 +292,6 @@ html[data-theme="blue"] .theme-chip.active {
 .item-icon { flex-shrink: 0; width: 18px; text-align: center; font-size: 13px; }
 .item-label { overflow: hidden; text-overflow: ellipsis; }
 
-/* 사이드바 테마 칩 (로그인과 동일 클래스 재사용) */
-.sidebar-theme {
-  flex-shrink: 0;
-  padding: 8px 12px 4px;
-  border-top: 1px solid var(--sidebar-border);
-}
-.sidebar-theme .login-theme-label { width: auto; text-align: left; margin-bottom: 6px; }
-.sidebar-theme .theme-chips { justify-content: flex-start; }
-
 /* 사용자 프로필 (하단) */
 .sidebar-user {
   margin-top: auto;
@@ -386,6 +326,15 @@ html[data-theme="blue"] .theme-chip.active {
   transition: background .1s, color .1s;
 }
 .btn-sidebar-logout:hover { background: var(--sidebar-item-hover-bg); color: var(--sidebar-item-fg-strong); }
+.btn-sidebar-gear {
+  color: var(--sidebar-item-fg);
+  font-size: 17px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background .1s, color .1s;
+}
+.btn-sidebar-gear:hover { background: var(--sidebar-item-hover-bg); color: var(--sidebar-item-fg-strong); }
 
 /* ── 채팅 영역 ── */
 .chat-area {
@@ -990,6 +939,36 @@ html[data-theme="blue"] .theme-chip.active {
   cursor: pointer;
 }
 .btn-cancel:hover { background: var(--bg-sidebar-hover); color: var(--text-primary); }
+
+.theme-picker-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.theme-option-btn {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-weight: 600;
+  cursor: pointer;
+}
+.theme-option-btn:hover {
+  border-color: var(--border-focus);
+  color: var(--text-primary);
+}
+.theme-option-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(167, 139, 250, 0.12);
+}
+html[data-theme="light"] .theme-option-btn.active {
+  background: rgba(99, 102, 241, 0.12);
+}
+html[data-theme="blue"] .theme-option-btn.active {
+  background: rgba(56, 189, 248, 0.12);
+}
 
 /* 사용자 검색 */
 .member-search-wrap { display: flex; gap: 8px; margin-bottom: 10px; }
