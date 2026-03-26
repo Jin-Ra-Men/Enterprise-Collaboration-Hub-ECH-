@@ -75,7 +75,8 @@ graph LR
 - RBAC 매트릭스: `docs/RBAC_MATRIX.md`
 - 인수인계서: `docs/HANDOVER.md`
 - DB 스키마 초안: `docs/sql/postgresql_schema_draft.sql`
-- 테스트 사용자·부서 시드: `docs/sql/seed_test_users.sql` (그룹웨어 미연동 시, `docs/ENVIRONMENT_SETUP.md` 참고)
+- 기존 DB에 조직 컬럼 추가: `docs/sql/migrate_users_add_org_columns.sql` (필요 시)
+- 테스트 사용자·부서 시드: `docs/sql/seed_test_users.sql` (그룹웨어 미연동 시, `docs/ENVIRONMENT_SETUP.md` 참고; INSERT 없이 백필만 할 때는 `docs/sql/backfill_users_org_hierarchy.sql`)
 - 변경 이력: `.cursor/rules/CHANGELOG.md`
 - 에러 이력: `.cursor/rules/ERRORS.md`
 

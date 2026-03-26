@@ -137,6 +137,9 @@ CREATE TABLE users (
     email           VARCHAR(255) NOT NULL UNIQUE,
     name            VARCHAR(100) NOT NULL,
     department      VARCHAR(100),
+    company_name    VARCHAR(120),
+    division_name   VARCHAR(120),
+    team_name       VARCHAR(120),
     job_rank        VARCHAR(100),
     duty_title      VARCHAR(100),
     role            VARCHAR(30)  NOT NULL DEFAULT 'MEMBER',
@@ -153,7 +156,10 @@ CREATE TABLE users (
 | `employee_no` | VARCHAR(50) | ✅ | - | 사번 (사내 고유식별자). UNIQUE |
 | `email` | VARCHAR(255) | ✅ | - | 이메일. 로그인 식별자. UNIQUE |
 | `name` | VARCHAR(100) | ✅ | - | 표시 이름 |
-| `department` | VARCHAR(100) | ❌ | NULL | 부서명. 그룹웨어 연동 시 자동 채움 |
+| `department` | VARCHAR(100) | ❌ | NULL | 부서명(레거시·표시용). 그룹웨어 연동 시 자동 채움 |
+| `company_name` | VARCHAR(120) | ❌ | NULL | 조직도 최상위(회사). `GET /api/user-directory/organization` 트리 루트 |
+| `division_name` | VARCHAR(120) | ❌ | NULL | 본부 단위 |
+| `team_name` | VARCHAR(120) | ❌ | NULL | 팀 단위 |
 | `job_rank` | VARCHAR(100) | ❌ | NULL | 직위(위계). UI에서 없으면 `-` 등으로 표시 |
 | `duty_title` | VARCHAR(100) | ❌ | NULL | 직책(담당 역할명). 없으면 프로필·채널 멤버 UI에서 행 자체를 숨김 |
 | `role` | VARCHAR(30) | ✅ | `'MEMBER'` | 앱 역할. → [역할 Enum 참고](#roles) |
