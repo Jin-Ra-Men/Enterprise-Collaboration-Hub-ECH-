@@ -8,14 +8,21 @@ import com.ech.backend.api.user.dto.OrganizationTreeResponse;
 import com.ech.backend.api.user.dto.OrgTeamResponse;
 import com.ech.backend.api.user.dto.UserProfileResponse;
 import com.ech.backend.api.user.dto.UserSearchResponse;
+import com.ech.backend.domain.org.OrgGroup;
+import com.ech.backend.domain.org.OrgGroupMember;
+import com.ech.backend.domain.org.OrgGroupMemberRepository;
+import com.ech.backend.domain.org.OrgGroupRepository;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,9 +31,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserSearchService {
 
     private final UserRepository userRepository;
+    private final OrgGroupRepository orgGroupRepository;
+    private final OrgGroupMemberRepository orgGroupMemberRepository;
 
-    public UserSearchService(UserRepository userRepository) {
+    public UserSearchService(
+            UserRepository userRepository,
+            OrgGroupRepository orgGroupRepository,
+            OrgGroupMemberRepository orgGroupMemberRepository
+    ) {
         this.userRepository = userRepository;
+        this.orgGroupRepository = orgGroupRepository;
+        this.orgGroupMemberRepository = orgGroupMemberRepository;
     }
 
     public List<UserSearchResponse> searchUsers(String keyword, String department) {
@@ -34,139 +49,172 @@ public class UserSearchService {
         String normalizedDepartment = normalize(department);
         Long idMatch = parseIdKeyword(normalizedKeyword);
 
-        return userRepository.searchUsers(normalizedKeyword, normalizedDepartment, idMatch).stream()
-                .map(this::toSearchResponse)
-                .toList();
-    }
-
-        /**
-         * 회사 → 본부 → 팀(부서) → 사용자.
-         * company/division/team 컬럼이 비어 있으면 해당 레벨을 "미지정" 버킷으로 분류한다.
-         *
-         * @param companyKeyFilter UI 회사 셀렉트 값. null 또는 빈 문자열, {@code ORGROOT} 는 필터 없음(전체).
-         * @param companyNameFilter {@code company_name} 정확 일치(트림). null 이면 회사명 필터 없음.
-         *                          빈 문자열({@code ""})이면 {@code company_name} 이 비어 있는 행만.
-         */
-    public OrganizationTreeResponse getOrganizationTree(String companyKeyFilter, String companyNameFilter) {
-        String repoKey = resolveCompanyKeyForRepository(companyKeyFilter);
-        String repoName = resolveCompanyNameForRepository(companyNameFilter);
-        List<User> users = userRepository.findActiveUsersForOrganization(repoKey, repoName);
-        Map<String, Map<String, Map<String, List<User>>>> byCompany = new LinkedHashMap<>();
-        for (User u : users) {
-            String co = resolveCompany(u);
-            String div = resolveDivision(u);
-            String team = resolveTeam(u);
-            byCompany
-                    .computeIfAbsent(co, k -> new LinkedHashMap<>())
-                    .computeIfAbsent(div, k -> new LinkedHashMap<>())
-                    .computeIfAbsent(team, k -> new ArrayList<>())
-                    .add(u);
-        }
-        List<OrgCompanyResponse> companies = new ArrayList<>();
-        for (var coEntry : byCompany.entrySet()) {
-            List<OrgDivisionResponse> divisions = new ArrayList<>();
-            for (var divEntry : coEntry.getValue().entrySet()) {
-                List<OrgTeamResponse> teams = new ArrayList<>();
-                for (var teamEntry : divEntry.getValue().entrySet()) {
-                    teams.add(new OrgTeamResponse(
-                            teamEntry.getKey(),
-                            teamEntry.getValue().stream().map(this::toSearchResponse).toList()));
-                }
-                divisions.add(new OrgDivisionResponse(divEntry.getKey(), teams));
-            }
-            companies.add(new OrgCompanyResponse(coEntry.getKey(), divisions));
-        }
-        return new OrganizationTreeResponse(companies);
+        return userRepository.searchUsers(normalizedKeyword, normalizedDepartment, idMatch);
     }
 
     /**
-     * ACTIVE 사용자 기준 {@code (company_key, company_name)} 고유 조합마다 셀렉트 옵션을 만든다.
-     * 같은 키라도 회사명이 다르면 별도 항목으로 나온다.
+     * 회사 → 본부 → 팀(부서) → 사용자 (조직도 UI용).
+     *
+     * @param companyGroupCode {@code org_groups.group_code} (COMPANY 타입). null/빈 값이면 전체.
+     */
+    public OrganizationTreeResponse getOrganizationTree(String companyGroupCode) {
+        String normalized = (companyGroupCode == null) ? null : companyGroupCode.trim();
+
+        List<OrgGroup> companies;
+        if (normalized == null || normalized.isEmpty()) {
+            companies = orgGroupRepository.findAllByGroupTypeAndIsActiveOrderByDisplayNameAsc("COMPANY", true);
+        } else {
+            Optional<OrgGroup> found = orgGroupRepository.findByGroupTypeAndGroupCode("COMPANY", normalized);
+            companies = found.map(List::of).orElseGet(List::of);
+        }
+
+        if (companies.isEmpty()) {
+            return new OrganizationTreeResponse(List.of());
+        }
+
+        Map<Long, OrgGroup> divisionById = new HashMap<>();
+        Map<Long, List<OrgGroup>> teamsByDivisionId = new HashMap<>();
+        List<OrgGroup> allTeams = new ArrayList<>();
+
+        for (OrgGroup company : companies) {
+            List<OrgGroup> divisions = orgGroupRepository.findAllByGroupTypeAndCompanyGroup_IdAndIsActiveOrderByDisplayNameAsc(
+                    "DIVISION",
+                    company.getId(),
+                    true
+            );
+            for (OrgGroup div : divisions) {
+                divisionById.put(div.getId(), div);
+                teamsByDivisionId.put(div.getId(), new ArrayList<>());
+            }
+
+            List<OrgGroup> teams = orgGroupRepository.findAllByGroupTypeAndCompanyGroup_IdAndIsActiveOrderByDisplayNameAsc(
+                    "TEAM",
+                    company.getId(),
+                    true
+            );
+            for (OrgGroup team : teams) {
+                OrgGroup parent = team.getParentGroup();
+                if (parent == null) {
+                    continue;
+                }
+                Long divisionId = parent.getId();
+                teamsByDivisionId.computeIfAbsent(divisionId, k -> new ArrayList<>()).add(team);
+            }
+            allTeams.addAll(teams);
+        }
+
+        List<Long> teamIds = allTeams.stream().map(OrgGroup::getId).toList();
+        List<OrgGroupMember> teamMembers = teamIds.isEmpty()
+                ? List.of()
+                : orgGroupMemberRepository.findMembersByMemberGroupTypeAndGroupIds("TEAM", teamIds);
+
+        Map<Long, List<User>> usersByTeamId = new HashMap<>();
+        Set<Long> userIds;
+        if (teamMembers.isEmpty()) {
+            userIds = Set.of();
+        } else {
+            userIds = teamMembers.stream().map(m -> m.getUser().getId()).collect(Collectors.toSet());
+        }
+
+        for (OrgGroupMember m : teamMembers) {
+            Long teamId = m.getGroup().getId();
+            usersByTeamId.computeIfAbsent(teamId, k -> new ArrayList<>()).add(m.getUser());
+        }
+
+        Map<Long, String> jobRankByUserId;
+        Map<Long, String> dutyTitleByUserId;
+        if (userIds.isEmpty()) {
+            jobRankByUserId = Map.of();
+            dutyTitleByUserId = Map.of();
+        } else {
+            List<OrgGroupMember> jobMembers = orgGroupMemberRepository.findMembersByMemberGroupTypeAndUserIds("JOB_LEVEL", userIds);
+            jobRankByUserId = jobMembers.stream().collect(Collectors.toMap(
+                    m -> m.getUser().getId(),
+                    m -> m.getGroup().getDisplayName(),
+                    (a, b) -> a
+            ));
+
+            List<OrgGroupMember> dutyMembers = orgGroupMemberRepository.findMembersByMemberGroupTypeAndUserIds("DUTY_TITLE", userIds);
+            dutyTitleByUserId = dutyMembers.stream().collect(Collectors.toMap(
+                    m -> m.getUser().getId(),
+                    m -> m.getGroup().getDisplayName(),
+                    (a, b) -> a
+            ));
+        }
+
+        List<OrgCompanyResponse> companiesResponse = new ArrayList<>();
+        for (OrgGroup company : companies) {
+            List<OrgGroup> divisions = orgGroupRepository.findAllByGroupTypeAndCompanyGroup_IdAndIsActiveOrderByDisplayNameAsc(
+                    "DIVISION",
+                    company.getId(),
+                    true
+            );
+
+            List<OrgDivisionResponse> divisionsResponse = new ArrayList<>();
+            for (OrgGroup division : divisions) {
+                List<OrgGroup> teams = teamsByDivisionId.getOrDefault(division.getId(), List.of());
+                teams = teams.stream()
+                        .sorted(Comparator.comparing(OrgGroup::getDisplayName, String.CASE_INSENSITIVE_ORDER))
+                        .toList();
+
+                List<OrgTeamResponse> teamsResponse = teams.stream().map(team -> {
+                    List<User> users = usersByTeamId.getOrDefault(team.getId(), List.of());
+                    List<UserSearchResponse> members = users.stream()
+                            .sorted(Comparator.comparing(User::getName, String.CASE_INSENSITIVE_ORDER))
+                            .map(u -> toTreeSearchResponse(
+                                    u,
+                                    team.getDisplayName(),
+                                    jobRankByUserId.get(u.getId()),
+                                    dutyTitleByUserId.get(u.getId())
+                            ))
+                            .toList();
+                    return new OrgTeamResponse(team.getDisplayName(), members);
+                }).toList();
+
+                divisionsResponse.add(new OrgDivisionResponse(division.getDisplayName(), teamsResponse));
+            }
+
+            companiesResponse.add(new OrgCompanyResponse(company.getDisplayName(), divisionsResponse));
+        }
+
+        return new OrganizationTreeResponse(companiesResponse);
+    }
+
+    /**
+     * 조직도 팝업 상단 회사 셀렉트 옵션.
+     * 회사 옵션은 org_groups(COMPANY, is_active=true)에서 가져온다.
      */
     public OrganizationCompanyFiltersResponse getOrganizationCompanyFilters() {
-        List<Object[]> rows = userRepository.findActiveDistinctCompanyScopes();
-        List<OrganizationCompanyFilterOption> rest = new ArrayList<>();
-        for (Object[] row : rows) {
-            String rawKey = row[0] instanceof String s ? s.trim() : null;
-            String rawName = row[1] instanceof String s ? s : null;
-            String nameTrimmed = rawName != null ? rawName.trim() : "";
-            boolean blankKey = rawKey == null || rawKey.isEmpty();
-            String apiKey = blankKey ? "GENERAL" : rawKey.toUpperCase(Locale.ROOT);
-            String apiName;
-            String label;
-            if (!nameTrimmed.isEmpty()) {
-                label = nameTrimmed;
-                apiName = nameTrimmed;
-            } else {
-                label = defaultFilterLabel(apiKey) + " (회사명 없음)";
-                apiName = "";
-            }
-            rest.add(new OrganizationCompanyFilterOption(label, apiKey, apiName));
-        }
-        rest.sort(Comparator.comparing(OrganizationCompanyFilterOption::label, String.CASE_INSENSITIVE_ORDER));
+        List<OrgGroup> companies = orgGroupRepository.findAllByGroupTypeAndIsActiveOrderByDisplayNameAsc("COMPANY", true);
         List<OrganizationCompanyFilterOption> options = new ArrayList<>();
-        options.add(new OrganizationCompanyFilterOption("전체 (그룹사 공용)", null, null));
-        options.addAll(rest);
+        options.add(new OrganizationCompanyFilterOption("전체 (그룹사 공용)", null));
+        for (OrgGroup company : companies) {
+            options.add(new OrganizationCompanyFilterOption(company.getDisplayName(), company.getGroupCode()));
+        }
         return new OrganizationCompanyFiltersResponse(options);
     }
 
-    private static String defaultFilterLabel(String filterValue) {
-        return switch (filterValue) {
-            case "EXTERNAL" -> "외부";
-            case "COVIM365" -> "M365";
-            case "GENERAL" -> "내부";
-            default -> filterValue;
-        };
-    }
+    private static UserSearchResponse toTreeSearchResponse(
+            User user,
+            String department,
+            String jobRank,
+            String dutyTitle
+    ) {
+        String resolvedJobRank = (jobRank != null && !jobRank.isBlank()) ? jobRank : user.getJobRank();
+        String resolvedDutyTitle = (dutyTitle != null && !dutyTitle.isBlank()) ? dutyTitle : user.getDutyTitle();
+        String resolvedDepartment = (department != null) ? department : user.getDepartment();
 
-    /**
-     * null / 공백 / ORGROOT → 전체 조회(null). 그 외 대문자 정규화.
-     */
-    private static String resolveCompanyKeyForRepository(String raw) {
-        if (raw == null) {
-            return null;
-        }
-        String t = raw.trim();
-        if (t.isEmpty()) {
-            return null;
-        }
-        String u = t.toUpperCase();
-        if ("ORGROOT".equals(u)) {
-            return null;
-        }
-        return u;
-    }
-
-    /**
-     * null → 회사명 필터 없음. 빈 문자열은 "이름 없음" 행만.
-     */
-    private static String resolveCompanyNameForRepository(String raw) {
-        if (raw == null) {
-            return null;
-        }
-        return raw.trim();
-    }
-
-    private static String resolveCompany(User u) {
-        String c = u.getCompanyName();
-        return (c != null && !c.isBlank()) ? c.trim() : "미지정 회사";
-    }
-
-    private static String resolveDivision(User u) {
-        String d = u.getDivisionName();
-        if (d != null && !d.isBlank()) {
-            return d.trim();
-        }
-
-        return "미지정 본부";
-    }
-
-    private static String resolveTeam(User u) {
-        String t = u.getTeamName();
-        if (t != null && !t.isBlank()) {
-            return t.trim();
-        }
-        return "미지정 팀";
+        return new UserSearchResponse(
+                user.getId(),
+                user.getEmployeeNo(),
+                user.getName(),
+                user.getEmail(),
+                resolvedDepartment,
+                resolvedJobRank,
+                resolvedDutyTitle,
+                user.getRole(),
+                user.getStatus()
+        );
     }
 
     public UserProfileResponse getProfile(Long userId) {

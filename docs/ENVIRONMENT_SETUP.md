@@ -56,9 +56,18 @@ psql -h localhost -p 5432 -U ech_user -d ech -f docs/sql/seed_test_users.sql
 스키마 초안 적용 후(`postgresql_schema_draft.sql` 등) 실행하는 것을 권장합니다.  
 이미 만들어 둔 `users` 테이블에 `company_name` / `division_name` / `team_name` 또는 `company_key` 컬럼이 없다면 먼저 `docs/sql/migrate_users_add_org_columns.sql`·`docs/sql/migrate_users_company_key.sql`을 실행한 뒤 시드를 적용합니다.
 
+그 다음 조직도 API를 동작시키려면 `org_groups`/`org_group_members`를 백필해야 합니다.
+```bash
+psql -h localhost -p 5432 -U ech_user -d ech -f docs/sql/create_org_groups.sql
+psql -h localhost -p 5432 -U ech_user -d ech -f docs/sql/create_org_group_members.sql
+psql -h localhost -p 5432 -U ech_user -d ech -f docs/sql/backfill_org_groups_from_users.sql
+psql -h localhost -p 5432 -U ech_user -d ech -f docs/sql/backfill_org_group_members_from_users.sql
+```
+
 ## 6) 점검 체크리스트
 - Java 17 적용 확인 (`java -version`)
 - Backend wrapper 실행 확인 (`gradlew.bat`)
 - Realtime 의존성 설치 완료 (`npm install`)
 - PostgreSQL 연결 정보 확인 (`.env.example` 기준)
 - (선택) 사용자 검색·멤버 API 테스트용 시드 적용 (`seed_test_users.sql`)
+- (테스트) `./gradlew test` 실행 시 H2 인메모리 환경에서 `org_groups/org_group_members`는 테스트 코드가 users 기반으로 직접 시드함(OrgSync POST upsert는 H2 `ON CONFLICT` 미지원)

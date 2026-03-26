@@ -1,5 +1,6 @@
 package com.ech.backend.domain.user;
 
+import com.ech.backend.api.user.dto.UserSearchResponse;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,19 +10,34 @@ import org.springframework.data.repository.query.Param;
 
 public interface UserRepository extends JpaRepository<User, Long> {
     @Query("""
-            SELECT u FROM User u
-            WHERE (:department IS NULL OR u.department = :department)
+            SELECT new com.ech.backend.api.user.dto.UserSearchResponse(
+                u.id,
+                u.employeeNo,
+                u.name,
+                u.email,
+                teamGroup.displayName,
+                u.jobRank,
+                u.dutyTitle,
+                u.role,
+                u.status
+            )
+            FROM User u
+            JOIN OrgGroupMember m
+              ON m.user = u
+             AND m.memberGroupType = 'TEAM'
+            JOIN m.group teamGroup
+            WHERE (:department IS NULL OR teamGroup.displayName = :department)
               AND (
                 :keyword IS NULL
                 OR LOWER(u.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
                 OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
                 OR LOWER(u.employeeNo) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(COALESCE(u.department, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(COALESCE(teamGroup.displayName, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
                 OR (:idMatch IS NOT NULL AND u.id = :idMatch)
               )
             ORDER BY u.name ASC
             """)
-    List<User> searchUsers(
+    List<UserSearchResponse> searchUsers(
             @Param("keyword") String keyword,
             @Param("department") String department,
             @Param("idMatch") Long idMatch

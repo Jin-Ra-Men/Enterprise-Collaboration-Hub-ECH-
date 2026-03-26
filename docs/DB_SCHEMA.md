@@ -102,23 +102,25 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 | # | 테이블명 | 도메인 | 역할 요약 |
 |---|---------|--------|-----------|
 | 1 | `users` | 사용자 | 사용자 계정 (사번, 이메일, 역할, 비밀번호 해시) |
-| 2 | `channels` | 채널 | 대화/협업 공간 (PUBLIC/PRIVATE/DM) |
-| 3 | `channel_members` | 채널 | 채널-사용자 M:N 매핑 및 채널 내 역할 |
-| 4 | `messages` | 메시지 | 채팅 메시지 및 스레드 답글 |
-| 5 | `channel_read_states` | 메시지 | 사용자별 채널 읽음 포인터 |
-| 6 | `channel_files` | 파일 | 채널 첨부파일 메타데이터 |
-| 7 | `kanban_boards` | 칸반 | 칸반 보드 |
-| 8 | `kanban_columns` | 칸반 | 칸반 컬럼 (단계) |
-| 9 | `kanban_cards` | 칸반 | 칸반 카드 (업무 항목) |
-| 10 | `kanban_card_assignees` | 칸반 | 카드-담당자 M:N 매핑 |
-| 11 | `kanban_card_events` | 칸반 | 카드 상태 변경 이력 |
-| 12 | `work_items` | 업무 | 채팅 메시지 → 업무 항목 연계 |
-| 13 | `error_logs` | 운영 | 시스템 오류 로그 |
-| 14 | `audit_logs` | 운영 | 도메인 이벤트 감사 로그 |
-| 15 | `app_settings` | 운영 | 앱 전역 설정 (파일 경로 등) |
-| 16 | `retention_policies` | 운영 | 데이터 보존 정책 |
-| 17 | `release_versions` | 배포 | WAR/JAR 릴리즈 파일 관리 |
-| 18 | `deployment_history` | 배포 | 배포 활성화/롤백 이력 |
+| 2 | `org_groups` | 조직도 | 조직 룩업/계층(회사→본부→팀, 잡 lookup) |
+| 3 | `org_group_members` | 조직도 | 유저-조직 매핑 (TEAM/JOB_LEVEL/DUTY_TITLE) |
+| 4 | `channels` | 채널 | 대화/협업 공간 (PUBLIC/PRIVATE/DM) |
+| 5 | `channel_members` | 채널 | 채널-사용자 M:N 매핑 및 채널 내 역할 |
+| 6 | `messages` | 메시지 | 채팅 메시지 및 스레드 답글 |
+| 7 | `channel_read_states` | 메시지 | 사용자별 채널 읽음 포인터 |
+| 8 | `channel_files` | 파일 | 채널 첨부파일 메타데이터 |
+| 9 | `kanban_boards` | 칸반 | 칸반 보드 |
+| 10 | `kanban_columns` | 칸반 | 칸반 컬럼 (단계) |
+| 11 | `kanban_cards` | 칸반 | 칸반 카드 (업무 항목) |
+| 12 | `kanban_card_assignees` | 칸반 | 카드-담당자 M:N 매핑 |
+| 13 | `kanban_card_events` | 칸반 | 카드 상태 변경 이력 |
+| 14 | `work_items` | 업무 | 채팅 메시지 → 업무 항목 연계 |
+| 15 | `error_logs` | 운영 | 시스템 오류 로그 |
+| 16 | `audit_logs` | 운영 | 도메인 이벤트 감사 로그 |
+| 17 | `app_settings` | 운영 | 앱 전역 설정 (파일 경로 등) |
+| 18 | `retention_policies` | 운영 | 데이터 보존 정책 |
+| 19 | `release_versions` | 배포 | WAR/JAR 릴리즈 파일 관리 |
+| 20 | `deployment_history` | 배포 | 배포 활성화/롤백 이력 |
 
 ---
 
@@ -157,13 +159,13 @@ CREATE TABLE users (
 | `employee_no` | VARCHAR(50) | ✅ | - | 사번 (사내 고유식별자). UNIQUE |
 | `email` | VARCHAR(255) | ✅ | - | 이메일. 로그인 식별자. UNIQUE |
 | `name` | VARCHAR(100) | ✅ | - | 표시 이름 |
-| `department` | VARCHAR(100) | ❌ | NULL | 부서명(레거시·표시용). 그룹웨어 연동 시 자동 채움 |
-| `company_name` | VARCHAR(120) | ❌ | NULL | 조직도 최상위(회사). `GET /api/user-directory/organization` 트리 루트 |
-| `division_name` | VARCHAR(120) | ❌ | NULL | 본부 단위 |
-| `team_name` | VARCHAR(120) | ❌ | NULL | 팀 단위 |
-| `company_key` | VARCHAR(40) | ❌ | NULL | 그룹사/테넌트 키(조직도 상단 필터). 예: `GENERAL`, `EXTERNAL`, `COVIM365`. null 은 레거시 호환으로 `GENERAL` 필터에 포함 |
-| `job_rank` | VARCHAR(100) | ❌ | NULL | 직위(위계). UI에서 없으면 `-` 등으로 표시 |
-| `duty_title` | VARCHAR(100) | ❌ | NULL | 직책(담당 역할명). 없으면 프로필·채널 멤버 UI에서 행 자체를 숨김 |
+| `department` | VARCHAR(100) | ❌ | NULL | 부서명(레거시·표시용). 조직도/검색은 `org_group_members(TEAM)` + `org_groups.display_name` 기반 |
+| `company_name` | VARCHAR(120) | ❌ | NULL | 레거시(백필/호환). 조직도는 `org_groups(COMPANY).display_name` 기준 |
+| `division_name` | VARCHAR(120) | ❌ | NULL | 레거시(백필/호환). 조직도는 `org_groups(DIVISION).display_name` 기준 |
+| `team_name` | VARCHAR(120) | ❌ | NULL | 레거시(백필/호환). 조직도는 `org_groups(TEAM).display_name` 기준 |
+| `company_key` | VARCHAR(40) | ❌ | NULL | 레거시(테넌트/필터용). 조직도 회사 필터는 `org_groups.group_code` 기반 |
+| `job_rank` | VARCHAR(100) | ❌ | NULL | 레거시(백필/호환). 직위는 `org_group_members(JOB_LEVEL)`로 확장 가능(미구성 시 users 값 fallback) |
+| `duty_title` | VARCHAR(100) | ❌ | NULL | 레거시(백필/호환). 직책은 `org_group_members(DUTY_TITLE)`로 확장 가능(미구성 시 users 값 fallback) |
 | `role` | VARCHAR(30) | ✅ | `'MEMBER'` | 앱 역할. → [역할 Enum 참고](#roles) |
 | `status` | VARCHAR(20) | ✅ | `'ACTIVE'` | 계정 상태. → [상태 Enum 참고](#user-status) |
 | `password_hash` | VARCHAR(255) | ❌ | NULL | BCrypt 해시. 그룹웨어 연동 시 NULL 허용 |
@@ -174,6 +176,61 @@ CREATE TABLE users (
 - `UNIQUE(employee_no)`, `UNIQUE(email)`
 
 **관련 Java Entity**: `com.ech.backend.domain.user.User`
+
+---
+
+### 4-1-1. `org_groups` — 조직 룩업/계층
+
+**목적**: 조직도 트리를 구성하는 룩업/계층 데이터(회사→본부→팀, 그리고 잡레벨/직책 lookup)를 저장한다.  
+**표시명**은 `display_name`이며, `group_code`는 (parent + DisplayName) 기반 md5로 안정적으로 생성한다.
+
+```sql
+CREATE TABLE IF NOT EXISTS org_groups (
+    id BIGSERIAL PRIMARY KEY,
+    group_type VARCHAR(30) NOT NULL,
+    group_code VARCHAR(32) NOT NULL,
+    display_name VARCHAR(200) NOT NULL,
+    parent_group_id BIGINT NULL REFERENCES org_groups(id) ON DELETE CASCADE,
+    company_group_id BIGINT NULL REFERENCES org_groups(id) ON DELETE CASCADE,
+    group_path VARCHAR(500) NULL,
+    sort_order INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_org_groups_type_code UNIQUE (group_type, group_code)
+);
+```
+
+| 컬럼명 | 타입 | 설명 |
+|--------|------|------|
+| `group_type` | VARCHAR(30) | `COMPANY`, `DIVISION`, `TEAM`, `JOB_LEVEL`, `DUTY_TITLE` |
+| `group_code` | VARCHAR(32) | 안정적 유니크 코드(md5 기반) |
+| `display_name` | VARCHAR(200) | UI 표시명 |
+| `parent_group_id` | BIGINT | COMPANY→DIVISION→TEAM 계층 연결 |
+| `company_group_id` | BIGINT | DIVISION/TEAM이 속한 COMPANY 연결 |
+
+---
+
+### 4-1-2. `org_group_members` — 유저 매핑
+
+**목적**: `users`와 `org_groups`를 연결해, 유저가 어느 `TEAM`/`JOB_LEVEL`/`DUTY_TITLE`에 속하는지 저장한다.
+
+```sql
+CREATE TABLE IF NOT EXISTS org_group_members (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    group_id BIGINT NOT NULL REFERENCES org_groups(id) ON DELETE CASCADE,
+    member_group_type VARCHAR(30) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_org_group_members_user_type UNIQUE (user_id, member_group_type)
+);
+```
+
+| 컬럼명 | 타입 | 설명 |
+|--------|------|------|
+| `member_group_type` | VARCHAR(30) | TEAM/JOB_LEVEL/DUTY_TITLE |
+| `group_id` | BIGINT | 해당 타입의 `org_groups` PK |
 
 ---
 

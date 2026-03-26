@@ -128,3 +128,21 @@
 - **발생 위치**: `java -version`, `gradle -v`
 - **원인**: 로컬 Java가 1.8이며, 프로젝트 요구사항(Java 17+)과 불일치. 시스템 Gradle 미설치.
 - **해결**: Java 17 설치/적용 완료, Backend `gradlew.bat` 생성 및 실행 검증 완료. 이슈 해소.
+
+---
+
+## 2026-03-26 — OrgSyncService groupCache 스코프 컴파일 오류
+
+- **에러 요약**: `OrgSyncService.java`에서 `groupCache` 변수를 잘못 참조하여 `compileJava` 실패
+- **발생 위치(파일/명령/기능)**: `backend/src/main/java/com/ech/backend/api/orgsync/OrgSyncService.java` — `upsertOrgAndMembership(...)` 호출부
+- **원인**: `syncUsers(...)` 내부 지역변수 `groupCache`가 헬퍼 메서드 스코프에 없어서 컴파일 실패
+- **해결/현재 상태**: `upsertOrgAndMembership(...)` 시그니처에 `groupCache`를 전달하도록 수정 후 `./gradlew test` 통과
+
+---
+
+## 2026-03-26 — H2에서 org-sync upsert SQL(ON CONFLICT) 문법 오류
+
+- **에러 요약**: 테스트에서 `POST /api/admin/org-sync/users/sync?source=TEST` 호출 시 `users` UPSERT native SQL 구문 오류로 500 발생
+- **발생 위치(파일/명령/기능)**: `UserDirectoryApiTest` — `org-sync` 동기화 호출(@BeforeEach), `UserRepository.upsertByEmployeeNo(...)`
+- **원인**: H2 인메모리 DB는 PostgreSQL의 `INSERT ... ON CONFLICT` 문법을 지원하지 않아 `SQLState: 42000` 문법 오류
+- **해결/현재 상태**: 테스트를 `org-sync` 호출 대신 Java 로 `org_groups/org_group_members`를 직접 시드하도록 수정하여 테스트 통과

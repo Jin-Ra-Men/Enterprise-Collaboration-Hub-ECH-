@@ -76,7 +76,9 @@ graph LR
 - 인수인계서: `docs/HANDOVER.md`
 - DB 스키마 초안: `docs/sql/postgresql_schema_draft.sql`
 - 기존 DB에 조직 컬럼 추가: `docs/sql/migrate_users_add_org_columns.sql` (필요 시)
-- 테스트 사용자·부서 시드: `docs/sql/seed_test_users.sql` (그룹웨어 미연동 시, `docs/ENVIRONMENT_SETUP.md` 참고; INSERT 없이 백필만 할 때는 `docs/sql/backfill_users_org_hierarchy.sql`)
+- 테스트 사용자·부서 시드: `docs/sql/seed_test_users.sql` (그룹웨어 미연동 시, `docs/ENVIRONMENT_SETUP.md` 참고)
+- 조직도 백필(org_groups/org_group_members): `docs/sql/create_org_groups.sql`, `docs/sql/create_org_group_members.sql`,
+  `docs/sql/backfill_org_groups_from_users.sql`, `docs/sql/backfill_org_group_members_from_users.sql`
 - 변경 이력: `.cursor/rules/CHANGELOG.md`
 - 에러 이력: `.cursor/rules/ERRORS.md`
 
@@ -98,8 +100,8 @@ graph LR
 - `POST /api/channels/{channelId}/messages/{parentMessageId}/replies`
 - `GET /api/channels/{channelId}/messages/{parentMessageId}/replies`
 - `GET /api/users/search?q=...&department=...`
-- `GET /api/user-directory/organization-filters` (조직도 팝업 회사 셀렉트 — DB `company_name` 라벨)
-- `GET /api/user-directory/organization?companyKey=&companyName=` (선택: 전체 또는 `company_key`+`company_name` 조합 필터)
+- `GET /api/user-directory/organization-filters` (조직도 팝업 회사 셀렉트 — `org_groups(COMPANY)` 기준 `label`, `companyGroupCode`)
+- `GET /api/user-directory/organization?companyGroupCode=` (선택: 전체 또는 특정 회사 트리(`companyGroupCode`)만)
 - `GET /api/users/profile?userId=...`
 - `GET /api/users/{userId}/profile` (경로형, 호환)
 - `POST /api/kanban/boards`, `GET /api/kanban/boards`, `GET /api/kanban/boards/{boardId}`, `DELETE /api/kanban/boards/{boardId}`
