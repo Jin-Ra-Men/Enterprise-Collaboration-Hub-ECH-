@@ -529,16 +529,31 @@ function renderMemberListRight() {
 
   listEl.innerHTML = "";
 
-  if (!orgPickerSelectedTeamKey || !orgPickerTeamIndex.has(orgPickerSelectedTeamKey)) {
-    listEl.innerHTML = '<li class="empty-notice">부서를 선택하세요.</li>';
-    return;
-  }
-
-  const team = orgPickerTeamIndex.get(orgPickerSelectedTeamKey);
   const rightType = getMemberPickerRightSearchType();
   const rightKeyword = getMemberPickerRightSearchKeyword();
+  const hasKeyword = !!normalizeSearchKeyword(rightKeyword);
 
-  const allUsers = (team.users || []).filter((u) => u.userId !== currentUser?.userId);
+  let candidateUsers = [];
+  if (hasKeyword) {
+    // 검색어가 있으면 "선택된 회사" 범위 내 전체 팀 구성원을 대상으로 검색한다.
+    // (loadOrgTree는 companySelect로 필터된 company 트리만 내려주므로 여기서 team.users를 합치면 된다.)
+    const byUserId = new Map();
+    for (const [, team] of orgPickerTeamIndex.entries()) {
+      for (const u of (team.users || [])) {
+        byUserId.set(u.userId, u);
+      }
+    }
+    candidateUsers = Array.from(byUserId.values());
+  } else {
+    if (!orgPickerSelectedTeamKey || !orgPickerTeamIndex.has(orgPickerSelectedTeamKey)) {
+      listEl.innerHTML = '<li class="empty-notice">부서를 선택하세요.</li>';
+      return;
+    }
+    const team = orgPickerTeamIndex.get(orgPickerSelectedTeamKey);
+    candidateUsers = (team.users || []);
+  }
+
+  const allUsers = candidateUsers.filter((u) => u.userId !== currentUser?.userId);
   const filtered = filterUsers(allUsers, rightType, rightKeyword);
 
   if (!filtered.length) {
