@@ -103,6 +103,10 @@ public final class OrgGroupCodes {
             return "GEN";
         }
         String upper = raw.trim().toUpperCase();
+        String alias = aliasFor(upper);
+        if (alias != null) {
+            return alias.length() <= maxLen ? alias : alias.substring(0, maxLen);
+        }
         StringBuilder ascii = new StringBuilder();
         for (int i = 0; i < upper.length() && ascii.length() < maxLen; i++) {
             char c = upper.charAt(i);
@@ -115,6 +119,27 @@ public final class OrgGroupCodes {
         }
         int h = Math.abs(upper.hashCode());
         return "N" + Integer.toString(h, 36).toUpperCase();
+    }
+
+    private static String aliasFor(String normalizedUpperText) {
+        if ("운영본부".equals(normalizedUpperText)) return "OPS_HQ";
+        if ("품질본부".equals(normalizedUpperText)) return "QA_HQ";
+        if ("기술본부".equals(normalizedUpperText)) return "INFRA";
+        if ("경영지원본부".equals(normalizedUpperText)) return "MGMT_HQ";
+        if ("영업본부".equals(normalizedUpperText)) return "SALES_HQ";
+        if ("기획본부".equals(normalizedUpperText)) return "PLAN_HQ";
+        if ("감사본부".equals(normalizedUpperText)) return "AUDIT_HQ";
+        if ("미지정 본부".equals(normalizedUpperText) || "미지정본부".equals(normalizedUpperText)) return "RETIREDEPT";
+        if ("IT운영팀".equals(normalizedUpperText)) return "ITOPS";
+        if ("테스트팀".equals(normalizedUpperText)) return "QA_TEAM";
+        if ("개발1팀".equals(normalizedUpperText)) return "DEV_TEAM1";
+        if ("개발2팀".equals(normalizedUpperText)) return "DEV_TEAM2";
+        if ("인사총무팀".equals(normalizedUpperText)) return "HR_TEAM";
+        if ("영업1팀".equals(normalizedUpperText)) return "SALES_TEAM1";
+        if ("기획전략팀".equals(normalizedUpperText)) return "PLAN_TEAM";
+        if ("보안감사팀".equals(normalizedUpperText)) return "SEC_AUDIT";
+        if ("미지정 팀".equals(normalizedUpperText) || "미지정팀".equals(normalizedUpperText)) return "RETIRETEAM";
+        return null;
     }
 
     private static String normalize(String value) {

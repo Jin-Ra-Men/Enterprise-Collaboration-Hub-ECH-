@@ -155,3 +155,12 @@
 - **발생 위치(파일/명령/기능)**: `backend/src/test/java/com/ech/backend/api/user/UserDirectoryApiTest.java`, 명령 `./gradlew test --no-daemon`
 - **원인**: `OrgGroupCodes`를 난수형 코드 생성에서 가독 코드 생성 API(`companyCode/divisionCode/teamCode`)로 변경했지만 테스트 코드가 구 메서드를 호출
 - **해결/현재 상태**: 테스트 코드를 신규 API 호출로 교체 완료
+
+---
+
+## 2026-03-26 — OrgGroupCodes alias switch 상수식 컴파일 오류
+
+- **에러 요약**: `./gradlew compileJava` 실행 시 `constant string expression required` 다수 발생
+- **발생 위치(파일/명령/기능)**: `backend/src/main/java/com/ech/backend/domain/org/OrgGroupCodes.java`, 명령 `./gradlew compileJava`
+- **원인**: `switch` case 라벨에 `"문자열".toUpperCase()`를 사용하여 컴파일 타임 상수 조건을 위반
+- **해결/현재 상태**: `switch`를 `if` 체인 비교로 교체하여 컴파일 가능하도록 수정
