@@ -2,6 +2,16 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-03-26
+
+### Added
+- `docs/sql/migrate_users_add_org_columns.sql`: `users`에 `company_name` / `division_name` / `team_name` 컬럼 추가(기존 DB용 idempotent `ALTER`)
+- `docs/sql/backfill_users_org_hierarchy.sql`: 시드와 동일한 사번별 조직 값 백필(외부 계정·미등록 사번 보조 로직 포함)
+
+### Changed
+- `docs/DB_SCHEMA.md`: `users` 명세에 조직 3컬럼 반영
+- `README.md`, `docs/HANDOVER.md`, `docs/ENVIRONMENT_SETUP.md`, `docs/FEATURE_SPEC.md`: 마이그레이션·백필 절차 안내
+
 ## 2026-03-25 (17차)
 
 ### Fixed

@@ -53,7 +53,8 @@ SOCKET_PORT=3001
 psql -h localhost -p 5432 -U ech_user -d ech -f docs/sql/seed_test_users.sql
 ```
 
-스키마 초안 적용 후(`postgresql_schema_draft.sql` 등) 실행하는 것을 권장합니다.
+스키마 초안 적용 후(`postgresql_schema_draft.sql` 등) 실행하는 것을 권장합니다.  
+이미 만들어 둔 `users` 테이블에 `company_name` / `division_name` / `team_name` 컬럼이 없다면 먼저 `docs/sql/migrate_users_add_org_columns.sql`을 실행한 뒤 시드를 적용합니다.
 
 ## 6) 점검 체크리스트
 - Java 17 적용 확인 (`java -version`)
