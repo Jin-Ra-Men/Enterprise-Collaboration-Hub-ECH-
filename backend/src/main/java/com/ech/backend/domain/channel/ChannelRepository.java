@@ -13,9 +13,9 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
             SELECT c FROM Channel c
             WHERE EXISTS (
                 SELECT cm FROM ChannelMember cm
-                WHERE cm.channel.id = c.id AND cm.user.id = :userId
+                WHERE cm.channel.id = c.id AND cm.user.employeeNo = :employeeNo
             )
             ORDER BY c.createdAt DESC
             """)
-    List<Channel> findByMemberId(@Param("userId") Long userId);
+    List<Channel> findByMemberEmployeeNo(@Param("employeeNo") String employeeNo);
 }

@@ -9,7 +9,7 @@ public record ChannelResponse(
         String name,
         String description,
         String channelType,
-        Long createdByUserId,
+        String createdByEmployeeNo,
         OffsetDateTime createdAt,
         List<ChannelMemberResponse> members
 ) {

@@ -4,6 +4,6 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ChannelMemberRepository extends JpaRepository<ChannelMember, Long> {
-    boolean existsByChannelIdAndUserId(Long channelId, Long userId);
+    boolean existsByChannelIdAndUserEmployeeNo(Long channelId, String employeeNo);
     List<ChannelMember> findByChannelId(Long channelId);
 }

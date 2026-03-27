@@ -72,8 +72,8 @@ public class ChannelFileService {
         this.messageService = messageService;
     }
 
-    public List<ChannelFileResponse> listFiles(Long channelId, Long requesterUserId) {
-        requireChannelMember(channelId, requesterUserId);
+    public List<ChannelFileResponse> listFiles(Long channelId, String requesterEmployeeNo) {
+        requireChannelMember(channelId, requesterEmployeeNo);
         return channelFileRepository
                 .findByChannel_IdOrderByCreatedAtDesc(channelId, PageRequest.of(0, LIST_PAGE_SIZE))
                 .stream()
@@ -91,15 +91,15 @@ public class ChannelFileService {
      * 없을 경우 {@code application.yml}의 {@code app.file-storage-dir} 기본값을 사용한다.
      */
     @Transactional
-    public ChannelFileResponse uploadFile(Long channelId, Long uploaderUserId,
+    public ChannelFileResponse uploadFile(Long channelId, String uploaderEmployeeNo,
                                           MultipartFile file) throws IOException {
         validateFileSize(file);
 
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new IllegalArgumentException("채널을 찾을 수 없습니다."));
-        User uploader = userRepository.findById(uploaderUserId)
+        User uploader = userRepository.findByEmployeeNo(uploaderEmployeeNo)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-        requireChannelMember(channelId, uploaderUserId);
+        requireChannelMember(channelId, uploaderEmployeeNo);
 
         String originalName = sanitizeOriginalFilename(
                 file.getOriginalFilename() != null ? file.getOriginalFilename() : "file");
@@ -132,7 +132,7 @@ public class ChannelFileService {
 
         auditLogService.safeRecord(
                 AuditEventType.FILE_UPLOADED,
-                uploaderUserId, "FILE", saved.getId(),
+                uploader.getId(), "FILE", saved.getId(),
                 channel.getWorkspaceKey(),
                 "channelId=" + channelId + " filename=" + originalName + " size=" + file.getSize(),
                 null
@@ -146,8 +146,8 @@ public class ChannelFileService {
      * 저장된 storageKey를 이용해 현재 설정된 basedir에서 파일을 찾는다.
      */
     public ResponseEntity<Resource> downloadFile(Long channelId, Long fileId,
-                                                  Long requesterUserId) throws IOException {
-        requireChannelMember(channelId, requesterUserId);
+                                                  String requesterEmployeeNo) throws IOException {
+        requireChannelMember(channelId, requesterEmployeeNo);
         ChannelFile meta = channelFileRepository.findByIdAndChannel_Id(fileId, channelId)
                 .orElseThrow(() -> new IllegalArgumentException("파일을 찾을 수 없습니다."));
 
@@ -172,7 +172,7 @@ public class ChannelFileService {
         String workspaceKey = meta.getChannel().getWorkspaceKey();
         auditLogService.safeRecord(
                 AuditEventType.FILE_DOWNLOAD_INFO_ACCESSED,
-                requesterUserId, "FILE", fileId, workspaceKey,
+                resolveUserIdOrNull(requesterEmployeeNo), "FILE", fileId, workspaceKey,
                 "channelId=" + channelId + " fileId=" + fileId, null
         );
 
@@ -210,14 +210,14 @@ public class ChannelFileService {
     }
 
     public FileDownloadInfoResponse getDownloadInfo(Long channelId, Long fileId,
-                                                     Long requesterUserId) {
-        requireChannelMember(channelId, requesterUserId);
+                                                     String requesterEmployeeNo) {
+        requireChannelMember(channelId, requesterEmployeeNo);
         ChannelFile file = channelFileRepository
                 .findByIdAndChannel_Id(fileId, channelId)
                 .orElseThrow(() -> new IllegalArgumentException("파일을 찾을 수 없습니다."));
         auditLogService.safeRecord(
                 AuditEventType.FILE_DOWNLOAD_INFO_ACCESSED,
-                requesterUserId, "FILE", file.getId(), null,
+                resolveUserIdOrNull(requesterEmployeeNo), "FILE", file.getId(), null,
                 "channelId=" + channelId + " fileId=" + fileId, null
         );
         String baseDir = appSettingsService.getFileStorageDir();
@@ -233,9 +233,9 @@ public class ChannelFileService {
                                                  CreateChannelFileMetadataRequest request) {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new IllegalArgumentException("채널을 찾을 수 없습니다."));
-        User uploader = userRepository.findById(request.uploadedByUserId())
+        User uploader = userRepository.findByEmployeeNo(request.uploadedByEmployeeNo())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-        requireChannelMember(channelId, request.uploadedByUserId());
+        requireChannelMember(channelId, request.uploadedByEmployeeNo());
 
         String safeName = sanitizeOriginalFilename(request.originalFilename());
         String safeKey = request.storageKey().trim();
@@ -262,7 +262,7 @@ public class ChannelFileService {
         try {
             messageService.createFileAttachmentMessage(
                     saved.getChannel().getId(),
-                    saved.getUploadedBy().getId(),
+                    saved.getUploadedBy().getEmployeeNo(),
                     saved.getId(),
                     saved.getOriginalFilename(),
                     saved.getSizeBytes()
@@ -289,12 +289,12 @@ public class ChannelFileService {
         }
     }
 
-    private void requireChannelMember(Long channelId, Long userId) {
+    private void requireChannelMember(Long channelId, String employeeNo) {
         channelRepository.findById(channelId)
                 .orElseThrow(() -> new IllegalArgumentException("채널을 찾을 수 없습니다."));
-        userRepository.findById(userId)
+        userRepository.findByEmployeeNo(employeeNo)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-        if (!channelMemberRepository.existsByChannelIdAndUserId(channelId, userId)) {
+        if (!channelMemberRepository.existsByChannelIdAndUserEmployeeNo(channelId, employeeNo)) {
             throw new IllegalArgumentException("채널 멤버만 파일에 접근할 수 있습니다.");
         }
     }
@@ -316,12 +316,16 @@ public class ChannelFileService {
     private ChannelFileResponse toResponse(ChannelFile file) {
         return new ChannelFileResponse(
                 file.getId(), file.getChannel().getId(),
-                file.getUploadedBy().getId(),
+                file.getUploadedBy().getEmployeeNo(),
                 file.getUploadedBy().getName(),
                 file.getOriginalFilename(),
                 file.getContentType(), file.getSizeBytes(),
                 file.getStorageKey(), file.getCreatedAt()
         );
+    }
+
+    private Long resolveUserIdOrNull(String employeeNo) {
+        return userRepository.findByEmployeeNo(employeeNo).map(User::getId).orElse(null);
     }
 
     /**

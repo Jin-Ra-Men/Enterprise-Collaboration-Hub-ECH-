@@ -22,6 +22,24 @@
 
 ---
 
+## 2026-03-27 — `./gradlew test` 실패 (employee_no 계약 전환 중 테스트 컴파일)
+
+- **에러 요약**: `JwtUtilTest`에서 `UserPrincipal` 시그니처 변경(`userId` 제거) 미반영으로 `compileTestJava` 실패
+- **발생 위치(파일/명령/기능)**: `backend/src/test/java/com/ech/backend/util/JwtUtilTest.java`, 명령 `./gradlew test`
+- **원인**: 인증 principal을 `employeeNo` 중심으로 바꾸는 과정에서 테스트 생성자/검증 코드가 기존 `userId` 기준을 사용
+- **해결/현재 상태**: `JwtUtilTest`를 `employeeNo` 기준으로 수정 후 재실행 진행
+
+---
+
+## 2026-03-27 — `./gradlew test` 실패 (API 계약 전환 후 통합테스트 불일치)
+
+- **에러 요약**: `AuthApiTest`/`ChannelApiTest`가 구 필드(`userId`, `createdByUserId`)를 검증해 4건 실패
+- **발생 위치(파일/명령/기능)**: `backend/src/test/java/com/ech/backend/api/auth/AuthApiTest.java`, `backend/src/test/java/com/ech/backend/api/channel/ChannelApiTest.java`, 명령 `./gradlew test`
+- **원인**: API 요청·응답 계약을 `employeeNo` 중심으로 변경했지만 테스트 JSON/검증 경로가 구 계약에 머물러 있음
+- **해결/현재 상태**: 테스트 요청/검증을 `employeeNo` 계약으로 수정 후 재실행 진행
+
+---
+
 ## 2026-03-26 — 첨부파일 다운로드 시 감사로그 INSERT 실패 (read-only 트랜잭션)
 
 - **에러 요약**: 첨부파일 다운로드 시 서버 내부 오류가 발생하고, DB 로그에 `SQLState: 25006` / `read-only transaction` INSERT 실패가 기록됨

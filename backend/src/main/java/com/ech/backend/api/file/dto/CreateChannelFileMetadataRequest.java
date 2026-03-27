@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record CreateChannelFileMetadataRequest(
-        @NotNull Long uploadedByUserId,
+        @NotBlank @Size(max = 50) String uploadedByEmployeeNo,
         @NotBlank @Size(max = 500) String originalFilename,
         @NotBlank @Size(max = 255) String contentType,
         @NotNull @Min(1) @Max(536_870_912L) Long sizeBytes,

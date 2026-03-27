@@ -43,11 +43,11 @@ public class SearchService {
      *
      * @param keyword  검색 키워드 (최소 2자)
      * @param type     검색 대상 유형 (null 또는 ALL = 전체)
-     * @param userId   요청자 사용자 ID (채널 멤버십 필터링에 사용)
+     * @param employeeNo 요청자 사용자 사번 (채널 멤버십 필터링에 사용)
      * @param limit    최대 결과 건수 (1~50, 기본 20)
      */
     @Transactional(readOnly = true)
-    public SearchResponse search(String keyword, SearchType type, Long userId, int limit) {
+    public SearchResponse search(String keyword, SearchType type, String employeeNo, int limit) {
         if (keyword == null || keyword.trim().length() < 2) {
             throw new IllegalArgumentException("검색어는 2자 이상 입력해 주세요.");
         }
@@ -60,7 +60,7 @@ public class SearchService {
         PageRequest page = PageRequest.of(0, DEFAULT_PER_TYPE);
 
         if (searchType == SearchType.ALL || searchType == SearchType.MESSAGES) {
-            messageRepository.searchInJoinedChannels(kw, userId, page)
+            messageRepository.searchInJoinedChannels(kw, employeeNo, page)
                     .forEach(m -> items.add(new SearchResultItem(
                             "MESSAGE",
                             m.getId(),
@@ -73,7 +73,7 @@ public class SearchService {
         }
 
         if (searchType == SearchType.ALL || searchType == SearchType.FILES) {
-            channelFileRepository.searchInJoinedChannels(kw, userId, page)
+            channelFileRepository.searchInJoinedChannels(kw, employeeNo, page)
                     .forEach(f -> items.add(new SearchResultItem(
                             "FILE",
                             f.getId(),

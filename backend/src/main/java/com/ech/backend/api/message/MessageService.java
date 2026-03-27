@@ -51,7 +51,7 @@ public class MessageService {
     public MessageResponse createMessage(Long channelId, CreateMessageRequest request) {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new IllegalArgumentException("채널을 찾을 수 없습니다."));
-        User sender = userRepository.findById(request.senderId())
+        User sender = userRepository.findByEmployeeNo(request.senderId())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
         Message message = messageRepository.save(new Message(channel, sender, null, request.text()));
@@ -75,16 +75,16 @@ public class MessageService {
     @Transactional
     public MessageResponse createFileAttachmentMessage(
             Long channelId,
-            Long senderId,
+            String senderEmployeeNo,
             Long fileId,
             String originalFilename,
             long sizeBytes
     ) {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new IllegalArgumentException("채널을 찾을 수 없습니다."));
-        User sender = userRepository.findById(senderId)
+        User sender = userRepository.findByEmployeeNo(senderEmployeeNo)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-        if (!channelMemberRepository.existsByChannelIdAndUserId(channelId, senderId)) {
+        if (!channelMemberRepository.existsByChannelIdAndUserEmployeeNo(channelId, senderEmployeeNo)) {
             throw new ForbiddenException("채널에 참여한 사용자가 아닙니다.");
         }
         String body;
@@ -118,7 +118,7 @@ public class MessageService {
     public MessageResponse createReply(Long channelId, Long parentMessageId, CreateMessageRequest request) {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new IllegalArgumentException("채널을 찾을 수 없습니다."));
-        User sender = userRepository.findById(request.senderId())
+        User sender = userRepository.findByEmployeeNo(request.senderId())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         Message parent = messageRepository.findById(parentMessageId)
                 .orElseThrow(() -> new IllegalArgumentException("부모 메시지를 찾을 수 없습니다."));
@@ -154,8 +154,8 @@ public class MessageService {
                 .toList();
     }
 
-    public List<MessageResponse> getChannelMessages(Long channelId, Long userId, int limit) {
-        if (!channelMemberRepository.existsByChannelIdAndUserId(channelId, userId)) {
+    public List<MessageResponse> getChannelMessages(Long channelId, String employeeNo, int limit) {
+        if (!channelMemberRepository.existsByChannelIdAndUserEmployeeNo(channelId, employeeNo)) {
             throw new ForbiddenException("채널에 참여한 사용자가 아닙니다.");
         }
         List<Message> messages = messageRepository.findRecentByChannelId(
@@ -169,7 +169,7 @@ public class MessageService {
         return new MessageResponse(
                 message.getId(),
                 message.getChannel().getId(),
-                message.getSender().getId(),
+                message.getSender().getEmployeeNo(),
                 message.getSender().getName(),
                 parentMessageId,
                 message.getBody(),

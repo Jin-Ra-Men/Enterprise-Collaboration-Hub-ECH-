@@ -26,10 +26,10 @@ public class MessageController {
     @GetMapping
     public ApiResponse<List<MessageResponse>> getMessages(
             @PathVariable Long channelId,
-            @RequestParam Long userId,
+            @RequestParam String employeeNo,
             @RequestParam(defaultValue = "50") int limit
     ) {
-        return ApiResponse.success(messageService.getChannelMessages(channelId, userId, limit));
+        return ApiResponse.success(messageService.getChannelMessages(channelId, employeeNo, limit));
     }
 
     @PostMapping

@@ -153,6 +153,7 @@
   - DB 저장 실패 -> `message:error` (`DB_SAVE_FAILED`)
   - 저장 성공한 경우에만 `message:new` 브로드캐스트
   - 프론트는 소켓 ACK 실패/지연(2.5초) 또는 소켓 미연결 시 `POST /api/channels/{channelId}/messages`로 자동 폴백해 전송 유실을 줄임
+  - 메시지 API 폴백 요청의 발신자 식별자(`senderId`)는 employee_no 문자열 기준으로 처리
 - 성능·메모리:
   - Socket.io `maxHttpBufferSize`로 비정상적으로 큰 패킷 완충 완화
   - `pg` Pool: `max`/`idleTimeoutMillis`/`connectionTimeoutMillis` 환경변수로 조정 가능

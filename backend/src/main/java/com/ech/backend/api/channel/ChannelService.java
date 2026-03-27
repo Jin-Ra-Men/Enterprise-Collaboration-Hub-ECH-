@@ -56,19 +56,19 @@ public class ChannelService {
 
     @Transactional
     public ChannelResponse createChannel(CreateChannelRequest request) {
-        User creator = userRepository.findById(request.createdByUserId())
+        User creator = userRepository.findByEmployeeNo(request.createdByEmployeeNo())
                 .orElseThrow(() -> new IllegalArgumentException("생성자를 찾을 수 없습니다."));
 
-        boolean dmWithPeers = request.channelType() == ChannelType.DM && !request.dmPeerUserIds().isEmpty();
+        boolean dmWithPeers = request.channelType() == ChannelType.DM && !request.dmPeerEmployeeNos().isEmpty();
 
         if (dmWithPeers) {
-            List<Long> participants = new ArrayList<>();
-            participants.add(request.createdByUserId());
-            participants.addAll(request.dmPeerUserIds());
-            List<Long> distinctSorted = participants.stream().distinct().sorted().toList();
-            for (Long uid : distinctSorted) {
-                if (!userRepository.existsById(uid)) {
-                    throw new IllegalArgumentException("존재하지 않는 사용자 ID입니다: " + uid);
+            List<String> participants = new ArrayList<>();
+            participants.add(request.createdByEmployeeNo());
+            participants.addAll(request.dmPeerEmployeeNos());
+            List<String> distinctSorted = participants.stream().distinct().sorted().toList();
+            for (String employeeNo : distinctSorted) {
+                if (userRepository.findByEmployeeNo(employeeNo).isEmpty()) {
+                    throw new IllegalArgumentException("존재하지 않는 사용자 사번입니다: " + employeeNo);
                 }
             }
 
@@ -76,8 +76,8 @@ public class ChannelService {
             String displayLabel = (request.name() != null && !request.name().isBlank())
                     ? request.name().trim()
                     : distinctSorted.stream()
-                            .filter(id -> !id.equals(request.createdByUserId()))
-                            .map(id -> userRepository.findById(id).map(User::getName).orElse("user#" + id))
+                            .filter(emp -> !emp.equals(request.createdByEmployeeNo()))
+                            .map(emp -> userRepository.findByEmployeeNo(emp).map(User::getName).orElse("user#" + emp))
                             .collect(Collectors.joining(", "));
             if (displayLabel.isBlank()) {
                 displayLabel = "DM";
@@ -104,11 +104,11 @@ public class ChannelService {
             );
             Channel savedChannel = channelRepository.save(channel);
             channelMemberRepository.save(new ChannelMember(savedChannel, creator, ChannelMemberRole.MANAGER));
-            for (Long uid : distinctSorted) {
-                if (uid.equals(creator.getId())) {
+            for (String emp : distinctSorted) {
+                if (emp.equals(creator.getEmployeeNo())) {
                     continue;
                 }
-                User peer = userRepository.findById(uid).orElseThrow();
+                User peer = userRepository.findByEmployeeNo(emp).orElseThrow();
                 channelMemberRepository.save(new ChannelMember(savedChannel, peer, ChannelMemberRole.MEMBER));
             }
             List<ChannelMember> members = channelMemberRepository.findByChannelId(savedChannel.getId());
@@ -155,7 +155,7 @@ public class ChannelService {
         return toResponse(savedChannel, List.of(ownerMembership));
     }
 
-    private static String buildDmCanonicalName(List<Long> sortedParticipantIds) {
+    private static String buildDmCanonicalName(List<String> sortedParticipantIds) {
         String raw = sortedParticipantIds.stream()
                 .map(String::valueOf)
                 .collect(Collectors.joining("_"));
@@ -173,15 +173,15 @@ public class ChannelService {
         }
     }
 
-    private void ensureDmParticipantsMembers(Channel channel, List<Long> participantIds) {
-        Long creatorId = channel.getCreatedBy().getId();
-        for (Long uid : participantIds) {
-            if (channelMemberRepository.existsByChannelIdAndUserId(channel.getId(), uid)) {
+    private void ensureDmParticipantsMembers(Channel channel, List<String> participantIds) {
+        String creatorEmployeeNo = channel.getCreatedBy().getEmployeeNo();
+        for (String employeeNo : participantIds) {
+            if (channelMemberRepository.existsByChannelIdAndUserEmployeeNo(channel.getId(), employeeNo)) {
                 continue;
             }
-            User u = userRepository.findById(uid)
-                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + uid));
-            ChannelMemberRole role = uid.equals(creatorId) ? ChannelMemberRole.MANAGER : ChannelMemberRole.MEMBER;
+            User u = userRepository.findByEmployeeNo(employeeNo)
+                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + employeeNo));
+            ChannelMemberRole role = employeeNo.equals(creatorEmployeeNo) ? ChannelMemberRole.MANAGER : ChannelMemberRole.MEMBER;
             channelMemberRepository.save(new ChannelMember(channel, u, role));
         }
     }
@@ -197,10 +197,10 @@ public class ChannelService {
     public ChannelResponse joinChannel(Long channelId, JoinChannelRequest request) {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new IllegalArgumentException("채널을 찾을 수 없습니다."));
-        User user = userRepository.findById(request.userId())
+        User user = userRepository.findByEmployeeNo(request.employeeNo())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
-        if (channelMemberRepository.existsByChannelIdAndUserId(channelId, request.userId())) {
+        if (channelMemberRepository.existsByChannelIdAndUserEmployeeNo(channelId, request.employeeNo())) {
             throw new IllegalArgumentException("이미 채널에 참여한 사용자입니다.");
         }
 
@@ -220,8 +220,8 @@ public class ChannelService {
         return toResponse(channel, members);
     }
 
-    public List<ChannelSummaryResponse> getMyChannels(Long userId) {
-        return channelRepository.findByMemberId(userId).stream()
+    public List<ChannelSummaryResponse> getMyChannels(String employeeNo) {
+        return channelRepository.findByMemberEmployeeNo(employeeNo).stream()
                 .map(channel -> {
                     int memberCount = channelMemberRepository.findByChannelId(channel.getId()).size();
                     return new ChannelSummaryResponse(
@@ -252,7 +252,7 @@ public class ChannelService {
                 .map(member -> {
                     String emp = member.getUser().getEmployeeNo();
                     return new ChannelMemberResponse(
-                            member.getUser().getId(),
+                            member.getUser().getEmployeeNo(),
                             member.getUser().getName(),
                             departmentByEmp.getOrDefault(emp, ""),
                             levelByEmp.getOrDefault(emp, null),
@@ -270,7 +270,7 @@ public class ChannelService {
                 channel.getName(),
                 channel.getDescription(),
                 channel.getChannelType().name(),
-                channel.getCreatedBy().getId(),
+                channel.getCreatedBy().getEmployeeNo(),
                 channel.getCreatedAt(),
                 memberResponses
         );

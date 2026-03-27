@@ -28,7 +28,7 @@ public class JwtUtil {
         Date now = new Date();
         Date exp = new Date(now.getTime() + expirationMs);
         return Jwts.builder()
-                .subject(String.valueOf(principal.userId()))
+                .subject(principal.employeeNo())
                 .claim("employeeNo", principal.employeeNo())
                 .claim("email", principal.email())
                 .claim("name", principal.name())
@@ -48,8 +48,7 @@ public class JwtUtil {
                     .parseSignedClaims(token)
                     .getPayload();
 
-            Long userId = Long.valueOf(claims.getSubject());
-            String employeeNo = claims.get("employeeNo", String.class);
+            String employeeNo = claims.getSubject();
             String email = claims.get("email", String.class);
             String name = claims.get("name", String.class);
             String department = claims.get("department", String.class);
@@ -57,7 +56,7 @@ public class JwtUtil {
             if (role == null) {
                 role = AppRole.MEMBER;
             }
-            return Optional.of(new UserPrincipal(userId, employeeNo, email, name, department, role));
+            return Optional.of(new UserPrincipal(employeeNo, email, name, department, role));
         } catch (JwtException | IllegalArgumentException e) {
             return Optional.empty();
         }

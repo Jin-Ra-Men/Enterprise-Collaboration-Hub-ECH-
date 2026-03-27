@@ -45,6 +45,8 @@ public abstract class BaseIntegrationTest {
 
     protected Long adminUserId;
     protected Long normalUserId;
+    protected String adminEmployeeNo;
+    protected String normalEmployeeNo;
     protected String adminToken;
     protected String userToken;
 
@@ -70,6 +72,9 @@ public abstract class BaseIntegrationTest {
                     user.setPasswordHash(passwordEncoder.encode(TEST_PASSWORD));
                     return userRepository.saveAndFlush(user).getId();
                 });
+
+        adminEmployeeNo = userRepository.findById(adminUserId).map(User::getEmployeeNo).orElse("TADM001");
+        normalEmployeeNo = userRepository.findById(normalUserId).map(User::getEmployeeNo).orElse("TUSR001");
 
         adminToken = fetchToken(TEST_ADMIN_EMAIL, TEST_PASSWORD);
         userToken = fetchToken(TEST_USER_EMAIL, TEST_PASSWORD);

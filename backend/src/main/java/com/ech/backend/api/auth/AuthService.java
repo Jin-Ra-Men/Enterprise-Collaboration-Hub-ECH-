@@ -61,7 +61,6 @@ public class AuthService {
             role = AppRole.MEMBER;
         }
         UserPrincipal principal = new UserPrincipal(
-                user.getId(),
                 user.getEmployeeNo(),
                 user.getEmail(),
                 user.getName(),
@@ -83,17 +82,17 @@ public class AuthService {
     }
 
     @Transactional
-    public String updateThemePreference(Long userId, String rawTheme) {
+    public String updateThemePreference(String employeeNo, String rawTheme) {
         String normalized = normalizeThemeOrDefault(rawTheme);
-        if (userRepository.updateThemePreferenceById(userId, normalized) <= 0) {
+        if (userRepository.updateThemePreferenceByEmployeeNo(employeeNo, normalized) <= 0) {
             throw new UnauthorizedException("사용자 정보를 찾을 수 없습니다.");
         }
         return normalized;
     }
 
     @Transactional(readOnly = true)
-    public String getThemePreference(Long userId) {
-        return userRepository.findById(userId)
+    public String getThemePreference(String employeeNo) {
+        return userRepository.findByEmployeeNo(employeeNo)
                 .map(User::getThemePreference)
                 .map(this::normalizeThemeOrDefault)
                 .orElse("dark");

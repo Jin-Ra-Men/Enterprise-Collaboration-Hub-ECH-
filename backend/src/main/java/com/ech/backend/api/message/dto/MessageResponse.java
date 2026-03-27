@@ -5,7 +5,7 @@ import java.time.OffsetDateTime;
 public record MessageResponse(
         Long messageId,
         Long channelId,
-        Long senderId,
+        String senderId,
         String senderName,
         Long parentMessageId,
         String text,

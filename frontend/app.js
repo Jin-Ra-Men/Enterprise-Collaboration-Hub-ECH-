@@ -248,7 +248,7 @@ async function openUserProfile(userId) {
 }
 
 /** 프로필·기타에서 동일 플로우로 DM 채널 생성 후 입장 */
-async function startDmWithUser(userId, displayName) {
+async function startDmWithUser(userId, displayName, peerEmployeeNo = "") {
   if (!currentUser || userId == null || userId === "") return;
   const uid = Number(userId);
   if (uid === Number(currentUser.userId)) {
@@ -265,8 +265,8 @@ async function startDmWithUser(userId, displayName) {
         name: dmName,
         description: dmName,
         channelType: "DM",
-        createdByUserId: currentUser.userId,
-        dmPeerUserIds: [uid],
+        createdByEmployeeNo: currentUser.employeeNo,
+        dmPeerEmployeeNos: [String(peerEmployeeNo || "").trim() || String(uid)],
       }),
     });
     const json = await res.json();
@@ -291,7 +291,7 @@ async function loadChannelFiles(channelId) {
   listEl.innerHTML = "";
   if (emptyEl) emptyEl.classList.add("hidden");
   try {
-    const res  = await apiFetch(`/api/channels/${channelId}/files?userId=${currentUser.userId}`);
+    const res  = await apiFetch(`/api/channels/${channelId}/files?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`);
     const json = await res.json();
     if (!res.ok) return;
     const files = json.data || [];
@@ -302,7 +302,7 @@ async function loadChannelFiles(channelId) {
     files.forEach((f) => {
       const li = document.createElement("li");
       li.className = "channel-file-item";
-      const who = f.uploaderName ? escHtml(f.uploaderName) : `user#${f.uploadedByUserId}`;
+      const who = f.uploaderName ? escHtml(f.uploaderName) : `emp#${f.uploadedByEmployeeNo}`;
       li.innerHTML = `
         <span class="channel-file-icon">📎</span>
         <span class="channel-file-meta">
@@ -324,7 +324,7 @@ async function downloadChannelFile(fileId, filename) {
   if (!activeChannelId || !currentUser) return;
   try {
     const res = await fetch(
-      `${API_BASE}/api/channels/${activeChannelId}/files/${fileId}/download?userId=${currentUser.userId}`,
+      `${API_BASE}/api/channels/${activeChannelId}/files/${fileId}/download?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
       { headers: { Authorization: `Bearer ${getToken()}` } }
     );
     if (!res.ok) {
@@ -856,7 +856,7 @@ function hideLoginError() {
 async function loadMyChannels() {
   if (!currentUser) return;
   try {
-    const res  = await apiFetch(`/api/channels?userId=${currentUser.userId}`);
+    const res  = await apiFetch(`/api/channels?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`);
     const json = await res.json();
     if (!res.ok) return;
     const channels = json.data || [];
@@ -937,7 +937,7 @@ async function selectChannel(channelId, channelName, channelType) {
 async function loadMessages(channelId) {
   if (!currentUser) return;
   try {
-    const res  = await apiFetch(`/api/channels/${channelId}/messages?userId=${currentUser.userId}&limit=50`);
+    const res  = await apiFetch(`/api/channels/${channelId}/messages?employeeNo=${encodeURIComponent(currentUser.employeeNo)}&limit=50`);
     const json = await res.json();
     messagesEl.innerHTML = "";
     if (!res.ok) { appendSystemMsg("메시지 로드 실패: " + (json.error?.message || "")); return; }
@@ -1395,7 +1395,7 @@ async function sendMessage() {
     // 소켓 저장이 실패해도 API 경로로 한 번 더 시도해 전송 유실을 줄인다.
     console.warn("[sendMessage] socket 전송 실패, API 폴백 시도:", socketErr);
     try {
-      await sendMessageViaApi(activeChannelId, currentUser.userId, text);
+      await sendMessageViaApi(activeChannelId, currentUser.employeeNo, text);
       appendSystemMsg("실시간 경로 오류로 API 경로로 전송했습니다.");
     } catch (apiErr) {
       appendSystemMsg("전송 실패: " + (apiErr?.message || "오류"));
@@ -1442,7 +1442,7 @@ async function uploadFile(file) {
   const formData = new FormData();
   formData.append("file", file);
   try {
-    const res  = await fetch(`${API_BASE}/api/channels/${activeChannelId}/files/upload?userId=${currentUser.userId}`, {
+    const res  = await fetch(`${API_BASE}/api/channels/${activeChannelId}/files/upload?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`, {
       method: "POST",
       headers: { Authorization: `Bearer ${getToken()}` },
       body: formData,
@@ -1583,7 +1583,7 @@ document.getElementById("btnConfirmCreateChannel").addEventListener("click", asy
         name,
         description: desc,
         channelType: type,
-        createdByUserId: currentUser.userId,
+        createdByEmployeeNo: currentUser.employeeNo,
       }),
     });
     const json = await res.json();
@@ -1631,8 +1631,8 @@ document.getElementById("btnConfirmCreateDm").addEventListener("click", async ()
         name: dmName,
         description: dmName,
         channelType: "DM",
-        createdByUserId: currentUser.userId,
-        dmPeerUserIds: selectedDmMembers.map((m) => m.userId),
+        createdByEmployeeNo: currentUser.employeeNo,
+        dmPeerEmployeeNos: selectedDmMembers.map((m) => m.employeeNo),
       }),
     });
     const json = await res.json();
@@ -1722,7 +1722,8 @@ document.getElementById("btnConfirmAddMembers").addEventListener("click", async 
 });
 document.getElementById("btnProfileDm").addEventListener("click", async () => {
   const name = document.getElementById("profileModalName")?.textContent?.trim() || "";
-  await startDmWithUser(profileViewUserId, name);
+  const peerEmployeeNo = document.getElementById("profileModalEmpNo")?.textContent?.trim() || "";
+  await startDmWithUser(profileViewUserId, name, peerEmployeeNo);
 });
 
 /* ==========================================================================

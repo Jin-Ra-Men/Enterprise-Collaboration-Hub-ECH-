@@ -40,9 +40,9 @@ public class AuthController {
      */
     @GetMapping("/me")
     public ApiResponse<MeResponse> me(@AuthenticationPrincipal UserPrincipal principal) {
-        String themePreference = authService.getThemePreference(principal.userId());
+        String themePreference = authService.getThemePreference(principal.employeeNo());
         return ApiResponse.success(new MeResponse(
-                principal.userId(),
+                null,
                 principal.employeeNo(),
                 principal.email(),
                 principal.name(),
@@ -57,6 +57,6 @@ public class AuthController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody UpdateThemePreferenceRequest request
     ) {
-        return ApiResponse.success(authService.updateThemePreference(principal.userId(), request.theme()));
+        return ApiResponse.success(authService.updateThemePreference(principal.employeeNo(), request.theme()));
     }
 }
