@@ -1319,6 +1319,61 @@ function joinSocketChannel(channelId) {
   socket.emit("channel:join", channelId);
 }
 
+async function sendMessageViaSocket(channelId, senderId, text) {
+  if (!socket || !socket.connected) {
+    const err = new Error("소켓 연결이 준비되지 않았습니다.");
+    err.code = "SOCKET_UNAVAILABLE";
+    throw err;
+  }
+  return new Promise((resolve, reject) => {
+    let finished = false;
+    const timer = setTimeout(() => {
+      if (finished) return;
+      finished = true;
+      const err = new Error("실시간 ACK 응답이 지연되었습니다.");
+      err.code = "SOCKET_ACK_TIMEOUT";
+      reject(err);
+    }, 2500);
+
+    socket.emit(
+      "message:send",
+      { channelId, senderId, text },
+      (ack) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        if (ack && ack.ok) {
+          resolve(ack);
+          return;
+        }
+        const err = new Error((ack && ack.message) || "실시간 전송 실패");
+        err.code = (ack && ack.code) || "SOCKET_ACK_FAILED";
+        reject(err);
+      }
+    );
+  });
+}
+
+async function sendMessageViaApi(channelId, senderId, text) {
+  const res = await apiFetch(`/api/channels/${channelId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ senderId, text }),
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.error?.message || "메시지 API 전송 실패");
+  }
+  const m = json.data;
+  appendMessageRealtime({
+    messageId: m.messageId,
+    channelId: m.channelId,
+    senderId: m.senderId,
+    senderName: m.senderName,
+    text: m.text,
+    createdAt: m.createdAt,
+  });
+}
+
 /* ==========================================================================
  * 메시지 전송
  * ========================================================================== */
@@ -1334,15 +1389,19 @@ async function sendMessage() {
   }
 
   if (!text) return;
-
-  socket.emit("message:send",
-    { channelId: activeChannelId, senderId: currentUser.userId, text },
-    (ack) => {
-      if (ack && !ack.ok) {
-        appendSystemMsg("전송 실패: " + (ack.message || "오류"));
-      }
+  try {
+    await sendMessageViaSocket(activeChannelId, currentUser.userId, text);
+  } catch (socketErr) {
+    // 소켓 저장이 실패해도 API 경로로 한 번 더 시도해 전송 유실을 줄인다.
+    console.warn("[sendMessage] socket 전송 실패, API 폴백 시도:", socketErr);
+    try {
+      await sendMessageViaApi(activeChannelId, currentUser.userId, text);
+      appendSystemMsg("실시간 경로 오류로 API 경로로 전송했습니다.");
+    } catch (apiErr) {
+      appendSystemMsg("전송 실패: " + (apiErr?.message || "오류"));
+      return;
     }
-  );
+  }
   messageInputEl.value = "";
 }
 
