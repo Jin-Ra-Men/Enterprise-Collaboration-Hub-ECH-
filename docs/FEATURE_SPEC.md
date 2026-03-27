@@ -25,6 +25,27 @@
 
 ---
 
+## DM 채널 생성 제약 자동 보정 (환경 호환)
+- 목적: 오래된 로컬 DB 스키마에서 DM 생성 실패를 자동 복구하여 사용자 DM 생성 흐름을 안정화
+- 사용자: 채팅 사용자, 운영자, 백엔드 개발자
+- 관련 화면/경로: 프론트 DM 생성(`modalCreateDm`, 프로필 `DM 보내기`) -> `POST /api/channels`
+- 관련 API: `POST /api/channels` (`channelType=DM`)
+- 관련 Socket 이벤트: 해당 없음
+- 입력/출력:
+  - 입력: `workspaceKey`, `name`, `description`, `createdByUserId`, `dmPeerUserIds`
+  - 출력: DM 채널 생성 또는 기존 DM 채널 재사용 응답
+- 상태 전이/예외 케이스:
+  - 구 스키마에서 `channels.channel_type` CHECK가 `PUBLIC/PRIVATE`만 허용하면 INSERT 실패 가능
+  - 기동 시 `DataInitializer.ensureChannelTypeConstraintAllowsDm()`가 `channel_type` 관련 CHECK 제약을 탐지/교체하여 `PUBLIC/PRIVATE/DM`으로 재구성
+- 권한/보안: 기존 채널 생성 권한 정책(`@RequireRole(MEMBER)`) 유지
+- 로그/감사 포인트: `DataInitializer` 보정 결과를 애플리케이션 로그로 기록
+- 테스트 기준:
+  - 구 스키마 DB에서 서버 기동 후 DM 생성 API 성공 확인
+  - 동일 참여자 DM 재생성 시 기존 채널 재사용 확인
+- 비고: 수동 반영 시 `docs/sql/migrate_channels_allow_dm_type.sql` 사용 가능
+
+---
+
 ## 공통 응답/에러 처리
 - 목적: API 응답 포맷을 일관화하고 예외를 표준 코드로 처리
 - 사용자: Backend 개발자, API 연동 개발자

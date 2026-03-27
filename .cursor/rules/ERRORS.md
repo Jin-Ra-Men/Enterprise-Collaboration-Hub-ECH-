@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-03-27 — DM 생성 실패 (channels channel_type 체크 제약)
+
+- **에러 요약**: DM 생성 API(`POST /api/channels`, `channelType=DM`) 호출 시 내부 오류 발생
+- **발생 위치(파일/명령/기능)**: 채널 생성 기능, DB `channels` 테이블 제약 `channels_channel_type_check`
+- **원인**: 기존 로컬 DB 제약이 `PUBLIC/PRIVATE`만 허용하고 `DM`을 허용하지 않아 INSERT 실패
+- **해결/현재 상태**: `DataInitializer` 기동 보정 로직으로 제약을 `PUBLIC/PRIVATE/DM`으로 재생성, 수동 적용용 SQL `docs/sql/migrate_channels_allow_dm_type.sql` 추가
+
+---
+
+## 2026-03-27 — `./gradlew test` 실패 (JVM 8 실행)
+
+- **에러 요약**: `./gradlew test` 실행 시 Spring Boot Gradle plugin 요구 버전 미충족으로 빌드 실패
+- **발생 위치(파일/명령/기능)**: 명령 `backend/./gradlew.bat test`
+- **원인**: 현재 셸 JVM이 Java 8로 실행되어, 프로젝트 요구사항(Java 17+)을 만족하지 못함
+- **해결/현재 상태**: `JAVA_HOME`을 JDK 17으로 지정 후 재실행하여 검증 진행 (2026-03-27 재확인: 동일 원인으로 테스트 미실행 상태)
+
+---
+
 ## 2026-03-26 — 첨부파일 다운로드 시 감사로그 INSERT 실패 (read-only 트랜잭션)
 
 - **에러 요약**: 첨부파일 다운로드 시 서버 내부 오류가 발생하고, DB 로그에 `SQLState: 25006` / `read-only transaction` INSERT 실패가 기록됨

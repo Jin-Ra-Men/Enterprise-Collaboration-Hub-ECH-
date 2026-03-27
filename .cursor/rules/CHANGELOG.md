@@ -5,12 +5,17 @@
 ## 2026-03-27
 
 ### Fixed
+- DM 생성 안정화: `DataInitializer`가 특정 이름 1개가 아니라 `channels.channel_type`에 걸린 모든 CHECK 제약을 탐지/교체해 `DM` 허용 제약(`PUBLIC/PRIVATE/DM`)을 일관되게 재구성하도록 보강
 - 조직도 팝업(멤버 피커): 다크(검정) 테마에서 상단 검색 유형 셀렉트·검색 입력 글자색이 어두워 가독성이 떨어지던 문제 수정(`--text-primary`·배경·placeholder 명시)
 
 ## 2026-03-27
 
 ### Changed
+- 채널 생성: 오래된 DB 제약(`channels_channel_type_check`)이 DM을 허용하지 않아 DM 생성이 실패하던 문제를 기동 시 자동 보정하도록 `DataInitializer`에 제약 재생성 로직 추가
 - Git: Windows에서 경로 공백 시 커밋 메시지 인코딩이 깨지는 문제를 방지하기 위해 `tools/git-editor-reword-msg.sh`·`tools/fix-theme-commit-messages.sh`(Git Bash UTF-8 reword) 사용 절차를 문서화하고, `main` 최근 5개 커밋 메시지를 재작성한 뒤 원격에 반영
+
+### Added
+- SQL 마이그레이션: `migrate_channels_allow_dm_type.sql` (`channels.channel_type` 체크 제약에 `DM` 포함)
 
 ## 2026-03-26 (7차)
 

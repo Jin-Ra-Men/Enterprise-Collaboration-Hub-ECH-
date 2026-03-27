@@ -42,6 +42,16 @@
 - 에러 이력: `.cursor/rules/ERRORS.md`
 - 코어 룰: `.cursor/rules/core-rules.mdc`
 
+## 3-0) 최신 운영 메모 (2026-03-27)
+- DM 생성 실패 이슈 대응:
+  - 증상: 프론트에서 `DM 생성 실패` 알림 노출
+  - 원인: 일부 로컬 DB에서 `channels.channel_type` CHECK 제약이 `PUBLIC/PRIVATE`만 허용
+  - 조치: `DataInitializer`가 부팅 시 `channel_type` 관련 CHECK 제약을 탐지/교체하여 `PUBLIC/PRIVATE/DM`으로 강제 정합
+  - 수동 보정: `docs/sql/migrate_channels_allow_dm_type.sql`
+- 점검 포인트:
+  - 서버 재기동 후 DM 생성 API(`POST /api/channels`, `channelType=DM`) 정상 여부 확인
+  - 기존 DB에 커스텀 제약명이 있어도 자동 보정 로그가 남는지 확인
+
 ## 3-1) 데이터베이스 스키마 인수인계 메모
 - 현재 기준 DB: PostgreSQL
 - 1차 확정 테이블:

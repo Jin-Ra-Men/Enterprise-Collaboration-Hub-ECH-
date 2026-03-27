@@ -8,12 +8,14 @@ import com.ech.backend.domain.settings.AppSettingKey;
 import com.ech.backend.domain.settings.AppSettingRepository;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
+import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,17 +44,20 @@ public class DataInitializer implements ApplicationRunner {
     private final PasswordEncoder passwordEncoder;
     private final RetentionPolicyRepository retentionPolicyRepository;
     private final AppSettingRepository appSettingRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     public DataInitializer(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             RetentionPolicyRepository retentionPolicyRepository,
-            AppSettingRepository appSettingRepository
+            AppSettingRepository appSettingRepository,
+            JdbcTemplate jdbcTemplate
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.retentionPolicyRepository = retentionPolicyRepository;
         this.appSettingRepository = appSettingRepository;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
@@ -61,6 +66,7 @@ public class DataInitializer implements ApplicationRunner {
         initDefaultPasswords();
         initDefaultRetentionPolicies();
         initDefaultAppSettings();
+        ensureChannelTypeConstraintAllowsDm();
     }
 
     private void initDefaultPasswords() {
@@ -119,6 +125,58 @@ public class DataInitializer implements ApplicationRunner {
                     new RetentionPolicy(typeName, retentionDays, isEnabled, description));
             log.info("[DataInitializer] 보존 정책 기본값 생성: {} ({}일, enabled={})",
                     typeName, retentionDays, isEnabled);
+        }
+    }
+
+    /**
+     * 과거 DB에서 channels_channel_type_check가 PUBLIC/PRIVATE만 허용하는 경우
+     * DM 채널 생성이 실패하므로 기동 시 안전하게 보정한다.
+     */
+    private void ensureChannelTypeConstraintAllowsDm() {
+        try {
+            List<String> constraintNames = jdbcTemplate.query(
+                    """
+                            SELECT tc.constraint_name
+                            FROM information_schema.table_constraints
+                            WHERE tc.table_schema = current_schema()
+                              AND tc.table_name = 'channels'
+                              AND tc.constraint_type = 'CHECK'
+                              AND EXISTS (
+                                  SELECT 1
+                                  FROM information_schema.constraint_column_usage ccu
+                                  WHERE ccu.constraint_schema = tc.constraint_schema
+                                    AND ccu.constraint_name = tc.constraint_name
+                                    AND ccu.table_name = tc.table_name
+                                    AND ccu.column_name = 'channel_type'
+                              )
+                            """,
+                    (rs, rowNum) -> rs.getString(1)
+            );
+            for (String name : new ArrayList<>(constraintNames)) {
+                if (name == null || !name.matches("[A-Za-z0-9_]+")) {
+                    continue;
+                }
+                jdbcTemplate.execute("ALTER TABLE channels DROP CONSTRAINT " + name);
+            }
+            Integer hasNewConstraint = jdbcTemplate.queryForObject(
+                    """
+                            SELECT COUNT(*)
+                            FROM information_schema.table_constraints
+                            WHERE table_schema = current_schema()
+                              AND table_name = 'channels'
+                              AND constraint_name = 'channels_channel_type_check'
+                            """,
+                    Integer.class
+            );
+            if (hasNewConstraint == null || hasNewConstraint <= 0) {
+                jdbcTemplate.execute(
+                        "ALTER TABLE channels ADD CONSTRAINT channels_channel_type_check " +
+                                "CHECK (channel_type IN ('PUBLIC','PRIVATE','DM'))"
+                );
+            }
+            log.info("[DataInitializer] channels_channel_type_check 제약을 DM 허용으로 보정했습니다.");
+        } catch (Exception e) {
+            log.warn("[DataInitializer] channels channel_type 제약 보정 실패: {}", e.getMessage());
         }
     }
 }
