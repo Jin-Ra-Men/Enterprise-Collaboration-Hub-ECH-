@@ -26,7 +26,7 @@ public class Message {
     private Channel channel;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sender_id", nullable = false)
+    @JoinColumn(name = "sender_id", referencedColumnName = "employee_no", nullable = false)
     private User sender;
 
     @ManyToOne(fetch = FetchType.LAZY)
