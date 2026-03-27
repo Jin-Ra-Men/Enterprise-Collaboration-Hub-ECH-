@@ -59,6 +59,7 @@ alwaysApply: true
 6. 한글이 깨져 보이면 즉시 수정합니다.
    - PowerShell `git commit --amend -m`은 재깨짐 위험이 커서 지양
    - UTF-8 메시지 파일 + `git commit -F`(가능하면 Git Bash) 또는 `tools/rewrite-head-commit-message.sh` 사용
+   - 작업 디렉터리 경로에 공백이 있으면 `GIT_EDITOR`에 셸이 경로를 끊지 않도록 `bash "…/스크립트.sh"`처럼 **bash로 스크립트를 명시 실행**하거나, `tools/git-editor-reword-msg.sh`를 참고한 재작성 스크립트를 사용합니다.
    - 이미 원격에 푸시한 뒤 수정이 필요하면 팀 정책에 따라 `push --force-with-lease`를 검토
 
 ### 작업 완료 시 커밋·푸시 (자동)
