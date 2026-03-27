@@ -27,7 +27,7 @@ class AuthApiTest extends BaseIntegrationTest {
                         .content(body))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.token", notNullValue()))
-                .andExpect(jsonPath("$.data.userId", notNullValue()))
+                .andExpect(jsonPath("$.data.employeeNo", notNullValue()))
                 .andExpect(jsonPath("$.error", nullValue()));
     }
 

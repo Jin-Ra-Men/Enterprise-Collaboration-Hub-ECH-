@@ -33,9 +33,9 @@ public class ChannelFileController {
     @GetMapping
     public ApiResponse<List<ChannelFileResponse>> list(
             @PathVariable Long channelId,
-            @RequestParam Long userId
+            @RequestParam String employeeNo
     ) {
-        return ApiResponse.success(channelFileService.listFiles(channelId, userId));
+        return ApiResponse.success(channelFileService.listFiles(channelId, employeeNo));
     }
 
     /**
@@ -46,10 +46,10 @@ public class ChannelFileController {
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ChannelFileResponse> upload(
             @PathVariable Long channelId,
-            @RequestParam Long userId,
+            @RequestParam String employeeNo,
             @RequestParam MultipartFile file
     ) throws IOException {
-        return ApiResponse.success(channelFileService.uploadFile(channelId, userId, file));
+        return ApiResponse.success(channelFileService.uploadFile(channelId, employeeNo, file));
     }
 
     /**
@@ -59,9 +59,9 @@ public class ChannelFileController {
     public ResponseEntity<Resource> download(
             @PathVariable Long channelId,
             @PathVariable Long fileId,
-            @RequestParam Long userId
+            @RequestParam String employeeNo
     ) throws IOException {
-        return channelFileService.downloadFile(channelId, fileId, userId);
+        return channelFileService.downloadFile(channelId, fileId, employeeNo);
     }
 
     /** 메타데이터만 등록 (하위 호환용). */
@@ -77,8 +77,8 @@ public class ChannelFileController {
     public ApiResponse<FileDownloadInfoResponse> downloadInfo(
             @PathVariable Long channelId,
             @PathVariable Long fileId,
-            @RequestParam Long userId
+            @RequestParam String employeeNo
     ) {
-        return ApiResponse.success(channelFileService.getDownloadInfo(channelId, fileId, userId));
+        return ApiResponse.success(channelFileService.getDownloadInfo(channelId, fileId, employeeNo));
     }
 }

@@ -9,7 +9,7 @@ public record WorkItemResponse(
         String status,
         Long sourceMessageId,
         Long sourceChannelId,
-        Long createdByUserId,
+        String createdByEmployeeNo,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {

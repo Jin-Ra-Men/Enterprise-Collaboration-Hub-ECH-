@@ -4,7 +4,7 @@ import java.time.OffsetDateTime;
 
 public record ChannelReadStateResponse(
         Long channelId,
-        Long userId,
+        String employeeNo,
         Long lastReadMessageId,
         OffsetDateTime updatedAt
 ) {

@@ -25,9 +25,9 @@ public class ChannelReadStateController {
     @GetMapping
     public ApiResponse<ChannelReadStateResponse> getReadState(
             @PathVariable Long channelId,
-            @RequestParam Long userId
+            @RequestParam String employeeNo
     ) {
-        return ApiResponse.success(channelReadStateService.getReadState(channelId, userId));
+        return ApiResponse.success(channelReadStateService.getReadState(channelId, employeeNo));
     }
 
     @PutMapping

@@ -4,5 +4,5 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ChannelReadStateRepository extends JpaRepository<ChannelReadState, Long> {
-    Optional<ChannelReadState> findByChannel_IdAndUser_Id(Long channelId, Long userId);
+    Optional<ChannelReadState> findByChannel_IdAndUser_EmployeeNo(Long channelId, String employeeNo);
 }

@@ -11,10 +11,10 @@ public record CreateChannelRequest(
         @NotBlank @Size(max = 100) String name,
         @Size(max = 2000) String description,
         @NotNull ChannelType channelType,
-        @NotNull Long createdByUserId,
-        List<Long> dmPeerUserIds
+        @NotBlank @Size(max = 50) String createdByEmployeeNo,
+        List<String> dmPeerEmployeeNos
 ) {
     public CreateChannelRequest {
-        dmPeerUserIds = dmPeerUserIds == null ? List.of() : List.copyOf(dmPeerUserIds);
+        dmPeerEmployeeNos = dmPeerEmployeeNos == null ? List.of() : List.copyOf(dmPeerEmployeeNos);
     }
 }

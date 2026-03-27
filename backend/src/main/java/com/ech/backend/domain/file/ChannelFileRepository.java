@@ -23,11 +23,11 @@ public interface ChannelFileRepository extends JpaRepository<ChannelFile, Long> 
               AND EXISTS (
                 SELECT cm FROM ChannelMember cm
                 WHERE cm.channel.id = ch.id
-                  AND cm.user.id = :userId
+                  AND cm.user.employeeNo = :employeeNo
               )
             ORDER BY f.createdAt DESC
             """)
     List<ChannelFile> searchInJoinedChannels(@Param("keyword") String keyword,
-                                              @Param("userId") Long userId,
+                                              @Param("employeeNo") String employeeNo,
                                               Pageable pageable);
 }

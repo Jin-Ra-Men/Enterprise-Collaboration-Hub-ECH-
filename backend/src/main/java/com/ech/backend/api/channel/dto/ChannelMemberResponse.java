@@ -3,7 +3,7 @@ package com.ech.backend.api.channel.dto;
 import java.time.OffsetDateTime;
 
 public record ChannelMemberResponse(
-        Long userId,
+        String employeeNo,
         String name,
         String department,
         String jobLevel,

@@ -42,7 +42,7 @@ public class SearchController {
             searchType = SearchType.ALL;
         }
 
-        Long userId = principal != null ? principal.userId() : null;
-        return ApiResponse.success(searchService.search(q, searchType, userId, limit));
+        String employeeNo = principal != null ? principal.employeeNo() : null;
+        return ApiResponse.success(searchService.search(q, searchType, employeeNo, limit));
     }
 }

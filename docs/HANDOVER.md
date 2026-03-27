@@ -59,6 +59,7 @@
   - 조치: 채널/메시지/파일/칸반/업무의 User 연관 `@JoinColumn`을 `users.employee_no` 기준으로 전환
   - 리얼타임: `senderId(users.id)` 입력을 내부에서 `employee_no`로 해석해 멤버십·메시지 저장 수행
   - 운영 SQL: `docs/sql/migrate_user_refs_id_to_employee_no.sql` 적용 후 검증 필요
+  - API 2차: 채널/메시지/파일/읽음상태 핵심 요청 파라미터를 `employeeNo` 기준으로 우선 전환
 
 ## 3-1) 데이터베이스 스키마 인수인계 메모
 - 현재 기준 DB: PostgreSQL

@@ -5,7 +5,7 @@ import java.time.OffsetDateTime;
 public record ChannelFileResponse(
         Long id,
         Long channelId,
-        Long uploadedByUserId,
+        String uploadedByEmployeeNo,
         String uploaderName,
         String originalFilename,
         String contentType,

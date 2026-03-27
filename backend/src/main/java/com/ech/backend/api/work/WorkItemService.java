@@ -52,10 +52,10 @@ public class WorkItemService {
     public WorkItemResponse createFromMessage(Long messageId, CreateWorkItemFromMessageRequest request) {
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new IllegalArgumentException("메시지를 찾을 수 없습니다."));
-        User creator = userRepository.findById(request.createdByUserId())
+        User creator = userRepository.findByEmployeeNo(request.createdByEmployeeNo())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         Long channelId = message.getChannel().getId();
-        if (!channelMemberRepository.existsByChannelIdAndUserId(channelId, request.createdByUserId())) {
+        if (!channelMemberRepository.existsByChannelIdAndUserEmployeeNo(channelId, request.createdByEmployeeNo())) {
             throw new IllegalArgumentException("채널 멤버만 메시지에서 업무를 생성할 수 있습니다.");
         }
         if (workItemRepository.findBySourceMessage_Id(messageId).isPresent()) {
@@ -134,7 +134,7 @@ public class WorkItemService {
                 item.getStatus(),
                 messageId,
                 item.getSourceChannel().getId(),
-                item.getCreatedBy().getId(),
+                item.getCreatedBy().getEmployeeNo(),
                 item.getCreatedAt(),
                 item.getUpdatedAt()
         );

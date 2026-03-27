@@ -5,6 +5,9 @@
 ## 2026-03-27
 
 ### Fixed
+- API 계약 2차 전환: 채널/메시지/파일/읽음상태 핵심 경로의 요청 식별자를 `employeeNo` 중심으로 전환하고, 관련 서비스/리포지토리 멤버십 체크를 `employee_no` 기준으로 정합화
+- 인증 토큰 principal: `userId` 제거 후 `employeeNo`를 JWT subject로 사용하도록 변경, 테마 설정 조회/수정도 사번 기준으로 처리
+- 통합 테스트 정합: `AuthApiTest`/`ChannelApiTest`/`JwtUtilTest`를 `employeeNo` 계약 변경에 맞춰 수정
 - 사용자 참조 FK 전환: `channels/channel_members/messages/channel_files/channel_read_states` 및 `kanban/work` 사용자 연관 `@JoinColumn`이 `users.id` 대신 `users.employee_no`를 참조하도록 매핑 변경
 - Realtime 메시지 저장: `senderId(users.id)` 입력을 내부에서 `employee_no`로 변환해 `channel_members.user_id` 멤버십 검사/`messages.sender_id` 저장이 employee_no 기준으로 동작하도록 수정
 - DB 스키마 초안: 사용자 참조 컬럼(`created_by/user_id/sender_id/uploaded_by/actor_user_id`) 정의를 `users.id` FK에서 `users.employee_no` FK로 정합화

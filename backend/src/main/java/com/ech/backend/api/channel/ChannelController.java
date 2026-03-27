@@ -28,8 +28,8 @@ public class ChannelController {
     }
 
     @GetMapping
-    public ApiResponse<List<ChannelSummaryResponse>> getMyChannels(@RequestParam Long userId) {
-        return ApiResponse.success(channelService.getMyChannels(userId));
+    public ApiResponse<List<ChannelSummaryResponse>> getMyChannels(@RequestParam String employeeNo) {
+        return ApiResponse.success(channelService.getMyChannels(employeeNo));
     }
 
     @PostMapping

@@ -23,9 +23,9 @@ class ChannelApiTest extends BaseIntegrationTest {
                   "name": "테스트채널",
                   "workspaceKey": "WS_TEST",
                   "channelType": "PUBLIC",
-                  "createdByUserId": %d
+                  "createdByEmployeeNo": "%s"
                 }
-                """.formatted(adminUserId);
+                """.formatted(adminEmployeeNo);
 
         mockMvc.perform(post("/api/channels")
                         .header("Authorization", "Bearer " + adminToken)
@@ -45,9 +45,9 @@ class ChannelApiTest extends BaseIntegrationTest {
                   "name": "멤버채널",
                   "workspaceKey": "WS_TEST",
                   "channelType": "PUBLIC",
-                  "createdByUserId": %d
+                  "createdByEmployeeNo": "%s"
                 }
-                """.formatted(normalUserId);
+                """.formatted(normalEmployeeNo);
 
         mockMvc.perform(post("/api/channels")
                         .header("Authorization", "Bearer " + userToken)
@@ -67,9 +67,9 @@ class ChannelApiTest extends BaseIntegrationTest {
                   "name": "조회테스트채널",
                   "workspaceKey": "WS_GET",
                   "channelType": "PUBLIC",
-                  "createdByUserId": %d
+                  "createdByEmployeeNo": "%s"
                 }
-                """.formatted(adminUserId);
+                """.formatted(adminEmployeeNo);
 
         String createResp = mockMvc.perform(post("/api/channels")
                         .header("Authorization", "Bearer " + adminToken)
