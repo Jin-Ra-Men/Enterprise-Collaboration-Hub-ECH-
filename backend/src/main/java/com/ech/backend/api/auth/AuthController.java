@@ -41,8 +41,9 @@ public class AuthController {
     @GetMapping("/me")
     public ApiResponse<MeResponse> me(@AuthenticationPrincipal UserPrincipal principal) {
         String themePreference = authService.getThemePreference(principal.employeeNo());
+        Long userId = authService.getUserId(principal.employeeNo());
         return ApiResponse.success(new MeResponse(
-                null,
+                userId,
                 principal.employeeNo(),
                 principal.email(),
                 principal.name(),

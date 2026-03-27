@@ -11,6 +11,7 @@ import com.ech.backend.domain.message.MessageRepository;
 import com.ech.backend.domain.retention.RetentionPolicy;
 import com.ech.backend.domain.retention.RetentionPolicyRepository;
 import com.ech.backend.domain.retention.RetentionResourceType;
+import com.ech.backend.domain.user.UserRepository;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,19 +30,22 @@ public class RetentionPolicyService {
     private final AuditLogRepository auditLogRepository;
     private final ErrorLogRepository errorLogRepository;
     private final AuditLogService auditLogService;
+    private final UserRepository userRepository;
 
     public RetentionPolicyService(
             RetentionPolicyRepository policyRepository,
             MessageRepository messageRepository,
             AuditLogRepository auditLogRepository,
             ErrorLogRepository errorLogRepository,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            UserRepository userRepository
     ) {
         this.policyRepository = policyRepository;
         this.messageRepository = messageRepository;
         this.auditLogRepository = auditLogRepository;
         this.errorLogRepository = errorLogRepository;
         this.auditLogService = auditLogService;
+        this.userRepository = userRepository;
     }
 
     @Transactional(readOnly = true)
@@ -57,13 +61,19 @@ public class RetentionPolicyService {
         RetentionPolicy policy = policyRepository.findByResourceType(normalizedType)
                 .orElseThrow(() -> new IllegalArgumentException("보존 정책을 찾을 수 없습니다: " + normalizedType));
 
+        Long updatedByUserId = request.updatedBy() == null
+                ? null
+                : userRepository.findByEmployeeNo(request.updatedBy())
+                        .map(u -> u.getId())
+                        .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + request.updatedBy()));
+
         policy.update(request.retentionDays(), request.isEnabled(),
-                request.description(), request.updatedBy());
+                request.description(), updatedByUserId);
         policyRepository.save(policy);
 
         auditLogService.safeRecord(
                 AuditEventType.RETENTION_POLICY_UPDATED,
-                request.updatedBy(),
+                updatedByUserId,
                 "RETENTION_POLICY",
                 policy.getId(),
                 null,
@@ -152,7 +162,7 @@ public class RetentionPolicyService {
                 p.getRetentionDays(),
                 p.isEnabled(),
                 p.getDescription(),
-                p.getUpdatedBy(),
+                p.getUpdatedBy() == null ? null : userRepository.findById(p.getUpdatedBy()).map(u -> u.getEmployeeNo()).orElse(null),
                 p.getUpdatedAt()
         );
     }

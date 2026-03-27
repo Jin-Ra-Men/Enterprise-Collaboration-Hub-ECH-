@@ -5,6 +5,7 @@
 ## 2026-03-27
 
 ### Fixed
+- 비핵심 API 전환: 칸반/릴리즈/설정/보존정책 DTO와 서비스 입력 식별자를 `employeeNo` 기반으로 확장하고, 관련 응답 필드(`createdBy`, `assignee`, `uploadedBy`, `updatedBy`)를 사번 기준으로 정합화
 - API 계약 2차 전환: 채널/메시지/파일/읽음상태 핵심 경로의 요청 식별자를 `employeeNo` 중심으로 전환하고, 관련 서비스/리포지토리 멤버십 체크를 `employee_no` 기준으로 정합화
 - 인증 토큰 principal: `userId` 제거 후 `employeeNo`를 JWT subject로 사용하도록 변경, 테마 설정 조회/수정도 사번 기준으로 처리
 - 통합 테스트 정합: `AuthApiTest`/`ChannelApiTest`/`JwtUtilTest`를 `employeeNo` 계약 변경에 맞춰 수정

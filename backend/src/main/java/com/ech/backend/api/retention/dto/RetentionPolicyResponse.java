@@ -8,7 +8,7 @@ public record RetentionPolicyResponse(
         int retentionDays,
         boolean isEnabled,
         String description,
-        Long updatedBy,
+        String updatedByEmployeeNo,
         OffsetDateTime updatedAt
 ) {
 }

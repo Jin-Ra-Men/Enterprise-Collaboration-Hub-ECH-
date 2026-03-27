@@ -43,10 +43,10 @@ public class ReleaseController {
             @RequestParam String version,
             @RequestParam MultipartFile file,
             @RequestParam(required = false) String description,
-            @RequestParam(required = false) Long uploadedBy
+            @RequestParam(required = false) String uploadedByEmployeeNo
     ) throws IOException {
         return ApiResponse.success(
-                releaseService.upload(version, description, uploadedBy, file));
+                releaseService.upload(version, description, uploadedByEmployeeNo, file));
     }
 
     /**
@@ -102,8 +102,8 @@ public class ReleaseController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(
             @PathVariable Long releaseId,
-            @RequestParam(required = false) Long actorUserId
+            @RequestParam(required = false) String actorEmployeeNo
     ) throws IOException {
-        releaseService.delete(releaseId, actorUserId);
+        releaseService.delete(releaseId, actorEmployeeNo);
     }
 }

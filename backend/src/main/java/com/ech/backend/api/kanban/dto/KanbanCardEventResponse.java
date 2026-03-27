@@ -6,7 +6,7 @@ import java.time.OffsetDateTime;
 public record KanbanCardEventResponse(
         Long id,
         KanbanCardEventType eventType,
-        Long actorUserId,
+        String actorEmployeeNo,
         String fromRef,
         String toRef,
         OffsetDateTime createdAt

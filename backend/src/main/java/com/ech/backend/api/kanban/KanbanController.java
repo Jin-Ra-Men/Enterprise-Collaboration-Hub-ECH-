@@ -122,14 +122,14 @@ public class KanbanController {
         return ApiResponse.success(kanbanService.addAssignee(cardId, request));
     }
 
-    @DeleteMapping("/cards/{cardId}/assignees/{assigneeUserId}")
+    @DeleteMapping("/cards/{cardId}/assignees/{assigneeEmployeeNo}")
     @RequireRole(AppRole.MANAGER)
     public ApiResponse<KanbanCardResponse> removeAssignee(
             @PathVariable Long cardId,
-            @PathVariable Long assigneeUserId,
-            @RequestParam Long actorUserId
+            @PathVariable String assigneeEmployeeNo,
+            @RequestParam String actorEmployeeNo
     ) {
-        return ApiResponse.success(kanbanService.removeAssignee(cardId, assigneeUserId, actorUserId));
+        return ApiResponse.success(kanbanService.removeAssignee(cardId, assigneeEmployeeNo, actorEmployeeNo));
     }
 
     @GetMapping("/cards/{cardId}/history")

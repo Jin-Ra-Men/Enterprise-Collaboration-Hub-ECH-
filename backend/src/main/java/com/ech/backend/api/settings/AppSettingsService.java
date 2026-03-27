@@ -5,6 +5,7 @@ import com.ech.backend.api.settings.dto.UpdateSettingRequest;
 import com.ech.backend.domain.settings.AppSetting;
 import com.ech.backend.domain.settings.AppSettingKey;
 import com.ech.backend.domain.settings.AppSettingRepository;
+import com.ech.backend.domain.user.UserRepository;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -18,9 +19,11 @@ public class AppSettingsService {
     private String defaultFileStorageDir;
 
     private final AppSettingRepository settingRepository;
+    private final UserRepository userRepository;
 
-    public AppSettingsService(AppSettingRepository settingRepository) {
+    public AppSettingsService(AppSettingRepository settingRepository, UserRepository userRepository) {
         this.settingRepository = settingRepository;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -60,13 +63,20 @@ public class AppSettingsService {
     public AppSettingResponse update(String key, UpdateSettingRequest request) {
         AppSetting setting = settingRepository.findByKey(key)
                 .orElseThrow(() -> new IllegalArgumentException("설정을 찾을 수 없습니다: " + key));
-        setting.update(request.value(), request.description(), request.updatedBy());
+        Long updatedByUserId = request.updatedBy() == null
+                ? null
+                : userRepository.findByEmployeeNo(request.updatedBy())
+                        .map(u -> u.getId())
+                        .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + request.updatedBy()));
+        setting.update(request.value(), request.description(), updatedByUserId);
         settingRepository.save(setting);
         return toResponse(setting);
     }
 
     private AppSettingResponse toResponse(AppSetting s) {
         return new AppSettingResponse(s.getId(), s.getKey(), s.getValue(),
-                s.getDescription(), s.getUpdatedBy(), s.getUpdatedAt());
+                s.getDescription(),
+                s.getUpdatedBy() == null ? null : userRepository.findById(s.getUpdatedBy()).map(u -> u.getEmployeeNo()).orElse(null),
+                s.getUpdatedAt());
     }
 }

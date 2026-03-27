@@ -7,7 +7,7 @@ public record KanbanBoardSummaryResponse(
         String workspaceKey,
         String name,
         String description,
-        Long createdByUserId,
+        String createdByEmployeeNo,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {
