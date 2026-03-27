@@ -5,6 +5,7 @@
 ## 2026-03-27
 
 ### Fixed
+- DM/채널 메시지 전송 안정화: 실시간 소켓 ACK 실패·지연 또는 소켓 미연결 시 `POST /api/channels/{channelId}/messages` API로 자동 폴백해 메시지 전송이 끊기지 않도록 보강
 - DM 생성 안정화: `DataInitializer`가 특정 이름 1개가 아니라 `channels.channel_type`에 걸린 모든 CHECK 제약을 탐지/교체해 `DM` 허용 제약(`PUBLIC/PRIVATE/DM`)을 일관되게 재구성하도록 보강
 - 조직도 팝업(멤버 피커): 다크(검정) 테마에서 상단 검색 유형 셀렉트·검색 입력 글자색이 어두워 가독성이 떨어지던 문제 수정(`--text-primary`·배경·placeholder 명시)
 
