@@ -12,6 +12,8 @@ import com.ech.backend.domain.release.DeploymentHistoryRepository;
 import com.ech.backend.domain.release.ReleaseStatus;
 import com.ech.backend.domain.release.ReleaseVersion;
 import com.ech.backend.domain.release.ReleaseVersionRepository;
+import com.ech.backend.domain.user.User;
+import com.ech.backend.domain.user.UserRepository;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -41,15 +43,18 @@ public class ReleaseService {
     private final ReleaseVersionRepository releaseVersionRepository;
     private final DeploymentHistoryRepository deploymentHistoryRepository;
     private final AuditLogService auditLogService;
+    private final UserRepository userRepository;
 
     public ReleaseService(
             ReleaseVersionRepository releaseVersionRepository,
             DeploymentHistoryRepository deploymentHistoryRepository,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            UserRepository userRepository
     ) {
         this.releaseVersionRepository = releaseVersionRepository;
         this.deploymentHistoryRepository = deploymentHistoryRepository;
         this.auditLogService = auditLogService;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -58,7 +63,7 @@ public class ReleaseService {
      */
     @Transactional
     public ReleaseVersionResponse upload(String version, String description,
-                                         Long uploadedBy, MultipartFile file) throws IOException {
+                                         String uploadedByEmployeeNo, MultipartFile file) throws IOException {
         if (releaseVersionRepository.findByVersion(version).isPresent()) {
             throw new IllegalArgumentException("이미 존재하는 버전입니다: " + version);
         }
@@ -71,6 +76,7 @@ public class ReleaseService {
 
         String checksum = saveFileWithChecksum(file.getInputStream(), targetPath);
 
+        Long uploadedBy = resolveUserId(uploadedByEmployeeNo);
         ReleaseVersion release = new ReleaseVersion(
                 version, originalName, targetPath.toString(),
                 file.getSize(), checksum, description, uploadedBy
@@ -131,13 +137,13 @@ public class ReleaseService {
         DeploymentHistory history = new DeploymentHistory(
                 target, DeploymentAction.ACTIVATED,
                 fromVersion, target.getVersion(),
-                request.actorUserId(), request.note()
+                resolveUserId(request.actorEmployeeNo()), request.note()
         );
         deploymentHistoryRepository.save(history);
 
         auditLogService.safeRecord(
                 AuditEventType.RELEASE_ACTIVATED,
-                request.actorUserId(), "RELEASE", releaseId, null,
+                resolveUserId(request.actorEmployeeNo()), "RELEASE", releaseId, null,
                 "version=" + target.getVersion() + " from=" + fromVersion,
                 null
         );
@@ -170,13 +176,13 @@ public class ReleaseService {
         DeploymentHistory history = new DeploymentHistory(
                 rollbackTarget, DeploymentAction.ROLLED_BACK,
                 fromVersion, rollbackTarget.getVersion(),
-                request.actorUserId(), request.note()
+                resolveUserId(request.actorEmployeeNo()), request.note()
         );
         deploymentHistoryRepository.save(history);
 
         auditLogService.safeRecord(
                 AuditEventType.RELEASE_ROLLED_BACK,
-                request.actorUserId(), "RELEASE", rollbackTarget.getId(), null,
+                resolveUserId(request.actorEmployeeNo()), "RELEASE", rollbackTarget.getId(), null,
                 "rollbackTo=" + rollbackTarget.getVersion() + " from=" + fromVersion,
                 null
         );
@@ -189,7 +195,7 @@ public class ReleaseService {
      * ACTIVE/PREVIOUS 상태는 삭제 불가.
      */
     @Transactional
-    public void delete(Long releaseId, Long actorUserId) throws IOException {
+    public void delete(Long releaseId, String actorEmployeeNo) throws IOException {
         ReleaseVersion release = findOrThrow(releaseId);
         if (release.getStatus() == ReleaseStatus.ACTIVE
                 || release.getStatus() == ReleaseStatus.PREVIOUS) {
@@ -208,6 +214,7 @@ public class ReleaseService {
             }
         }
 
+        Long actorUserId = resolveUserId(actorEmployeeNo);
         auditLogService.safeRecord(
                 AuditEventType.RELEASE_DELETED,
                 actorUserId, "RELEASE", releaseId, null,
@@ -267,7 +274,7 @@ public class ReleaseService {
                 r.getId(), r.getVersion(), r.getFileName(),
                 r.getFileSize(), r.getChecksum(),
                 r.getStatus().name(), r.getDescription(),
-                r.getUploadedBy(), r.getUploadedAt(), r.getActivatedAt()
+                resolveEmployeeNo(r.getUploadedBy()), r.getUploadedAt(), r.getActivatedAt()
         );
     }
 
@@ -276,7 +283,23 @@ public class ReleaseService {
                 h.getId(), h.getRelease().getId(),
                 h.getAction().name(),
                 h.getFromVersion(), h.getToVersion(),
-                h.getActorUserId(), h.getNote(), h.getCreatedAt()
+                resolveEmployeeNo(h.getActorUserId()), h.getNote(), h.getCreatedAt()
         );
+    }
+
+    private Long resolveUserId(String employeeNo) {
+        if (employeeNo == null || employeeNo.isBlank()) {
+            return null;
+        }
+        User user = userRepository.findByEmployeeNo(employeeNo.trim())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + employeeNo));
+        return user.getId();
+    }
+
+    private String resolveEmployeeNo(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        return userRepository.findById(userId).map(User::getEmployeeNo).orElse(null);
     }
 }

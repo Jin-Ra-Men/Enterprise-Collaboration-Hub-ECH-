@@ -60,6 +60,7 @@
   - 리얼타임: `senderId(users.id)` 입력을 내부에서 `employee_no`로 해석해 멤버십·메시지 저장 수행
   - 운영 SQL: `docs/sql/migrate_user_refs_id_to_employee_no.sql` 적용 후 검증 필요
   - API 2차: 채널/메시지/파일/읽음상태 핵심 요청 파라미터를 `employeeNo` 기준으로 우선 전환
+  - API 3차: 칸반/릴리즈/설정/보존정책의 actor·creator·updater·uploader 식별자도 employeeNo 기준으로 확장
 
 ## 3-1) 데이터베이스 스키마 인수인계 메모
 - 현재 기준 DB: PostgreSQL

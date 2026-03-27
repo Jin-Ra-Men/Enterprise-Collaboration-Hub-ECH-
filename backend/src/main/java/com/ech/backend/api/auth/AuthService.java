@@ -98,6 +98,13 @@ public class AuthService {
                 .orElse("dark");
     }
 
+    @Transactional(readOnly = true)
+    public Long getUserId(String employeeNo) {
+        return userRepository.findByEmployeeNo(employeeNo)
+                .map(User::getId)
+                .orElse(null);
+    }
+
     private String resolveDepartmentFromTeam(User user) {
         List<OrgGroupMember> members = orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos(
                 "TEAM",

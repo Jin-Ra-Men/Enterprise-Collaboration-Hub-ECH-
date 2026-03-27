@@ -1,9 +1,10 @@
 package com.ech.backend.api.kanban.dto;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 public record KanbanAssigneeMutationRequest(
-        @NotNull Long actorUserId,
-        @NotNull Long assigneeUserId
+        @NotBlank @Size(max = 50) String actorEmployeeNo,
+        @NotBlank @Size(max = 50) String assigneeEmployeeNo
 ) {
 }

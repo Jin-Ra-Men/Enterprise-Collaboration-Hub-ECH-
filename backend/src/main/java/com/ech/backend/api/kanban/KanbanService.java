@@ -72,7 +72,7 @@ public class KanbanService {
         if (boardRepository.findByWorkspaceKeyAndName(request.workspaceKey(), request.name()).isPresent()) {
             throw new IllegalArgumentException("동일 워크스페이스에 같은 이름의 보드가 이미 있습니다.");
         }
-        User creator = userRepository.findById(request.createdByUserId())
+        User creator = userRepository.findByEmployeeNo(request.createdByEmployeeNo())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         KanbanBoard board = boardRepository.save(new KanbanBoard(
                 request.workspaceKey().trim(),
@@ -132,7 +132,7 @@ public class KanbanService {
                 board.getWorkspaceKey(),
                 board.getName(),
                 board.getDescription(),
-                board.getCreatedBy().getId(),
+                board.getCreatedBy().getEmployeeNo(),
                 board.getCreatedAt(),
                 board.getUpdatedAt(),
                 columnResponses
@@ -165,7 +165,7 @@ public class KanbanService {
 
     @Transactional
     public KanbanColumnResponse updateColumn(Long boardId, Long columnId, UpdateKanbanColumnRequest request) {
-        userRepository.findById(request.actorUserId())
+        userRepository.findByEmployeeNo(request.actorEmployeeNo())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         KanbanColumn column = columnRepository.findByIdAndBoard_Id(columnId, boardId)
                 .orElseThrow(() -> new IllegalArgumentException("컬럼을 찾을 수 없습니다."));
@@ -197,7 +197,7 @@ public class KanbanService {
 
     @Transactional
     public KanbanCardResponse createCard(Long boardId, Long columnId, CreateKanbanCardRequest request) {
-        User actor = userRepository.findById(request.actorUserId())
+        User actor = userRepository.findByEmployeeNo(request.actorEmployeeNo())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         KanbanColumn column = columnRepository.findByIdAndBoard_Id(columnId, boardId)
                 .orElseThrow(() -> new IllegalArgumentException("컬럼을 찾을 수 없습니다."));
@@ -236,7 +236,7 @@ public class KanbanService {
 
     @Transactional
     public KanbanCardResponse updateCard(Long cardId, UpdateKanbanCardRequest request) {
-        User actor = userRepository.findById(request.actorUserId())
+        User actor = userRepository.findByEmployeeNo(request.actorEmployeeNo())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         KanbanCard card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new IllegalArgumentException("카드를 찾을 수 없습니다."));
@@ -294,13 +294,13 @@ public class KanbanService {
 
     @Transactional
     public KanbanCardResponse addAssignee(Long cardId, KanbanAssigneeMutationRequest request) {
-        User actor = userRepository.findById(request.actorUserId())
+        User actor = userRepository.findByEmployeeNo(request.actorEmployeeNo())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-        User assignee = userRepository.findById(request.assigneeUserId())
+        User assignee = userRepository.findByEmployeeNo(request.assigneeEmployeeNo())
                 .orElseThrow(() -> new IllegalArgumentException("담당자 사용자를 찾을 수 없습니다."));
         KanbanCard card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new IllegalArgumentException("카드를 찾을 수 없습니다."));
-        if (assigneeRepository.existsByCard_IdAndUser_Id(cardId, request.assigneeUserId())) {
+        if (assigneeRepository.existsByCard_IdAndUser_EmployeeNo(cardId, request.assigneeEmployeeNo())) {
             throw new IllegalArgumentException("이미 담당으로 지정된 사용자입니다.");
         }
         assigneeRepository.save(new KanbanCardAssignee(card, assignee));
@@ -309,7 +309,7 @@ public class KanbanService {
                 actor,
                 KanbanCardEventType.ASSIGNEE_ADDED,
                 null,
-                String.valueOf(assignee.getId())
+                assignee.getEmployeeNo()
         ));
         card.touch();
         card.getColumn().getBoard().touch();
@@ -319,19 +319,19 @@ public class KanbanService {
     }
 
     @Transactional
-    public KanbanCardResponse removeAssignee(Long cardId, Long assigneeUserId, Long actorUserId) {
-        User actor = userRepository.findById(actorUserId)
+    public KanbanCardResponse removeAssignee(Long cardId, String assigneeEmployeeNo, String actorEmployeeNo) {
+        User actor = userRepository.findByEmployeeNo(actorEmployeeNo)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         KanbanCard card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new IllegalArgumentException("카드를 찾을 수 없습니다."));
-        KanbanCardAssignee link = assigneeRepository.findByCard_IdAndUser_Id(cardId, assigneeUserId)
+        KanbanCardAssignee link = assigneeRepository.findByCard_IdAndUser_EmployeeNo(cardId, assigneeEmployeeNo)
                 .orElseThrow(() -> new IllegalArgumentException("해당 담당자가 없습니다."));
         assigneeRepository.delete(link);
         eventRepository.save(new KanbanCardEvent(
                 card,
                 actor,
                 KanbanCardEventType.ASSIGNEE_REMOVED,
-                String.valueOf(assigneeUserId),
+                assigneeEmployeeNo,
                 null
         ));
         card.touch();
@@ -350,7 +350,7 @@ public class KanbanService {
                 .map(e -> new KanbanCardEventResponse(
                         e.getId(),
                         e.getEventType(),
-                        e.getActor().getId(),
+                        e.getActor().getEmployeeNo(),
                         e.getFromRef(),
                         e.getToRef(),
                         e.getCreatedAt()
@@ -364,15 +364,15 @@ public class KanbanService {
                 board.getWorkspaceKey(),
                 board.getName(),
                 board.getDescription(),
-                board.getCreatedBy().getId(),
+                board.getCreatedBy().getEmployeeNo(),
                 board.getCreatedAt(),
                 board.getUpdatedAt()
         );
     }
 
     private KanbanCardResponse toCardResponse(KanbanCard card) {
-        List<Long> assigneeIds = card.getAssignees().stream()
-                .map(a -> a.getUser().getId())
+        List<String> assigneeIds = card.getAssignees().stream()
+                .map(a -> a.getUser().getEmployeeNo())
                 .sorted()
                 .toList();
         return new KanbanCardResponse(

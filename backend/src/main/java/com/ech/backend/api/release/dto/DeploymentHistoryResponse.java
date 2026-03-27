@@ -8,7 +8,7 @@ public record DeploymentHistoryResponse(
         String action,
         String fromVersion,
         String toVersion,
-        Long actorUserId,
+        String actorEmployeeNo,
         String note,
         OffsetDateTime createdAt
 ) {

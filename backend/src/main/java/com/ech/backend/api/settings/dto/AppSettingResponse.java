@@ -7,7 +7,7 @@ public record AppSettingResponse(
         String key,
         String value,
         String description,
-        Long updatedBy,
+        String updatedByEmployeeNo,
         OffsetDateTime updatedAt
 ) {
 }

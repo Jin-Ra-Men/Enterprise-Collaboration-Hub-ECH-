@@ -10,7 +10,7 @@ public record ReleaseVersionResponse(
         String checksum,
         String status,
         String description,
-        Long uploadedBy,
+        String uploadedByEmployeeNo,
         OffsetDateTime uploadedAt,
         OffsetDateTime activatedAt
 ) {

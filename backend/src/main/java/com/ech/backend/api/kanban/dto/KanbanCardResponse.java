@@ -10,7 +10,7 @@ public record KanbanCardResponse(
         String description,
         int sortOrder,
         String status,
-        List<Long> assigneeUserIds,
+        List<String> assigneeEmployeeNos,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {
