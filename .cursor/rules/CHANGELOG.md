@@ -7,6 +7,11 @@
 ### Fixed
 - 조직도 팝업(멤버 피커): 다크(검정) 테마에서 상단 검색 유형 셀렉트·검색 입력 글자색이 어두워 가독성이 떨어지던 문제 수정(`--text-primary`·배경·placeholder 명시)
 
+## 2026-03-27
+
+### Changed
+- Git: Windows에서 경로 공백 시 커밋 메시지 인코딩이 깨지는 문제를 방지하기 위해 `tools/git-editor-reword-msg.sh`·`tools/fix-theme-commit-messages.sh`(Git Bash UTF-8 reword) 사용 절차를 문서화하고, `main` 최근 5개 커밋 메시지를 재작성한 뒤 원격에 반영
+
 ## 2026-03-26 (7차)
 
 ### Changed
