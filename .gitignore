@@ -16,3 +16,5 @@ tools/git_msg_*.txt
 tools/git_commit_msg.txt
 _tmp_commit_msg.txt
 fix_msg_utf8.txt
+commit-msg-*.txt
+msg-fix-org.txt
