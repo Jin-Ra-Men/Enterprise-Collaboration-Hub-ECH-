@@ -40,7 +40,7 @@ public class WorkItem {
     private Channel sourceChannel;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by", nullable = false)
+    @JoinColumn(name = "created_by", referencedColumnName = "employee_no", nullable = false)
     private User createdBy;
 
     @Column(name = "created_at", nullable = false)

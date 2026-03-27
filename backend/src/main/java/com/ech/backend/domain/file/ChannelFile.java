@@ -26,7 +26,7 @@ public class ChannelFile {
     private Channel channel;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "uploaded_by", nullable = false)
+    @JoinColumn(name = "uploaded_by", referencedColumnName = "employee_no", nullable = false)
     private User uploadedBy;
 
     @Column(name = "original_filename", nullable = false, length = 500)

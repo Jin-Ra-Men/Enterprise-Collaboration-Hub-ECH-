@@ -5,6 +5,9 @@
 ## 2026-03-27
 
 ### Fixed
+- 사용자 참조 FK 전환: `channels/channel_members/messages/channel_files/channel_read_states` 및 `kanban/work` 사용자 연관 `@JoinColumn`이 `users.id` 대신 `users.employee_no`를 참조하도록 매핑 변경
+- Realtime 메시지 저장: `senderId(users.id)` 입력을 내부에서 `employee_no`로 변환해 `channel_members.user_id` 멤버십 검사/`messages.sender_id` 저장이 employee_no 기준으로 동작하도록 수정
+- DB 스키마 초안: 사용자 참조 컬럼(`created_by/user_id/sender_id/uploaded_by/actor_user_id`) 정의를 `users.id` FK에서 `users.employee_no` FK로 정합화
 - DM/채널 메시지 전송 안정화: 실시간 소켓 ACK 실패·지연 또는 소켓 미연결 시 `POST /api/channels/{channelId}/messages` API로 자동 폴백해 메시지 전송이 끊기지 않도록 보강
 - DM 생성 안정화: `DataInitializer`가 특정 이름 1개가 아니라 `channels.channel_type`에 걸린 모든 CHECK 제약을 탐지/교체해 `DM` 허용 제약(`PUBLIC/PRIVATE/DM`)을 일관되게 재구성하도록 보강
 - 조직도 팝업(멤버 피커): 다크(검정) 테마에서 상단 검색 유형 셀렉트·검색 입력 글자색이 어두워 가독성이 떨어지던 문제 수정(`--text-primary`·배경·placeholder 명시)
@@ -17,6 +20,7 @@
 
 ### Added
 - SQL 마이그레이션: `migrate_channels_allow_dm_type.sql` (`channels.channel_type` 체크 제약에 `DM` 포함)
+- SQL 마이그레이션: `migrate_user_refs_id_to_employee_no.sql` (`users.id` 참조 컬럼 데이터를 `employee_no` 기반으로 이관)
 
 ## 2026-03-26 (7차)
 

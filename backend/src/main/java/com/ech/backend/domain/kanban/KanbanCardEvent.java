@@ -27,7 +27,7 @@ public class KanbanCardEvent {
     private KanbanCard card;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "actor_user_id", nullable = false)
+    @JoinColumn(name = "actor_user_id", referencedColumnName = "employee_no", nullable = false)
     private User actor;
 
     @Enumerated(EnumType.STRING)

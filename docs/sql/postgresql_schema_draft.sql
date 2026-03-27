@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS channels (
     name VARCHAR(100) NOT NULL,
     description TEXT,
     channel_type VARCHAR(20) NOT NULL DEFAULT 'PUBLIC',
-    created_by BIGINT NOT NULL REFERENCES users(id),
+    created_by VARCHAR(50) NOT NULL REFERENCES users(employee_no),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (workspace_key, name)
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS channels (
 CREATE TABLE IF NOT EXISTS channel_members (
     id BIGSERIAL PRIMARY KEY,
     channel_id BIGINT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
-    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id VARCHAR(50) NOT NULL REFERENCES users(employee_no) ON DELETE CASCADE,
     member_role VARCHAR(20) NOT NULL DEFAULT 'MEMBER',
     joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (channel_id, user_id)
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS channel_members (
 CREATE TABLE IF NOT EXISTS messages (
     id BIGSERIAL PRIMARY KEY,
     channel_id BIGINT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
-    sender_id BIGINT NOT NULL REFERENCES users(id),
+    sender_id VARCHAR(50) NOT NULL REFERENCES users(employee_no),
     parent_message_id BIGINT REFERENCES messages(id) ON DELETE SET NULL,
     body TEXT NOT NULL,
     message_type VARCHAR(20) NOT NULL DEFAULT 'TEXT',
@@ -63,7 +63,7 @@ CREATE INDEX IF NOT EXISTS idx_messages_parent_message_id ON messages(parent_mes
 CREATE TABLE IF NOT EXISTS channel_read_states (
     id BIGSERIAL PRIMARY KEY,
     channel_id BIGINT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
-    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id VARCHAR(50) NOT NULL REFERENCES users(employee_no) ON DELETE CASCADE,
     last_read_message_id BIGINT REFERENCES messages(id) ON DELETE SET NULL,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (channel_id, user_id)
@@ -75,7 +75,7 @@ CREATE INDEX IF NOT EXISTS idx_channel_read_states_channel_user ON channel_read_
 CREATE TABLE IF NOT EXISTS channel_files (
     id BIGSERIAL PRIMARY KEY,
     channel_id BIGINT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
-    uploaded_by BIGINT NOT NULL REFERENCES users(id),
+    uploaded_by VARCHAR(50) NOT NULL REFERENCES users(employee_no),
     original_filename VARCHAR(500) NOT NULL,
     content_type VARCHAR(255) NOT NULL,
     size_bytes BIGINT NOT NULL,
@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS kanban_boards (
     workspace_key VARCHAR(100) NOT NULL DEFAULT 'default',
     name VARCHAR(200) NOT NULL,
     description TEXT,
-    created_by BIGINT NOT NULL REFERENCES users(id),
+    created_by VARCHAR(50) NOT NULL REFERENCES users(employee_no),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (workspace_key, name)
@@ -123,7 +123,7 @@ CREATE INDEX IF NOT EXISTS idx_kanban_cards_column_id_sort ON kanban_cards(colum
 CREATE TABLE IF NOT EXISTS kanban_card_assignees (
     id BIGSERIAL PRIMARY KEY,
     card_id BIGINT NOT NULL REFERENCES kanban_cards(id) ON DELETE CASCADE,
-    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id VARCHAR(50) NOT NULL REFERENCES users(employee_no) ON DELETE CASCADE,
     UNIQUE (card_id, user_id)
 );
 
@@ -132,7 +132,7 @@ CREATE INDEX IF NOT EXISTS idx_kanban_card_assignees_user_id ON kanban_card_assi
 CREATE TABLE IF NOT EXISTS kanban_card_events (
     id BIGSERIAL PRIMARY KEY,
     card_id BIGINT NOT NULL REFERENCES kanban_cards(id) ON DELETE CASCADE,
-    actor_user_id BIGINT NOT NULL REFERENCES users(id),
+    actor_user_id VARCHAR(50) NOT NULL REFERENCES users(employee_no),
     event_type VARCHAR(40) NOT NULL,
     from_ref VARCHAR(500),
     to_ref VARCHAR(500),
@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS work_items (
     status VARCHAR(50) NOT NULL DEFAULT 'OPEN',
     source_message_id BIGINT UNIQUE REFERENCES messages(id) ON DELETE SET NULL,
     source_channel_id BIGINT NOT NULL REFERENCES channels(id),
-    created_by BIGINT NOT NULL REFERENCES users(id),
+    created_by VARCHAR(50) NOT NULL REFERENCES users(employee_no),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

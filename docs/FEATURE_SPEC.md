@@ -157,7 +157,7 @@
   - Socket.io `maxHttpBufferSize`로 비정상적으로 큰 패킷 완충 완화
   - `pg` Pool: `max`/`idleTimeoutMillis`/`connectionTimeoutMillis` 환경변수로 조정 가능
 - 권한/보안:
-  - 리얼타임 서버는 INSERT 전 `channel_members(channel_id, user_id)` 존재 여부로 발신자가 해당 채널 멤버인지 검사함 (직접 SQL로 넣은 메시지는 멤버가 아닌 발신자도 표시될 수 있음 — `docs/sql/cleanup_dev_messages.sql` 참고)
+  - 리얼타임 서버는 `senderId(users.id)`를 조회해 `employee_no`로 변환한 뒤, `channel_members(channel_id, user_id)`와 `messages.sender_id`를 employee_no 기준으로 처리한다.
 - 로그/감사 포인트:
   - `messages` 테이블의 `created_at` 기반 메시지 생성 이력 추적 가능
 - 테스트 기준:

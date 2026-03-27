@@ -55,6 +55,10 @@
   - 증상: DM 채널 진입은 되지만 메시지 전송이 실패하는 케이스 존재
   - 조치: 프론트 `sendMessage()`에 소켓 ACK 실패/지연(2.5초)·소켓 미연결 시 메시지 API(`POST /api/channels/{channelId}/messages`) 자동 폴백 추가
   - 효과: 실시간 저장 경로 장애/불일치가 있어도 사용자 메시지 전송 자체는 유지
+- 사용자 참조 키 전환(employee_no):
+  - 조치: 채널/메시지/파일/칸반/업무의 User 연관 `@JoinColumn`을 `users.employee_no` 기준으로 전환
+  - 리얼타임: `senderId(users.id)` 입력을 내부에서 `employee_no`로 해석해 멤버십·메시지 저장 수행
+  - 운영 SQL: `docs/sql/migrate_user_refs_id_to_employee_no.sql` 적용 후 검증 필요
 
 ## 3-1) 데이터베이스 스키마 인수인계 메모
 - 현재 기준 DB: PostgreSQL

@@ -27,7 +27,7 @@ public class ChannelMember {
     private Channel channel;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", referencedColumnName = "employee_no", nullable = false)
     private User user;
 
     @Enumerated(EnumType.STRING)

@@ -31,9 +31,21 @@ pool.on("remove", () => {
  * 메시지 저장. 재시도 로직 포함 (최대 3회, 지수 백오프).
  */
 async function saveMessage({ channelId, senderId, body }, retries = 3) {
+  const senderLookup = await pool.query(
+    `SELECT employee_no, name FROM users WHERE id = $1`,
+    [senderId]
+  );
+  if (senderLookup.rowCount === 0) {
+    const err = new Error("존재하지 않는 사용자입니다.");
+    err.code = "SENDER_NOT_FOUND";
+    throw err;
+  }
+  const senderEmployeeNo = senderLookup.rows[0].employee_no;
+  const senderName = senderLookup.rows[0].name || null;
+
   const memberCheck = await pool.query(
     `SELECT 1 FROM channel_members WHERE channel_id = $1 AND user_id = $2`,
-    [channelId, senderId]
+    [channelId, senderEmployeeNo]
   );
   if (memberCheck.rowCount === 0) {
     const err = new Error("채널 멤버가 아닌 사용자는 메시지를 보낼 수 없습니다.");
@@ -46,20 +58,14 @@ async function saveMessage({ channelId, senderId, body }, retries = 3) {
     VALUES ($1, $2, $3, 'TEXT', false, false, NOW(), NOW())
     RETURNING id, channel_id, sender_id, body, created_at
   `;
-  const senderQuery = `SELECT name FROM users WHERE id = $1`;
-  const values = [channelId, senderId, body];
+  const values = [channelId, senderEmployeeNo, body];
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const result = await pool.query(query, values);
       const row = result.rows[0];
       // 발신자 이름 조회 (프론트엔드 표시용)
-      try {
-        const senderResult = await pool.query(senderQuery, [senderId]);
-        row.sender_name = senderResult.rows[0]?.name || null;
-      } catch (_) {
-        row.sender_name = null;
-      }
+      row.sender_name = senderName;
       return row;
     } catch (err) {
       const isRetryable = isRetryableError(err);
