@@ -34,6 +34,9 @@ DB_USER=ech_user
 DB_PASSWORD=ech_password
 SPRING_PORT=8080
 SOCKET_PORT=3001
+# 백엔드→실시간 서버 내부 브로드캐스트 인증(선택). 미설정이면 realtime은 토큰 없이 허용, 운영에서는 양쪽에 동일 값 설정 권장.
+# REALTIME_INTERNAL_BASE_URL=http://localhost:3001
+# REALTIME_INTERNAL_TOKEN=
 ```
 
 ### 선택(성능·상한 튜닝)

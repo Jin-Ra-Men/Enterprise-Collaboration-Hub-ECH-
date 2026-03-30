@@ -1074,9 +1074,9 @@ async function removeChannelMemberFromPanel(targetEmp, displayName) {
       appendSystemMsg(`내보내기 실패: ${json.error?.message || res.status}`);
       return;
     }
-    appendSystemMsg(`${label} 님을 채널에서 내보냈습니다.`);
     await loadChannelMembers(activeChannelId);
     await loadMyChannels();
+    await loadMessages(activeChannelId);
   } catch (e) {
     console.error(e);
     appendSystemMsg("내보내기 중 오류가 발생했습니다.");
@@ -1127,7 +1127,11 @@ function createDateDividerElement(iso) {
 function shouldShowMessageTime(msgs, i) {
   const cur = msgs[i];
   const next = msgs[i + 1];
+  const curMt = String(cur.messageType || cur.message_type || "").toUpperCase();
+  if (curMt === "SYSTEM") return false;
   if (!next) return true;
+  const nextMt = String(next.messageType || next.message_type || "").toUpperCase();
+  if (nextMt === "SYSTEM") return true;
   if (String(next.senderId) !== String(cur.senderId)) return true;
   if (minuteKey(next.createdAt) !== minuteKey(cur.createdAt)) return true;
   return false;
@@ -1136,7 +1140,12 @@ function shouldShowMessageTime(msgs, i) {
 /** 아바타+이름 행: 이전 메시지와 발신자가 다를 때만 */
 function shouldShowAvatarForMessage(msgs, i) {
   if (i === 0) return true;
-  return String(msgs[i - 1].senderId) !== String(msgs[i].senderId);
+  const cur = msgs[i];
+  const prev = msgs[i - 1];
+  const curMt = String(cur.messageType || cur.message_type || "").toUpperCase();
+  const prevMt = String(prev.messageType || prev.message_type || "").toUpperCase();
+  if (prevMt === "SYSTEM" || curMt === "SYSTEM") return true;
+  return String(prev.senderId) !== String(cur.senderId);
 }
 
 /** API·소켓 메시지에서 파일 첨부 JSON 추출 */
@@ -1355,6 +1364,15 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
 }
 
 function createMessageRowElement(msg, { showAvatar, showTime }) {
+  const mt = String(msg.messageType || msg.message_type || "").toUpperCase();
+  if (mt === "SYSTEM") {
+    const div = document.createElement("div");
+    div.className = "msg-system";
+    if (msg.messageId != null) div.dataset.messageId = String(msg.messageId);
+    div.textContent = msg.text || "";
+    return div;
+  }
+
   const filePayload = tryParseFilePayload(msg);
   if (filePayload) {
     return createFileAttachmentRowFromMsg(msg, filePayload, { showAvatar, showTime });
@@ -1460,9 +1478,19 @@ function appendMessageRealtime(msg) {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
-function appendSystemMsg(text) {
+/**
+ * 채팅 영역 시스템 한 줄. 소켓·API 중복 표시 방지용 messageId(선택) 지원.
+ * @param {{ messageId?: number|string }} [options]
+ */
+function appendSystemMsg(text, options = {}) {
+  const mid = options.messageId != null && options.messageId !== "" ? String(options.messageId) : "";
+  if (mid) {
+    const existing = messagesEl.querySelector(`.msg-system[data-message-id="${mid}"]`);
+    if (existing) return;
+  }
   const div = document.createElement("div");
   div.className = "msg-system";
+  if (mid) div.dataset.messageId = mid;
   div.textContent = text;
   messagesEl.appendChild(div);
   messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -1524,6 +1552,11 @@ function initSocket() {
     if (Number(msg.channelId) === activeChannelId) {
       appendMessageRealtime(msg);
     }
+  });
+
+  socket.on("channel:system", (p) => {
+    if (Number(p.channelId) !== activeChannelId) return;
+    appendSystemMsg(p.text || "", { messageId: p.messageId });
   });
 
   socket.on("message:error", (err) => {

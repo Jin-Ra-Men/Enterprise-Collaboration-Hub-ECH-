@@ -150,6 +150,7 @@
   - `channel:join`
   - `message:send` (DB 저장 연계)
   - `message:new` (저장 성공 시 송신)
+  - `channel:system` (백엔드 내부 HTTP로 브로드캐스트 — 채널 운영 시스템 문구 등, payload: `channelId`, `text`, `createdAt`, `messageId`)
   - `message:error` (유효성/저장 실패)
   - `presence:set`
   - `presence:update`
@@ -171,6 +172,7 @@
 - DB 저장 성공 시에만 `message:new`가 채널 룸으로 전송됩니다.
 - `/health` 엔드포인트에서 DB 연결 상태(`db: ok/error`)를 함께 확인할 수 있습니다.
 - `pg` Pool은 `DB_POOL_MAX`, `DB_POOL_IDLE_MS`, `DB_POOL_CONNECT_TIMEOUT_MS`로 조정할 수 있습니다.
+- 백엔드는 커밋 후 `POST {app.realtime.internal-base-url}/internal/broadcast-channel-system`(선택 `X-Internal-Token` = `REALTIME_INTERNAL_TOKEN`)으로 채널 룸에 시스템 알림을 쏠 수 있다. 토큰 미설정 시 Realtime은 로컬 개발 편의상 인증 생략.
 
 ### 사용자 검색/Presence 인수인계 메모
 - 사용자 검색은 `org_group_members(TEAM)` + `org_groups.display_name`(팀 표시명)을 사용해 부서 필터를 지원합니다.

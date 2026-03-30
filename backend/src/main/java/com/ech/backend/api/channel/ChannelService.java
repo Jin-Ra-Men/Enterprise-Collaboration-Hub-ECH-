@@ -20,10 +20,13 @@ import com.ech.backend.domain.channel.ChannelRepository;
 import com.ech.backend.domain.channel.ChannelMemberUserIdColumnInspector;
 import com.ech.backend.domain.channel.ChannelReadStateRepository;
 import com.ech.backend.domain.channel.ChannelType;
+import com.ech.backend.domain.message.Message;
+import com.ech.backend.domain.message.MessageRepository;
 import com.ech.backend.domain.org.OrgGroupMember;
 import com.ech.backend.domain.org.OrgGroupMemberRepository;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
+import com.ech.backend.integration.realtime.RealtimeBroadcastClient;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -37,6 +40,8 @@ import java.util.stream.Collectors;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 @Transactional(readOnly = true)
@@ -51,6 +56,8 @@ public class ChannelService {
     private final AuthService authService;
     private final ChannelMemberUserIdColumnInspector channelMemberUserIdColumnInspector;
     private final JdbcTemplate jdbcTemplate;
+    private final MessageRepository messageRepository;
+    private final RealtimeBroadcastClient realtimeBroadcastClient;
 
     public ChannelService(
             ChannelRepository channelRepository,
@@ -61,7 +68,9 @@ public class ChannelService {
             AuditLogService auditLogService,
             AuthService authService,
             ChannelMemberUserIdColumnInspector channelMemberUserIdColumnInspector,
-            JdbcTemplate jdbcTemplate
+            JdbcTemplate jdbcTemplate,
+            MessageRepository messageRepository,
+            RealtimeBroadcastClient realtimeBroadcastClient
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
@@ -72,6 +81,8 @@ public class ChannelService {
         this.authService = authService;
         this.channelMemberUserIdColumnInspector = channelMemberUserIdColumnInspector;
         this.jdbcTemplate = jdbcTemplate;
+        this.messageRepository = messageRepository;
+        this.realtimeBroadcastClient = realtimeBroadcastClient;
     }
 
     @Transactional
@@ -289,6 +300,17 @@ public class ChannelService {
         channelReadStateRepository.deleteByChannel_IdAndUser_EmployeeNo(channelId, targetEmp);
         channelMemberRepository.delete(membership);
 
+        String targetLabel = userRepository.findByEmployeeNo(targetEmp)
+                .map(u -> {
+                    String n = u.getName();
+                    return n != null && !n.isBlank() ? n.trim() : targetEmp;
+                })
+                .orElse(targetEmp);
+        String systemLine = "「" + targetLabel + "」님을 채널에서 내보냈습니다.";
+        Message systemMsg = messageRepository.save(new Message(channel, actorUser, null, systemLine, "SYSTEM"));
+        String systemCreatedIso = systemMsg.getCreatedAt().toString();
+        Long systemMessageId = systemMsg.getId();
+
         auditLogService.safeRecord(
                 AuditEventType.CHANNEL_MEMBER_REMOVED,
                 actorUser.getId(),
@@ -298,6 +320,14 @@ public class ChannelService {
                 "removedUserId=" + removedUserId + ",removedEmployeeNo=" + targetEmp,
                 null
         );
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                realtimeBroadcastClient.broadcastChannelSystem(
+                        channelId, systemLine, systemCreatedIso, systemMessageId);
+            }
+        });
 
         List<ChannelMember> members = channelMemberRepository.findByChannelId(channelId);
         return toResponse(channel, members);

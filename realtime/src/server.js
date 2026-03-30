@@ -98,6 +98,47 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  /** Backend → 채널 룸 시스템 메시지 브로드캐스트(내부 전용). 환경변수 REALTIME_INTERNAL_TOKEN 이 있으면 X-Internal-Token 헤더와 일치해야 함. */
+  if (req.url === "/internal/broadcast-channel-system" && req.method === "POST") {
+    const expected = process.env.REALTIME_INTERNAL_TOKEN;
+    const given = req.headers["x-internal-token"];
+    if (expected && String(expected).trim() && String(given || "").trim() !== String(expected).trim()) {
+      res.writeHead(401, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: false, message: "Unauthorized" }));
+      return;
+    }
+    let buf = "";
+    req.on("data", (c) => {
+      buf += c;
+    });
+    req.on("end", () => {
+      try {
+        const body = buf ? JSON.parse(buf) : {};
+        const cid = Number(body.channelId);
+        const text = String(body.text || "").trim();
+        const createdAt = body.createdAt || new Date().toISOString();
+        const messageId = body.messageId != null ? Number(body.messageId) : null;
+        if (!Number.isInteger(cid) || !text) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: false, message: "channelId and text required" }));
+          return;
+        }
+        io.to(String(cid)).emit("channel:system", {
+          channelId: cid,
+          text,
+          createdAt,
+          messageId: Number.isInteger(messageId) ? messageId : null,
+        });
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (err) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: false, message: err.message || "error" }));
+      }
+    });
+    return;
+  }
+
   res.writeHead(404, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ message: "Not Found" }));
 });

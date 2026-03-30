@@ -119,7 +119,7 @@
   - 없는 사용자/채널 조회 시 예외
   - 이미 참여한 사용자 재참여 시 예외
   - 생성 시 생성자는 자동으로 `MANAGER` 멤버십 부여
-  - 내보내기 시 대상 사용자 `channel_read_states` 행 삭제 후 `channel_members` 행 삭제; 감사 `CHANNEL_MEMBER_REMOVED`
+  - 내보내기 시 대상 사용자 `channel_read_states` 행 삭제 후 `channel_members` 행 삭제; 감사 `CHANNEL_MEMBER_REMOVED`; 동일 트랜잭션에서 `messages`에 `message_type=SYSTEM` 본문(내보내진 사용자 표시명 포함) 저장, 커밋 후 Realtime **내부 HTTP**로 `channel:system` 브로드캐스트 → 모든 접속 클라이언트가 채팅에 동일 시스템 줄 표시·재조회 시에도 유지
 - 권한/보안:
   - 현재는 기본 도메인 동작 중심 (인증/인가 고도화는 다음 단계)
 - 로그/감사 포인트:
