@@ -265,7 +265,8 @@ public class ChannelFileService {
                     saved.getUploadedBy().getEmployeeNo(),
                     saved.getId(),
                     saved.getOriginalFilename(),
-                    saved.getSizeBytes()
+                    saved.getSizeBytes(),
+                    saved.getContentType()
             );
         } catch (Exception e) {
             log.warn("파일 첨부 메시지 기록 실패 (fileId={}): {}", saved.getId(), e.getMessage());

@@ -4,6 +4,9 @@
 
 ## 2026-03-30
 
+### Added
+- 채팅 이미지 첨부 UX: FILE 메시지 JSON에 `contentType` 저장, 프론트에서 이미지 인라인 표시·라이트박스 확대·확대 화면 다운로드, 작성 중 이미지 미리보기 썸네일
+
 ### Changed
 - `docs/FEATURE_SPEC.md` 전반: 채널·메시지·읽음·파일·칸반·업무·프레즌스·실시간 소켓 서술을 `employeeNo`/`actorEmployeeNo`/`createdByEmployeeNo` 등 현재 API DTO와 일치하도록 정리
 - `docs/HANDOVER.md` 6절 API 목록·채널/식별자/프론트 메모를 `employeeNo`·`dmPeerEmployeeNos`·메시지 `senderId`(사번) 등 현재 구현과 일치하도록 정리

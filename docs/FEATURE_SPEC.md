@@ -499,6 +499,7 @@
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:
   - 등록(메타만 API): `uploadedByEmployeeNo`, `originalFilename`, `contentType`, `sizeBytes`(1~512MiB), `storageKey`
+  - 업로드 후 `MessageService`가 `message_type=FILE` 메시지를 남기며, JSON 본문에 `kind`, `fileId`, `originalFilename`, `sizeBytes`, **`contentType`**(이미지 판별·프론트 인라인 표시용)을 포함한다.
   - 목록: 파일 id, `uploaderName`, 원본명, 타입, 크기, `storageKey`, 업로드 시각
   - 디스크 저장 경로(신규 업로드): `channels/{workspaceKey}_ch{channelId}_{채널명슬러그}/yyyy/mm/{uuid}_{원본파일명}` (기존 `channels/{channelId}/...` 키는 DB에 남아 있으면 다운로드 시 그 경로로 조회)
 - 상태 전이/예외 케이스:
@@ -614,7 +615,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 - 입력/출력:
   - **통합 피커**: 채널 생성·DM 생성·구성원 추가 모두 **동일한 `+` 버튼 기반 팝업**(`modalAddMemberPicker`)을 사용합니다. 팝업에서 좌측 조직도(회사>본부>팀) + 우측 검색/결과로 사용자 선택 후 상위 모달의 선택 태그에 반영됩니다.
   - 멤버 패널: `department`·`jobLevel`을 한 줄 요약, `jobPosition`·`jobTitle`은 값이 있을 때만 추가 표시
-  - 파일 업로드 성공 시: 일반 텍스트 메시지와 동일한 **메시지 행**(아바타·발신자·시간) 안에 첨부 인라인(파일명·크기·다운로드) 표시
+  - 파일 업로드 성공 시: 일반 텍스트 메시지와 동일한 **메시지 행**(아바타·발신자·시간) 안에 첨부 인라인 표시 — **이미지**(`contentType` 또는 확장자 기준)는 썸네일 + 클릭 시 확대 모달(`modalImagePreview`) + 모달 내 다운로드, 그 외는 파일명·크기·다운로드 버튼 행
   - **날짜 구분선**: 스레드 첫 메시지 또는 로컬 날짜가 바뀔 때 채팅 영역에 날짜 pill 표시
   - UI: CSS 변수 기반 **다크·보라 액센트** 톤(모달·관리자·검색·조직도 블록 포함)
   - **테마 선택**: 로그인 사용자 영역의 톱니바퀴 버튼으로 팝업을 열어 `검정`(기본 다크·보라) / `하양`(라이트·인디고) / `파랑`(네이비·시안 액센트) 선택. 즉시 적용되며 `PUT /api/auth/me/theme`로 사용자별 DB(`users.theme_preference`)에 저장되어 로그아웃/재로그인 후에도 유지

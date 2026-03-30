@@ -280,6 +280,7 @@
 ### 프론트엔드 데모 UI 메모
 - 동료 **프로필 모달**(`modalUserProfile`): `GET /api/users/profile?employeeNo=`로 로드. 역할·계정 상태는 표시하지 않음. **직급**(`jobLevel`)은 항상 행(없으면 `-`), **직위**(`jobPosition`)·**직책**(`jobTitle`)은 값이 있을 때만 해당 행 표시. **DM 보내기**(`btnProfileDm`)는 `startDmWithUser`로 `POST /api/channels`에 `channelType: DM`, `createdByEmployeeNo`, `dmPeerEmployeeNos: [상대 사번]`을 보내 서버가 내부 이름·멤버십을 처리한 뒤 `selectChannel`로 전환(자기 자신이면 버튼 비활성). DB `channels.channel_type`은 `DM` 문자열로 저장됩니다.
 - **프레즌스**: `presence:set`/`presence:update`/스냅샷 키는 **사번 문자열**. 채팅·멤버 패널에서 `[data-presence-user]`에 사번을 두고 `refreshPresenceDots`가 갱신합니다.
+- **이미지 첨부**: `contentType`이 이미지이거나 확장자가 이미지인 FILE 메시지는 채팅에 썸네일 표시, 클릭 시 `modalImagePreview`로 확대, **다운로드** 버튼은 기존 파일 다운로드 API 재사용(JWT `fetch` → `blob:` URL).
 - `frontend/app.js`는 수신 메시지 DOM을 최대 200개로 유지해 브라우저 메모리·렌더 비용이 무한 증가하지 않도록 합니다.
 - 채팅 시각 표시: **동일 발신자·동일 분(로컬 캘린더 분)** 묶음에서는 **그 분의 마지막 메시지 줄에만** 시각을 붙이고, **분이 바뀌면** 각 메시지 줄에 시각을 붙인다(`minuteKey` / `renderMessages` / `appendMessageRealtime`). 시각은 **24시간제 `HH:mm`**이며 본문 바로 뒤에 약간 띄워 인라인으로 붙인다(`fmtTime`, `.msg-content-row`).
 

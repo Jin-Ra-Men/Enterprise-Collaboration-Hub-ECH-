@@ -119,6 +119,23 @@ function clearSession() {
   sessionStorage.removeItem(USER_KEY);
 }
 
+/** 인증된 다운로드로 만든 이미지 blob URL (채널 전환·목록 갱신 시 revoke) */
+const imageAttachmentBlobUrls = new Map();
+
+function revokeImageAttachmentBlobUrls() {
+  imageAttachmentBlobUrls.forEach((url) => {
+    try {
+      URL.revokeObjectURL(url);
+    } catch {
+      /* ignore */
+    }
+  });
+  imageAttachmentBlobUrls.clear();
+}
+
+let pendingComposerPreviewUrl = null;
+let imageLightboxEscapeBound = false;
+
 async function apiFetch(path, opts = {}) {
   const token = getToken();
   const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
@@ -323,11 +340,12 @@ async function loadChannelFiles(channelId) {
   }
 }
 
-async function downloadChannelFile(fileId, filename) {
-  if (!activeChannelId || !currentUser) return;
+async function downloadChannelFile(fileId, filename, channelId) {
+  const ch = channelId != null ? channelId : activeChannelId;
+  if (!ch || !currentUser) return;
   try {
     const res = await fetch(
-      `${API_BASE}/api/channels/${activeChannelId}/files/${fileId}/download?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
+      `${API_BASE}/api/channels/${ch}/files/${fileId}/download?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
       { headers: { Authorization: `Bearer ${getToken()}` } }
     );
     if (!res.ok) {
@@ -838,6 +856,9 @@ loginForm.addEventListener("submit", async (e) => {
 logoutBtn.addEventListener("click", () => {
   if (!confirm("로그아웃 하시겠습니까?")) return;
   if (socket) { socket.disconnect(); socket = null; }
+  revokeImageAttachmentBlobUrls();
+  closeModal("modalImagePreview");
+  clearFilePreview();
   activeChannelId = null;
   currentUser     = null;
   clearSession();
@@ -915,6 +936,8 @@ function renderChannelList(channels) {
  * 채널 선택 / 메시지 로드
  * ========================================================================== */
 async function selectChannel(channelId, channelName, channelType) {
+  revokeImageAttachmentBlobUrls();
+  closeModal("modalImagePreview");
   activeChannelId   = channelId;
   activeChannelType = channelType;
 
@@ -951,6 +974,7 @@ async function selectChannel(channelId, channelName, channelType) {
 
 async function loadMessages(channelId) {
   if (!currentUser) return;
+  revokeImageAttachmentBlobUrls();
   try {
     const res  = await apiFetch(`/api/channels/${channelId}/messages?employeeNo=${encodeURIComponent(currentUser.employeeNo)}&limit=50`);
     const json = await res.json();
@@ -1098,7 +1122,135 @@ function tryParseFilePayload(msg) {
   return null;
 }
 
+async function getAuthedImageBlobUrl(channelId, fileId) {
+  const key = `${channelId}_${fileId}`;
+  if (imageAttachmentBlobUrls.has(key)) {
+    return imageAttachmentBlobUrls.get(key);
+  }
+  if (!currentUser) {
+    throw new Error("Not signed in");
+  }
+  const res = await fetch(
+    `${API_BASE}/api/channels/${channelId}/files/${fileId}/download?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
+    { headers: { Authorization: `Bearer ${getToken()}` } }
+  );
+  if (!res.ok) {
+    throw new Error("Image fetch failed");
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  imageAttachmentBlobUrls.set(key, url);
+  return url;
+}
+
+const INLINE_IMAGE_EXT = /\.(jpe?g|png|gif|webp|bmp|svg)$/i;
+
+function isImageFilePayload(payload) {
+  if (!payload) return false;
+  const ct = String(payload.contentType || "").trim().toLowerCase();
+  if (ct.startsWith("image/")) return true;
+  return INLINE_IMAGE_EXT.test(String(payload.originalFilename || ""));
+}
+
+function openImageLightbox(blobUrl, fileId, filename, channelId) {
+  const img = document.getElementById("imagePreviewLarge");
+  const cap = document.getElementById("imagePreviewCaption");
+  const dl = document.getElementById("imagePreviewDownload");
+  if (!img || !cap || !dl) return;
+  img.src = blobUrl;
+  img.alt = filename || "image";
+  cap.textContent = filename || "";
+  dl.onclick = () => downloadChannelFile(fileId, filename, channelId);
+  openModal("modalImagePreview");
+}
+
+function createImageAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) {
+  const emp = String(msg.senderId ?? "").trim();
+  const channelId = Number(msg.channelId) || activeChannelId;
+  const isMine =
+    currentUser && String(currentUser.employeeNo || "").trim() === emp;
+  const senderName = msg.senderName || (emp ? `emp#${emp}` : "?");
+  const pr = presenceByEmployeeNo.get(emp) || "OFFLINE";
+  const prCl = presenceCssClass(pr);
+  const prTip = presenceTitle(pr);
+  const fileMeta = {
+    id: Number(payload.fileId),
+    originalFilename: payload.originalFilename,
+    sizeBytes: payload.sizeBytes,
+  };
+  const timeHtml = showTime
+    ? `<span class="msg-time">${escHtml(fmtTime(msg.createdAt))}</span>`
+    : "";
+  const div = document.createElement("div");
+  div.className = `msg-row msg-chat ${isMine ? "msg-mine" : "msg-other"} msg-has-attachment msg-has-image${showAvatar ? "" : " msg-continued"}`;
+  div.dataset.senderId = emp;
+  div.dataset.minuteKey = minuteKey(msg.createdAt);
+  div.dataset.dateKey = dateKeyLocal(msg.createdAt);
+
+  const imageBlock = `
+        <div class="msg-content-row msg-attachment-image">
+          <button type="button" class="msg-inline-image-btn" title="크게 보기" aria-label="이미지 크게 보기">
+            <div class="msg-inline-image-placeholder">불러오는 중…</div>
+          </button>
+          <div class="msg-image-caption-row">
+            <span class="msg-attach-name">${escHtml(fileMeta.originalFilename || "이미지")}</span>
+            <span class="msg-attach-meta">${fmtSize(fileMeta.sizeBytes || 0)}</span>
+            <button type="button" class="btn-attach-dl">다운로드</button>${timeHtml}
+          </div>
+        </div>`;
+
+  if (showAvatar) {
+    const initials = avatarInitials(senderName);
+    div.innerHTML = `
+      <div class="msg-avatar-wrap">
+        <button type="button" class="msg-avatar msg-user-trigger" data-employee-no="${escHtml(emp)}" title="프로필 보기">${initials}</button>
+        <span class="presence-dot ${prCl}" data-presence-user="${escHtml(emp)}" title="${prTip}"></span>
+      </div>
+      <div class="msg-body">
+        <div class="msg-meta">
+          <button type="button" class="msg-sender msg-user-trigger" data-employee-no="${escHtml(emp)}">${escHtml(senderName)}</button>
+        </div>
+        ${imageBlock}
+      </div>`;
+  } else {
+    div.innerHTML = `
+      <div class="msg-spacer"></div>
+      <div class="msg-body">
+        ${imageBlock}
+      </div>`;
+  }
+
+  const dlBtn = div.querySelector(".btn-attach-dl");
+  dlBtn.addEventListener("click", () => {
+    downloadChannelFile(fileMeta.id, fileMeta.originalFilename, channelId);
+  });
+
+  const imgBtn = div.querySelector(".msg-inline-image-btn");
+  const placeholder = div.querySelector(".msg-inline-image-placeholder");
+
+  getAuthedImageBlobUrl(channelId, fileMeta.id)
+    .then((url) => {
+      const im = document.createElement("img");
+      im.className = "msg-inline-image";
+      im.alt = fileMeta.originalFilename || "첨부 이미지";
+      im.src = url;
+      im.loading = "lazy";
+      placeholder.replaceWith(im);
+      imgBtn.addEventListener("click", () => {
+        openImageLightbox(url, fileMeta.id, fileMeta.originalFilename, channelId);
+      });
+    })
+    .catch(() => {
+      placeholder.textContent = "이미지를 불러올 수 없습니다";
+    });
+
+  return div;
+}
+
 function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) {
+  if (isImageFilePayload(payload)) {
+    return createImageAttachmentRowFromMsg(msg, payload, { showAvatar, showTime });
+  }
   const emp = String(msg.senderId ?? "").trim();
   const isMine =
     currentUser && String(currentUser.employeeNo || "").trim() === emp;
@@ -1106,6 +1258,7 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
   const pr = presenceByEmployeeNo.get(emp) || "OFFLINE";
   const prCl = presenceCssClass(pr);
   const prTip = presenceTitle(pr);
+  const channelId = Number(msg.channelId) || activeChannelId;
   const fileMeta = {
     id: Number(payload.fileId),
     originalFilename: payload.originalFilename,
@@ -1153,7 +1306,7 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
       </div>`;
   }
   div.querySelector(".btn-attach-dl").addEventListener("click", () => {
-    downloadChannelFile(fileMeta.id, fileMeta.originalFilename);
+    downloadChannelFile(fileMeta.id, fileMeta.originalFilename, channelId);
   });
   return div;
 }
@@ -1444,7 +1597,26 @@ document.getElementById("btnAttach").addEventListener("click", () => {
 document.getElementById("fileInput").addEventListener("change", (e) => {
   const file = e.target.files[0];
   if (!file) return;
+  if (pendingComposerPreviewUrl) {
+    try {
+      URL.revokeObjectURL(pendingComposerPreviewUrl);
+    } catch {
+      /* ignore */
+    }
+    pendingComposerPreviewUrl = null;
+  }
   pendingFile = file;
+  const thumb = document.getElementById("filePreviewThumb");
+  if (thumb) {
+    if (file.type && file.type.startsWith("image/")) {
+      pendingComposerPreviewUrl = URL.createObjectURL(file);
+      thumb.src = pendingComposerPreviewUrl;
+      thumb.classList.remove("hidden");
+    } else {
+      thumb.classList.add("hidden");
+      thumb.removeAttribute("src");
+    }
+  }
   document.getElementById("filePreview").classList.remove("hidden");
   document.getElementById("filePreviewName").textContent = `📎 ${file.name} (${fmtSize(file.size)})`;
   e.target.value = "";
@@ -1453,7 +1625,20 @@ document.getElementById("fileInput").addEventListener("change", (e) => {
 document.getElementById("btnClearFile").addEventListener("click", clearFilePreview);
 
 function clearFilePreview() {
+  if (pendingComposerPreviewUrl) {
+    try {
+      URL.revokeObjectURL(pendingComposerPreviewUrl);
+    } catch {
+      /* ignore */
+    }
+    pendingComposerPreviewUrl = null;
+  }
   pendingFile = null;
+  const thumb = document.getElementById("filePreviewThumb");
+  if (thumb) {
+    thumb.classList.add("hidden");
+    thumb.removeAttribute("src");
+  }
   document.getElementById("filePreview").classList.add("hidden");
   document.getElementById("filePreviewName").textContent = "";
 }
@@ -1987,6 +2172,17 @@ async function runSearch(q, type) {
  * 기타 이벤트
  * ========================================================================== */
 function initEvents() {
+  if (!imageLightboxEscapeBound) {
+    imageLightboxEscapeBound = true;
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      const mod = document.getElementById("modalImagePreview");
+      if (mod && !mod.classList.contains("hidden")) {
+        closeModal("modalImagePreview");
+      }
+    });
+  }
+
   // 사이드바 섹션 접기/펼치기
   document.querySelectorAll(".section-toggle").forEach(btn => {
     btn.addEventListener("click", () => {
