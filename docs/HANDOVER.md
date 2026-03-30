@@ -150,7 +150,7 @@
   - `channel:join`
   - `message:send` (DB 저장 연계)
   - `message:new` (저장 성공 시 송신)
-  - `channel:system` (백엔드 내부 HTTP로 브로드캐스트 — 채널 운영 시스템 문구 등, payload: `channelId`, `text`, `createdAt`, `messageId`)
+  - `channel:system` (백엔드 내부 HTTP로 브로드캐스트 — 멤버 참여·내보내기 등 `SYSTEM` 메시지, payload: `channelId`, `text`, `createdAt`, `messageId`)
   - `message:error` (유효성/저장 실패)
   - `presence:set`
   - `presence:update`

@@ -21,6 +21,7 @@
 
 ### Added
 - 멤버 내보내기 시 **SYSTEM** 메시지를 DB에 저장하고 Node에 `channel:system` 브로드캐스트(내부 HTTP `/internal/broadcast-channel-system`)해 채널에 있는 모든 클라이언트가 동일 시스템 문구를 보게 함; 프론트는 API 목록·소켓 모두 `messageType=SYSTEM`/`channel:system` 처리 및 `messageId` 중복 제거
+- **채널 참여**(`POST .../members`) 시에도 동일하게 `SYSTEM` 본문(「이름」님이 채널에 참여했습니다)·`channel:system` 브로드캐스트; 구성원 추가 UI 확인 후 `loadMessages`로 동기화
 - 채널 **개설자** 전용 구성원 내보내기: `DELETE /api/channels/{channelId}/members?targetEmployeeNo=`(JWT=개설자), `channel_members`·`channel_read_states` 정리, 감사 `CHANNEL_MEMBER_REMOVED`; 프론트 멤버 패널에「내보내기」버튼
 - 채팅 이미지 첨부 UX: FILE 메시지 JSON에 `contentType` 저장, 프론트에서 이미지 인라인 표시·라이트박스 확대·확대 화면 다운로드, 작성 중 이미지 미리보기 썸네일
 - 채팅창에서 클립보드 이미지 붙여넣기(Ctrl+V): `viewChat` 캡처 단계 `paste`로 처리, 기존 `pendingFile`/업로드·전송 흐름 재사용(모달 열림 시 제외)

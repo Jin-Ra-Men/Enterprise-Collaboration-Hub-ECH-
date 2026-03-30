@@ -247,6 +247,13 @@ public class ChannelService {
         }
 
         channelMemberRepository.save(new ChannelMember(channel, user, request.memberRole()));
+
+        String joinerLabel = user.getName() != null && !user.getName().isBlank()
+                ? user.getName().trim()
+                : (user.getEmployeeNo() != null ? user.getEmployeeNo() : request.employeeNo());
+        String joinSystemLine = "「" + joinerLabel + "」님이 채널에 참여했습니다.";
+        saveAndBroadcastChannelSystemLine(channel, user, joinSystemLine);
+
         List<ChannelMember> members = channelMemberRepository.findByChannelId(channelId);
 
         auditLogService.safeRecord(
@@ -307,9 +314,7 @@ public class ChannelService {
                 })
                 .orElse(targetEmp);
         String systemLine = "「" + targetLabel + "」님을 채널에서 내보냈습니다.";
-        Message systemMsg = messageRepository.save(new Message(channel, actorUser, null, systemLine, "SYSTEM"));
-        String systemCreatedIso = systemMsg.getCreatedAt().toString();
-        Long systemMessageId = systemMsg.getId();
+        saveAndBroadcastChannelSystemLine(channel, actorUser, systemLine);
 
         auditLogService.safeRecord(
                 AuditEventType.CHANNEL_MEMBER_REMOVED,
@@ -320,14 +325,6 @@ public class ChannelService {
                 "removedUserId=" + removedUserId + ",removedEmployeeNo=" + targetEmp,
                 null
         );
-
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                realtimeBroadcastClient.broadcastChannelSystem(
-                        channelId, systemLine, systemCreatedIso, systemMessageId);
-            }
-        });
 
         List<ChannelMember> members = channelMemberRepository.findByChannelId(channelId);
         return toResponse(channel, members);
@@ -436,5 +433,20 @@ public class ChannelService {
                 m -> m.getGroup().getDisplayName(),
                 (a, b) -> a
         ));
+    }
+
+    /** {@code message_type=SYSTEM} 저장 후 커밋 시점에 실시간 브로드캐스트. */
+    private void saveAndBroadcastChannelSystemLine(Channel channel, User technicalSender, String systemLine) {
+        Message systemMsg = messageRepository.save(
+                new Message(channel, technicalSender, null, systemLine, "SYSTEM"));
+        String systemCreatedIso = systemMsg.getCreatedAt().toString();
+        Long systemMessageId = systemMsg.getId();
+        long cid = channel.getId();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                realtimeBroadcastClient.broadcastChannelSystem(cid, systemLine, systemCreatedIso, systemMessageId);
+            }
+        });
     }
 }

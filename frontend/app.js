@@ -2065,10 +2065,9 @@ document.getElementById("btnConfirmAddMembers").addEventListener("click", async 
   }
   closeModal("modalAddChannelMembers");
   await loadChannelMembers(activeChannelId);
+  await loadMessages(activeChannelId);
   if (failed.length) {
     appendSystemMsg(`일부 구성원 추가 실패: ${failed.join(", ")}`);
-  } else {
-    appendSystemMsg("구성원 추가 완료");
   }
 });
 document.getElementById("btnProfileDm").addEventListener("click", async () => {
