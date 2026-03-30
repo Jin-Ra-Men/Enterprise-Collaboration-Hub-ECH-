@@ -16,6 +16,7 @@
 - 멘션 토스트 미표시: 현재 채널 `message:new` 수신 시 내 멘션을 폴백 토스트로 처리해 `mention:notify` 누락/지연에도 알림 표시
 - 관리자 `error_logs` 조회: `path`가 `bytea`로 저장된 DB에서 `lower()` 검색이 실패하던 문제를 `convert_from` 기반 변환으로 수정
 - 관리자 `error_logs` 조회: `from/to/errorCode` 미지정(null) 시 Postgres 파라미터 타입 추론 문제를 `COALESCE`로 완화
+- 로그인 실패(`POST /api/auth/login`)와 `/favicon.ico` 같은 프론트 404는 불필요한 `error_logs` 적재에서 제외
 - 채널/DM 섹션 접기 시 화살표 **▾↔▸** 전환(`syncSectionToggleChevron`·`section-toggle-chevron`)
 
 ### Added

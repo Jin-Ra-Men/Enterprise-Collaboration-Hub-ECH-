@@ -15,6 +15,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
@@ -40,10 +41,23 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.fail("NOT_FOUND", "요청한 경로를 찾을 수 없습니다: " + exception.getResourcePath()));
     }
 
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNoHandler(NoHandlerFoundException exception) {
+        // /favicon.ico 같은 프론트 쪽 404는 불필요하므로 error_logs에 남기지 않는다.
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail("NOT_FOUND", "요청한 경로를 찾을 수 없습니다."));
+    }
+
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ApiResponse<Void>> handleUnauthorized(UnauthorizedException exception,
                                                                   HttpServletRequest request) {
-        safeLog("UNAUTHORIZED", exception, request);
+        // 로그인 실패(잘못된 사원번호/이메일 또는 비밀번호)는 사용자 입력 오류이므로 error_logs에 남기지 않는다.
+        String requestUri = request != null ? request.getRequestURI() : "";
+        boolean isLoginRequest = "/api/auth/login".equals(requestUri);
+        if (!isLoginRequest) {
+            safeLog("UNAUTHORIZED", exception, request);
+        }
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.fail("UNAUTHORIZED", exception.getMessage()));
