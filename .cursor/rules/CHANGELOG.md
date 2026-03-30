@@ -7,6 +7,7 @@
 ### Fixed
 - **로컬 PostgreSQL 레거시 스키마**: `channel_members.user_id`가 아직 `bigint`(`users.id`)인 DB에서 `GET /api/channels` JPQL이 `bigint = varchar`로 깨지던 문제 — `information_schema`로 컬럼 타입을 검사하고, 레거시일 때만 `users.id`로 조인하는 JDBC 보조 쿼리로 목록 조회 (`ChannelMemberUserIdColumnInspector`)
 - 채팅방 메시지·스레드 답글 로드: 레거시 DB처럼 `messages.sender_id` 또는 `channel_members.user_id`가 여전히 `bigint`(`users.id`)인 경우, 채널 메시지 목록·스레드 답글·멤버십 확인에서 JPA `JOIN`/`existsBy…EmployeeNo`가 `bigint = varchar`로 실패하던 문제 — Inspector로 `sender_id`/멤버 `user_id` 정수 FK 여부를 검사하고, 레거시일 때만 `users.id` 조인 JDBC로 `MessageResponse`를 조회·멤버십을 확인하도록 `MessageService` 보강
+- 레거시 FK 감지 안정화: `ChannelMemberUserIdColumnInspector`가 `information_schema`에서 `current_schema()` 한정으로만 컬럼 타입을 찾다 테이블이 `public` 등 다른 스키마에만 있을 때 레거시를 놓치던 경우 — `public` 우선·대소문자 무관 매칭으로 스키마를 넓혀 `bigint`/`employee_no` 불일치 JDBC 분기가 켜지도록 수정
 - 채널 생성(`POST /api/channels`): 생성자 조회를 요청 본문 `createdByEmployeeNo`가 아니라 **JWT(로그인 계정) 사원번호**로만 수행해, 세션/본문 불일치 시 「생성자를 찾을 수 없습니다」가 나던 문제 방지. `createdByEmployeeNo`는 선택 필드(하위 호환)로 완화
 - JWT에 DB 사용자 id(`uid` 클레임) 포함, `UserPrincipal`에 `userId` 추가. 채널 생성·`/api/auth/me`·테마·검색 등에서 **uid 우선 → 사원번호 → 레거시(숫자-only subject를 DB id로 간주)** 순으로 사용자를 식별해, 구형 토큰/숫자 subject와 사번 불일치로 「생성자를 찾을 수 없습니다」가 반복되던 케이스 완화
 - 500 「서버 내부 오류」 완화: JWT `uid`를 문자열·숫자 모두 파싱, `getThemePreference`·`/api/auth/me`의 빈 사번 방어, 채널 단건 조회 시 `createdBy`·멤버 `user` **JOIN FETCH**, `toResponse` 생성자 사번 null-safe, 빈 사원번호는 `IllegalArgumentException`(400)으로 처리, `DataIntegrityViolationException`·`LazyInitializationException` 전용 예외 응답 추가

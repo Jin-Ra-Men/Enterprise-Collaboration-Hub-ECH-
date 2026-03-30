@@ -39,19 +39,30 @@ public class ChannelMemberUserIdColumnInspector {
 
     private static boolean detectIntegerFkColumn(JdbcTemplate jdbc, String tableName, String columnName) {
         try {
-            String dataType = jdbc.queryForObject(
+            /*
+             * current_schema()만 쓰면 search_path·앱 스키마와 실제 테이블 스키마가 어긋날 때
+             * 컬럼을 못 찾아 "레거시 아님"으로 떨어지고, JPA가 bigint=varchar SQL을 생성한다.
+             * public 우선, 그다음 기타 사용자 스키마에서 첫 매칭만 본다.
+             */
+            var types = jdbc.query(
                     """
                             SELECT c.data_type
                             FROM information_schema.columns c
-                            WHERE c.table_schema = current_schema()
-                              AND c.table_name = ?
-                              AND c.column_name = ?
+                            WHERE lower(c.table_name) = lower(?)
+                              AND lower(c.column_name) = lower(?)
+                              AND c.table_schema NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+                            ORDER BY CASE WHEN c.table_schema = 'public' THEN 0 ELSE 1 END,
+                                     c.table_schema
+                            LIMIT 1
                             """,
-                    String.class,
+                    (rs, rowNum) -> rs.getString(1),
                     tableName,
                     columnName
             );
-            return isIntegerLikeUserReferenceColumn(dataType);
+            if (types.isEmpty()) {
+                return false;
+            }
+            return isIntegerLikeUserReferenceColumn(types.get(0));
         } catch (Exception ignored) {
             return false;
         }
