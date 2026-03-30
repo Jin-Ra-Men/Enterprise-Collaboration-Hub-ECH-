@@ -5,9 +5,13 @@ import com.ech.backend.common.api.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import org.hibernate.LazyInitializationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -16,10 +20,17 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private final ErrorLogService errorLogService;
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    public GlobalExceptionHandler(ErrorLogService errorLogService) {
+    private final ErrorLogService errorLogService;
+    private final boolean exposeErrorDetail;
+
+    public GlobalExceptionHandler(
+            ErrorLogService errorLogService,
+            @Value("${app.expose-error-detail:false}") boolean exposeErrorDetail
+    ) {
         this.errorLogService = errorLogService;
+        this.exposeErrorDetail = exposeErrorDetail;
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
@@ -99,6 +110,17 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotReadable(
+            HttpMessageNotReadableException exception,
+            HttpServletRequest request
+    ) {
+        safeLog("BAD_JSON", exception, request);
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.fail("BAD_JSON", "요청 본문(JSON) 형식이 올바르지 않습니다."));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException exception, HttpServletRequest request) {
         String message = exception.getBindingResult().getFieldErrors().stream()
@@ -114,10 +136,32 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleUnhandled(Exception exception, HttpServletRequest request) {
+        String path = request != null ? request.getRequestURI() : "";
+        log.error("Unhandled exception {} {}", path, exception.getClass().getName(), exception);
         safeLog("INTERNAL_SERVER_ERROR", exception, request);
+        String message = "서버 내부 오류가 발생했습니다.";
+        if (exposeErrorDetail) {
+            message += " [" + summarizeException(exception) + "]";
+        }
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.fail("INTERNAL_SERVER_ERROR", "서버 내부 오류가 발생했습니다."));
+                .body(ApiResponse.fail("INTERNAL_SERVER_ERROR", message));
+    }
+
+    /** 사용자 응답에 넣을 짧은 예외 요약(개발용). */
+    private static String summarizeException(Throwable exception) {
+        Throwable root = exception;
+        while (root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
+        }
+        String cls = exception.getClass().getSimpleName();
+        String msg = root.getMessage();
+        if (msg == null || msg.isBlank()) {
+            return cls;
+        }
+        String flat = msg.replace('\n', ' ').replace('\r', ' ').trim();
+        String combined = cls + ": " + flat;
+        return combined.length() > 400 ? combined.substring(0, 400) + "…" : combined;
     }
 
     private void safeLog(String code, Exception exception, HttpServletRequest request) {

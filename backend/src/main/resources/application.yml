@@ -47,6 +47,8 @@ jwt:
   expiration-ms: ${JWT_EXPIRATION_MS:28800000}
 
 app:
+  # true이면 500 응답에 예외 요약을 붙임(로컬 디버깅). 운영은 EXPOSE_ERROR_DETAIL=false 권장
+  expose-error-detail: ${EXPOSE_ERROR_DETAIL:true}
   # 릴리즈 파일 저장 디렉토리 (운영 환경에서 절대 경로 지정 권장)
   releases-dir: ${APP_RELEASES_DIR:./releases}
   # 첨부파일 저장 기본 경로 (DB app_settings 에서 덮어쓸 수 있음)

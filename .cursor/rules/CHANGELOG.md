@@ -8,6 +8,7 @@
 - 채널 생성(`POST /api/channels`): 생성자 조회를 요청 본문 `createdByEmployeeNo`가 아니라 **JWT(로그인 계정) 사원번호**로만 수행해, 세션/본문 불일치 시 「생성자를 찾을 수 없습니다」가 나던 문제 방지. `createdByEmployeeNo`는 선택 필드(하위 호환)로 완화
 - JWT에 DB 사용자 id(`uid` 클레임) 포함, `UserPrincipal`에 `userId` 추가. 채널 생성·`/api/auth/me`·테마·검색 등에서 **uid 우선 → 사원번호 → 레거시(숫자-only subject를 DB id로 간주)** 순으로 사용자를 식별해, 구형 토큰/숫자 subject와 사번 불일치로 「생성자를 찾을 수 없습니다」가 반복되던 케이스 완화
 - 500 「서버 내부 오류」 완화: JWT `uid`를 문자열·숫자 모두 파싱, `getThemePreference`·`/api/auth/me`의 빈 사번 방어, 채널 단건 조회 시 `createdBy`·멤버 `user` **JOIN FETCH**, `toResponse` 생성자 사번 null-safe, 빈 사원번호는 `IllegalArgumentException`(400)으로 처리, `DataIntegrityViolationException`·`LazyInitializationException` 전용 예외 응답 추가
+- 500 원인 추적: 전역 핸들러에서 미처리 예외 **ERROR 로그+스택**, `app.expose-error-detail`(기본 true, `EXPOSE_ERROR_DETAIL`로 끔) 시 응답 메시지에 예외 요약 첨부, `HttpMessageNotReadableException`→400, JWT 필터는 유효 Bearer 시 **항상** SecurityContext 설정·role null 방어. 프론트 초기화 시 `/api/auth/me` 비정상 응답을 `console.error`로 출력
 
 ### Added
 - 채팅 이미지 첨부 UX: FILE 메시지 JSON에 `contentType` 저장, 프론트에서 이미지 인라인 표시·라이트박스 확대·확대 화면 다운로드, 작성 중 이미지 미리보기 썸네일

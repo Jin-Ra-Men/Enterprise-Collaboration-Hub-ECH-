@@ -12,6 +12,12 @@
   - Frontend: Vanilla JS
   - DB: PostgreSQL
 
+## 2-0) 「서버 내부 오류」가 계속될 때
+- 백엔드 콘솔에 `Unhandled exception` 로그와 스택이 찍힌다(전역 예외 처리기).
+- 기본 설정(`app.expose-error-detail=true`)에서는 API JSON `error.message` 끝에 `[예외요약]`이 붙는다. 운영은 `EXPOSE_ERROR_DETAIL=false` 권장.
+- DB에 `error_logs` 테이블이 있으면 최근 행을 조회해 `error_code`, `error_class`, `message`, `path`를 확인한다.
+- 브라우저 개발자 도구 콘솔: 새로고침 시 `/api/auth/me 실패` 로그에 응답 본문이 출력된다.
+
 ## 2) 로컬 실행 요약
 1. Realtime 실행: `cd realtime && npm install && npm run dev`
 2. Backend 실행: `cd backend && gradlew.bat bootRun` (Windows)

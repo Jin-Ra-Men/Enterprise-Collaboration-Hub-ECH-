@@ -2218,6 +2218,12 @@ function initEvents() {
       saveSession(token, meUser);
       showMain(meUser);
     } else {
+      try {
+        const errJson = await res.json();
+        console.error("/api/auth/me 실패", res.status, errJson);
+      } catch {
+        console.error("/api/auth/me 실패", res.status, "(본문 파싱 불가)");
+      }
       clearSession();
       showLogin();
     }

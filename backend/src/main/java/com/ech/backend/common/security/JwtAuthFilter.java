@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import com.ech.backend.common.rbac.AppRole;
 import java.io.IOException;
 import java.util.List;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -35,15 +36,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {
             String token = authHeader.substring(BEARER_PREFIX.length());
             jwtUtil.parseToken(token).ifPresent(principal -> {
-                if (SecurityContextHolder.getContext().getAuthentication() == null) {
-                    UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            principal,
-                            null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + principal.role().name()))
-                    );
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authToken);
-                }
+                AppRole role = principal.role() != null ? principal.role() : AppRole.MEMBER;
+                UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
+                        principal,
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_" + role.name()))
+                );
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                // 유효한 Bearer가 있으면 항상 덮어써 이전 요청 잔여 컨텍스트 등으로 JWT가 무시되지 않게 한다.
+                SecurityContextHolder.getContext().setAuthentication(authToken);
             });
         }
 
