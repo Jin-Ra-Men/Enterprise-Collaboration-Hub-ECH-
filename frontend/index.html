@@ -43,16 +43,11 @@
     <!-- ===================== 메인 앱 ===================== -->
     <div id="mainApp" class="app-layout hidden">
 
-      <!-- 좌측 퀵 레일 (미읽음 대화 — Covi/Simplebar형 세로 아이콘 + 배지) -->
-      <nav id="quickContainer" class="quick-rail" aria-label="미읽음 빠른 이동">
-        <div class="quick-rail-scroll" id="quickRailScroll"></div>
-      </nav>
-
-      <!-- 채널/DM 사이드바 + 우측 가운데 돌출 접기 탭 -->
+      <!-- 채널/DM 사이드바(워크스페이스 ECH 단독 상단 · 퀵 레일은 검색~목록과 같은 세로 구간) + 돌출 접기 탭 -->
       <div class="sidebar-column" id="sidebarColumn">
         <div class="sidebar-slip">
           <aside class="sidebar">
-        <!-- 워크스페이스 헤더 -->
+        <!-- 워크스페이스 헤더 (퀵 레일보다 위 전폭) -->
         <div class="sidebar-workspace">
           <span class="workspace-name">ECH</span>
           <div class="sidebar-workspace-actions">
@@ -60,6 +55,11 @@
           </div>
         </div>
 
+        <div class="sidebar-body">
+          <nav id="quickContainer" class="quick-rail" aria-label="최근 대화·미읽음 빠른 이동">
+            <div class="quick-rail-scroll" id="quickRailScroll"></div>
+          </nav>
+          <div class="sidebar-main">
         <!-- 검색 -->
         <div class="sidebar-search-wrap">
           <form id="searchForm" autocomplete="off">
@@ -95,6 +95,9 @@
             <li class="sidebar-item" id="navReleases" data-view="releases">🚀 배포 관리</li>
             <li class="sidebar-item" id="navSettings" data-view="settings">⚙️ 설정</li>
           </ul>
+        </div>
+
+          </div>
         </div>
 
         <!-- 사용자 프로필 (프레즌스 메뉴는 행 기준으로 위로 뜨도록 이 블록에 둠 — user-info overflow 제한 회피) -->

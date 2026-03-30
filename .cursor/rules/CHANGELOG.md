@@ -5,7 +5,8 @@
 ## 2026-03-30
 
 ### Changed
-- **퀵 UI**: 미읽음을 사이드바 안이 아니라 **좌측 64px 퀵 레일** `#quickContainer` / `#quickRailScroll`(세로 아이콘·짧은 라벨·`em.quick-rail-badge`, Covi/Simplebar형)로 이동; **접기**는 워크스페이스 상단 버튼 제거 → 사이드바 **우측 경계 세로 중앙 돌출 탭** `#btnSidebarEdgeToggle`(`.sidebar-edge-toggle`); 접힘 시 `.sidebar-column` 너비 0(퀵 레일 유지). 문서 `FEATURE_SPEC`/`HANDOVER`/`README`/`ROADMAP` 반영
+- **퀵 레일 위치**: `#quickContainer`를 `mainApp` 형제에서 **사이드바 내부** `.sidebar-body`로 이동 — **ECH 워크스페이스 헤더 전폭 최상단**, 퀵은 **검색~채널/DM 목록과 같은 세로 구간**만 차지(프로필 바 제외). 펼침 너비 **324px**(64+260).
+- **퀵 목록 로직**: 미읽음만 표시 → **미읽음 우선 정렬 후 최근 대화**까지 최대 15개(`QUICK_RAIL_MAX_ITEMS`), 배지는 미읽음에만.
 
 ### Added
 - 좌측 하단 본인 프레즌스 클릭 → **온라인 / 자리비움** 선택 팝업·`presence:set` 전송; 창 포커스 복귀 시 `AWAY` 선택 유지 후 재전송

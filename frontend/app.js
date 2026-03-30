@@ -17,6 +17,8 @@ const MAX_MSGS   = 300;
 const THEME_KEY  = "ech_theme";
 const VALID_THEMES = ["dark", "light", "blue"];
 const SIDEBAR_COLLAPSED_KEY = "ech_sidebar_collapsed";
+/** 퀵 레일에 표시할 최대 대화 수(미읽음 우선 후 최근 순) */
+const QUICK_RAIL_MAX_ITEMS = 15;
 
 function getCurrentTheme() {
   return document.documentElement.getAttribute("data-theme") || "dark";
@@ -1102,21 +1104,31 @@ function quickRailCaption(name) {
   return `${s.slice(0, 6)}…`;
 }
 
-/** 미읽음이 있는 채널/DM만, 최근 메시지 시각 내림차순 — 좌측 `#quickContainer` 세로 아이콘 레일 */
+function compareQuickRailChannel(a, b) {
+  const ua = Number(a.unreadCount ?? 0) > 0 ? 1 : 0;
+  const ub = Number(b.unreadCount ?? 0) > 0 ? 1 : 0;
+  if (ua !== ub) return ub - ua;
+  return channelActivityTimeMs(b) - channelActivityTimeMs(a);
+}
+
+/**
+ * 퀵 레일(`#quickRailScroll`): 워크스페이스 아래·검색~목록과 같은 세로 구간.
+ * 미읽음 대화를 최상단(배지), 그 아래 `lastMessageAt` 기준 최근 대화(최대 `QUICK_RAIL_MAX_ITEMS`).
+ */
 function renderQuickUnreadList(channels) {
   const el = document.getElementById("quickRailScroll");
   if (!el) return;
   el.innerHTML = "";
-  const unread = (channels || []).filter((ch) => Number(ch.unreadCount ?? 0) > 0);
-  unread.sort((a, b) => channelActivityTimeMs(b) - channelActivityTimeMs(a));
-  if (unread.length === 0) {
+  const sorted = [...(channels || [])].sort(compareQuickRailChannel);
+  const picked = sorted.slice(0, QUICK_RAIL_MAX_ITEMS);
+  if (picked.length === 0) {
     const emptyHint = document.createElement("div");
     emptyHint.className = "quick-rail-empty";
-    emptyHint.textContent = "미읽음 대화 없음";
+    emptyHint.textContent = "참여 중인 대화가 없습니다";
     el.appendChild(emptyHint);
     return;
   }
-  unread.forEach((ch) => {
+  picked.forEach((ch) => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "quick-rail-link channel-item";

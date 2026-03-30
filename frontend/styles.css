@@ -196,7 +196,24 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   overflow: hidden;
 }
 
-/* ── 좌측 퀵 레일 (Covi형 세로 아이콘 + 배지, 스크롤 영역) ── */
+/* ── 사이드바 본문: 퀵 레일 + 검색·목록 (워크스페이스·프로필 바깥 동일 세로 구간) ── */
+.sidebar-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: row;
+  overflow: hidden;
+}
+.sidebar-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── 퀵 레일 (Covi형 세로 아이콘 + 배지, 검색~채널/DM 구간에만 높이 맞춤) ── */
 .quick-rail {
   flex-shrink: 0;
   width: 64px;
@@ -206,7 +223,7 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   display: flex;
   flex-direction: column;
   min-height: 0;
-  z-index: 25;
+  align-self: stretch;
 }
 .quick-rail-scroll {
   flex: 1;
@@ -284,11 +301,11 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   text-align: center;
 }
 
-/* ── 사이드바 컬럼 + 우측 돌출 접기 탭 ── */
+/* ── 사이드바 컬럼 + 우측 돌출 접기 탭 (64px 퀵 + 260px 목록 = 324px) ── */
 .sidebar-column {
   position: relative;
   flex-shrink: 0;
-  width: 260px;
+  width: 324px;
   height: 100vh;
   transition: width 0.22s ease;
   overflow: visible;
@@ -299,7 +316,7 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   overflow: hidden;
 }
 .sidebar-slip .sidebar {
-  width: 260px;
+  width: 324px;
   height: 100%;
 }
 .app-layout.sidebar-collapsed .sidebar-column {
@@ -347,9 +364,9 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   flex-direction: column;
   overflow: hidden;
 }
-
 /* 워크스페이스 헤더 */
 .sidebar-workspace {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -456,6 +473,7 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 
 /* 사용자 프로필 (하단) */
 .sidebar-user {
+  flex-shrink: 0;
   margin-top: auto;
   display: flex;
   align-items: center;

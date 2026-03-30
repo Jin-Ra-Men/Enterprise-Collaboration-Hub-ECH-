@@ -138,15 +138,15 @@
 ---
 
 ## 좌측 퀵 레일(미읽음)·사이드바 접기
-- 목적: Covi/Simplebar형 **좁은 세로 퀵 레일**(`#quickContainer`, 64px)에 미읽음 대화만 아이콘·짧은 캡션·배지로 모으고, 채널/DM 목록은 우측 사이드바에 유지. 사이드바는 **우측 경계 세로 중앙 돌출 탭**(`#btnSidebarEdgeToggle`)으로 접어 너비 0에 가깝게 숨김(퀵 레일은 항상 표시).
+- 목적: **워크스페이스(ECH) 헤더는 사이드바 최상단 전폭**으로 두고, 퀵 레일은 그 아래에서 **검색·채널/DM 목록과 동일한 세로 구간**(`.sidebar-body`)에만 배치해 ECH 제목 영역을 침범하지 않음. 퀵에는 **미읽음을 최상단(배지)**으로 올리고, **최근 대화**도 항상 표시(상한 `QUICK_RAIL_MAX_ITEMS`). 사이드바 전체는 **돌출 탭**으로 접음(너비 0 근접).
 - 사용자: 일반 채팅 사용자
-- 관련 화면/경로: `frontend/index.html` `#quickRailScroll`, `#sidebarColumn`·`.sidebar-slip`·`#btnSidebarEdgeToggle`; `frontend/app.js` `renderQuickUnreadList`, `loadMyChannels`·`scheduleRefreshMyChannels`; `frontend/styles.css` `.quick-rail`, `.sidebar-column`, `.sidebar-edge-toggle`, `#mainApp.sidebar-collapsed`
+- 관련 화면/경로: `frontend/index.html` `.sidebar-workspace`(ECH) → `.sidebar-body`(`#quickContainer`·`#quickRailScroll` + `.sidebar-main`); `#btnSidebarEdgeToggle`; `frontend/app.js` `renderQuickUnreadList`·`QUICK_RAIL_MAX_ITEMS`·`compareQuickRailChannel`; `frontend/styles.css` `.sidebar-body`·`.sidebar-main`·`.quick-rail`·`.sidebar-column`(324px 펼침)
 - 관련 API: `GET /api/channels` (`unreadCount`, **`lastMessageAt`**, `createdAt` 폴백 정렬)
 - 관련 Socket 이벤트: `message:new`, `channel:system` 등 기존 디바운스 채널 목록 갱신과 동일(약 400ms) — 갱신 시 퀵 레일도 동일 데이터로 재렌더
 - 입력/출력:
-  - 퀵 레일: `unreadCount > 0` 인 항목만 버튼(`.quick-rail-link.channel-item`), 정렬 키 = `lastMessageAt`(없으면 `createdAt`) 내림차순; 전체 이름은 `title`·`data-tooltip-title`·`aria-label`
-  - 미읽음 0건: `.quick-rail-empty` 문구
-  - 접기: `localStorage` `ech_sidebar_collapsed` (`1`/`0`); `.sidebar-column` 너비 260px↔0; 탭 화살표 `‹`(펼침·접기) / `›`(접힘·펼치기)
+  - 퀵 레일: 정렬 = (1) `unreadCount > 0` 우선 (2) 각 그룹 내 `lastMessageAt`(없으면 `createdAt`) 내림차순; 상위 최대 15개(`QUICK_RAIL_MAX_ITEMS`); 배지는 미읽음일 때만; `.quick-rail-link.channel-item`; 전체 이름은 `title`·`data-tooltip-title`·`aria-label`
+  - 채널 0개: `.quick-rail-empty` 문구
+  - 접기: `localStorage` `ech_sidebar_collapsed` (`1`/`0`); `.sidebar-column` 너비 324px↔0; 탭 화살표 `‹` / `›`
 - 상태 전이/예외 케이스:
   - `lastMessageAt` 미수신·파싱 실패 시 `createdAt`만으로 정렬(둘 다 없으면 0)
   - 퀵 항목은 `selectChannel` 연동·`.channel-item`과 동일 active 표시
@@ -154,6 +154,8 @@
 - 로그/감사 포인트: 해당 없음
 - 테스트 기준:
   - 타 채널 메시지 수신 후 퀵 레일 순서·배지가 목록과 일치
+  - 미읽음 0이어도 최근 대화가 퀵에 나오고, 미읽음 발생 시 해당 항목이 상단·배지로 올라옴
+  - ECH 헤더가 퀵 레일보다 위에만 보이고, 퀵이 검색 행과 같은 높이에서 시작함
   - 돌출 탭으로 접기/펼치기 및 새로고침 후 상태 유지
 - 비고: DM 퀵 아이콘은 `●`(사이드바 DM 줄은 기존처럼 프레즌스 점 다중 표시 가능)
 
