@@ -50,11 +50,7 @@ public class JwtUtil {
                     .parseSignedClaims(token)
                     .getPayload();
 
-            Long userId = null;
-            Object uidObj = claims.get("uid");
-            if (uidObj instanceof Number n) {
-                userId = n.longValue();
-            }
+            Long userId = parseUidClaim(claims.get("uid"));
 
             String claimEmp = claims.get("employeeNo", String.class);
             String subject = claims.getSubject();
@@ -77,6 +73,28 @@ public class JwtUtil {
         } catch (JwtException | IllegalArgumentException e) {
             return Optional.empty();
         }
+    }
+
+    /** JWT {@code uid}는 숫자·문자열 모두 허용 (일부 클라이언트/직렬화 호환). */
+    private static Long parseUidClaim(Object uidObj) {
+        if (uidObj == null) {
+            return null;
+        }
+        if (uidObj instanceof Number n) {
+            return n.longValue();
+        }
+        if (uidObj instanceof String s) {
+            String t = s.trim();
+            if (t.isEmpty()) {
+                return null;
+            }
+            try {
+                return Long.parseLong(t);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
     }
 
     private static String firstNonBlank(String a, String b) {

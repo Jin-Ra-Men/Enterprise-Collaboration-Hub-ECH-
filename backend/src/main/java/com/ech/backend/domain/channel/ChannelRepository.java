@@ -7,6 +7,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ChannelRepository extends JpaRepository<Channel, Long> {
+    @Query("SELECT c FROM Channel c JOIN FETCH c.createdBy WHERE c.id = :id")
+    Optional<Channel> findByIdWithCreatedBy(@Param("id") Long id);
+
     Optional<Channel> findByWorkspaceKeyAndName(String workspaceKey, String name);
 
     @Query("""

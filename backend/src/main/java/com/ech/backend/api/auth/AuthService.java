@@ -94,7 +94,10 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public String getThemePreference(String employeeNo) {
-        return userRepository.findByEmployeeNo(employeeNo)
+        if (employeeNo == null || employeeNo.isBlank()) {
+            return "dark";
+        }
+        return userRepository.findByEmployeeNo(employeeNo.trim())
                 .map(User::getThemePreference)
                 .map(this::normalizeThemeOrDefault)
                 .orElse("dark");

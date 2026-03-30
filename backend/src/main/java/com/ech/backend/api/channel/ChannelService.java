@@ -65,7 +65,7 @@ public class ChannelService {
                 .orElseThrow(() -> new IllegalArgumentException("생성자를 찾을 수 없습니다."));
         String creatorEmpNo = creator.getEmployeeNo() == null ? "" : creator.getEmployeeNo().trim();
         if (creatorEmpNo.isBlank()) {
-            throw new IllegalStateException("사용자 사원번호가 비어 있습니다.");
+            throw new IllegalArgumentException("사용자 사원번호가 비어 있습니다. DB users.employee_no 및 로그인 계정을 확인하세요.");
         }
 
         List<String> normalizedPeerNos = request.dmPeerEmployeeNos().stream()
@@ -188,7 +188,9 @@ public class ChannelService {
     }
 
     private void ensureDmParticipantsMembers(Channel channel, List<String> participantIds) {
-        String creatorEmployeeNo = channel.getCreatedBy().getEmployeeNo();
+        String creatorEmployeeNo = channel.getCreatedBy() != null && channel.getCreatedBy().getEmployeeNo() != null
+                ? channel.getCreatedBy().getEmployeeNo()
+                : "";
         for (String employeeNo : participantIds) {
             if (channelMemberRepository.existsByChannelIdAndUserEmployeeNo(channel.getId(), employeeNo)) {
                 continue;
@@ -201,9 +203,9 @@ public class ChannelService {
     }
 
     public ChannelResponse getChannel(Long channelId) {
-        Channel channel = channelRepository.findById(channelId)
+        Channel channel = channelRepository.findByIdWithCreatedBy(channelId)
                 .orElseThrow(() -> new NotFoundException("채널을 찾을 수 없습니다. id=" + channelId));
-        List<ChannelMember> members = channelMemberRepository.findByChannelId(channelId);
+        List<ChannelMember> members = channelMemberRepository.findByChannelIdFetchUsers(channelId);
         return toResponse(channel, members);
     }
 
@@ -278,13 +280,18 @@ public class ChannelService {
                 })
                 .toList();
 
+        String createdByEmp = "";
+        if (channel.getCreatedBy() != null && channel.getCreatedBy().getEmployeeNo() != null) {
+            createdByEmp = channel.getCreatedBy().getEmployeeNo();
+        }
+
         return new ChannelResponse(
                 channel.getId(),
                 channel.getWorkspaceKey(),
                 channel.getName(),
                 channel.getDescription(),
                 channel.getChannelType().name(),
-                channel.getCreatedBy().getEmployeeNo(),
+                createdByEmp,
                 channel.getCreatedAt(),
                 memberResponses
         );

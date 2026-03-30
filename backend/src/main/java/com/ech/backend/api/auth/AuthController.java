@@ -47,6 +47,9 @@ public class AuthController {
         }
         User user = authService.findUserForPrincipal(principal)
                 .orElseThrow(() -> new UnauthorizedException("사용자 정보를 찾을 수 없습니다."));
+        if (user.getEmployeeNo() == null || user.getEmployeeNo().isBlank()) {
+            throw new UnauthorizedException("계정에 사원번호가 없습니다. 관리자에게 문의하세요.");
+        }
         String themePreference = authService.getThemePreference(user.getEmployeeNo());
         return ApiResponse.success(new MeResponse(
                 user.getId(),

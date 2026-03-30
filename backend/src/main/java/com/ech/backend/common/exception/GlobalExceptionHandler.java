@@ -4,6 +4,8 @@ import com.ech.backend.api.errorlog.ErrorLogService;
 import com.ech.backend.common.api.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import org.hibernate.LazyInitializationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -67,6 +69,34 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.fail("FILE_IO_ERROR", "파일을 읽는 중 오류가 발생했습니다."));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(
+            DataIntegrityViolationException exception,
+            HttpServletRequest request
+    ) {
+        safeLog("DATA_INTEGRITY", exception, request);
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.fail(
+                        "DATA_INTEGRITY",
+                        "DB 제약 위반으로 저장할 수 없습니다. users.employee_no 기준 스키마·외래키 이관을 확인하세요."
+                ));
+    }
+
+    @ExceptionHandler(LazyInitializationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleLazyInit(
+            LazyInitializationException exception,
+            HttpServletRequest request
+    ) {
+        safeLog("LAZY_INIT", exception, request);
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.fail(
+                        "LAZY_INIT",
+                        "연관 데이터 로드 오류가 발생했습니다. 잠시 후 다시 시도하거나 서버 로그를 확인하세요."
+                ));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
