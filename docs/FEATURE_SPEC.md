@@ -138,7 +138,7 @@
 ---
 
 ## 좌측 퀵 레일(미읽음)·사이드바 접기
-- 목적: **워크스페이스(ECH) 헤더는 사이드바 최상단 전폭**으로 두고, 퀵 레일은 그 아래에서 **검색·채널/DM 목록과 동일한 세로 구간**(`.sidebar-body`)에만 배치해 ECH 제목 영역을 침범하지 않음. 퀵에는 **미읽음을 최상단(배지)**으로 올리고, **최근 대화**도 항상 표시(상한 `QUICK_RAIL_MAX_ITEMS`). 사이드바 전체는 **돌출 탭**으로 접음(너비 0 근접).
+- 목적: **워크스페이스(ECH) 헤더는 사이드바 최상단 전폭**으로 두고, 퀵 레일은 그 아래에서 **검색·채널/DM 목록과 동일한 세로 구간**(`.sidebar-body`)에만 배치해 ECH 제목 영역을 침범하지 않음. 퀵에는 **미읽음을 최상단(배지)**으로 올리고, **최근 대화**도 항상 표시(상한 `QUICK_RAIL_MAX_ITEMS`). 사이드바는 **돌출 탭**으로 접어 **퀵 64px만** 남기고 나머지(워크스페이스·검색·목록·프로필)는 숨김.
 - 사용자: 일반 채팅 사용자
 - 관련 화면/경로: `frontend/index.html` `.sidebar-workspace`(ECH) → `.sidebar-body`(`#quickContainer`·`#quickRailScroll` + `.sidebar-main`); `#btnSidebarEdgeToggle`; `frontend/app.js` `renderQuickUnreadList`·`QUICK_RAIL_MAX_ITEMS`·`compareQuickRailChannel`; `frontend/styles.css` `.sidebar-body`·`.sidebar-main`·`.quick-rail`·`.sidebar-column`(324px 펼침)
 - 관련 API: `GET /api/channels` (`unreadCount`, **`lastMessageAt`**, `createdAt` 폴백 정렬)
@@ -146,7 +146,7 @@
 - 입력/출력:
   - 퀵 레일: 정렬 = (1) `unreadCount > 0` 우선 (2) 각 그룹 내 `lastMessageAt`(없으면 `createdAt`) 내림차순; 상위 최대 15개(`QUICK_RAIL_MAX_ITEMS`); 배지는 미읽음일 때만; `.quick-rail-link.channel-item`; 전체 이름은 `title`·`data-tooltip-title`·`aria-label`
   - 채널 0개: `.quick-rail-empty` 문구
-  - 접기: `localStorage` `ech_sidebar_collapsed` (`1`/`0`); `.sidebar-column` 너비 324px↔0; 탭 화살표 `‹` / `›`
+  - 접기: `localStorage` `ech_sidebar_collapsed` (`1`/`0`); `.sidebar-column` 너비 324px↔**64px**(퀵 레일만 표시·워크스페이스/검색·목록/프로필 숨김); 탭 화살표 `‹` / `›`
 - 상태 전이/예외 케이스:
   - `lastMessageAt` 미수신·파싱 실패 시 `createdAt`만으로 정렬(둘 다 없으면 0)
   - 퀵 항목은 `selectChannel` 연동·`.channel-item`과 동일 active 표시

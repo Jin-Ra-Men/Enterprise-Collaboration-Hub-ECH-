@@ -319,8 +319,21 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   width: 324px;
   height: 100%;
 }
+/* 접힘: 목록·ECH 헤더·프로필은 숨기고 퀵 레일(64px)만 유지 */
 .app-layout.sidebar-collapsed .sidebar-column {
-  width: 0;
+  width: 64px;
+}
+.app-layout.sidebar-collapsed .sidebar-workspace,
+.app-layout.sidebar-collapsed .sidebar-main,
+.app-layout.sidebar-collapsed .sidebar-user {
+  display: none !important;
+}
+.app-layout.sidebar-collapsed .sidebar-body {
+  flex: 1;
+  min-height: 0;
+}
+.app-layout.sidebar-collapsed .quick-rail {
+  border-right: none;
 }
 .sidebar-edge-toggle {
   position: absolute;

@@ -112,7 +112,7 @@
 - 공통:
   - `GET /api/health`
 - 채널 도메인:
-  - `GET /api/channels?employeeNo=...` — 내 채널/DM 목록. DM은 요약 `description`을 **조회자(employeeNo)를 제외한 멤버** 이름(없으면 사번)으로 계산; **`unreadCount`** 는 `channel_read_states` 읽음 포인터 이후 **루트 메시지** 수; **`lastMessageAt`** 는 채널별 루트 메시지 최신 시각(JSON ISO); **`dmPeerEmployeeNos`** 는 DM만 조회자 제외 멤버 **사번** 배열(사이드바 DM 프레즌스 점). 프론트는 채팅 열람·실시간 수신 시 `PUT .../read-state`로 포인터 갱신; **퀵 레일**은 ECH 헤더 아래·검색~목록과 같은 세로 구간(`#quickContainer`·`#quickRailScroll`); **미읽음 우선·최근 대화** 최대 15개·미읽음만 배지(`compareQuickRailChannel`); 좌측 패널 펼침 너비 **324px**(64+260); **접기**는 `#btnSidebarEdgeToggle`·`ech_sidebar_collapsed`
+  - `GET /api/channels?employeeNo=...` — 내 채널/DM 목록. DM은 요약 `description`을 **조회자(employeeNo)를 제외한 멤버** 이름(없으면 사번)으로 계산; **`unreadCount`** 는 `channel_read_states` 읽음 포인터 이후 **루트 메시지** 수; **`lastMessageAt`** 는 채널별 루트 메시지 최신 시각(JSON ISO); **`dmPeerEmployeeNos`** 는 DM만 조회자 제외 멤버 **사번** 배열(사이드바 DM 프레즌스 점). 프론트는 채팅 열람·실시간 수신 시 `PUT .../read-state`로 포인터 갱신; **퀵 레일**은 ECH 헤더 아래·검색~목록과 같은 세로 구간(`#quickContainer`·`#quickRailScroll`); **미읽음 우선·최근 대화** 최대 15개·미읽음만 배지(`compareQuickRailChannel`); 좌측 패널 펼침 **324px**(64+260), 접힘 **64px**(퀵만); **접기**는 `#btnSidebarEdgeToggle`·`ech_sidebar_collapsed`
   - `POST /api/channels` — 생성자는 JWT에서 식별: **`uid` 클레임(= `users.id`) 우선**, 없으면 사원번호, 레거시 토큰은 숫자-only subject를 DB id로 폴백(숫자 사번과 충돌 시 재로그인 권장). body는 `workspaceKey`, `name`, `channelType` 등, 선택 `createdByEmployeeNo`(하위 호환), DM 시 `dmPeerEmployeeNos` (`CreateChannelRequest`)
   - `GET /api/channels/{channelId}`
   - `POST /api/channels/{channelId}/members` — body: `employeeNo`, `memberRole` (`JoinChannelRequest`)
