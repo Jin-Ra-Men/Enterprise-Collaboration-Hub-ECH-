@@ -11,9 +11,9 @@ import org.springframework.data.repository.query.Param;
 public interface ErrorLogRepository extends JpaRepository<ErrorLog, Long> {
     @Query("""
             SELECT e FROM ErrorLog e
-            WHERE (:from IS NULL OR e.createdAt >= :from)
-              AND (:to IS NULL OR e.createdAt <= :to)
-              AND (:errorCode IS NULL OR e.errorCode = :errorCode)
+            WHERE e.createdAt >= COALESCE(:from, e.createdAt)
+              AND e.createdAt <= COALESCE(:to, e.createdAt)
+              AND e.errorCode = COALESCE(:errorCode, e.errorCode)
             ORDER BY e.createdAt DESC
             """)
     List<ErrorLog> search(
