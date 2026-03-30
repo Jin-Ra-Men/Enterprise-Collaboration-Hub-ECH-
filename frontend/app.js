@@ -804,6 +804,9 @@ function showMain(user) {
   sidebarUserName.textContent = `${user.name}`;
   sidebarAvatar.textContent = avatarInitials(user.name);
 
+  /** 다른 계정 재로그인 시 이전 세션 프레즌스 캐시 제거 */
+  presenceByEmployeeNo.clear();
+
   // 로그인 계정이 바뀌어도 정확한 권한 상태를 반영하도록 항상 초기화 후 설정
   document.getElementById("adminSection").classList.add("hidden");
   if (user.role === "ADMIN") {
@@ -1610,23 +1613,35 @@ function initSocket() {
   });
 
   socket.on("connect", async () => {
-    await fetchPresenceSnapshot();
     if (currentUser?.employeeNo) {
       socket.emit("presence:set", { employeeNo: currentUser.employeeNo, status: "ONLINE" });
     }
     if (activeChannelId) socket.emit("channel:join", activeChannelId);
+    await fetchPresenceSnapshot();
     refreshPresenceDots();
     if (activeChannelId) loadChannelMembers(activeChannelId);
   });
 
   socket.on("reconnect", async () => {
-    await fetchPresenceSnapshot();
     if (currentUser?.employeeNo) {
       socket.emit("presence:set", { employeeNo: currentUser.employeeNo, status: "ONLINE" });
     }
     if (activeChannelId) socket.emit("channel:join", activeChannelId);
+    await fetchPresenceSnapshot();
     refreshPresenceDots();
     if (activeChannelId) loadChannelMembers(activeChannelId);
+  });
+
+  /** Realtime 서버가 presence:set 직후 내려주는 전체 목록(타 클라이언트와 상태 일치) */
+  socket.on("presence:snapshot", (payload) => {
+    const rows = payload?.data;
+    if (!Array.isArray(rows)) return;
+    presenceByEmployeeNo.clear();
+    rows.forEach((p) => {
+      const emp = String(p?.employeeNo ?? "").trim();
+      if (emp) presenceByEmployeeNo.set(emp, String(p.status || "OFFLINE").toUpperCase());
+    });
+    refreshPresenceDots();
   });
 
   socket.on("presence:update", (p) => {
@@ -2483,11 +2498,23 @@ function initEvents() {
 })();
 initTheme();
 
-window.addEventListener("focus", () => {
+function scheduleSidebarAndPresenceSync() {
   if (!currentUser) return;
   if (windowFocusChannelsTimer) clearTimeout(windowFocusChannelsTimer);
   windowFocusChannelsTimer = setTimeout(() => {
     windowFocusChannelsTimer = null;
     loadMyChannels();
+    fetchPresenceSnapshot().then(() => {
+      if (socket?.connected && currentUser?.employeeNo) {
+        socket.emit("presence:set", { employeeNo: currentUser.employeeNo, status: "ONLINE" });
+      }
+      refreshPresenceDots();
+      if (activeChannelId) loadChannelMembers(activeChannelId);
+    });
   }, 500);
+}
+
+window.addEventListener("focus", scheduleSidebarAndPresenceSync);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") scheduleSidebarAndPresenceSync();
 });

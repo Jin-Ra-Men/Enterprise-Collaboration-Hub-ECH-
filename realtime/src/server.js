@@ -182,6 +182,8 @@ io.on("connection", (socket) => {
     };
     presenceByEmployeeNo.set(employeeNo, updatePayload);
     io.emit("presence:update", updatePayload);
+    /** 요청한 소켓만 서버 전체 스냅샷 — 다른 탭·GET 레이스로 상대 프레즌스가 비는 현상 완화 */
+    socket.emit("presence:snapshot", { data: serializePresence() });
   });
 
   socket.on("disconnect", (reason) => {

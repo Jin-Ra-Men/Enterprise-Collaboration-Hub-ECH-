@@ -523,12 +523,12 @@
 ## 사용자 Presence 확인 기능
 - 목적: 온라인/자리비움/오프라인 상태를 실시간 확인
 - 사용자: 모든 사용자(조회), Admin/Manager(관리 화면 활용)
-- 관련 화면/경로: 채팅 메시지·멤버 패널에서 **아바타 네모칸 우측 하단**에 프레즌스 점, 프론트는 연결 시 `GET /presence`로 스냅샷 후 `presence:update`로 갱신
+- 관련 화면/경로: 채팅 메시지·멤버 패널에서 **아바타 네모칸 우측 하단**에 프레즌스 점, 프론트는 `presence:set` 후 서버가 해당 소켓에만 `presence:snapshot`(전체 목록)을 내려 주고, 보조로 `GET /presence`·`presence:update`로 맞춤; 창 포커스·탭 복귀 시 재동기화
 - 관련 API:
   - `GET /presence` (현재 Presence 목록 조회)
 - 관련 Socket 이벤트:
   - 입력: `presence:set`
-  - 출력: `presence:update`, `presence:error`
+  - 출력: `presence:update`, `presence:snapshot`(요청 소켓 전용, `{ data: [...] }` 형태), `presence:error`
 - 입력/출력:
   - 입력: `employeeNo`(사원번호 문자열), `status` (`ONLINE`/`AWAY`/`OFFLINE`) — 구 클라이언트 호환용으로 동일 값을 `userId` 키로 보내는 폴백이 있으나, **반드시 사번 문자열**을 넣어야 한다(DB 숫자 PK와 혼동 금지)
   - 출력: `employeeNo`, `status`, `updatedAt` (`GET /presence` 스냅샷 동일)

@@ -154,6 +154,7 @@
   - `message:error` (유효성/저장 실패)
   - `presence:set`
   - `presence:update`
+  - `presence:snapshot` (해당 소켓에만, `presence:set` 처리 직후 전체 `{ data: [...] }` — 멀티 창/탭 시 상대 상태 누락 완화)
   - `presence:error`
 
 ### 채널·멤버·식별자 계약 메모
@@ -180,7 +181,7 @@
 - `GET /api/user-directory/organization?companyGroupCode=`로 선택 회사 트리만 내려보내며, 전체 옵션이면 쿼리 파라미터를 생략하여 전체 트리를 반환합니다.
 - 검색 키워드(`q`)는 이름/이메일/사번에 대해 부분 일치 조회를 수행합니다.
 - Presence는 Realtime 서버 메모리 기반으로 관리됩니다.
-- `presence:set` / `presence:update` / `GET /presence` 스냅샷은 **`employeeNo`(문자열)** 를 키로 사용합니다(레거시 숫자 `userId`는 소켓에서 더 이상 유효하지 않음).
+- `presence:set` / `presence:update` / `presence:snapshot`(소켓 전용 전체 목록) / `GET /presence` 스냅샷은 **`employeeNo`(문자열)** 를 키로 사용합니다(레거시 숫자 `userId`는 소켓에서 더 이상 유효하지 않음).
 - 소켓별로 사용자를 추적하며, 해당 사용자의 **모든** 소켓이 끊기면 OFFLINE 브로드캐스트 후 메모리에서 제거합니다(유령 키 누적 방지).
 - 운영 환경에서 다중 인스턴스 구성 시 Presence 저장소(예: Redis) 공유가 필요합니다.
 
