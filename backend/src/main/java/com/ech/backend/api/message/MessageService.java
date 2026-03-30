@@ -2,7 +2,9 @@ package com.ech.backend.api.message;
 
 import com.ech.backend.api.auditlog.AuditLogService;
 import com.ech.backend.api.message.dto.CreateMessageRequest;
+import com.ech.backend.api.message.dto.MessageTimelineItemResponse;
 import com.ech.backend.api.message.dto.MessageResponse;
+import com.ech.backend.common.mention.MentionParser;
 import com.ech.backend.common.exception.ForbiddenException;
 import com.ech.backend.domain.audit.AuditEventType;
 import com.ech.backend.domain.channel.Channel;
@@ -60,6 +62,59 @@ public class MessageService {
             );
         }
     };
+
+    private static final RowMapper<MessageTimelineItemResponse> LEGACY_TIMELINE_ROW_MAPPER = (rs, rowNum) -> {
+        Long parentId = rs.getObject("parent_message_id") == null ? null : rs.getLong("parent_message_id");
+        Long replyToMessageId = rs.getObject("reply_to_message_id") == null ? null : rs.getLong("reply_to_message_id");
+        Long replyToParentMessageId = rs.getObject("reply_to_parent_message_id") == null ? null : rs.getLong("reply_to_parent_message_id");
+        String msgType = rs.getString("message_type");
+
+        boolean isReply = parentId != null;
+        String replyToKind = null;
+        Long replyToRootMessageId = null;
+        String replyToPreview = null;
+        if (isReply && replyToMessageId != null) {
+            replyToKind = replyToParentMessageId == null ? "ROOT" : "COMMENT";
+            replyToRootMessageId = replyToParentMessageId == null ? replyToMessageId : replyToParentMessageId;
+            String replyToBody = rs.getString("reply_to_body");
+            replyToPreview = previewForReplyTargetBody(replyToBody);
+        }
+
+        return new MessageTimelineItemResponse(
+                rs.getLong("message_id"),
+                rs.getLong("channel_id"),
+                rs.getString("sender_id"),
+                rs.getString("sender_name"),
+                parentId,
+                rs.getString("body"),
+                readCreatedAtUtc(rs),
+                msgType != null && !msgType.isBlank() ? msgType : "TEXT",
+                isReply,
+                replyToMessageId,
+                replyToKind,
+                replyToRootMessageId,
+                replyToPreview
+        );
+    };
+
+    private static String previewForReplyTargetBody(String body) {
+        if (body == null) return "";
+        String s = body.trim();
+        // FILE 메시지 본문은 JSON이며 kind=FILE을 포함한다.
+        if (s.startsWith("{") && s.contains("\"kind\"") && s.contains("FILE")) {
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> o = OBJECT_MAPPER.readValue(s, Map.class);
+                if (o != null && "FILE".equals(String.valueOf(o.get("kind"))) && o.get("originalFilename") != null) {
+                    String fn = String.valueOf(o.get("originalFilename")).trim();
+                    if (!fn.isEmpty()) return fn;
+                }
+            } catch (Exception ignored) {
+                // fall back to text preview
+            }
+        }
+        return MentionParser.previewForToast(body, 80);
+    }
 
     public MessageService(
             ChannelRepository channelRepository,
@@ -121,6 +176,30 @@ public class MessageService {
             long sizeBytes,
             String contentType
     ) {
+        // 기존 업로드는 루트 메시지로 간주한다(댓글/답글 붙이기는 오버로드에서 처리).
+        return createFileAttachmentMessage(
+                channelId,
+                senderEmployeeNo,
+                null,
+                fileId,
+                originalFilename,
+                sizeBytes,
+                contentType,
+                "FILE"
+        );
+    }
+
+    @Transactional
+    public MessageResponse createFileAttachmentMessage(
+            Long channelId,
+            String senderEmployeeNo,
+            Long parentMessageId,
+            Long fileId,
+            String originalFilename,
+            long sizeBytes,
+            String contentType,
+            String messageType
+    ) {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new IllegalArgumentException("채널을 찾을 수 없습니다."));
         User sender = userRepository.findByEmployeeNo(senderEmployeeNo)
@@ -141,7 +220,17 @@ public class MessageService {
             throw new IllegalStateException("파일 메시지 본문 직렬화 실패", e);
         }
 
-        Message message = messageRepository.save(new Message(channel, sender, null, body, "FILE"));
+        Message parent = null;
+        if (parentMessageId != null) {
+            parent = messageRepository.findById(parentMessageId)
+                    .orElseThrow(() -> new IllegalArgumentException("부모 메시지를 찾을 수 없습니다."));
+            if (!parent.getChannel().getId().equals(channelId)) {
+                throw new IllegalArgumentException("부모 메시지의 채널이 일치하지 않습니다.");
+            }
+        }
+
+        String mt = messageType != null && !messageType.isBlank() ? messageType : "FILE";
+        Message message = messageRepository.save(new Message(channel, sender, parent, body, mt));
 
         auditLogService.safeRecord(
                 AuditEventType.MESSAGE_SENT,
@@ -169,7 +258,8 @@ public class MessageService {
             throw new IllegalArgumentException("부모 메시지의 채널이 일치하지 않습니다.");
         }
 
-        Message reply = messageRepository.save(new Message(channel, sender, parent, request.text()));
+        // REPLY는 첨부(payload)는 별도로(예: FILE) 처리하되, 스레드 종류는 messageType 접두사로 구분한다.
+        Message reply = messageRepository.save(new Message(channel, sender, parent, request.text(), "REPLY_TEXT"));
 
         auditLogService.safeRecord(
                 AuditEventType.MESSAGE_REPLY_SENT,
@@ -183,6 +273,36 @@ public class MessageService {
 
         mentionNotificationService.dispatchForNewMessage(channel, reply, sender);
         return toResponse(reply);
+    }
+
+    @Transactional
+    public MessageResponse createComment(Long channelId, Long parentMessageId, CreateMessageRequest request) {
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new IllegalArgumentException("채널을 찾을 수 없습니다."));
+        User sender = userRepository.findByEmployeeNo(request.senderId())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        Message parent = messageRepository.findById(parentMessageId)
+                .orElseThrow(() -> new IllegalArgumentException("부모 메시지를 찾을 수 없습니다."));
+
+        if (!parent.getChannel().getId().equals(channelId)) {
+            throw new IllegalArgumentException("부모 메시지의 채널이 일치하지 않습니다.");
+        }
+
+        // COMMENT는 기본 텍스트 댓글(첨부는 FILE 계열로 확장될 예정). 종류 구분용으로 messageType을 COMMENT_TEXT로 저장한다.
+        Message comment = messageRepository.save(new Message(channel, sender, parent, request.text(), "COMMENT_TEXT"));
+
+        auditLogService.safeRecord(
+                AuditEventType.MESSAGE_SENT,
+                sender.getId(),
+                "MESSAGE",
+                comment.getId(),
+                channel.getWorkspaceKey(),
+                "channelId=" + channelId + " parentId=" + parentMessageId,
+                null
+        );
+
+        mentionNotificationService.dispatchForNewMessage(channel, comment, sender);
+        return toResponse(comment);
     }
 
     public List<MessageResponse> getThreadReplies(Long channelId, Long parentMessageId) {
@@ -254,6 +374,94 @@ public class MessageService {
                 channelId, PageRequest.of(0, Math.min(limit, 200)));
         Collections.reverse(messages);
         return messages.stream().map(this::toResponse).toList();
+    }
+
+    public List<MessageTimelineItemResponse> getChannelTimelineMessages(Long channelId, String employeeNo, int limit) {
+        if (!isUserMemberOfChannel(channelId, employeeNo)) {
+            throw new ForbiddenException("채널에 참여한 사용자가 아닙니다.");
+        }
+
+        int cap = Math.min(limit, 200);
+        if (legacyUserFkInspector.isLegacyMessageSenderReferencesUserPrimaryKey()) {
+            List<MessageTimelineItemResponse> rows = jdbcTemplate.query(
+                    """
+                            SELECT m.id AS message_id,
+                                   m.channel_id,
+                                   u.employee_no AS sender_id,
+                                   u.name AS sender_name,
+                                   m.parent_message_id,
+                                   m.body,
+                                   m.created_at,
+                                   m.message_type,
+                                   pm.id AS reply_to_message_id,
+                                   pm.parent_message_id AS reply_to_parent_message_id,
+                                   pm.body AS reply_to_body
+                            FROM messages m
+                            INNER JOIN users u ON u.id = m.sender_id
+                            LEFT JOIN messages pm ON pm.id = m.parent_message_id
+                            WHERE m.channel_id = ?
+                              AND m.archived_at IS NULL
+                              AND m.is_deleted = false
+                              AND (m.parent_message_id IS NULL OR m.message_type LIKE 'REPLY%')
+                            ORDER BY m.created_at DESC
+                            LIMIT ?
+                            """,
+                    LEGACY_TIMELINE_ROW_MAPPER,
+                    channelId,
+                    cap
+            );
+            Collections.reverse(rows);
+            return rows;
+        }
+
+        List<Message> messages = messageRepository.findTimelineByChannelId(
+                channelId,
+                PageRequest.of(0, cap)
+        );
+        Collections.reverse(messages);
+        return messages.stream().map(m -> {
+            Long parentMessageId = m.getParentMessage() == null ? null : m.getParentMessage().getId();
+            boolean isReply = parentMessageId != null && m.getMessageType() != null && m.getMessageType().toUpperCase().startsWith("REPLY");
+
+            if (!isReply) {
+                return new MessageTimelineItemResponse(
+                        m.getId(),
+                        m.getChannel().getId(),
+                        m.getSender().getEmployeeNo(),
+                        m.getSender().getName(),
+                        null,
+                        m.getBody(),
+                        m.getCreatedAt(),
+                        m.getMessageType(),
+                        false,
+                        null,
+                        null,
+                        null,
+                        null
+                );
+            }
+
+            Message replyTo = m.getParentMessage();
+            Message replyToParent = replyTo.getParentMessage(); // null이면 ROOT
+            Long replyToRootMessageId = replyToParent == null ? replyTo.getId() : replyToParent.getId();
+            String replyToKind = replyToParent == null ? "ROOT" : "COMMENT";
+
+            return new MessageTimelineItemResponse(
+                    m.getId(),
+                    m.getChannel().getId(),
+                    m.getSender().getEmployeeNo(),
+                    m.getSender().getName(),
+                    replyTo.getId(),
+                    m.getBody(),
+                    m.getCreatedAt(),
+                    m.getMessageType(),
+                    true,
+                    replyTo.getId(),
+                    replyToKind,
+                    replyToRootMessageId,
+                    previewForReplyTargetBody(replyTo.getBody())
+            );
+        }).toList();
     }
 
     private boolean isUserMemberOfChannel(Long channelId, String employeeNo) {

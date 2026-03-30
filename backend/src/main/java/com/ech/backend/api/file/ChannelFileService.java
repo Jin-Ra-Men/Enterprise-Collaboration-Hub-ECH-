@@ -91,8 +91,13 @@ public class ChannelFileService {
      * 없을 경우 {@code application.yml}의 {@code app.file-storage-dir} 기본값을 사용한다.
      */
     @Transactional
-    public ChannelFileResponse uploadFile(Long channelId, String uploaderEmployeeNo,
-                                          MultipartFile file) throws IOException {
+    public ChannelFileResponse uploadFile(
+            Long channelId,
+            String uploaderEmployeeNo,
+            MultipartFile file,
+            Long parentMessageId,
+            String threadKind
+    ) throws IOException {
         validateFileSize(file);
 
         Channel channel = channelRepository.findById(channelId)
@@ -137,7 +142,7 @@ public class ChannelFileService {
                 "channelId=" + channelId + " filename=" + originalName + " size=" + file.getSize(),
                 null
         );
-        recordFileMessage(saved);
+        recordFileMessage(saved, parentMessageId, threadKind);
         return toResponse(saved);
     }
 
@@ -254,19 +259,31 @@ public class ChannelFileService {
                 channel.getWorkspaceKey(),
                 "channelId=" + channelId + " filename=" + safeName, null
         );
-        recordFileMessage(saved);
+        // 메타데이터만 등록(하위 호환). 댓글/답글 컨텍스트가 없으므로 루트 FILE로 저장한다.
+        recordFileMessage(saved, null, null);
         return toResponse(saved);
     }
 
-    private void recordFileMessage(ChannelFile saved) {
+    private void recordFileMessage(ChannelFile saved, Long parentMessageId, String threadKind) {
         try {
+            String mt = "FILE";
+            String kind = threadKind == null ? "" : threadKind.trim().toUpperCase();
+            if ("COMMENT".equals(kind)) mt = "COMMENT_FILE";
+            else if ("REPLY".equals(kind)) mt = "REPLY_FILE";
+            if (parentMessageId == null && !"FILE".equals(mt)) {
+                // 댓글/답글 컨텍스트 정보 없이 업로드되면 루트 FILE로 저장한다.
+                mt = "FILE";
+            }
+
             messageService.createFileAttachmentMessage(
                     saved.getChannel().getId(),
                     saved.getUploadedBy().getEmployeeNo(),
+                    parentMessageId,
                     saved.getId(),
                     saved.getOriginalFilename(),
                     saved.getSizeBytes(),
-                    saved.getContentType()
+                    saved.getContentType(),
+                    mt
             );
         } catch (Exception e) {
             log.warn("파일 첨부 메시지 기록 실패 (fileId={}): {}", saved.getId(), e.getMessage());

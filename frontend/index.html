@@ -262,6 +262,39 @@
     <!-- 멘션 토스트: mainApp overflow:hidden 밖에 두어 잘리지 않도록 body 직계 -->
     <div id="mentionToastStack" class="mention-toast-stack" aria-live="polite"></div>
 
+    <!-- 메시지 컨텍스트 메뉴(댓글/답글) -->
+    <div id="messageContextMenu" class="context-menu hidden" role="menu" aria-label="메시지 메뉴">
+      <button type="button" class="context-menu-item" data-action="comment" role="menuitem">댓글</button>
+      <button type="button" class="context-menu-item" data-action="reply" role="menuitem">답글</button>
+    </div>
+
+    <!-- 스레드 모달(원글 + 댓글) -->
+    <div id="modalThread" class="modal-overlay hidden">
+      <div class="modal modal-wide modal-thread">
+        <div class="modal-header">
+          <h3>스레드</h3>
+          <button class="modal-close" data-modal="modalThread" type="button">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="threadRootContainer" class="thread-root"></div>
+          <div id="threadCommentsContainer" class="thread-comments"></div>
+        </div>
+        <div class="modal-footer thread-composer">
+          <div class="thread-composer-controls">
+            <input id="threadFileInput" type="file" class="hidden" />
+            <button id="threadBtnAttach" type="button" class="composer-attach-btn" title="파일·이미지 첨부">📎</button>
+            <input id="threadMessageInput" type="text" class="composer-input" placeholder="댓글 입력… @이름 멘션(토큰) " autocomplete="off" />
+            <button id="threadBtnSend" type="button" class="composer-send-btn" title="전송">➤</button>
+          </div>
+          <div id="threadFilePreview" class="file-preview hidden">
+            <img id="threadFilePreviewThumb" class="file-preview-thumb hidden" alt="" />
+            <span id="threadFilePreviewName"></span>
+            <button id="threadBtnClearFile" class="btn-clear-file" type="button">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 이미지 첨부: 크게 보기 + 다운로드 -->
     <div id="modalImagePreview" class="modal-overlay modal-image-preview hidden">
       <div class="image-preview-shell">

@@ -89,6 +89,19 @@ let activeChannelCreatorEmployeeNo = null;
 /** 현재 채널 멤버만 @자동완성 (전사 검색 대신). selectChannel 시 비움 → loadChannelMembers에서 채움 */
 let activeChannelMemberMentionList = [];
 let pendingFile    = null;
+// 스레드(댓글) 모달 상태
+let threadPendingFile = null;
+let threadPendingFilePreviewUrl = null;
+let threadRootMessageId = null;
+// 타임라인 답글 모드(메시지 입력창으로 답글 생성)
+let replyComposerTargetMessageId = null;
+let replyComposerOriginalPlaceholder = "";
+// 메시지 우클릭 컨텍스트 메뉴 상태
+let contextMenuSelectedMessageId = null;
+let contextMenuSelectedRootMessageId = null;
+let contextMenuSelectedIsReply = false;
+// 타임라인에서 로드된 ROOT 메시지 캐시(스레드 모달 렌더용)
+let timelineRootMessageById = new Map();
 let selectedMembers = [];     // 채널/DM 생성 시 선택된 사용자
 let selectedDmMembers = [];
 let selectedAddMembers = [];  // 기존 채널에 추가할 사용자
@@ -119,6 +132,21 @@ const channelListEl  = document.getElementById("channelList");
 const dmListEl       = document.getElementById("dmList");
 const messagesEl     = document.getElementById("messages");
 const messageInputEl = document.getElementById("messageInput");
+const messageContextMenuEl = document.getElementById("messageContextMenu");
+const threadRootContainerEl = document.getElementById("threadRootContainer");
+const threadCommentsContainerEl = document.getElementById("threadCommentsContainer");
+const threadFileInputEl = document.getElementById("threadFileInput");
+const threadBtnAttachEl = document.getElementById("threadBtnAttach");
+const threadMessageInputEl = document.getElementById("threadMessageInput");
+const threadBtnSendEl = document.getElementById("threadBtnSend");
+const threadFilePreviewEl = document.getElementById("threadFilePreview");
+const threadFilePreviewThumbEl = document.getElementById("threadFilePreviewThumb");
+const threadFilePreviewNameEl = document.getElementById("threadFilePreviewName");
+const threadBtnClearFileEl = document.getElementById("threadBtnClearFile");
+
+if (messageInputEl && replyComposerOriginalPlaceholder === "") {
+  replyComposerOriginalPlaceholder = messageInputEl.placeholder || "메시지 입력…";
+}
 
 /* ==========================================================================
  * 유틸
@@ -1290,15 +1318,21 @@ async function loadMessages(channelId) {
   if (!currentUser) return;
   revokeImageAttachmentBlobUrls();
   try {
-    const res  = await apiFetch(`/api/channels/${channelId}/messages?employeeNo=${encodeURIComponent(currentUser.employeeNo)}&limit=50`);
+    const res  = await apiFetch(`/api/channels/${channelId}/messages/timeline?employeeNo=${encodeURIComponent(currentUser.employeeNo)}&limit=50`);
     const json = await res.json();
     messagesEl.innerHTML = "";
     if (!res.ok) { appendSystemMsg("메시지 로드 실패: " + (json.error?.message || "")); return; }
     const msgs = json.data || [];
+    timelineRootMessageById.clear();
+    msgs.forEach((m) => {
+      if (!m || m.isReply) return;
+      const mid = m.messageId ?? m.message_id;
+      if (mid != null) timelineRootMessageById.set(Number(mid), m);
+    });
     if (msgs.length === 0) {
       appendSystemMsg("아직 메시지가 없습니다. 첫 메시지를 보내보세요! 👋");
     } else {
-      renderMessages(msgs);
+      renderTimelineMessages(msgs);
     }
     const maxId = maxRootMessageIdFromList(msgs);
     if (maxId != null) {
@@ -1593,6 +1627,12 @@ function createImageAttachmentRowFromMsg(msg, payload, { showAvatar, showTime })
   div.dataset.senderId = emp;
   div.dataset.minuteKey = minuteKey(msg.createdAt);
   div.dataset.dateKey = dateKeyLocal(msg.createdAt);
+  const mid = msg.messageId ?? msg.message_id;
+  if (mid != null) {
+    div.dataset.messageId = String(mid);
+    const pid = msg.parentMessageId ?? msg.parent_message_id;
+    div.dataset.rootMessageId = pid == null ? String(mid) : String(pid);
+  }
 
   const imageBlock = `
         <div class="msg-content-row msg-attachment-image">
@@ -1681,6 +1721,12 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
   div.dataset.senderId = emp;
   div.dataset.minuteKey = minuteKey(msg.createdAt);
   div.dataset.dateKey = dateKeyLocal(msg.createdAt);
+  const mid = msg.messageId ?? msg.message_id;
+  if (mid != null) {
+    div.dataset.messageId = String(mid);
+    const pid = msg.parentMessageId ?? msg.parent_message_id;
+    div.dataset.rootMessageId = pid == null ? String(mid) : String(pid);
+  }
 
   if (showAvatar) {
     const initials = avatarInitials(senderName);
@@ -1745,6 +1791,12 @@ function createMessageRowElement(msg, { showAvatar, showTime }) {
   div.dataset.senderId = emp;
   div.dataset.minuteKey = minuteKey(msg.createdAt);
   div.dataset.dateKey = dateKeyLocal(msg.createdAt);
+  const mid = msg.messageId ?? msg.message_id;
+  if (mid != null) {
+    div.dataset.messageId = String(mid);
+    const pid = msg.parentMessageId ?? msg.parent_message_id;
+    div.dataset.rootMessageId = pid == null ? String(mid) : String(pid);
+  }
 
   const timeHtml = showTime
     ? `<span class="msg-time">${escHtml(fmtTime(msg.createdAt))}</span>`
@@ -1796,6 +1848,391 @@ function renderMessages(msgs) {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
+function createReplyTimelineRowElement(tlMsg, { showAvatar, showTime }) {
+  const row = createMessageRowElement(tlMsg, { showAvatar, showTime });
+  row.classList.add("msg-has-reply");
+
+  row.dataset.isReply = "true";
+  row.dataset.replyToKind = tlMsg.replyToKind || "";
+  row.dataset.replyToMessageId = tlMsg.replyToMessageId != null ? String(tlMsg.replyToMessageId) : "";
+  row.dataset.replyToRootMessageId = tlMsg.replyToRootMessageId != null ? String(tlMsg.replyToRootMessageId) : "";
+  if (tlMsg.replyToRootMessageId != null) {
+    row.dataset.rootMessageId = String(tlMsg.replyToRootMessageId);
+  }
+
+  const preview = String(tlMsg.replyToPreview || "").trim();
+  const jumpLabel = preview || (tlMsg.replyToKind === "COMMENT" ? "댓글" : "원글");
+
+  const replyToBlock = document.createElement("div");
+  replyToBlock.className = "msg-reply-to";
+  replyToBlock.innerHTML = `
+    <span class="msg-reply-to-label">답글 대상</span>
+    <button type="button" class="msg-reply-to-jump">${escHtml(jumpLabel)}</button>
+  `;
+
+  const body = row.querySelector(".msg-body");
+  if (body) {
+    const meta = row.querySelector(".msg-meta");
+    if (meta) meta.insertAdjacentElement("afterend", replyToBlock);
+    else body.prepend(replyToBlock);
+  }
+
+  const jumpBtn = row.querySelector(".msg-reply-to-jump");
+  if (jumpBtn) {
+    jumpBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      jumpToReplyTarget({
+        replyToKind: row.dataset.replyToKind,
+        replyToMessageId: row.dataset.replyToMessageId,
+        replyToRootMessageId: row.dataset.replyToRootMessageId,
+      });
+    });
+  }
+  return row;
+}
+
+function renderTimelineMessages(items) {
+  messagesEl.innerHTML = "";
+  if (!items || !items.length) return;
+
+  let prevDk = null;
+  items.forEach((m, i) => {
+    const dk = dateKeyLocal(m.createdAt);
+    if (prevDk !== dk) {
+      messagesEl.appendChild(createDateDividerElement(m.createdAt));
+      prevDk = dk;
+    }
+    const showAvatar = shouldShowAvatarForMessage(items, i);
+    const showTime = shouldShowMessageTime(items, i);
+
+    const row = m.isReply
+      ? createReplyTimelineRowElement(m, { showAvatar, showTime })
+      : createMessageRowElement(m, { showAvatar, showTime });
+    const mid = m.messageId ?? m.message_id;
+    if (mid != null) row.id = `msg-${mid}`;
+    messagesEl.appendChild(row);
+  });
+  trimMessages();
+  refreshPresenceDots();
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+/* ==========================================================================
+ * 스레드 모달 / 답글 이동 / 컨텍스트 메뉴
+ * ========================================================================== */
+function hideMessageContextMenu() {
+  if (!messageContextMenuEl) return;
+  messageContextMenuEl.classList.add("hidden");
+}
+
+function setReplyComposerTarget(messageId) {
+  if (!messageId || !Number.isFinite(Number(messageId))) return;
+  replyComposerTargetMessageId = Number(messageId);
+  if (messageInputEl) messageInputEl.placeholder = "답글 입력…";
+  messageInputEl?.focus?.();
+}
+
+function clearReplyComposerTarget() {
+  replyComposerTargetMessageId = null;
+  if (messageInputEl) messageInputEl.placeholder = replyComposerOriginalPlaceholder || "메시지 보내기… @이름 멘션 · 이미지 Ctrl+V";
+}
+
+function clearThreadFilePreview() {
+  if (threadPendingFilePreviewUrl) {
+    try {
+      URL.revokeObjectURL(threadPendingFilePreviewUrl);
+    } catch {
+      /* ignore */
+    }
+  }
+  threadPendingFilePreviewUrl = null;
+  threadPendingFile = null;
+  if (threadFilePreviewThumbEl) {
+    threadFilePreviewThumbEl.classList.add("hidden");
+    threadFilePreviewThumbEl.removeAttribute("src");
+  }
+  if (threadFilePreviewEl) threadFilePreviewEl.classList.add("hidden");
+  if (threadFilePreviewNameEl) threadFilePreviewNameEl.textContent = "";
+}
+
+function setThreadComposerPendingFile(file) {
+  if (!file) return;
+  threadPendingFile = file;
+  if (threadFilePreviewNameEl) threadFilePreviewNameEl.textContent = file.name || "첨부파일";
+  const isImage = String(file.type || "").toLowerCase().startsWith("image/");
+  if (threadFilePreviewThumbEl && threadFilePreviewEl) {
+    const url = URL.createObjectURL(file);
+    if (threadPendingFilePreviewUrl) {
+      try {
+        URL.revokeObjectURL(threadPendingFilePreviewUrl);
+      } catch {
+        /* ignore */
+      }
+    }
+    threadPendingFilePreviewUrl = url;
+    if (isImage) {
+      threadFilePreviewThumbEl.src = url;
+      threadFilePreviewThumbEl.classList.remove("hidden");
+    } else {
+      threadFilePreviewThumbEl.src = "";
+      threadFilePreviewThumbEl.classList.add("hidden");
+    }
+    threadFilePreviewEl.classList.remove("hidden");
+  }
+}
+
+async function jumpToReplyTarget({ replyToKind, replyToMessageId, replyToRootMessageId }) {
+  const kind = String(replyToKind || "").trim();
+  const rootId = Number(replyToRootMessageId);
+  const targetId = Number(replyToMessageId);
+
+  if (!Number.isFinite(rootId) || !kind) return;
+
+  if (kind === "ROOT") {
+    const el = document.getElementById(`msg-${rootId}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    hideMessageContextMenu();
+    return;
+  }
+
+  if (kind === "COMMENT") {
+    await openThreadModal(rootId, { targetCommentMessageId: Number.isFinite(targetId) ? targetId : null });
+  }
+}
+
+async function openThreadModal(rootMessageId, { targetCommentMessageId = null } = {}) {
+  if (!activeChannelId || !currentUser) return;
+  const rootId = Number(rootMessageId);
+  if (!Number.isFinite(rootId)) return;
+
+  threadRootMessageId = rootId;
+  // 댓글 모달 입력으로 전환하므로 답글 모드를 해제한다.
+  if (replyComposerTargetMessageId != null) clearReplyComposerTarget();
+  if (threadMessageInputEl) threadMessageInputEl.value = "";
+  clearThreadFilePreview();
+  hideMessageContextMenu();
+  openModal("modalThread");
+
+  // ROOT 메시지(타임라인에서 캐시로 재사용)
+  const rootMsg = timelineRootMessageById.get(rootId);
+  threadRootContainerEl.innerHTML = "";
+  threadCommentsContainerEl.innerHTML = "";
+
+  if (!rootMsg) {
+    threadRootContainerEl.textContent = "원글을 찾을 수 없습니다.";
+    return;
+  }
+
+  const rootRow = createMessageRowElement(rootMsg, { showAvatar: true, showTime: true });
+  threadRootContainerEl.appendChild(rootRow);
+
+  try {
+    const res = await apiFetch(`/api/channels/${activeChannelId}/messages/${rootId}/replies`);
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      threadCommentsContainerEl.textContent = "댓글 불러오기 실패";
+      return;
+    }
+
+    const children = Array.isArray(json.data) ? json.data : [];
+    const comments = children.filter((m) => String(m.messageType || m.message_type || "").toUpperCase().startsWith("COMMENT"));
+
+    // 각 COMMENT 아래의 REPLY를 병렬 조회
+    const commentReplyPairs = await Promise.all(
+      comments.map(async (c) => {
+        const cid = Number(c.messageId ?? c.message_id);
+        let nestedReplies = [];
+        try {
+          const rr = await apiFetch(`/api/channels/${activeChannelId}/messages/${cid}/replies`);
+          const rj = await rr.json().catch(() => ({}));
+          const nested = Array.isArray(rj.data) ? rj.data : [];
+          nestedReplies = nested.filter((m) => String(m.messageType || m.message_type || "").toUpperCase().startsWith("REPLY"));
+        } catch {
+          nestedReplies = [];
+        }
+        return { comment: c, replies: nestedReplies, commentId: cid };
+      })
+    );
+
+    threadCommentsContainerEl.innerHTML = "";
+    for (const { comment, replies, commentId } of commentReplyPairs) {
+      const node = document.createElement("div");
+      node.className = "thread-comment-node";
+
+      const commentRow = createMessageRowElement(comment, { showAvatar: true, showTime: true });
+      commentRow.id = `thread-msg-${commentId}`;
+      node.appendChild(commentRow);
+
+      if (replies && replies.length) {
+        const repliesWrap = document.createElement("div");
+        repliesWrap.className = "thread-comment-replies";
+        const filePayload = tryParseFilePayload(comment);
+        const replyToPreview = filePayload
+          ? String(filePayload.originalFilename || "첨부파일")
+          : mentionPreviewForToastClient(comment.text || "", 160);
+
+        replies.forEach((r) => {
+          const rid = Number(r.messageId ?? r.message_id);
+          const replyItem = {
+            ...r,
+            isReply: true,
+            replyToKind: "COMMENT",
+            replyToMessageId: commentId,
+            replyToRootMessageId: rootId,
+            replyToPreview: replyToPreview,
+          };
+          const replyRow = createReplyTimelineRowElement(replyItem, { showAvatar: false, showTime: true });
+          replyRow.id = `thread-msg-${rid}`;
+          repliesWrap.appendChild(replyRow);
+        });
+
+        node.appendChild(repliesWrap);
+      }
+
+      threadCommentsContainerEl.appendChild(node);
+    }
+    if (targetCommentMessageId != null) {
+      const targetEl = document.getElementById(`thread-msg-${targetCommentMessageId}`);
+      if (targetEl) targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  } catch (e) {
+    threadCommentsContainerEl.textContent = "스레드 로딩 중 오류";
+    console.error(e);
+  }
+}
+
+async function sendThreadComment() {
+  if (!activeChannelId || !currentUser) return;
+  const rootId = threadRootMessageId;
+  if (!Number.isFinite(Number(rootId))) return;
+
+  const text = threadMessageInputEl?.value?.trim?.() || "";
+
+  try {
+    // 댓글 파일이 있으면 먼저 업로드(텍스트가 있으면 모달은 즉시 리로드하지 않음)
+    if (threadPendingFile) {
+      const reloadMode = text ? "none" : "thread";
+      await uploadFile(threadPendingFile, {
+        parentMessageId: rootId,
+        threadKind: "COMMENT",
+        reloadMode,
+      });
+      clearThreadFilePreview();
+      if (!text) {
+        threadMessageInputEl.value = "";
+        return;
+      }
+    }
+
+    if (!text) return;
+
+    const res = await apiFetch(
+      `/api/channels/${activeChannelId}/messages/${rootId}/comments`,
+      {
+        method: "POST",
+        body: JSON.stringify({ senderId: currentUser.employeeNo, text }),
+      }
+    );
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error?.message || "댓글 전송 실패");
+
+    const createdId = json.data?.messageId ?? null;
+    threadMessageInputEl.value = "";
+    await openThreadModal(rootId, { targetCommentMessageId: createdId });
+  } catch (e) {
+    appendSystemMsg("댓글 전송 실패: " + (e?.message || "오류"));
+    console.error(e);
+  }
+}
+
+// 스레드 모달: 이벤트 바인딩
+if (threadBtnAttachEl && threadFileInputEl) {
+  threadBtnAttachEl.addEventListener("click", () => threadFileInputEl.click());
+}
+if (threadBtnClearFileEl) {
+  threadBtnClearFileEl.addEventListener("click", clearThreadFilePreview);
+}
+if (threadFileInputEl) {
+  threadFileInputEl.addEventListener("change", () => {
+    const file = threadFileInputEl.files?.[0] || null;
+    if (!file) return;
+    setThreadComposerPendingFile(file);
+    // 같은 파일을 다시 선택해도 change 이벤트가 뜨도록 초기화
+    threadFileInputEl.value = "";
+  });
+}
+if (threadBtnSendEl) {
+  threadBtnSendEl.addEventListener("click", sendThreadComment);
+}
+if (threadMessageInputEl) {
+  threadMessageInputEl.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendThreadComment();
+    }
+  });
+}
+
+// 메시지 우클릭 컨텍스트 메뉴 이벤트(댓글/답글)
+messagesEl?.addEventListener("contextmenu", (e) => {
+  const row = e.target.closest(".msg-row.msg-chat");
+  if (!row) return;
+  const mid = row.dataset.messageId ? Number(row.dataset.messageId) : null;
+  const rootMid = row.dataset.rootMessageId ? Number(row.dataset.rootMessageId) : mid;
+  if (!Number.isFinite(mid) || !Number.isFinite(rootMid)) return;
+
+  contextMenuSelectedMessageId = mid;
+  contextMenuSelectedRootMessageId = rootMid;
+  contextMenuSelectedIsReply = row.dataset.isReply === "true";
+
+  const commentBtn = messageContextMenuEl?.querySelector('[data-action="comment"]');
+  const replyBtn = messageContextMenuEl?.querySelector('[data-action="reply"]');
+  if (commentBtn) commentBtn.disabled = false;
+  if (replyBtn) replyBtn.disabled = contextMenuSelectedIsReply;
+
+  const menuW = 190;
+  const x = Math.min(e.clientX, window.innerWidth - menuW);
+  const y = Math.min(e.clientY, window.innerHeight - 90);
+  if (messageContextMenuEl) {
+    messageContextMenuEl.style.left = `${x}px`;
+    messageContextMenuEl.style.top = `${y}px`;
+    messageContextMenuEl.classList.remove("hidden");
+  }
+  e.preventDefault();
+});
+
+document.addEventListener("click", (e) => {
+  if (!messageContextMenuEl || messageContextMenuEl.classList.contains("hidden")) return;
+  const inMenu = e.target && messageContextMenuEl.contains(e.target);
+  if (!inMenu) hideMessageContextMenu();
+});
+
+if (messageContextMenuEl) {
+  messageContextMenuEl.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".context-menu-item");
+    if (!btn) return;
+    const action = btn.dataset.action;
+
+    const rootId = contextMenuSelectedRootMessageId;
+    const selectedId = contextMenuSelectedMessageId;
+    hideMessageContextMenu();
+
+    if (action === "comment") {
+      await openThreadModal(rootId, { targetCommentMessageId: null });
+      threadMessageInputEl?.focus?.();
+      return;
+    }
+
+    if (action === "reply") {
+      if (contextMenuSelectedIsReply) return;
+      setReplyComposerTarget(selectedId);
+      closeMentionSuggest();
+      return;
+    }
+  });
+}
+
 /** 소켓으로 도착한 한 줄: 직전 줄과 같은 사람·같은 분이면 직전 줄에서 시각 제거 후 추가 */
 function appendMessageRealtime(msg) {
   const sid = String(msg.senderId ?? "").trim();
@@ -1819,9 +2256,10 @@ function appendMessageRealtime(msg) {
 
   const beforeAppendChat = findLastChatRowIn(messagesEl);
   const showAvatar = !beforeAppendChat || beforeAppendChat.dataset.senderId !== sid;
-  messagesEl.appendChild(
-    createMessageRowElement(msg, { showAvatar, showTime: true })
-  );
+  const row = createMessageRowElement(msg, { showAvatar, showTime: true });
+  const mid = msg.messageId ?? msg.message_id;
+  if (mid != null) row.id = `msg-${mid}`;
+  messagesEl.appendChild(row);
   trimMessages();
   refreshPresenceDots();
   messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -2247,6 +2685,47 @@ async function sendMessage() {
   const text = messageInputEl.value.trim();
   closeMentionSuggest();
 
+  // 답글 모드: 선택된 메시지를 parent로 해서 REPLY 저장
+  if (replyComposerTargetMessageId != null) {
+    const parentMessageId = replyComposerTargetMessageId;
+
+    if (pendingFile) {
+      await uploadFile(pendingFile, {
+        parentMessageId,
+        threadKind: "REPLY",
+        reloadMode: "timeline",
+      });
+      clearFilePreview();
+      if (!text) {
+        messageInputEl.value = "";
+        clearReplyComposerTarget();
+        return;
+      }
+    }
+
+    if (!text) return;
+
+    try {
+      const res = await apiFetch(
+        `/api/channels/${activeChannelId}/messages/${parentMessageId}/replies`,
+        {
+          method: "POST",
+          body: JSON.stringify({ senderId: currentUser.employeeNo, text }),
+        }
+      );
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error?.message || "답글 전송 실패");
+
+      messageInputEl.value = "";
+      clearReplyComposerTarget();
+      await loadMessages(activeChannelId);
+    } catch (e) {
+      appendSystemMsg("답글 전송 실패: " + (e?.message || "오류"));
+      console.error(e);
+    }
+    return;
+  }
+
   // 파일이 있으면 파일 먼저 업로드
   if (pendingFile) {
     await uploadFile(pendingFile);
@@ -2292,8 +2771,16 @@ messageInputEl.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       e.preventDefault();
       closeMentionSuggest();
+      if (replyComposerTargetMessageId != null) clearReplyComposerTarget();
       return;
     }
+  }
+  if (e.key === "Escape") {
+    if (replyComposerTargetMessageId != null) {
+      e.preventDefault();
+      clearReplyComposerTarget();
+    }
+    return;
   }
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
@@ -2427,25 +2914,49 @@ function clearFilePreview() {
   document.getElementById("filePreviewName").textContent = "";
 }
 
-async function uploadFile(file) {
-  if (!activeChannelId || !currentUser) return;
+async function uploadFile(
+  file,
+  { parentMessageId = null, threadKind = null, reloadMode = "timeline" } = {}
+) {
+  if (!activeChannelId || !currentUser || !file) return;
   const formData = new FormData();
   formData.append("file", file);
+
+  const params = new URLSearchParams();
+  params.set("employeeNo", String(currentUser.employeeNo));
+  if (parentMessageId != null && Number.isFinite(Number(parentMessageId))) {
+    params.set("parentMessageId", String(parentMessageId));
+  }
+  if (threadKind != null && String(threadKind).trim()) {
+    params.set("threadKind", String(threadKind).trim());
+  }
+
   try {
-    const res  = await fetch(`${API_BASE}/api/channels/${activeChannelId}/files/upload?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${getToken()}` },
-      body: formData,
-    });
-    const json = await res.json();
-    if (res.ok) {
-      if (activeChannelId) {
-        await loadMessages(activeChannelId);
-        loadChannelFiles(activeChannelId);
+    const res = await fetch(
+      `${API_BASE}/api/channels/${activeChannelId}/files/upload?${params.toString()}`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${getToken()}` },
+        body: formData,
       }
-    } else {
+    );
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
       appendSystemMsg(`파일 업로드 실패: ${json.error?.message || "오류"}`);
+      return;
     }
+
+    if (reloadMode === "none") return;
+    if (reloadMode === "thread") {
+      if (threadRootMessageId != null) {
+        await openThreadModal(threadRootMessageId, { targetCommentMessageId: null });
+      }
+      return;
+    }
+
+    // 기본: 메인 타임라인 + 파일 허브 갱신
+    await loadMessages(activeChannelId);
+    loadChannelFiles(activeChannelId);
   } catch {
     appendSystemMsg("파일 업로드 중 서버 오류");
   }

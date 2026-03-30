@@ -47,9 +47,11 @@ public class ChannelFileController {
     public ApiResponse<ChannelFileResponse> upload(
             @PathVariable Long channelId,
             @RequestParam String employeeNo,
-            @RequestParam MultipartFile file
+            @RequestParam MultipartFile file,
+            @RequestParam(required = false) Long parentMessageId,
+            @RequestParam(required = false) String threadKind
     ) throws IOException {
-        return ApiResponse.success(channelFileService.uploadFile(channelId, employeeNo, file));
+        return ApiResponse.success(channelFileService.uploadFile(channelId, employeeNo, file, parentMessageId, threadKind));
     }
 
     /**

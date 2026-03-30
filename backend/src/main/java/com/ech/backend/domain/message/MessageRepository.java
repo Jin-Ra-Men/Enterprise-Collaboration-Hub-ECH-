@@ -36,6 +36,23 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     List<Message> findRecentByChannelId(@Param("channelId") Long channelId, Pageable pageable);
 
     /**
+     * 타임라인(루트 + REPLY) 최신 N개.
+     * - ROOT: parentMessage IS NULL (기존 메인 타임라인)
+     * - REPLY: parentMessage는 존재하며 messageType이 REPLY_* 인 메시지
+     */
+    @Query("""
+            SELECT m FROM Message m
+            JOIN FETCH m.sender s
+            LEFT JOIN FETCH m.parentMessage pm
+            WHERE m.channel.id = :channelId
+              AND m.isDeleted = false
+              AND m.archivedAt IS NULL
+              AND (m.parentMessage IS NULL OR m.messageType LIKE 'REPLY%')
+            ORDER BY m.createdAt DESC
+            """)
+    List<Message> findTimelineByChannelId(@Param("channelId") Long channelId, Pageable pageable);
+
+    /**
      * 통합 검색: 사용자가 속한 채널의 메시지 본문을 키워드로 검색.
      * 아카이브/삭제 메시지는 제외된다.
      */

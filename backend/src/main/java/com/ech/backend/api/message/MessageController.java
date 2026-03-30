@@ -2,6 +2,7 @@ package com.ech.backend.api.message;
 
 import com.ech.backend.api.message.dto.CreateMessageRequest;
 import com.ech.backend.api.message.dto.MessageResponse;
+import com.ech.backend.api.message.dto.MessageTimelineItemResponse;
 import com.ech.backend.common.api.ApiResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -49,11 +50,29 @@ public class MessageController {
         return ApiResponse.success(messageService.createReply(channelId, parentMessageId, request));
     }
 
+    @PostMapping("/{parentMessageId}/comments")
+    public ApiResponse<MessageResponse> createComment(
+            @PathVariable Long channelId,
+            @PathVariable Long parentMessageId,
+            @Valid @RequestBody CreateMessageRequest request
+    ) {
+        return ApiResponse.success(messageService.createComment(channelId, parentMessageId, request));
+    }
+
     @GetMapping("/{parentMessageId}/replies")
     public ApiResponse<List<MessageResponse>> getThreadReplies(
             @PathVariable Long channelId,
             @PathVariable Long parentMessageId
     ) {
         return ApiResponse.success(messageService.getThreadReplies(channelId, parentMessageId));
+    }
+
+    @GetMapping("/timeline")
+    public ApiResponse<List<MessageTimelineItemResponse>> getTimelineMessages(
+            @PathVariable Long channelId,
+            @RequestParam String employeeNo,
+            @RequestParam(defaultValue = "50") int limit
+    ) {
+        return ApiResponse.success(messageService.getChannelTimelineMessages(channelId, employeeNo, limit));
     }
 }

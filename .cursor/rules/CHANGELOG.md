@@ -19,6 +19,7 @@
 - 관리자 `error_logs` 조회: `from/to/errorCode` 미지정(null) 시 Postgres 파라미터 타입 추론 문제를 `COALESCE`로 완화
 - 로그인 실패(`POST /api/auth/login`)와 `/favicon.ico` 같은 프론트 404는 불필요한 `error_logs` 적재에서 제외
 - 채널/DM 섹션 접기 시 화살표 **▾↔▸** 전환(`syncSectionToggleChevron`·`section-toggle-chevron`)
+- 스레드 타임라인 통합 테스트 안정화: `isReply` 직렬화 불일치에 대비해 `messageType(REPLY_*)` 기반으로 REPLY/ROOT 분기 판정
 
 ### Added
 - 퀵 레일 **DM**에도 사이드바와 동일 **프레즌스 점**(`dmSidebarLeadingHtml`, `refreshPresenceDots`)
