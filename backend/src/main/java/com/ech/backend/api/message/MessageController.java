@@ -59,14 +59,10 @@ public class MessageController {
         return ApiResponse.success(messageService.createComment(channelId, parentMessageId, request));
     }
 
-    @GetMapping("/{parentMessageId}/replies")
-    public ApiResponse<List<MessageResponse>> getThreadReplies(
-            @PathVariable Long channelId,
-            @PathVariable Long parentMessageId
-    ) {
-        return ApiResponse.success(messageService.getThreadReplies(channelId, parentMessageId));
-    }
-
+    /**
+     * 리터럴 경로는 가변 세그먼트({parentMessageId}/replies)보다 먼저 두어,
+     * 일부 환경에서 {@code /messages/timeline}이 핸들러 미매칭(404)으로 떨어지는 것을 방지한다.
+     */
     @GetMapping("/timeline")
     public ApiResponse<List<MessageTimelineItemResponse>> getTimelineMessages(
             @PathVariable Long channelId,
@@ -74,5 +70,13 @@ public class MessageController {
             @RequestParam(defaultValue = "50") int limit
     ) {
         return ApiResponse.success(messageService.getChannelTimelineMessages(channelId, employeeNo, limit));
+    }
+
+    @GetMapping("/{parentMessageId}/replies")
+    public ApiResponse<List<MessageResponse>> getThreadReplies(
+            @PathVariable Long channelId,
+            @PathVariable Long parentMessageId
+    ) {
+        return ApiResponse.success(messageService.getThreadReplies(channelId, parentMessageId));
     }
 }

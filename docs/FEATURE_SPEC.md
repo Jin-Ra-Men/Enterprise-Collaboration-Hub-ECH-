@@ -288,9 +288,11 @@
 - 사용자: Member, Manager, Admin
 - 관련 화면/경로: 채널 메시지 목록, 스레드 패널
 - 관련 API:
-  - `GET /api/channels/{channelId}/messages?employeeNo=...&limit=` (채널 메시지 목록)
+  - `GET /api/channels/{channelId}/messages?employeeNo=...&limit=` (채널 **루트** 메시지 목록)
+  - `GET /api/channels/{channelId}/messages/timeline?employeeNo=...&limit=` (메인 타임라인: 루트 + `REPLY_*` 답글, `isReply`·`replyTo*` 메타 포함)
   - `POST /api/channels/{channelId}/messages` (부모 메시지 생성)
   - `POST /api/channels/{channelId}/messages/{parentMessageId}/replies` (답글 생성)
+  - `POST /api/channels/{channelId}/messages/{parentMessageId}/comments` (댓글 생성, `COMMENT_*`)
   - `GET /api/channels/{channelId}/messages/{parentMessageId}/replies` (스레드 조회)
 - 관련 Socket 이벤트:
   - 현재 API 중심 구현, 추후 소켓 이벤트와 동기화 확장 예정
@@ -310,6 +312,7 @@
   - 채널 불일치/없는 부모 메시지 요청 실패
   - 인덱스(`idx_messages_parent_message_id`) 기반 스레드 조회 성능 점검
 - 비고:
+  - 프론트 `loadMessages`: **timeline 요청이 HTTP 404**이면(구버전 백엔드 등) 위 루트 목록 API로 **자동 폴백**해 채팅 읽기는 가능(이 경우 타임라인 전용 답글 UI는 제한될 수 있음).
   - 구현 파일:
     - `backend/src/main/java/com/ech/backend/api/message/MessageController.java`
     - `backend/src/main/java/com/ech/backend/api/message/MessageService.java`

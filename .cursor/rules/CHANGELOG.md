@@ -2,6 +2,12 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-03-31
+
+### Fixed
+- 채팅 메시지 로드: `GET .../messages/timeline`이 404(구버전 백엔드 등)일 때 `GET .../messages`로 자동 폴백해 채팅을 읽을 수 있게 함
+- `MessageController`: `GET /timeline` 매핑을 `/{parentMessageId}/replies` 앞에 배치해 경로 매칭 안정화
+
 ## 2026-03-30
 
 ### Changed

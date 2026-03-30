@@ -1318,22 +1318,56 @@ async function loadMessages(channelId) {
   if (!currentUser) return;
   revokeImageAttachmentBlobUrls();
   try {
-    const res  = await apiFetch(`/api/channels/${channelId}/messages/timeline?employeeNo=${encodeURIComponent(currentUser.employeeNo)}&limit=50`);
-    const json = await res.json();
+    const empQ = encodeURIComponent(currentUser.employeeNo);
+    const timelineUrl = `/api/channels/${channelId}/messages/timeline?employeeNo=${empQ}&limit=50`;
+    const legacyUrl = `/api/channels/${channelId}/messages?employeeNo=${empQ}&limit=50`;
+
+    let res = await apiFetch(timelineUrl);
+    let json = await res.json().catch(() => ({}));
+    let usedTimeline = true;
+
+    // 구버전 백엔드(timeline 미구현)는 404(NoHandlerFound)로 떨어질 수 있음 → 루트 메시지 API로 폴백
+    if (!res.ok && res.status === 404) {
+      usedTimeline = false;
+      res = await apiFetch(legacyUrl);
+      json = await res.json().catch(() => ({}));
+    }
+
     messagesEl.innerHTML = "";
-    if (!res.ok) { appendSystemMsg("메시지 로드 실패: " + (json.error?.message || "")); return; }
+    if (!res.ok) {
+      appendSystemMsg("메시지 로드 실패: " + (json.error?.message || ""));
+      return;
+    }
+
     const msgs = json.data || [];
     timelineRootMessageById.clear();
-    msgs.forEach((m) => {
-      if (!m || m.isReply) return;
-      const mid = m.messageId ?? m.message_id;
-      if (mid != null) timelineRootMessageById.set(Number(mid), m);
-    });
-    if (msgs.length === 0) {
-      appendSystemMsg("아직 메시지가 없습니다. 첫 메시지를 보내보세요! 👋");
+
+    if (usedTimeline) {
+      msgs.forEach((m) => {
+        if (!m || m.isReply) return;
+        const mid = m.messageId ?? m.message_id;
+        if (mid != null) timelineRootMessageById.set(Number(mid), m);
+      });
+      if (msgs.length === 0) {
+        appendSystemMsg("아직 메시지가 없습니다. 첫 메시지를 보내보세요! 👋");
+      } else {
+        renderTimelineMessages(msgs);
+      }
     } else {
-      renderTimelineMessages(msgs);
+      msgs.forEach((m) => {
+        if (!m) return;
+        const pid = m.parentMessageId ?? m.parent_message_id;
+        if (pid != null && pid !== "") return;
+        const mid = m.messageId ?? m.message_id;
+        if (mid != null) timelineRootMessageById.set(Number(mid), m);
+      });
+      if (msgs.length === 0) {
+        appendSystemMsg("아직 메시지가 없습니다. 첫 메시지를 보내보세요! 👋");
+      } else {
+        renderMessages(msgs);
+      }
     }
+
     const maxId = maxRootMessageIdFromList(msgs);
     if (maxId != null) {
       await markChannelReadUpTo(channelId, maxId);
