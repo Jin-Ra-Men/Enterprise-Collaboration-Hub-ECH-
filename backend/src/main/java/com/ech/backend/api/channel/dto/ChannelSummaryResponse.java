@@ -1,6 +1,7 @@
 package com.ech.backend.api.channel.dto;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
 public record ChannelSummaryResponse(
         Long channelId,
@@ -10,6 +11,7 @@ public record ChannelSummaryResponse(
         String channelType,
         int memberCount,
         OffsetDateTime createdAt,
-        int unreadCount
+        int unreadCount,
+        List<String> dmPeerEmployeeNos
 ) {
 }

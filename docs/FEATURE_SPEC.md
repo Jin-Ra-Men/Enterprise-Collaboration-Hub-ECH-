@@ -104,7 +104,7 @@
 - 사용자: Backend 개발자, Frontend 개발자
 - 관련 화면/경로: 채널 목록/채널 상세/채널 참여 UI
 - 관련 API:
-  - `GET /api/channels?employeeNo=...` (내 채널/DM 목록 — **DM**의 `description`은 DB 저장값이 아니라 요청 `employeeNo`(본인)을 제외한 참가자 표시명을 서버가 매번 계산; **`unreadCount`** 는 본인 읽음 포인터 이후의 **루트 메시지** 건수로 계산해 사이드바 빨간 배지에 표시)
+  - `GET /api/channels?employeeNo=...` (내 채널/DM 목록 — **DM**의 `description`은 DB 저장값이 아니라 요청 `employeeNo`(본인)을 제외한 참가자 표시명을 서버가 매번 계산; **`unreadCount`** 는 본인 읽음 포인터 이후의 **루트 메시지** 건수로 계산해 사이드바 빨간 배지에 표시; **`dmPeerEmployeeNos`** 는 DM만 조회자를 제외한 참가자 **사번** 배열(정렬) — 사이드바 DM 줄 프레즌스 점에 사용)
   - `POST /api/channels` (채널 생성)
   - `GET /api/channels/{channelId}` (채널 상세 조회)
   - `POST /api/channels/{channelId}/members` (채널 참여)

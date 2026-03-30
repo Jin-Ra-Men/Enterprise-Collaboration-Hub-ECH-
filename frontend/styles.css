@@ -333,7 +333,37 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 .user-info { flex: 1; overflow: hidden; }
 .user-name { display: block; font-size: 14px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .user-status { font-size: 12px; color: var(--text-muted); }
+/* 본인 상태 한 줄당 점 하나(::before만 사용, 본문은 라벨만) */
 .user-status.online::before { content: "● "; color: var(--success); }
+.user-status.away::before { content: "● "; color: #fbbf24; }
+.user-status.offline::before { content: "● "; color: #6b7280; }
+
+/* DM 목록: 상대 프레즌스 점(1명=1점, 다자 DM은 최대 3개까지) */
+.sidebar-dm-presence-wrap {
+  flex-shrink: 0;
+  width: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  align-self: center;
+}
+.sidebar-dm-presence-wrap .presence-dot {
+  width: 7px;
+  height: 7px;
+}
+.sidebar-dm-presence-more {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--sidebar-item-fg);
+  line-height: 1;
+  opacity: 0.85;
+}
+.dm-type-icon {
+  font-size: 10px;
+  opacity: 0.7;
+}
 .btn-sidebar-logout {
   color: var(--sidebar-item-fg);
   font-size: 18px;

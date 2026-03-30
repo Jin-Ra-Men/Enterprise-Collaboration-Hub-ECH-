@@ -365,6 +365,9 @@ public class ChannelService {
                     int memberCount = channelMemberRepository.findByChannelId(channel.getId()).size();
                     String summaryDescription = resolveChannelSummaryDescription(channel, emp);
                     int unread = resolveUnreadRootCount(channel.getId(), emp);
+                    List<String> dmPeers = channel.getChannelType() == ChannelType.DM
+                            ? resolveDmPeerEmployeeNos(channel.getId(), emp)
+                            : List.of();
                     return new ChannelSummaryResponse(
                             channel.getId(),
                             channel.getWorkspaceKey(),
@@ -373,9 +376,25 @@ public class ChannelService {
                             channel.getChannelType().name(),
                             memberCount,
                             channel.getCreatedAt(),
-                            unread
+                            unread,
+                            dmPeers
                     );
                 })
+                .toList();
+    }
+
+    /** DM 사이드바 프레즌스: 조회자(사번)를 제외한 참가자 사번, 정렬 */
+    private List<String> resolveDmPeerEmployeeNos(Long channelId, String viewerEmployeeNo) {
+        String viewer = viewerEmployeeNo == null ? "" : viewerEmployeeNo.trim();
+        List<ChannelMember> members = channelMemberRepository.findByChannelIdFetchUsers(channelId);
+        return members.stream()
+                .map(cm -> {
+                    User u = cm.getUser();
+                    return u.getEmployeeNo() == null ? "" : u.getEmployeeNo().trim();
+                })
+                .filter(e -> !e.isEmpty())
+                .filter(e -> viewer.isEmpty() || !viewer.equals(e))
+                .sorted()
                 .toList();
     }
 

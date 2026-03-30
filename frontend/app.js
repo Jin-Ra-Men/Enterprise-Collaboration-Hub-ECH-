@@ -205,10 +205,59 @@ async function fetchPresenceSnapshot() {
 function refreshPresenceDots() {
   document.querySelectorAll("[data-presence-user]").forEach((el) => {
     const emp = String(el.dataset.presenceUser || "").trim();
+    if (!emp) return;
     const st = presenceByEmployeeNo.get(emp) || "OFFLINE";
-    el.className = `presence-dot ${presenceCssClass(st)}`;
-    el.title = presenceTitle(st);
+    const prCl = presenceCssClass(st);
+    const tip = presenceTitle(st);
+    if (el.classList.contains("sidebar-dm-presence")) {
+      el.className = `presence-dot ${prCl} sidebar-dm-presence`;
+      el.dataset.presenceUser = emp;
+      el.title = `${tip} · ${emp}`;
+      return;
+    }
+    el.className = `presence-dot ${prCl}`;
+    el.title = tip;
   });
+  refreshSidebarUserStatusLine();
+}
+
+/** 좌측 하단 본인 프레즌스 문구(점은 CSS ::before 한 개만) */
+function refreshSidebarUserStatusLine() {
+  const el = document.getElementById("sidebarUserStatus");
+  if (!el || !currentUser?.employeeNo) return;
+  const emp = String(currentUser.employeeNo).trim();
+  if (!emp) return;
+  const st = presenceByEmployeeNo.get(emp) || "OFFLINE";
+  el.classList.remove("online", "away", "offline");
+  if (st === "ONLINE") el.classList.add("online");
+  else if (st === "AWAY") el.classList.add("away");
+  else el.classList.add("offline");
+  el.textContent = st === "ONLINE" ? "온라인" : st === "AWAY" ? "자리비움" : "오프라인";
+}
+
+/** DM 줄 왼쪽: 상대 사번이 있으면 프레즌스 점, 없으면 기본 ● 아이콘 */
+function dmSidebarLeadingHtml(peerEmployeeNos) {
+  const peers = Array.isArray(peerEmployeeNos)
+    ? peerEmployeeNos.map((e) => String(e || "").trim()).filter(Boolean)
+    : [];
+  if (peers.length === 0) {
+    return `<span class="item-icon dm-type-icon" aria-hidden="true" title="다이렉트 메시지">●</span>`;
+  }
+  const maxDots = 3;
+  const shown = peers.slice(0, maxDots);
+  const dots = shown
+    .map((emp) => {
+      const st = presenceByEmployeeNo.get(emp) || "OFFLINE";
+      const prCl = presenceCssClass(st);
+      const tip = `${presenceTitle(st)} · ${emp}`;
+      return `<span class="presence-dot ${prCl} sidebar-dm-presence" data-presence-user="${escHtml(emp)}" title="${escHtml(tip)}"></span>`;
+    })
+    .join("");
+  const more =
+    peers.length > maxDots
+      ? `<span class="sidebar-dm-presence-more" title="+${peers.length - maxDots}명">+${peers.length - maxDots}</span>`
+      : "";
+  return `<span class="sidebar-dm-presence-wrap">${dots}${more}</span>`;
 }
 
 async function openUserProfile(employeeNo) {
@@ -979,7 +1028,8 @@ function renderChannelList(channels) {
       : "";
 
     if (ch.channelType === "DM") {
-      li.innerHTML = `<span class="item-icon">●</span><span class="item-label">${escHtml(displayName)}</span>${badgeHtml}`;
+      const dmLead = dmSidebarLeadingHtml(ch.dmPeerEmployeeNos);
+      li.innerHTML = `${dmLead}<span class="item-label">${escHtml(displayName)}</span>${badgeHtml}`;
       dmListEl.appendChild(li);
     } else {
       const icon = ch.channelType === "PRIVATE" ? "🔒" : "#";
@@ -991,6 +1041,8 @@ function renderChannelList(channels) {
 
     li.addEventListener("click", () => selectChannel(ch.channelId, displayName, ch.channelType));
   });
+
+  refreshPresenceDots();
 }
 
 /* ==========================================================================
