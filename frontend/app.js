@@ -1594,8 +1594,7 @@ document.getElementById("btnAttach").addEventListener("click", () => {
   document.getElementById("fileInput").click();
 });
 
-document.getElementById("fileInput").addEventListener("change", (e) => {
-  const file = e.target.files[0];
+function setComposerPendingFile(file) {
   if (!file) return;
   if (pendingComposerPreviewUrl) {
     try {
@@ -1619,8 +1618,73 @@ document.getElementById("fileInput").addEventListener("change", (e) => {
   }
   document.getElementById("filePreview").classList.remove("hidden");
   document.getElementById("filePreviewName").textContent = `📎 ${file.name} (${fmtSize(file.size)})`;
+}
+
+document.getElementById("fileInput").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  setComposerPendingFile(file);
   e.target.value = "";
 });
+
+/**
+ * 채팅 패널 포커스 시 클립보드 이미지(Ctrl+V)를 첨부 미리보기와 동일 경로로 연결한다.
+ * 캡처 단계에서 처리해 메시지 입력란·메시지 목록 등 하위 요소에 포커스가 있어도 동작한다.
+ */
+function handleChatImagePaste(e) {
+  if (!activeChannelId || !currentUser) return;
+  const overlay = e.target && e.target.closest(".modal-overlay");
+  if (overlay && !overlay.classList.contains("hidden")) return;
+
+  const dt = e.clipboardData;
+  if (!dt) return;
+
+  let imageFile = null;
+  const items = dt.items;
+  if (items && items.length > 0) {
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      if (it.kind === "file" && it.type && it.type.startsWith("image/")) {
+        const f = it.getAsFile();
+        if (f && f.size > 0) {
+          imageFile = f;
+          break;
+        }
+      }
+    }
+  }
+  if (!imageFile && dt.files && dt.files.length > 0) {
+    for (let i = 0; i < dt.files.length; i++) {
+      const f = dt.files[i];
+      if (f.type && f.type.startsWith("image/")) {
+        imageFile = f;
+        break;
+      }
+    }
+  }
+  if (!imageFile) return;
+
+  e.preventDefault();
+  const mime = imageFile.type || "image/png";
+  let ext = "png";
+  if (mime === "image/jpeg" || mime === "image/jpg") ext = "jpg";
+  else if (mime === "image/gif") ext = "gif";
+  else if (mime === "image/webp") ext = "webp";
+  else if (mime === "image/png") ext = "png";
+
+  const rawName = imageFile.name ? String(imageFile.name).trim() : "";
+  const generic =
+    !rawName || rawName === "image.png" || rawName.toLowerCase() === "image.jpeg" || rawName === "clipboard.png";
+  const name = generic ? `pasted-image-${Date.now()}.${ext}` : rawName;
+  const file =
+    generic || !imageFile.name ? new File([imageFile], name, { type: mime }) : imageFile;
+  setComposerPendingFile(file);
+}
+
+const viewChatEl = document.getElementById("viewChat");
+if (viewChatEl) {
+  viewChatEl.addEventListener("paste", handleChatImagePaste, true);
+}
 
 document.getElementById("btnClearFile").addEventListener("click", clearFilePreview);
 

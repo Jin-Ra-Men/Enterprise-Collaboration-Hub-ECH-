@@ -18,6 +18,7 @@
 
 ### Added
 - 채팅 이미지 첨부 UX: FILE 메시지 JSON에 `contentType` 저장, 프론트에서 이미지 인라인 표시·라이트박스 확대·확대 화면 다운로드, 작성 중 이미지 미리보기 썸네일
+- 채팅창에서 클립보드 이미지 붙여넣기(Ctrl+V): `viewChat` 캡처 단계 `paste`로 처리, 기존 `pendingFile`/업로드·전송 흐름 재사용(모달 열림 시 제외)
 
 ### Changed
 - `docs/FEATURE_SPEC.md` 전반: 채널·메시지·읽음·파일·칸반·업무·프레즌스·실시간 소켓 서술을 `employeeNo`/`actorEmployeeNo`/`createdByEmployeeNo` 등 현재 API DTO와 일치하도록 정리
