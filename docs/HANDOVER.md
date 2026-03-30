@@ -57,10 +57,11 @@
   - 효과: 실시간 저장 경로 장애/불일치가 있어도 사용자 메시지 전송 자체는 유지
 - 사용자 참조 키 전환(employee_no):
   - 조치: 채널/메시지/파일/칸반/업무의 User 연관 `@JoinColumn`을 `users.employee_no` 기준으로 전환
-  - 리얼타임: `senderId(users.id)` 입력을 내부에서 `employee_no`로 해석해 멤버십·메시지 저장 수행
+  - 리얼타임: `message:send`의 `senderId`는 **클라이언트가 보내는 사원번호 문자열**을 그대로 검증·저장(구 숫자 `users.id` 경로 제거)
   - 운영 SQL: `docs/sql/migrate_user_refs_id_to_employee_no.sql` 적용 후 검증 필요
-  - API 2차: 채널/메시지/파일/읽음상태 핵심 요청 파라미터를 `employeeNo` 기준으로 우선 전환
+  - API 2차: 채널/메시지/파일/읽음상태 핵심 요청 파라미터를 `employeeNo` 기준으로 전환
   - API 3차: 칸반/릴리즈/설정/보존정책의 actor·creator·updater·uploader 식별자도 employeeNo 기준으로 확장
+  - 프론트·소켓(2026-03-30): 프로필 조회 `?employeeNo=`, 프레즌스 키 `employeeNo`, 관리자 릴리즈/설정 요청 필드 정합
 
 ## 3-1) 데이터베이스 스키마 인수인계 메모
 - 현재 기준 DB: PostgreSQL
@@ -102,18 +103,20 @@
 - 공통:
   - `GET /api/health`
 - 채널 도메인:
-  - `POST /api/channels`
+  - `GET /api/channels?employeeNo=...` — 내 채널/DM 목록
+  - `POST /api/channels` — body: `createdByEmployeeNo`, DM 시 `dmPeerEmployeeNos` 등 (`CreateChannelRequest`)
   - `GET /api/channels/{channelId}`
-  - `POST /api/channels/{channelId}/members`
-  - `GET /api/channels/{channelId}/read-state?userId=...`
-  - `PUT /api/channels/{channelId}/read-state`
-  - `GET /api/channels/{channelId}/files?userId=...`
-  - `POST /api/channels/{channelId}/files/upload?userId=...` (multipart)
+  - `POST /api/channels/{channelId}/members` — body: `employeeNo`, `memberRole` (`JoinChannelRequest`)
+  - `GET /api/channels/{channelId}/read-state?employeeNo=...`
+  - `PUT /api/channels/{channelId}/read-state` — body: `employeeNo`, `lastReadMessageId`
+  - `GET /api/channels/{channelId}/files?employeeNo=...`
+  - `POST /api/channels/{channelId}/files/upload?employeeNo=...` (multipart)
   - `POST /api/channels/{channelId}/files` (메타만)
-  - `GET /api/channels/{channelId}/files/{fileId}/download?userId=...`
-  - `GET /api/channels/{channelId}/files/{fileId}/download-info?userId=...`
+  - `GET /api/channels/{channelId}/files/{fileId}/download?employeeNo=...`
+  - `GET /api/channels/{channelId}/files/{fileId}/download-info?employeeNo=...`
 - 메시지/스레드:
-  - `POST /api/channels/{channelId}/messages`
+  - `GET /api/channels/{channelId}/messages?employeeNo=...` — 목록(프론트 기본)
+  - `POST /api/channels/{channelId}/messages` — body: `senderId`(발신자 **사원번호** 문자열), `text`
   - `POST /api/channels/{channelId}/messages/{parentMessageId}/replies`
   - `GET /api/channels/{channelId}/messages/{parentMessageId}/replies`
 - 사용자 검색·프로필·조직도:
@@ -132,7 +135,7 @@
 - 오류 로그(관리):
   - `GET /api/admin/error-logs?from=&to=&errorCode=&path=&limit=`
 - 감사 로그(관리):
-  - `GET /api/admin/audit-logs?from=&to=&actorUserId=&eventType=&resourceType=&workspaceKey=&limit=`
+  - `GET /api/admin/audit-logs?from=&to=&actorUserId=&eventType=&resourceType=&workspaceKey=&limit=` (`actorUserId`는 DB `users.id` 숫자; 행위자 필터는 추후 `employeeNo` 확장 여지)
 - Realtime 소켓:
   - `channel:join`
   - `message:send` (DB 저장 연계)
@@ -142,11 +145,14 @@
   - `presence:update`
   - `presence:error`
 
-### 채널 API 인수인계 메모
-- 생성 시 생성자(`createdByUserId`)는 자동으로 채널 멤버(`MANAGER`)로 등록됩니다.
+### 채널·멤버·식별자 계약 메모
+- **사용자 식별(클라이언트→서버)**: 채널/읽음/파일/메시지 목록 등 대부분의 쿼리·본문은 **`employeeNo`(사원번호 문자열)** 를 사용합니다. JWT subject도 사번 기준이며, 프론트 `app.js`는 이에 맞춰 동작합니다.
+- 채널 **생성** 시 `createdByEmployeeNo`는 자동으로 해당 채널 멤버(`MANAGER`)로 등록됩니다.
+- **DM** 생성 시 `dmPeerEmployeeNos`에 상대 사번 목록을 넣습니다(프론트 `startDmWithUser`).
+- **멤버 추가**는 `POST .../members` body의 `employeeNo` + `memberRole`입니다.
 - 채널명은 워크스페이스 기준으로 유니크합니다. (`workspaceKey + name`)
 - 멤버 중복 참여는 서버에서 차단합니다.
-- 현재 인증/인가는 미적용 상태이며, RBAC 고도화 단계에서 보완 예정입니다.
+- DB 컬럼명 `channel_members.user_id` 등은 역사적 이름이며, **값은 `users.employee_no`** 와 FK로 연결됩니다(스키마 초안·마이그레이션 참고).
 
 ### Realtime 메시지 저장 연계 메모
 - Realtime 서버는 PostgreSQL에 직접 연결해 메시지를 저장합니다.
@@ -272,8 +278,8 @@
 - `download-info`는 멤버 검증 후 `storageKey`와 안내 문구를 돌려주며, 실제 사전 서명 URL은 스토리지 연동 단계에서 확장합니다.
 
 ### 프론트엔드 데모 UI 메모
-- 동료 **프로필 모달**(`modalUserProfile`): 역할·계정 상태는 표시하지 않음. **직급**(`jobLevel`)은 항상 행(없으면 `-`), **직위**(`jobPosition`)·**직책**(`jobTitle`)은 값이 있을 때만 `profileJobPositionDt`/`profileModalJobPosition`, `profileJobTitleDt`/`profileModalJobTitle` 행 표시. **DM 보내기**(`btnProfileDm`)는 `startDmWithUser`로 `POST /api/channels`에 `channelType: DM`과 `dmPeerUserIds: [상대 userId]`를 한 번에 보내 서버가 내부 이름·멤버십을 처리한 뒤 `selectChannel`로 전환(자기 자신이면 버튼 비활성). DB `channels.channel_type`은 `DM` 문자열로 저장됩니다.
-- **프레즌스**: 채팅 메시지(`.msg-avatar-wrap`)·멤버 패널(`.member-avatar-wrap`)에서 점을 아바타 사각형 **우측 하단**에 겹쳐 표시(`refreshPresenceDots`가 `[data-presence-user]` 갱신).
+- 동료 **프로필 모달**(`modalUserProfile`): `GET /api/users/profile?employeeNo=`로 로드. 역할·계정 상태는 표시하지 않음. **직급**(`jobLevel`)은 항상 행(없으면 `-`), **직위**(`jobPosition`)·**직책**(`jobTitle`)은 값이 있을 때만 해당 행 표시. **DM 보내기**(`btnProfileDm`)는 `startDmWithUser`로 `POST /api/channels`에 `channelType: DM`, `createdByEmployeeNo`, `dmPeerEmployeeNos: [상대 사번]`을 보내 서버가 내부 이름·멤버십을 처리한 뒤 `selectChannel`로 전환(자기 자신이면 버튼 비활성). DB `channels.channel_type`은 `DM` 문자열로 저장됩니다.
+- **프레즌스**: `presence:set`/`presence:update`/스냅샷 키는 **사번 문자열**. 채팅·멤버 패널에서 `[data-presence-user]`에 사번을 두고 `refreshPresenceDots`가 갱신합니다.
 - `frontend/app.js`는 수신 메시지 DOM을 최대 200개로 유지해 브라우저 메모리·렌더 비용이 무한 증가하지 않도록 합니다.
 - 채팅 시각 표시: **동일 발신자·동일 분(로컬 캘린더 분)** 묶음에서는 **그 분의 마지막 메시지 줄에만** 시각을 붙이고, **분이 바뀌면** 각 메시지 줄에 시각을 붙인다(`minuteKey` / `renderMessages` / `appendMessageRealtime`). 시각은 **24시간제 `HH:mm`**이며 본문 바로 뒤에 약간 띄워 인라인으로 붙인다(`fmtTime`, `.msg-content-row`).
 
