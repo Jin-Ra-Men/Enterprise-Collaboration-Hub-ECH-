@@ -1087,8 +1087,8 @@ span.section-toggle-static { cursor: default; }
   z-index: 1200;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  max-width: 320px;
+  gap: 12px;
+  max-width: 380px;
   pointer-events: none;
 }
 .mention-toast-stack .mention-toast {
@@ -1099,9 +1099,9 @@ span.section-toggle-static { cursor: default; }
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
-  padding: 12px 14px;
+  padding: 14px 18px;
   border: 1px solid var(--border-subtle);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--bg-elevated);
   color: var(--text-primary);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
@@ -1115,18 +1115,18 @@ span.section-toggle-static { cursor: default; }
   to { opacity: 1; transform: translateY(0); }
 }
 .mention-toast-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--accent);
 }
-.mention-toast-sub { font-size: 13px; font-weight: 600; }
+.mention-toast-sub { font-size: 14px; font-weight: 600; }
 .mention-toast-preview {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
-  line-height: 1.35;
-  max-height: 3.2em;
+  line-height: 1.45;
+  max-height: 3.8em;
   overflow: hidden;
 }
 
