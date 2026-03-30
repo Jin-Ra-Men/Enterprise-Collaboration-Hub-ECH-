@@ -4,42 +4,57 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * {@code channel_members.user_id} 가 아직 {@code users.id}(정수 PK)를 담는 레거시 스키마인지,
- * 아니면 {@code users.employee_no}(문자) FK로 이관된 스키마인지 런타임에 판별한다.
+ * 사용자 참조 컬럼이 아직 {@code users.id}(정수 PK)만 담는 레거시인지,
+ * {@code users.employee_no} FK로 이관된 스키마인지 런타임에 판별한다.
  *
- * <p>레거시 상태에서는 JPA가 {@code cm.user.employeeNo} 조건으로 생성하는 JPQL/SQL이
- * DB 타입 불일치(bigint vs varchar)로 실패할 수 있어, JDBC 보조 경로를 쓴다.</p>
+ * <p>대상: {@code channel_members.user_id}, {@code messages.sender_id} 등.
+ * 레거시에서는 JPA JPQL이 bigint=varchar 조인·조건 SQL을 만들어 PostgreSQL에서 실패할 수 있다.</p>
  */
 @Component
 public class ChannelMemberUserIdColumnInspector {
 
-    private final boolean legacyUserIdReferencesUserPrimaryKey;
+    private final boolean legacyChannelMemberUserIdReferencesPk;
+    private final boolean legacyMessageSenderReferencesPk;
 
     public ChannelMemberUserIdColumnInspector(JdbcTemplate jdbcTemplate) {
-        boolean legacy = false;
-        try {
-            String dataType = jdbcTemplate.queryForObject(
-                    """
-                            SELECT c.data_type
-                            FROM information_schema.columns c
-                            WHERE c.table_schema = current_schema()
-                              AND c.table_name = 'channel_members'
-                              AND c.column_name = 'user_id'
-                            """,
-                    String.class
-            );
-            legacy = isIntegerLikeUserReferenceColumn(dataType);
-        } catch (Exception ignored) {
-            legacy = false;
-        }
-        this.legacyUserIdReferencesUserPrimaryKey = legacy;
+        this.legacyChannelMemberUserIdReferencesPk = detectIntegerFkColumn(
+                jdbcTemplate, "channel_members", "user_id");
+        this.legacyMessageSenderReferencesPk = detectIntegerFkColumn(
+                jdbcTemplate, "messages", "sender_id");
     }
 
     /**
      * {@code true} 이면 {@code channel_members.user_id} 는 {@code users.id} 와 조인해야 한다.
      */
     public boolean isLegacyUserIdReferencesUserPrimaryKey() {
-        return legacyUserIdReferencesUserPrimaryKey;
+        return legacyChannelMemberUserIdReferencesPk;
+    }
+
+    /**
+     * {@code true} 이면 {@code messages.sender_id} 는 {@code users.id} 와 조인해야 한다.
+     */
+    public boolean isLegacyMessageSenderReferencesUserPrimaryKey() {
+        return legacyMessageSenderReferencesPk;
+    }
+
+    private static boolean detectIntegerFkColumn(JdbcTemplate jdbc, String tableName, String columnName) {
+        try {
+            String dataType = jdbc.queryForObject(
+                    """
+                            SELECT c.data_type
+                            FROM information_schema.columns c
+                            WHERE c.table_schema = current_schema()
+                              AND c.table_name = ?
+                              AND c.column_name = ?
+                            """,
+                    String.class,
+                    tableName,
+                    columnName
+            );
+            return isIntegerLikeUserReferenceColumn(dataType);
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     private static boolean isIntegerLikeUserReferenceColumn(String dataType) {

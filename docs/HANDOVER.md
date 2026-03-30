@@ -12,8 +12,8 @@
   - Frontend: Vanilla JS
   - DB: PostgreSQL
 
-## 2-0) 「서버 내부 오류」·채널 목록 500
-- 재현 예: `InvalidDataAccessResourceUsageException`, PostgreSQL `bigint = character varying` — **`channel_members.user_id`가 아직 `users.id`(bigint)만 참조**하는 레거시 DB인 경우, JPA 매핑(`employee_no` FK)과 충돌한다. **권장**: `docs/sql/migrate_user_refs_id_to_employee_no.sql` 이관. **임시**: 앱이 `information_schema`로 bigint 여부를 보고 `GET /api/channels`만 JDBC 보조 경로로 조회한다(`ChannelMemberUserIdColumnInspector`).
+## 2-0) 「서버 내부 오류」·채널 목록 500 / 채팅방 메시지 로드 500
+- 재현 예: `InvalidDataAccessResourceUsageException`, PostgreSQL `bigint = character varying` — **`channel_members.user_id` 또는 `messages.sender_id`가 아직 `users.id`(bigint)만 참조**하는 레거시 DB인 경우, JPA 매핑(`employee_no` FK)과 충돌한다. **권장**: `docs/sql/migrate_user_refs_id_to_employee_no.sql` 이관. **임시**: 앱이 `information_schema`로 bigint 여부를 보고 `GET /api/channels`·채널 메시지/스레드 조회·파일 메시지 멤버십 확인에 JDBC 보조 경로를 쓴다(`ChannelMemberUserIdColumnInspector`, `MessageService`).
 
 ## 2-0-1) 「서버 내부 오류」가 계속될 때 (일반)
 - 백엔드 콘솔에 `Unhandled exception` 로그와 스택이 찍힌다(전역 예외 처리기).

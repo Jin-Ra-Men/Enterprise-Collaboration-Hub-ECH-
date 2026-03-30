@@ -7,17 +7,24 @@ import com.ech.backend.common.exception.ForbiddenException;
 import com.ech.backend.domain.audit.AuditEventType;
 import com.ech.backend.domain.channel.Channel;
 import com.ech.backend.domain.channel.ChannelMemberRepository;
+import com.ech.backend.domain.channel.ChannelMemberUserIdColumnInspector;
 import com.ech.backend.domain.channel.ChannelRepository;
 import com.ech.backend.domain.message.Message;
 import com.ech.backend.domain.message.MessageRepository;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,19 +39,48 @@ public class MessageService {
     private final UserRepository userRepository;
     private final MessageRepository messageRepository;
     private final AuditLogService auditLogService;
+    private final ChannelMemberUserIdColumnInspector legacyUserFkInspector;
+    private final JdbcTemplate jdbcTemplate;
+
+    private static final RowMapper<MessageResponse> LEGACY_MESSAGE_ROW_MAPPER = new RowMapper<>() {
+        @Override
+        public MessageResponse mapRow(ResultSet rs, int rowNum) throws SQLException {
+            Long parentId = rs.getObject("parent_message_id") == null ? null : rs.getLong("parent_message_id");
+            String msgType = rs.getString("message_type");
+            return new MessageResponse(
+                    rs.getLong("message_id"),
+                    rs.getLong("channel_id"),
+                    rs.getString("sender_id"),
+                    rs.getString("sender_name"),
+                    parentId,
+                    rs.getString("body"),
+                    readCreatedAtUtc(rs),
+                    msgType != null && !msgType.isBlank() ? msgType : "TEXT"
+            );
+        }
+    };
 
     public MessageService(
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
             UserRepository userRepository,
             MessageRepository messageRepository,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            ChannelMemberUserIdColumnInspector legacyUserFkInspector,
+            JdbcTemplate jdbcTemplate
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
         this.userRepository = userRepository;
         this.messageRepository = messageRepository;
         this.auditLogService = auditLogService;
+        this.legacyUserFkInspector = legacyUserFkInspector;
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    private static OffsetDateTime readCreatedAtUtc(ResultSet rs) throws SQLException {
+        java.sql.Timestamp ts = rs.getTimestamp("created_at");
+        return ts == null ? OffsetDateTime.now(ZoneOffset.UTC) : ts.toInstant().atOffset(ZoneOffset.UTC);
     }
 
     @Transactional
@@ -85,7 +121,7 @@ public class MessageService {
                 .orElseThrow(() -> new IllegalArgumentException("채널을 찾을 수 없습니다."));
         User sender = userRepository.findByEmployeeNo(senderEmployeeNo)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-        if (!channelMemberRepository.existsByChannelIdAndUserEmployeeNo(channelId, senderEmployeeNo)) {
+        if (!isUserMemberOfChannel(channelId, senderEmployeeNo)) {
             throw new ForbiddenException("채널에 참여한 사용자가 아닙니다.");
         }
         String body;
@@ -151,19 +187,91 @@ public class MessageService {
             throw new IllegalArgumentException("부모 메시지의 채널이 일치하지 않습니다.");
         }
 
+        if (legacyUserFkInspector.isLegacyMessageSenderReferencesUserPrimaryKey()) {
+            return jdbcTemplate.query(
+                    """
+                            SELECT m.id AS message_id,
+                                   m.channel_id,
+                                   u.employee_no AS sender_id,
+                                   u.name AS sender_name,
+                                   m.parent_message_id,
+                                   m.body,
+                                   m.created_at,
+                                   m.message_type
+                            FROM messages m
+                            INNER JOIN users u ON u.id = m.sender_id
+                            WHERE m.parent_message_id = ?
+                              AND m.archived_at IS NULL
+                            ORDER BY m.created_at ASC
+                            """,
+                    LEGACY_MESSAGE_ROW_MAPPER,
+                    parentMessageId
+            );
+        }
         return messageRepository.findByParentMessageIdOrderByCreatedAtAsc(parentMessageId).stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     public List<MessageResponse> getChannelMessages(Long channelId, String employeeNo, int limit) {
-        if (!channelMemberRepository.existsByChannelIdAndUserEmployeeNo(channelId, employeeNo)) {
+        if (!isUserMemberOfChannel(channelId, employeeNo)) {
             throw new ForbiddenException("채널에 참여한 사용자가 아닙니다.");
+        }
+        if (legacyUserFkInspector.isLegacyMessageSenderReferencesUserPrimaryKey()) {
+            int cap = Math.min(limit, 200);
+            List<MessageResponse> rows = jdbcTemplate.query(
+                    """
+                            SELECT m.id AS message_id,
+                                   m.channel_id,
+                                   u.employee_no AS sender_id,
+                                   u.name AS sender_name,
+                                   m.parent_message_id,
+                                   m.body,
+                                   m.created_at,
+                                   m.message_type
+                            FROM messages m
+                            INNER JOIN users u ON u.id = m.sender_id
+                            WHERE m.channel_id = ?
+                              AND m.parent_message_id IS NULL
+                              AND m.archived_at IS NULL
+                              AND m.is_deleted = false
+                            ORDER BY m.created_at DESC
+                            LIMIT ?
+                            """,
+                    LEGACY_MESSAGE_ROW_MAPPER,
+                    channelId,
+                    cap
+            );
+            Collections.reverse(rows);
+            return rows;
         }
         List<Message> messages = messageRepository.findRecentByChannelId(
                 channelId, PageRequest.of(0, Math.min(limit, 200)));
         Collections.reverse(messages);
         return messages.stream().map(this::toResponse).toList();
+    }
+
+    private boolean isUserMemberOfChannel(Long channelId, String employeeNo) {
+        if (employeeNo == null || employeeNo.isBlank()) {
+            return false;
+        }
+        String emp = employeeNo.trim();
+        if (legacyUserFkInspector.isLegacyUserIdReferencesUserPrimaryKey()) {
+            Integer n = jdbcTemplate.queryForObject(
+                    """
+                            SELECT COUNT(*)::int
+                            FROM channel_members cm
+                            INNER JOIN users u ON u.id = cm.user_id
+                            WHERE cm.channel_id = ?
+                              AND u.employee_no = ?
+                            """,
+                    Integer.class,
+                    channelId,
+                    emp
+            );
+            return n != null && n > 0;
+        }
+        return channelMemberRepository.existsByChannelIdAndUserEmployeeNo(channelId, emp);
     }
 
     private MessageResponse toResponse(Message message) {
