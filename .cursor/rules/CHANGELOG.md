@@ -4,8 +4,12 @@
 
 ## 2026-03-30
 
+### Changed
+- **@멘션**: 자동완성을 전사 `GET /api/users/search` 대신 **현재 채널 `members`만** 필터; 토스트 `#mentionToastStack`을 `body` 직계로 옮겨 `.app-layout overflow:hidden` 클리핑 방지, `z-index: 1200`
+- **Realtime**: `mention:notify`를 `io.sockets.sockets.get(sid).emit`으로 전송, 사번 키 `trim` 정규화
+
 ### Added
-- **@멘션**: 본문 `@{사번|표시명}`, `GET /api/users/search` 자동완성, 채널 멤버 검증 후 `mention:notify`(Realtime `message:send`·Java `MentionNotificationService`·`POST /internal/notify-mentions`), 프론트 우하단 토스트·클릭 시 채널 이동·렌더 `@이름` 강조
+- **@멘션**: 본문 `@{사번|표시명}`, 채널 멤버 검증 후 `mention:notify`(Realtime `message:send`·Java `MentionNotificationService`·`POST /internal/notify-mentions`), 프론트 우하단 토스트·클릭 시 채널 이동·렌더 `@이름` 강조
 
 ### Fixed
 - 워크스페이스 **ECH** 옆 미동작 `⌄` 버튼 제거(혼란 방지)

@@ -86,6 +86,8 @@ let activeChannelId = null;
 let activeChannelType = null; // PUBLIC / PRIVATE / DM
 /** GET /api/channels/{id} 의 createdByEmployeeNo (멤버 내보내기 버튼 표시용) */
 let activeChannelCreatorEmployeeNo = null;
+/** 현재 채널 멤버만 @자동완성 (전사 검색 대신). selectChannel 시 비움 → loadChannelMembers에서 채움 */
+let activeChannelMemberMentionList = [];
 let pendingFile    = null;
 let selectedMembers = [];     // 채널/DM 생성 시 선택된 사용자
 let selectedDmMembers = [];
@@ -985,6 +987,7 @@ logoutBtn.addEventListener("click", () => {
   closeModal("modalImagePreview");
   clearFilePreview();
   activeChannelId = null;
+  activeChannelMemberMentionList = [];
   currentUser     = null;
   clearSession();
 
@@ -1250,6 +1253,7 @@ async function selectChannel(channelId, channelName, channelType) {
   activeChannelId   = channelId;
   activeChannelType = channelType;
   activeChannelCreatorEmployeeNo = null;
+  activeChannelMemberMentionList = [];
 
   // 사이드바 active 표시
   document.querySelectorAll(".channel-item").forEach(el => {
@@ -1316,6 +1320,14 @@ async function loadChannelMembers(channelId) {
     activeChannelCreatorEmployeeNo = creatorEmp || null;
     const members = json.data?.members || [];
     document.getElementById("chatMemberCount").textContent = `멤버 ${members.length}명`;
+
+    const myEmpMention = currentUser ? String(currentUser.employeeNo || "").trim() : "";
+    activeChannelMemberMentionList = members
+      .map((m) => ({
+        employeeNo: String(m.employeeNo || "").trim(),
+        name: String(m.name || "").trim(),
+      }))
+      .filter((m) => m.employeeNo && m.employeeNo !== myEmpMention);
 
     const listEl = document.getElementById("memberList");
     listEl.innerHTML = "";
@@ -2084,17 +2096,36 @@ function mentionPickIndex(i) {
 }
 
 async function fetchMentionUsers(query) {
-  const q = String(query || "").trim();
-  if (!q || !currentUser) return [];
-  try {
-    const res = await apiFetch(`/api/users/search?q=${encodeURIComponent(q)}`);
-    const json = await res.json();
-    if (!res.ok) return [];
-    const list = json.data || [];
-    return Array.isArray(list) ? list.slice(0, 8) : [];
-  } catch {
-    return [];
+  const qRaw = String(query || "").trim();
+  if (!qRaw || !currentUser || !activeChannelId) return [];
+  const q = qRaw.toLowerCase();
+  let list = activeChannelMemberMentionList;
+  if (!list.length) {
+    try {
+      const res = await apiFetch(`/api/channels/${activeChannelId}`);
+      const json = await res.json();
+      if (res.ok) {
+        const members = json.data?.members || [];
+        const myEmp = String(currentUser.employeeNo || "").trim();
+        activeChannelMemberMentionList = members
+          .map((m) => ({
+            employeeNo: String(m.employeeNo || "").trim(),
+            name: String(m.name || "").trim(),
+          }))
+          .filter((m) => m.employeeNo && m.employeeNo !== myEmp);
+        list = activeChannelMemberMentionList;
+      }
+    } catch {
+      return [];
+    }
   }
+  if (!list.length) return [];
+  const matches = list.filter((u) => {
+    const emp = (u.employeeNo || "").toLowerCase();
+    const nm = (u.name || "").toLowerCase();
+    return emp.includes(q) || nm.includes(q);
+  });
+  return matches.slice(0, 8);
 }
 
 function scheduleMentionSuggestUpdate() {

@@ -25,22 +25,29 @@ const MAX_MSGS_PER_SECOND = Number(process.env.MAX_MSGS_PER_SECOND || 10);
 /** 소켓별 rate limit 추적: socket.id -> { count, resetAt } */
 const rateLimitMap = new Map();
 
+function normalizeEmployeeNo(v) {
+  return String(v ?? "").trim();
+}
+
 function linkSocketToEmployeeNo(socketId, employeeNo) {
-  if (!employeeNoToSocketIds.has(employeeNo)) {
-    employeeNoToSocketIds.set(employeeNo, new Set());
+  const emp = normalizeEmployeeNo(employeeNo);
+  if (!emp) return;
+  if (!employeeNoToSocketIds.has(emp)) {
+    employeeNoToSocketIds.set(emp, new Set());
   }
-  employeeNoToSocketIds.get(employeeNo).add(socketId);
+  employeeNoToSocketIds.get(emp).add(socketId);
 }
 
 function unlinkSocketFromEmployeeNo(socketId, employeeNo) {
-  const set = employeeNoToSocketIds.get(employeeNo);
+  const emp = normalizeEmployeeNo(employeeNo);
+  const set = employeeNoToSocketIds.get(emp);
   if (!set) return;
   set.delete(socketId);
   if (set.size === 0) {
-    employeeNoToSocketIds.delete(employeeNo);
-    presenceByEmployeeNo.delete(employeeNo);
+    employeeNoToSocketIds.delete(emp);
+    presenceByEmployeeNo.delete(emp);
     io.emit("presence:update", {
-      employeeNo,
+      employeeNo: emp,
       status: "OFFLINE",
       updatedAt: new Date().toISOString(),
     });
@@ -164,7 +171,7 @@ const server = http.createServer((req, res) => {
         const body = buf ? JSON.parse(buf) : {};
         const items = Array.isArray(body.items) ? body.items : [];
         for (const it of items) {
-          const emp = String(it.targetEmployeeNo || "").trim();
+          const emp = normalizeEmployeeNo(it.targetEmployeeNo);
           if (!emp) continue;
           const payload = {
             channelId: Number(it.channelId),
@@ -199,10 +206,13 @@ const io = new Server(server, {
 });
 
 function emitMentionNotifyToEmployee(employeeNo, payload) {
-  const set = employeeNoToSocketIds.get(employeeNo);
+  const emp = normalizeEmployeeNo(employeeNo);
+  if (!emp) return;
+  const set = employeeNoToSocketIds.get(emp);
   if (!set || set.size === 0) return;
   for (const sid of set) {
-    io.to(sid).emit("mention:notify", payload);
+    const sock = io.sockets.sockets.get(sid);
+    if (sock) sock.emit("mention:notify", payload);
   }
 }
 
@@ -232,7 +242,7 @@ async function dispatchMentionsForSavedMessage(channelId, senderEmployeeNo, body
 
 io.on("connection", (socket) => {
   socket.on("presence:set", (payload) => {
-    const employeeNo = String(payload?.employeeNo ?? payload?.userId ?? "").trim();
+    const employeeNo = normalizeEmployeeNo(payload?.employeeNo ?? payload?.userId);
     const allowed = new Set(["ONLINE", "AWAY", "OFFLINE"]);
     const normalizedStatus = String(payload?.status || "").toUpperCase();
 

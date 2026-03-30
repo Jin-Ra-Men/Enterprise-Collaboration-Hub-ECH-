@@ -152,7 +152,7 @@
   - `message:new` (저장 성공 시 송신)
   - `channel:system` (백엔드 내부 HTTP로 브로드캐스트 — 멤버 참여·내보내기 등 `SYSTEM` 메시지, payload: `channelId`, `text`, `createdAt`, `messageId`)
   - `message:error` (유효성/저장 실패)
-  - `mention:notify` (멘션된 채널 멤버에게만, payload: `channelId`, `channelName`, `channelType`, `senderName`, `messagePreview`, `messageId`)
+  - `mention:notify` (멘션된 채널 멤버에게만, payload: `channelId`, `channelName`, `channelType`, `senderName`, `messagePreview`, `messageId` — 클라이언트는 `presence:set`으로 등록된 소켓에만 수신; 프론트 토스트는 `#mainApp` 밖 DOM 권장)
   - `presence:set`
   - `presence:update`
   - `presence:snapshot` (해당 소켓에만, `presence:set` 처리 직후 전체 `{ data: [...] }` — 멀티 창/탭 시 상대 상태 누락 완화)

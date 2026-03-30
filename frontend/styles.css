@@ -1084,7 +1084,7 @@ span.section-toggle-static { cursor: default; }
   position: fixed;
   right: 20px;
   bottom: 20px;
-  z-index: 400;
+  z-index: 1200;
   display: flex;
   flex-direction: column;
   gap: 10px;
