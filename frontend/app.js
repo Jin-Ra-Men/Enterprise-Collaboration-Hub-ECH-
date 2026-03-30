@@ -1184,6 +1184,37 @@ function createDateDividerElement(iso) {
   return div;
 }
 
+/** 직전 채팅 행(시스템·날짜선 뒤에 있어도 탐색) */
+function findLastChatRowIn(container) {
+  let el = container.lastElementChild;
+  while (el) {
+    if (el.classList?.contains("msg-row") && el.classList?.contains("msg-chat")) {
+      return el;
+    }
+    el = el.previousElementSibling;
+  }
+  return null;
+}
+
+/**
+ * 타임라인 상 마지막 캘린더일(로컬 YYYY-MM-DD).
+ * 마지막 채팅 행의 dateKey 우선, 없으면 가장 가까운 날짜 구분선.
+ */
+function lastTimelineDateKey(container) {
+  const lastChat = findLastChatRowIn(container);
+  if (lastChat?.dataset?.dateKey) {
+    return lastChat.dataset.dateKey;
+  }
+  let el = container.lastElementChild;
+  while (el) {
+    if (el.classList?.contains("msg-date-divider")) {
+      return el.dataset.dateKey || "";
+    }
+    el = el.previousElementSibling;
+  }
+  return "";
+}
+
 /** 다음 줄이 같은 사람·같은 분이면 현재 줄에는 시각 미표시 */
 function shouldShowMessageTime(msgs, i) {
   const cur = msgs[i];
@@ -1507,18 +1538,13 @@ function appendMessageRealtime(msg) {
   const sid = String(msg.senderId ?? "").trim();
   const mk = minuteKey(msg.createdAt);
   const dk = dateKeyLocal(msg.createdAt);
-  const isChatRow = (el) =>
-    !!el && el.classList?.contains("msg-row") && el.classList.contains("msg-chat");
 
-  const prevEl = messagesEl.lastElementChild;
-  const prevChat = isChatRow(prevEl) ? prevEl : null;
-  const prevChatDateKey = prevChat ? prevChat.dataset.dateKey : null;
-  if (!prevChat || prevChatDateKey !== dk) {
+  const prevDk = lastTimelineDateKey(messagesEl);
+  if (dk && prevDk !== dk) {
     messagesEl.appendChild(createDateDividerElement(msg.createdAt));
   }
 
-  const adjacentPrevEl = messagesEl.lastElementChild;
-  const adjacentPrevChat = isChatRow(adjacentPrevEl) ? adjacentPrevEl : null;
+  const adjacentPrevChat = findLastChatRowIn(messagesEl);
   if (
     adjacentPrevChat &&
     adjacentPrevChat.dataset.senderId === sid &&
@@ -1528,8 +1554,7 @@ function appendMessageRealtime(msg) {
     if (timeEl) timeEl.remove();
   }
 
-  const beforeAppendEl = messagesEl.lastElementChild;
-  const beforeAppendChat = isChatRow(beforeAppendEl) ? beforeAppendEl : null;
+  const beforeAppendChat = findLastChatRowIn(messagesEl);
   const showAvatar = !beforeAppendChat || beforeAppendChat.dataset.senderId !== sid;
   messagesEl.appendChild(
     createMessageRowElement(msg, { showAvatar, showTime: true })
@@ -1548,6 +1573,13 @@ function appendSystemMsg(text, options = {}) {
   if (mid) {
     const existing = messagesEl.querySelector(`.msg-system[data-message-id="${mid}"]`);
     if (existing) return;
+  }
+  if (options.createdAt) {
+    const dk = dateKeyLocal(options.createdAt);
+    const prevDk = lastTimelineDateKey(messagesEl);
+    if (dk && prevDk !== dk) {
+      messagesEl.appendChild(createDateDividerElement(options.createdAt));
+    }
   }
   const div = document.createElement("div");
   div.className = "msg-system";
@@ -1626,7 +1658,7 @@ function initSocket() {
       scheduleRefreshMyChannels();
       return;
     }
-    appendSystemMsg(p.text || "", { messageId: p.messageId });
+    appendSystemMsg(p.text || "", { messageId: p.messageId, createdAt: p.createdAt });
     const mid = p.messageId != null ? Number(p.messageId) : NaN;
     if (Number.isFinite(mid)) {
       markChannelReadUpTo(cid, mid).then(() => loadMyChannels());
