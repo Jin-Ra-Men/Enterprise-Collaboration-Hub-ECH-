@@ -39,6 +39,9 @@
   - [v] 2-2-2. 사용자 Presence 상태 관리(온라인/자리비움/오프라인)
   - [v] 2-2-3. 채널/DM 목록 미읽음 건수 배지(API `unreadCount`·루트 메시지 기준·프론트 읽음 갱신)
   - [v] 2-2-4. 좌측 퀵 레일(미읽음·`lastMessageAt` 정렬·실시간)·사이드바 우측 돌출 탭 접기(`ech_sidebar_collapsed`)
+- [v] 2-6. 채팅 @멘션(자동완성·실시간 알림·채널 이동)
+  - [v] 2-6-1. 본문 토큰 `@{사번|표시명}`·`GET /api/users/search` 자동완성·렌더·토스트 UI
+  - [v] 2-6-2. 채널 멤버 검증 후 `mention:notify`·Realtime `internal/notify-mentions`·Java `MentionNotificationService`
 - [v] 2-3. 파일 업로드/다운로드 기본 기능 구현
   - [v] 2-3-1. 업로드 메타데이터 테이블 및 API 구현
   - [v] 2-3-2. 다운로드 권한/URL 발급 정책 구현

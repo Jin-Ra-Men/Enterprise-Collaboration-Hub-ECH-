@@ -161,6 +161,30 @@
 
 ---
 
+## 채팅 @멘션·알림
+- 목적: `@` 입력 후 사용자 검색 자동완성으로 멘션 삽입, 멘션된 **채널 멤버**에게 실시간 알림, 알림 클릭 시 해당 채팅방으로 이동
+- 사용자: 일반 채팅 사용자
+- 관련 화면/경로: `frontend/index.html` `messageInput`, `#mentionSuggest`, `#mentionToastStack`; `frontend/app.js` `formatMessageWithMentions`, `scheduleMentionSuggestUpdate`, `pushMentionToast`, `mention:notify` 수신
+- 관련 API: `GET /api/users/search?q=` (자동완성)
+- 관련 Socket 이벤트:
+  - 출력(멘션 수신자에게만): `mention:notify` — payload: `channelId`, `channelName`, `channelType`, `senderName`, `messagePreview`, `messageId`
+  - 저장 경로: 소켓 `message:send` 성공 후 Realtime이 본문에서 토큰 파싱·`channel_members` 검증 후 발송; REST `POST .../messages`는 `MentionNotificationService`가 동일 검증 후 `POST .../internal/notify-mentions`로 Node에 위임
+- 입력/출력:
+  - 저장 본문 토큰: `@{사원번호|표시명}` (표시명에 `|`, `}` 금지·프론트에서 제거). 메시지 렌더 시 `@표시명` 강조·클릭 시 프로필(`msg-user-trigger`)
+  - 본문당 토큰 최대 20개(Realtime·Java 공통)
+  - 발신자 본인·비멤버 사번은 알림 제외
+- 상태 전이/예외 케이스:
+  - Realtime 미기동/내부 URL 비어 있으면 Java 쪽 `notifyMentions`는 HTTP 실패를 로그만 남기고 메시지 저장은 유지
+- 권한/보안:
+  - 알림 대상은 **해당 채널 멤버**인 사번만(DB 검증)
+- 로그/감사 포인트: 해당 없음(메시지 전송 감사는 기존 `MESSAGE_SENT`)
+- 테스트 기준:
+  - 멘션 삽입 후 전송 시 피멘션자 소켓에 `mention:notify` 수신
+  - 토스트 클릭 시 `selectChannel`로 동일 채널 오픈
+- 비고: 구현 `MentionParser`, `MentionNotificationService`, `RealtimeBroadcastClient.notifyMentions`, `realtime/src/db.js` 멘션 헬퍼, `POST /internal/notify-mentions`
+
+---
+
 ## 실시간 메시지 저장 연계 (Socket + PostgreSQL)
 - 목적: `message:send` 요청을 DB에 먼저 저장한 뒤 저장 성공 데이터만 브로드캐스트
 - 사용자: Frontend 개발자, Realtime/Backend 개발자
@@ -168,7 +192,7 @@
 - 관련 API: 해당 없음 (소켓 중심)
 - 관련 Socket 이벤트:
   - 입력: `message:send`
-  - 출력: `message:new`, `message:error`
+  - 출력: `message:new`, `message:error`, `mention:notify`(멘션 대상 개인 전달)
   - 보조: `channel:join`
 - 입력/출력:
   - 입력 payload: `channelId`, `senderId`(발신자 **사원번호** 문자열), `text`

@@ -195,6 +195,7 @@
 
           <!-- 메시지 입력 -->
           <div class="composer">
+            <div id="mentionSuggest" class="mention-suggest hidden" role="listbox" aria-label="멘션 사용자"></div>
             <div class="composer-inner">
               <button class="composer-attach-btn" id="btnAttach" title="파일·이미지 첨부">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -202,7 +203,7 @@
                 </svg>
               </button>
               <input type="file" id="fileInput" class="hidden" />
-              <input id="messageInput" type="text" class="composer-input" placeholder="메시지 보내기… (이미지 붙여넣기 Ctrl+V)" />
+              <input id="messageInput" type="text" class="composer-input" placeholder="메시지 보내기… @이름 멘션 · 이미지 Ctrl+V" autocomplete="off" />
               <button class="composer-send-btn" id="btnSend" title="전송">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
@@ -255,6 +256,8 @@
         </div>
 
       </main>
+
+      <div id="mentionToastStack" class="mention-toast-stack" aria-live="polite"></div>
     </div>
 
     <!-- 이미지 첨부: 크게 보기 + 다운로드 -->

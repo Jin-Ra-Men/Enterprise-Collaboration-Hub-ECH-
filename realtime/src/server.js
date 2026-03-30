@@ -1,6 +1,14 @@
 const http = require("http");
 const { Server } = require("socket.io");
-const { healthCheckDb, saveMessage, getPoolStats } = require("./db");
+const {
+  healthCheckDb,
+  saveMessage,
+  getPoolStats,
+  extractMentionEmployeeNosFromBody,
+  filterEmployeeNosInChannel,
+  getChannelMentionMeta,
+  mentionPreviewForToast,
+} = require("./db");
 
 const PORT = process.env.SOCKET_PORT || 3001;
 /** @type {Map<string, { employeeNo: string, status: string, updatedAt: string }>} */
@@ -139,6 +147,45 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (req.url === "/internal/notify-mentions" && req.method === "POST") {
+    const expected = process.env.REALTIME_INTERNAL_TOKEN;
+    const given = req.headers["x-internal-token"];
+    if (expected && String(expected).trim() && String(given || "").trim() !== String(expected).trim()) {
+      res.writeHead(401, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: false, message: "Unauthorized" }));
+      return;
+    }
+    let buf = "";
+    req.on("data", (c) => {
+      buf += c;
+    });
+    req.on("end", () => {
+      try {
+        const body = buf ? JSON.parse(buf) : {};
+        const items = Array.isArray(body.items) ? body.items : [];
+        for (const it of items) {
+          const emp = String(it.targetEmployeeNo || "").trim();
+          if (!emp) continue;
+          const payload = {
+            channelId: Number(it.channelId),
+            channelName: String(it.channelName || ""),
+            channelType: String(it.channelType || "PUBLIC"),
+            senderName: String(it.senderName || ""),
+            messagePreview: String(it.messagePreview || "").slice(0, 200),
+            messageId: it.messageId != null ? Number(it.messageId) : null,
+          };
+          emitMentionNotifyToEmployee(emp, payload);
+        }
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (err) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: false, message: err.message || "error" }));
+      }
+    });
+    return;
+  }
+
   res.writeHead(404, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ message: "Not Found" }));
 });
@@ -150,6 +197,38 @@ const io = new Server(server, {
   pingInterval: 10000,
   connectTimeout: 10000,
 });
+
+function emitMentionNotifyToEmployee(employeeNo, payload) {
+  const set = employeeNoToSocketIds.get(employeeNo);
+  if (!set || set.size === 0) return;
+  for (const sid of set) {
+    io.to(sid).emit("mention:notify", payload);
+  }
+}
+
+async function dispatchMentionsForSavedMessage(channelId, senderEmployeeNo, body, savedRow, senderName) {
+  try {
+    const ids = extractMentionEmployeeNosFromBody(body);
+    const valid = await filterEmployeeNosInChannel(channelId, ids);
+    const meta = await getChannelMentionMeta(channelId);
+    if (!meta) return;
+    const preview = mentionPreviewForToast(body);
+    const payload = {
+      channelId,
+      channelName: meta.channelName,
+      channelType: meta.channelType,
+      senderName: senderName || senderEmployeeNo,
+      messagePreview: preview,
+      messageId: Number(savedRow.id),
+    };
+    for (const emp of valid) {
+      if (emp === senderEmployeeNo) continue;
+      emitMentionNotifyToEmployee(emp, payload);
+    }
+  } catch (e) {
+    console.error("[mention] dispatch failed:", e.message);
+  }
+}
 
 io.on("connection", (socket) => {
   socket.on("presence:set", (payload) => {
@@ -260,6 +339,13 @@ io.on("connection", (socket) => {
         createdAt: saved.created_at,
       };
       io.to(String(parsedChannelId)).emit("message:new", broadcastPayload);
+      void dispatchMentionsForSavedMessage(
+        parsedChannelId,
+        senderEmployeeNo,
+        body,
+        saved,
+        saved.sender_name
+      );
       reply({ ok: true, messageId: saved.id, createdAt: saved.created_at });
     } catch (error) {
       const isNotMember = error.code === "NOT_CHANNEL_MEMBER";

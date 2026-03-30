@@ -4,6 +4,9 @@
 
 ## 2026-03-30
 
+### Added
+- **@멘션**: 본문 `@{사번|표시명}`, `GET /api/users/search` 자동완성, 채널 멤버 검증 후 `mention:notify`(Realtime `message:send`·Java `MentionNotificationService`·`POST /internal/notify-mentions`), 프론트 우하단 토스트·클릭 시 채널 이동·렌더 `@이름` 강조
+
 ### Fixed
 - 워크스페이스 **ECH** 옆 미동작 `⌄` 버튼 제거(혼란 방지)
 - 채널/DM 섹션 접기 시 화살표 **▾↔▸** 전환(`syncSectionToggleChevron`·`section-toggle-chevron`)

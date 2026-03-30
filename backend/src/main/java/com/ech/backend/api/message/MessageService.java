@@ -41,6 +41,7 @@ public class MessageService {
     private final AuditLogService auditLogService;
     private final ChannelMemberUserIdColumnInspector legacyUserFkInspector;
     private final JdbcTemplate jdbcTemplate;
+    private final MentionNotificationService mentionNotificationService;
 
     private static final RowMapper<MessageResponse> LEGACY_MESSAGE_ROW_MAPPER = new RowMapper<>() {
         @Override
@@ -67,7 +68,8 @@ public class MessageService {
             MessageRepository messageRepository,
             AuditLogService auditLogService,
             ChannelMemberUserIdColumnInspector legacyUserFkInspector,
-            JdbcTemplate jdbcTemplate
+            JdbcTemplate jdbcTemplate,
+            MentionNotificationService mentionNotificationService
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
@@ -76,6 +78,7 @@ public class MessageService {
         this.auditLogService = auditLogService;
         this.legacyUserFkInspector = legacyUserFkInspector;
         this.jdbcTemplate = jdbcTemplate;
+        this.mentionNotificationService = mentionNotificationService;
     }
 
     private static OffsetDateTime readCreatedAtUtc(ResultSet rs) throws SQLException {
@@ -102,6 +105,7 @@ public class MessageService {
                 null
         );
 
+        mentionNotificationService.dispatchForNewMessage(channel, message, sender);
         return toResponse(message);
     }
 
@@ -177,6 +181,7 @@ public class MessageService {
                 null
         );
 
+        mentionNotificationService.dispatchForNewMessage(channel, reply, sender);
         return toResponse(reply);
     }
 

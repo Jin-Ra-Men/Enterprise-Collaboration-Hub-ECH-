@@ -135,8 +135,60 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const MAX_MENTION_TOKENS = 20;
+
+function extractMentionEmployeeNosFromBody(body) {
+  const s = String(body || "");
+  const re = /@\{([^}]+)\}/g;
+  const out = new Set();
+  let m;
+  while ((m = re.exec(s)) !== null && out.size < MAX_MENTION_TOKENS) {
+    const inner = m[1];
+    const pipe = inner.indexOf("|");
+    const emp = (pipe >= 0 ? inner.slice(0, pipe) : inner).trim();
+    if (emp) out.add(emp);
+  }
+  return [...out];
+}
+
+async function filterEmployeeNosInChannel(channelId, employeeNos) {
+  if (!employeeNos || employeeNos.length === 0) return [];
+  const r = await pool.query(
+    `SELECT user_id FROM channel_members WHERE channel_id = $1 AND user_id = ANY($2::text[])`,
+    [channelId, employeeNos]
+  );
+  return r.rows.map((row) => row.user_id);
+}
+
+async function getChannelMentionMeta(channelId) {
+  const r = await pool.query(
+    `SELECT name, channel_type, description FROM channels WHERE id = $1`,
+    [channelId]
+  );
+  if (r.rowCount === 0) return null;
+  const row = r.rows[0];
+  const ct = String(row.channel_type || "").toUpperCase();
+  const isDm = ct === "DM";
+  const display = isDm && row.description ? String(row.description) : String(row.name || "");
+  return {
+    channelName: display || row.name || "채널",
+    channelType: ct || "PUBLIC",
+  };
+}
+
+function mentionPreviewForToast(body, maxLen = 120) {
+  const s = String(body || "")
+    .replace(/@\{([^}|]+)\|([^}]+)\}/g, "@$2")
+    .replace(/@\{([^}]+)\}/g, "@$1");
+  return s.length <= maxLen ? s : s.slice(0, maxLen) + "…";
+}
+
 module.exports = {
   saveMessage,
   healthCheckDb,
   getPoolStats,
+  extractMentionEmployeeNosFromBody,
+  filterEmployeeNosInChannel,
+  getChannelMentionMeta,
+  mentionPreviewForToast,
 };

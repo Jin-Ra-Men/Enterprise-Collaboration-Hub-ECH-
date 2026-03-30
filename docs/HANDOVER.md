@@ -126,7 +126,7 @@
   - `GET /api/channels/{channelId}/files/{fileId}/download-info?employeeNo=...`
 - 메시지/스레드:
   - `GET /api/channels/{channelId}/messages?employeeNo=...` — 목록(프론트 기본)
-  - `POST /api/channels/{channelId}/messages` — body: `senderId`(발신자 **사원번호** 문자열), `text`
+  - `POST /api/channels/{channelId}/messages` — body: `senderId`(발신자 **사원번호** 문자열), `text`(멘션 토큰 `@{사번|표시명}` 가능 → `MentionNotificationService`가 채널 멤버 검증 후 Realtime `internal/notify-mentions` 호출)
   - `POST /api/channels/{channelId}/messages/{parentMessageId}/replies`
   - `GET /api/channels/{channelId}/messages/{parentMessageId}/replies`
 - 사용자 검색·프로필·조직도:
@@ -152,6 +152,7 @@
   - `message:new` (저장 성공 시 송신)
   - `channel:system` (백엔드 내부 HTTP로 브로드캐스트 — 멤버 참여·내보내기 등 `SYSTEM` 메시지, payload: `channelId`, `text`, `createdAt`, `messageId`)
   - `message:error` (유효성/저장 실패)
+  - `mention:notify` (멘션된 채널 멤버에게만, payload: `channelId`, `channelName`, `channelType`, `senderName`, `messagePreview`, `messageId`)
   - `presence:set`
   - `presence:update`
   - `presence:snapshot` (해당 소켓에만, `presence:set` 처리 직후 전체 `{ data: [...] }` — 멀티 창/탭 시 상대 상태 누락 완화)
@@ -174,6 +175,7 @@
 - `/health` 엔드포인트에서 DB 연결 상태(`db: ok/error`)를 함께 확인할 수 있습니다.
 - `pg` Pool은 `DB_POOL_MAX`, `DB_POOL_IDLE_MS`, `DB_POOL_CONNECT_TIMEOUT_MS`로 조정할 수 있습니다.
 - 백엔드는 커밋 후 `POST {app.realtime.internal-base-url}/internal/broadcast-channel-system`(선택 `X-Internal-Token` = `REALTIME_INTERNAL_TOKEN`)으로 채널 룸에 시스템 알림을 쏠 수 있다. 토큰 미설정 시 Realtime은 로컬 개발 편의상 인증 생략.
+- 멘션: `POST .../internal/notify-mentions` — body `{ items: [{ targetEmployeeNo, channelId, channelName, channelType, senderName, messagePreview, messageId }] }`(동일 토큰 규칙). `message:send` 저장 직후에도 Realtime이 본문 파싱으로 동일 이벤트를 쏜다(소켓 전송 경로).
 
 ### 사용자 검색/Presence 인수인계 메모
 - 사용자 검색은 `org_group_members(TEAM)` + `org_groups.display_name`(팀 표시명)을 사용해 부서 필터를 지원합니다.

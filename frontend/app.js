@@ -162,6 +162,30 @@ function escHtml(s) {
     .replace(/"/g,"&quot;");
 }
 
+/** 멘션 토큰 `@{사번|표시명}` → 이스케이프된 @표시명 span (XSS 방지) */
+function formatMessageWithMentions(text) {
+  const s = text == null ? "" : String(text);
+  const re = /@\{([^}]*)\}/g;
+  const parts = [];
+  let last = 0;
+  let m;
+  while ((m = re.exec(s)) !== null) {
+    parts.push(escHtml(s.slice(last, m.index)));
+    const inner = m[1];
+    const pipe = inner.indexOf("|");
+    const emp = (pipe >= 0 ? inner.slice(0, pipe) : inner).trim();
+    const label = pipe >= 0 ? inner.slice(pipe + 1).trim() : emp;
+    const safeEmp = escHtml(emp);
+    const safeLabel = escHtml(label || emp);
+    parts.push(
+      `<span class="msg-mention msg-user-trigger" data-employee-no="${safeEmp}" role="button" tabindex="0" title="프로필">@${safeLabel}</span>`
+    );
+    last = m.index + m[0].length;
+  }
+  parts.push(escHtml(s.slice(last)));
+  return parts.join("");
+}
+
 /** 채팅 메시지 옆 시각 — 24시간제 HH:mm (오전/오후 문구 없음) */
 function fmtTime(iso) {
   if (!iso) return "";
@@ -1726,7 +1750,7 @@ function createMessageRowElement(msg, { showAvatar, showTime }) {
           <button type="button" class="msg-sender msg-user-trigger" data-employee-no="${escHtml(emp)}">${escHtml(senderName)}</button>
         </div>
         <div class="msg-content-row">
-          <span class="msg-text">${escHtml(msg.text)}</span>${timeHtml}
+          <span class="msg-text">${formatMessageWithMentions(msg.text)}</span>${timeHtml}
         </div>
       </div>`;
   } else {
@@ -1734,7 +1758,7 @@ function createMessageRowElement(msg, { showAvatar, showTime }) {
       <div class="msg-spacer"></div>
       <div class="msg-body">
         <div class="msg-content-row">
-          <span class="msg-text">${escHtml(msg.text)}</span>${timeHtml}
+          <span class="msg-text">${formatMessageWithMentions(msg.text)}</span>${timeHtml}
         </div>
       </div>`;
   }
@@ -1907,6 +1931,10 @@ function initSocket() {
   socket.on("message:error", (err) => {
     appendSystemMsg("전송 실패: " + (err?.message || "알 수 없는 오류"));
   });
+
+  socket.on("mention:notify", (p) => {
+    pushMentionToast(p);
+  });
 }
 
 function joinSocketChannel(channelId) {
@@ -1974,11 +2002,159 @@ async function sendMessageViaApi(channelId, senderId, text) {
 }
 
 /* ==========================================================================
+ * @멘션 자동완성 (토큰 `@{사번|표시명}`)
+ * ========================================================================== */
+let mentionSuggestTimer = null;
+let mentionSuggestResults = [];
+let mentionSelectedIndex = 0;
+
+function getMentionQueryAtCaret(value, caret) {
+  const before = value.slice(0, caret);
+  const at = before.lastIndexOf("@");
+  if (at < 0) return null;
+  const afterAt = before.slice(at + 1);
+  if (/\s/.test(afterAt)) return null;
+  return { start: at, query: afterAt };
+}
+
+function getMentionSuggestEl() {
+  return document.getElementById("mentionSuggest");
+}
+
+function closeMentionSuggest() {
+  const el = getMentionSuggestEl();
+  if (el) {
+    el.classList.add("hidden");
+    el.innerHTML = "";
+  }
+  mentionSuggestResults = [];
+  mentionSelectedIndex = 0;
+}
+
+function isMentionSuggestOpen() {
+  const el = getMentionSuggestEl();
+  return el && !el.classList.contains("hidden") && mentionSuggestResults.length > 0;
+}
+
+function renderMentionSuggestList() {
+  const el = getMentionSuggestEl();
+  if (!el) return;
+  el.innerHTML = "";
+  mentionSuggestResults.forEach((u, i) => {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "mention-suggest-item" + (i === mentionSelectedIndex ? " is-active" : "");
+    row.dataset.index = String(i);
+    row.innerHTML = `<span class="mention-suggest-name">${escHtml(u.name || "")}</span><span class="mention-suggest-meta">${escHtml(u.employeeNo || "")}</span>`;
+    row.addEventListener("mousedown", (ev) => {
+      ev.preventDefault();
+      mentionPickIndex(i);
+    });
+    el.appendChild(row);
+  });
+}
+
+function mentionSelectMove(delta) {
+  if (!mentionSuggestResults.length) return;
+  mentionSelectedIndex = (mentionSelectedIndex + delta + mentionSuggestResults.length) % mentionSuggestResults.length;
+  renderMentionSuggestList();
+}
+
+function mentionPickSelected() {
+  mentionPickIndex(mentionSelectedIndex);
+}
+
+function mentionPickIndex(i) {
+  const u = mentionSuggestResults[i];
+  if (!u || !messageInputEl) return;
+  const emp = String(u.employeeNo || "").trim();
+  if (!emp) return;
+  const display = String(u.name || emp).replace(/[|}]/g, "").trim() || emp;
+  const v = messageInputEl.value;
+  const caret = messageInputEl.selectionStart;
+  const info = getMentionQueryAtCaret(v, caret);
+  if (!info) return;
+  const token = `@{${emp}|${display}}`;
+  const next = v.slice(0, info.start) + token + " " + v.slice(caret);
+  messageInputEl.value = next;
+  const pos = info.start + token.length + 1;
+  messageInputEl.setSelectionRange(pos, pos);
+  messageInputEl.focus();
+  closeMentionSuggest();
+}
+
+async function fetchMentionUsers(query) {
+  const q = String(query || "").trim();
+  if (!q || !currentUser) return [];
+  try {
+    const res = await apiFetch(`/api/users/search?q=${encodeURIComponent(q)}`);
+    const json = await res.json();
+    if (!res.ok) return [];
+    const list = json.data || [];
+    return Array.isArray(list) ? list.slice(0, 8) : [];
+  } catch {
+    return [];
+  }
+}
+
+function scheduleMentionSuggestUpdate() {
+  if (!messageInputEl || !document.getElementById("viewChat") || document.getElementById("viewChat").classList.contains("hidden")) {
+    closeMentionSuggest();
+    return;
+  }
+  if (mentionSuggestTimer) clearTimeout(mentionSuggestTimer);
+  mentionSuggestTimer = setTimeout(async () => {
+    mentionSuggestTimer = null;
+    const v = messageInputEl.value;
+    const caret = messageInputEl.selectionStart;
+    const info = getMentionQueryAtCaret(v, caret);
+    const el = getMentionSuggestEl();
+    if (!info || !el) {
+      closeMentionSuggest();
+      return;
+    }
+    const users = await fetchMentionUsers(info.query);
+    if (!users.length) {
+      closeMentionSuggest();
+      return;
+    }
+    mentionSuggestResults = users;
+    mentionSelectedIndex = 0;
+    el.classList.remove("hidden");
+    renderMentionSuggestList();
+  }, 200);
+}
+
+function pushMentionToast(p) {
+  const stack = document.getElementById("mentionToastStack");
+  if (!stack || !p) return;
+  const cid = Number(p.channelId);
+  if (!Number.isFinite(cid)) return;
+  const channelName = String(p.channelName || "채널");
+  const channelType = String(p.channelType || "PUBLIC");
+  const senderName = String(p.senderName || "");
+  const preview = String(p.messagePreview || "").slice(0, 160);
+  const toast = document.createElement("button");
+  toast.type = "button";
+  toast.className = "mention-toast";
+  toast.innerHTML = `<span class="mention-toast-title">멘션</span><span class="mention-toast-sub">${escHtml(senderName)} · ${escHtml(channelName)}</span><span class="mention-toast-preview">${escHtml(preview)}</span>`;
+  toast.addEventListener("click", () => {
+    toast.remove();
+    selectChannel(cid, channelName, channelType);
+  });
+  stack.appendChild(toast);
+  setTimeout(() => {
+    if (toast.parentNode) toast.remove();
+  }, 25_000);
+}
+
+/* ==========================================================================
  * 메시지 전송
  * ========================================================================== */
 async function sendMessage() {
   if (!activeChannelId || !currentUser) return;
   const text = messageInputEl.value.trim();
+  closeMentionSuggest();
 
   // 파일이 있으면 파일 먼저 업로드
   if (pendingFile) {
@@ -2006,10 +2182,38 @@ async function sendMessage() {
 
 document.getElementById("btnSend").addEventListener("click", sendMessage);
 messageInputEl.addEventListener("keydown", (e) => {
+  if (isMentionSuggestOpen()) {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      mentionSelectMove(1);
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      mentionSelectMove(-1);
+      return;
+    }
+    if (e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault();
+      mentionPickSelected();
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeMentionSuggest();
+      return;
+    }
+  }
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     sendMessage();
   }
+});
+messageInputEl.addEventListener("input", () => {
+  scheduleMentionSuggestUpdate();
+});
+messageInputEl.addEventListener("blur", () => {
+  setTimeout(() => closeMentionSuggest(), 250);
 });
 
 /* ==========================================================================
