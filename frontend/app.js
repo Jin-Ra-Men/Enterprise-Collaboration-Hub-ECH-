@@ -992,6 +992,22 @@ function hideLoginError() {
 /* ==========================================================================
  * 사이드바 채널 목록
  * ========================================================================== */
+/** 섹션 목록 `hidden` 여부에 맞춰 화살표 ▾(펼침) / ▸(접힘) */
+function syncSectionToggleChevron(btn, targetEl) {
+  const chev = btn.querySelector(".section-toggle-chevron");
+  if (!chev || !targetEl) return;
+  chev.textContent = targetEl.classList.contains("hidden") ? "▸" : "▾";
+}
+
+function syncAllSidebarSectionChevrons() {
+  document.querySelectorAll(".section-toggle[data-target]").forEach((btn) => {
+    const id = btn.dataset.target;
+    if (!id) return;
+    const t = document.getElementById(id);
+    if (t) syncSectionToggleChevron(btn, t);
+  });
+}
+
 async function loadMyChannels() {
   if (!currentUser) return;
   try {
@@ -2691,9 +2707,13 @@ function initEvents() {
         const targetId = btn.dataset.target;
         if (!targetId) return;
         const target = document.getElementById(targetId);
-        if (target) target.classList.toggle("hidden");
+        if (target) {
+          target.classList.toggle("hidden");
+          syncSectionToggleChevron(btn, target);
+        }
       });
     });
+    syncAllSidebarSectionChevrons();
   }
 
   if (!sidebarCollapseBound) {

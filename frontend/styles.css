@@ -407,12 +407,6 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   user-select: none;
 }
 .workspace-name { font-size: 17px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; }
-.sidebar-workspace-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.workspace-menu-btn { color: var(--workspace-btn-fg); font-size: 16px; cursor: pointer; background: none; border: none; padding: 2px 4px; }
 
 /* 검색 */
 .sidebar-search-wrap { padding: 8px 12px; }
@@ -443,14 +437,31 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 }
 .section-toggle {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: var(--sidebar-item-fg);
   font-size: 13px;
   font-weight: 600;
   text-align: left;
   cursor: pointer;
   background: none;
+  border: none;
+  font: inherit;
+  padding: 0;
 }
+button.section-toggle { cursor: pointer; }
+span.section-toggle-static { cursor: default; }
 .section-toggle:hover { color: var(--sidebar-item-fg-strong); }
+.section-toggle-chevron {
+  flex-shrink: 0;
+  width: 12px;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0.85;
+}
+.section-toggle-label { min-width: 0; }
 .btn-add-item {
   color: var(--sidebar-item-fg);
   font-size: 18px;

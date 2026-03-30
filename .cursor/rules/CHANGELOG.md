@@ -4,6 +4,10 @@
 
 ## 2026-03-30
 
+### Fixed
+- 워크스페이스 **ECH** 옆 미동작 `⌄` 버튼 제거(혼란 방지)
+- 채널/DM 섹션 접기 시 화살표 **▾↔▸** 전환(`syncSectionToggleChevron`·`section-toggle-chevron`)
+
 ### Added
 - 퀵 레일 **DM**에도 사이드바와 동일 **프레즌스 점**(`dmSidebarLeadingHtml`, `refreshPresenceDots`)
 
