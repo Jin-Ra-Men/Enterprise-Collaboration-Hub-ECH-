@@ -5,6 +5,7 @@
 ## 2026-03-30
 
 ### Changed
+- `docs/FEATURE_SPEC.md` 전반: 채널·메시지·읽음·파일·칸반·업무·프레즌스·실시간 소켓 서술을 `employeeNo`/`actorEmployeeNo`/`createdByEmployeeNo` 등 현재 API DTO와 일치하도록 정리
 - `docs/HANDOVER.md` 6절 API 목록·채널/식별자/프론트 메모를 `employeeNo`·`dmPeerEmployeeNos`·메시지 `senderId`(사번) 등 현재 구현과 일치하도록 정리
 - 사용자 프로필 API: `GET /api/users/profile?employeeNo=` 추가(기존 `userId` 쿼리·경로형 유지), 프론트 프로필·멤버 패널을 사번 기준으로 조회
 - Realtime: 프레즌스 키를 `userId`에서 `employeeNo`로 전환(`presence:set`/`presence:update`/GET `/presence` 응답), `message:send`의 `senderId`를 사원번호 문자열로 검증·저장

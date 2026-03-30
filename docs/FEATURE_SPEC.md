@@ -32,7 +32,7 @@
 - 관련 API: `POST /api/channels` (`channelType=DM`)
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:
-  - 입력: `workspaceKey`, `name`, `description`, `createdByUserId`, `dmPeerUserIds`
+  - 입력: `workspaceKey`, `name`, `description`, `createdByEmployeeNo`, `dmPeerEmployeeNos`
   - 출력: DM 채널 생성 또는 기존 DM 채널 재사용 응답
 - 상태 전이/예외 케이스:
   - 구 스키마에서 `channels.channel_type` CHECK가 `PUBLIC/PRIVATE`만 허용하면 INSERT 실패 가능
@@ -104,14 +104,15 @@
 - 사용자: Backend 개발자, Frontend 개발자
 - 관련 화면/경로: 채널 목록/채널 상세/채널 참여 UI
 - 관련 API:
+  - `GET /api/channels?employeeNo=...` (내 채널/DM 목록)
   - `POST /api/channels` (채널 생성)
   - `GET /api/channels/{channelId}` (채널 상세 조회)
   - `POST /api/channels/{channelId}/members` (채널 참여)
 - 관련 Socket 이벤트: 추후 `channel:join`과 연계 예정
 - 입력/출력:
-  - 생성 입력: `workspaceKey`, `name`, `description`, `channelType`(`PUBLIC`|`PRIVATE`|`DM`), `createdByUserId`, 선택 `dmPeerUserIds`(DM일 때 상대·그룹 참가자 userId — 서버가 내부 고유 `name`(`__dm__…`)과 표시용 `description`을 구성하고, 동일 참가자 조합이면 기존 채널 반환 후 누락 멤버만 추가)
-  - 참여 입력: `userId`, `memberRole`
-  - 출력: 채널 기본 정보 + 멤버 목록(`members`: `userId`, `name`, `department`, `jobLevel`, `jobPosition`, `jobTitle`, `memberRole`, `joinedAt`)
+  - 생성 입력: `workspaceKey`, `name`, `description`, `channelType`(`PUBLIC`|`PRIVATE`|`DM`), `createdByEmployeeNo`, 선택 `dmPeerEmployeeNos`(DM일 때 상대 **사원번호** 목록 — 서버가 내부 고유 `name`(`__dm__…`)과 표시용 `description`을 구성하고, 동일 참가자 조합이면 기존 채널 반환 후 누락 멤버만 추가)
+  - 참여 입력: `employeeNo`, `memberRole` (`JoinChannelRequest`)
+  - 출력: 채널 기본 정보 + 멤버 목록(`members`: `employeeNo`, `name`, `department`, `jobLevel`, `jobPosition`, `jobTitle`, `memberRole`, `joinedAt` — `ChannelMemberResponse`)
 - 상태 전이/예외 케이스:
   - 중복 채널명(`workspaceKey + name`) 생성 시 예외
   - 없는 사용자/채널 조회 시 예외
@@ -143,8 +144,8 @@
   - 출력: `message:new`, `message:error`
   - 보조: `channel:join`
 - 입력/출력:
-  - 입력 payload: `channelId`, `senderId`, `text`
-  - 저장 성공 출력: `messageId`, `channelId`, `senderId`, `text`, `createdAt`
+  - 입력 payload: `channelId`, `senderId`(발신자 **사원번호** 문자열), `text`
+  - 저장 성공 출력: `messageId`, `channelId`, `senderId`(사번 문자열), `senderName`, `text`, `createdAt`
   - 저장 실패 출력: `code=DB_SAVE_FAILED` 또는 `code=NOT_CHANNEL_MEMBER` 오류 이벤트
 - 상태 전이/예외 케이스:
   - payload 유효성 실패 -> `message:error` (`INVALID_PAYLOAD`)
@@ -158,7 +159,7 @@
   - Socket.io `maxHttpBufferSize`로 비정상적으로 큰 패킷 완충 완화
   - `pg` Pool: `max`/`idleTimeoutMillis`/`connectionTimeoutMillis` 환경변수로 조정 가능
 - 권한/보안:
-  - 리얼타임 서버는 `senderId(users.id)`를 조회해 `employee_no`로 변환한 뒤, `channel_members(channel_id, user_id)`와 `messages.sender_id`를 employee_no 기준으로 처리한다.
+  - 리얼타임 서버는 `users.employee_no`로 발신자 존재를 검증한 뒤, `channel_members`(컬럼명 `user_id`, 값은 사번 FK) 멤버십과 `messages.sender_id`(사번) 저장을 수행한다.
 - 로그/감사 포인트:
   - `messages` 테이블의 `created_at` 기반 메시지 생성 이력 추적 가능
 - 테스트 기준:
@@ -234,14 +235,15 @@
 - 사용자: Member, Manager, Admin
 - 관련 화면/경로: 채널 메시지 목록, 스레드 패널
 - 관련 API:
+  - `GET /api/channels/{channelId}/messages?employeeNo=...&limit=` (채널 메시지 목록)
   - `POST /api/channels/{channelId}/messages` (부모 메시지 생성)
   - `POST /api/channels/{channelId}/messages/{parentMessageId}/replies` (답글 생성)
   - `GET /api/channels/{channelId}/messages/{parentMessageId}/replies` (스레드 조회)
 - 관련 Socket 이벤트:
   - 현재 API 중심 구현, 추후 소켓 이벤트와 동기화 확장 예정
 - 입력/출력:
-  - 입력: `senderId`, `text`
-  - 출력: `messageId`, `channelId`, `senderId`, `parentMessageId`, `text`, `createdAt`
+  - 입력: `senderId`(발신자 사원번호 문자열), `text`
+  - 출력: `messageId`, `channelId`, `senderId`(사번), `senderName`, `parentMessageId`, `text`, `createdAt`
 - 상태 전이/예외 케이스:
   - 없는 채널/사용자/부모 메시지 요청 시 예외
   - 부모 메시지와 요청 채널 불일치 시 예외
@@ -267,18 +269,18 @@
 - 사용자: 채널 멤버
 - 관련 화면/경로: 채널 메시지 목록, 사이드바 미읽음 배지(추후)
 - 관련 API:
-  - `GET /api/channels/{channelId}/read-state?userId=...` (조회, 미설정 시 `lastReadMessageId=null`)
-  - `PUT /api/channels/{channelId}/read-state` (갱신, body: `userId`, `lastReadMessageId`)
+  - `GET /api/channels/{channelId}/read-state?employeeNo=...` (조회, 미설정 시 `lastReadMessageId=null`)
+  - `PUT /api/channels/{channelId}/read-state` (갱신, body: `employeeNo`, `lastReadMessageId`)
 - 관련 Socket 이벤트: 해당 없음 (추후 `read:update` 브로드캐스트 검토)
 - 입력/출력:
-  - 갱신 입력: `userId`, `lastReadMessageId`(해당 채널 소속 메시지 ID)
-  - 출력: `channelId`, `userId`, `lastReadMessageId`, `updatedAt` (`updatedAt`은 미설정 조회 시 null)
+  - 갱신 입력: `employeeNo`, `lastReadMessageId`(해당 채널 소속 메시지 ID)
+  - 출력: `channelId`, `employeeNo`, `lastReadMessageId`, `updatedAt` (`updatedAt`은 미설정 조회 시 null)
 - 상태 전이/예외 케이스:
   - 채널 멤버가 아니면 조회/갱신 불가
   - 다른 채널의 메시지 ID로 갱신 시 예외
   - 없는 채널/사용자/메시지 요청 시 예외
 - 권한/보안:
-  - 멤버십 검증만 수행, 인증 세션의 `userId`와 요청 `userId` 일치 검증은 RBAC 단계에서 보완
+  - 멤버십 검증만 수행, JWT subject(`employeeNo`)와 요청 `employeeNo` 정합은 RBAC·후속 고도화에서 보완
 - 로그/감사 포인트:
   - `channel_read_states.updated_at` 기준 갱신 이력 추적 가능
 - 테스트 기준:
@@ -299,29 +301,29 @@
 - 사용자: 협업 사용자(보드 수준 RBAC는 추후)
 - 관련 화면/경로: 보드 뷰, 카드 상세, 담당자 배지
 - 관련 API:
-  - `POST /api/kanban/boards` — 보드 생성 (`workspaceKey`, `name`, `description`, `createdByUserId`)
+  - `POST /api/kanban/boards` — 보드 생성 (`workspaceKey`, `name`, `description`, `createdByEmployeeNo`)
   - `GET /api/kanban/boards?workspaceKey=default` — 보드 목록(최대 100건)
-  - `GET /api/kanban/boards/{boardId}` — 보드 상세(컬럼·카드·담당자 id 목록)
+  - `GET /api/kanban/boards/{boardId}` — 보드 상세(컬럼·카드·담당자 사번 목록)
   - `DELETE /api/kanban/boards/{boardId}`
   - `POST /api/kanban/boards/{boardId}/columns` — 컬럼 추가 (`name`, `sortOrder` 선택)
-  - `PUT /api/kanban/boards/{boardId}/columns/{columnId}` — 이름·정렬 (`actorUserId`)
+  - `PUT /api/kanban/boards/{boardId}/columns/{columnId}` — 이름·정렬 (`actorEmployeeNo`)
   - `DELETE /api/kanban/boards/{boardId}/columns/{columnId}` — 컬럼 및 소속 카드 연쇄 삭제
-  - `POST /api/kanban/boards/{boardId}/columns/{columnId}/cards` — 카드 생성 (`actorUserId`, `title`, `description`, `sortOrder`, `status`)
-  - `PUT /api/kanban/cards/{cardId}` — 제목·설명·정렬·`status`·`columnId`(이동) 부분 갱신 (`actorUserId`)
+  - `POST /api/kanban/boards/{boardId}/columns/{columnId}/cards` — 카드 생성 (`actorEmployeeNo`, `title`, `description`, `sortOrder`, `status`)
+  - `PUT /api/kanban/cards/{cardId}` — 제목·설명·정렬·`status`·`columnId`(이동) 부분 갱신 (`actorEmployeeNo`)
   - `DELETE /api/kanban/cards/{cardId}`
-  - `POST /api/kanban/cards/{cardId}/assignees` — 담당 추가 (`actorUserId`, `assigneeUserId`)
-  - `DELETE /api/kanban/cards/{cardId}/assignees/{assigneeUserId}?actorUserId=...`
+  - `POST /api/kanban/cards/{cardId}/assignees` — 담당 추가 (body: `actorEmployeeNo`, `assigneeEmployeeNo`)
+  - `DELETE /api/kanban/cards/{cardId}/assignees/{assigneeEmployeeNo}?actorEmployeeNo=...`
   - `GET /api/kanban/cards/{cardId}/history?limit=` — 이벤트 이력(기본 50, 최대 100)
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:
-  - 카드: `status` 문자열(기본 `OPEN`), `assigneeUserIds` 배열
-  - 이력: `eventType`(`CARD_CREATED`, `COLUMN_MOVED`, `STATUS_CHANGED`, `ASSIGNEE_ADDED`, `ASSIGNEE_REMOVED`), `fromRef`/`toRef`
+  - 카드: `status` 문자열(기본 `OPEN`), 응답에 `assigneeEmployeeNos` 배열
+  - 이력: `eventType`(`CARD_CREATED`, `COLUMN_MOVED`, `STATUS_CHANGED`, `ASSIGNEE_ADDED`, `ASSIGNEE_REMOVED`), `fromRef`/`toRef`, `actorEmployeeNo`
 - 상태 전이/예외 케이스:
   - 동일 `(workspaceKey, name)` 보드 중복 생성 불가
   - 카드 컬럼 이동은 **같은 보드** 내 컬럼만 허용
   - 담당 중복 추가 불가
 - 권한/보안:
-  - `actorUserId`는 존재 여부만 검증(인증 연동·보드 멤버 검사는 RBAC 단계)
+  - `actorEmployeeNo` 등은 존재 여부(사번 유효성) 위주 검증(인증 연동·보드 멤버 검사는 RBAC 단계)
 - 성능:
   - 보드 목록 100건 상한, 카드 이력 조회 100건 상한
   - 보드 상세는 카드·담당자를 `join fetch`로 한 번에 로드해 N+1 완화
@@ -339,13 +341,13 @@
 - 사용자: 채널 멤버
 - 관련 화면/경로: 메시지 액션 메뉴, 업무 상세
 - 관련 API:
-  - `POST /api/messages/{messageId}/work-items` (생성, body: `createdByUserId`, 선택 `title`, `description`, `status`)
+  - `POST /api/messages/{messageId}/work-items` (생성, body: `createdByEmployeeNo`, 선택 `title`, `description`, `status`)
   - `GET /api/messages/{messageId}/work-items` (0~1건 리스트, 메시지당 최대 1건)
   - `GET /api/work-items/{workItemId}` (단건 조회)
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:
   - `title`/`description` 생략 시 메시지 본문에서 기본값(제목: 첫 줄 최대 80자, 설명: 본문 최대 4000자)
-  - 응답에 `sourceMessageId`, `sourceChannelId`, `createdByUserId` 포함
+  - 응답에 `sourceMessageId`, `sourceChannelId`, `createdByEmployeeNo` 포함
 - 메시지 ↔ 업무 링크 구조(2-5-2):
   - **정방향**: `work_items.source_message_id` → `messages.id` (유니크, 메시지당 업무 1건)
   - **역방향**: `messages` 테이블에 역참조 컬럼 없음. `GET /api/messages/{id}/work-items` 또는 `work_items` 조회로 연결 확인
@@ -353,7 +355,7 @@
 - 상태 전이/예외 케이스:
   - 없는 메시지, 비멤버 생성 시도, 동일 메시지로 중복 생성 시 예외
 - 권한/보안:
-  - 채널 멤버십만 검증, 인증 세션과 `createdByUserId` 정합은 RBAC 단계에서 보완
+  - 채널 멤버십만 검증, 인증 세션(`employeeNo`)과 `createdByEmployeeNo` 정합은 RBAC 단계에서 보완
 - 테스트 기준:
   - 생성 후 조회·목록 일치, 중복 생성 실패, 메시지 삭제 후 업무 단건 조회 가능(`sourceMessageId` null)
 - 비고:
@@ -409,7 +411,7 @@
   - 최소 권한 미만 역할 요청 시 `FORBIDDEN`
 - 권한/보안:
   - 현재는 헤더 기반 임시 모델이며, 인증 연동 시 토큰/세션의 역할 클레임으로 대체 필요
-  - body의 `userId`와 인증 주체 정합 검증은 후속 RBAC 고도화 과제
+  - body의 `employeeNo` 등과 JWT subject 정합 검증은 후속 RBAC 고도화 과제
 - 테스트 기준:
   - `ADMIN` 헤더로 관리자 API 접근 성공
   - `MANAGER`/`MEMBER` 헤더로 관리자 API 접근 실패
@@ -490,20 +492,20 @@
 - 관련 화면/경로: 채널 채팅 상단 **첨부 파일** 목록(프론트), 멀티파트 업로드, 다운로드
 - 관련 API:
   - `POST /api/channels/{channelId}/files` (메타데이터만 등록, 하위 호환)
-  - `POST /api/channels/{channelId}/files/upload?userId=...` (multipart `file` — 디스크 저장 + DB 메타)
-  - `GET /api/channels/{channelId}/files?userId=...` (최신순 최대 100건, 응답에 `uploaderName` 포함)
-  - `GET /api/channels/{channelId}/files/{fileId}/download?userId=...` (바이너리 스트림, `Authorization: Bearer` 필요)
-  - `GET /api/channels/{channelId}/files/{fileId}/download-info?userId=...` (멤버 검증 후 스토리지 키·안내 문구)
+  - `POST /api/channels/{channelId}/files/upload?employeeNo=...` (multipart `file` — 디스크 저장 + DB 메타)
+  - `GET /api/channels/{channelId}/files?employeeNo=...` (최신순 최대 100건, 응답에 `uploaderName`, `uploadedByEmployeeNo` 포함)
+  - `GET /api/channels/{channelId}/files/{fileId}/download?employeeNo=...` (바이너리 스트림, `Authorization: Bearer` 필요)
+  - `GET /api/channels/{channelId}/files/{fileId}/download-info?employeeNo=...` (멤버 검증 후 스토리지 키·안내 문구)
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:
-  - 등록: `uploadedByUserId`, `originalFilename`, `contentType`, `sizeBytes`(1~512MiB), `storageKey`
+  - 등록(메타만 API): `uploadedByEmployeeNo`, `originalFilename`, `contentType`, `sizeBytes`(1~512MiB), `storageKey`
   - 목록: 파일 id, `uploaderName`, 원본명, 타입, 크기, `storageKey`, 업로드 시각
   - 디스크 저장 경로(신규 업로드): `channels/{workspaceKey}_ch{channelId}_{채널명슬러그}/yyyy/mm/{uuid}_{원본파일명}` (기존 `channels/{channelId}/...` 키는 DB에 남아 있으면 다운로드 시 그 경로로 조회)
 - 상태 전이/예외 케이스:
   - 비멤버 접근 불가
   - 파일명 경로 조각(`..` 등) 제거·검증
 - 권한/보안:
-  - 멤버십만 검증; 요청 `userId`와 인증 세션 정합은 RBAC 단계에서 보완
+  - 멤버십만 검증; 요청 `employeeNo`와 JWT subject 정합은 RBAC 단계에서 보완
 - 성능:
   - 목록은 페이지 크기 100으로 상한 고정(대량 조회로 인한 응답·직렬화 부담 완화)
 - 테스트 기준:
@@ -524,11 +526,11 @@
   - 입력: `presence:set`
   - 출력: `presence:update`, `presence:error`
 - 입력/출력:
-  - 입력: `userId`, `status` (`ONLINE`/`AWAY`/`OFFLINE`)
-  - 출력: `userId`, `status`, `updatedAt`
+  - 입력: `employeeNo`(사원번호 문자열), `status` (`ONLINE`/`AWAY`/`OFFLINE`) — 구 클라이언트 호환용으로 동일 값을 `userId` 키로 보내는 폴백이 있으나, **반드시 사번 문자열**을 넣어야 한다(DB 숫자 PK와 혼동 금지)
+  - 출력: `employeeNo`, `status`, `updatedAt` (`GET /presence` 스냅샷 동일)
 - 상태 전이/예외 케이스:
-  - 유효하지 않은 status/userId는 `presence:error` 반환
-  - 동일 `userId` 다중 탭(소켓)은 집합으로 추적하며, **해당 사용자의 모든 소켓이 끊기면** `presence:update`(OFFLINE) 브로드캐스트 후 서버 메모리 맵에서 제거(미사용 userId 누적 방지)
+  - 유효하지 않은 status/빈 `employeeNo`는 `presence:error` 반환
+  - 동일 `employeeNo` 다중 탭(소켓)은 집합으로 추적하며, **해당 사용자의 모든 소켓이 끊기면** `presence:update`(OFFLINE) 브로드캐스트 후 서버 메모리 맵에서 제거(미사용 키 누적 방지)
 - 권한/보안:
   - 현재는 기본 상태 이벤트 처리, 인증 연동 시 sender 검증 강화 예정
 - 로그/감사 포인트:
@@ -607,8 +609,8 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 - 관련 API:
   - `GET /api/user-directory/organization` (조직도 트리 데이터)
   - `POST /api/channels/{channelId}/members` (채널 생성 후 추가 멤버 등록)
-  - `GET /api/channels/{channelId}/files?userId=...`
-  - `GET /api/channels/{channelId}/files/{fileId}/download?userId=...`
+  - `GET /api/channels/{channelId}/files?employeeNo=...`
+  - `GET /api/channels/{channelId}/files/{fileId}/download?employeeNo=...`
 - 입력/출력:
   - **통합 피커**: 채널 생성·DM 생성·구성원 추가 모두 **동일한 `+` 버튼 기반 팝업**(`modalAddMemberPicker`)을 사용합니다. 팝업에서 좌측 조직도(회사>본부>팀) + 우측 검색/결과로 사용자 선택 후 상위 모달의 선택 태그에 반영됩니다.
   - 멤버 패널: `department`·`jobLevel`을 한 줄 요약, `jobPosition`·`jobTitle`은 값이 있을 때만 추가 표시
