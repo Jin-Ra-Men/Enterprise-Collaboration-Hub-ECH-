@@ -14,7 +14,7 @@ public interface ErrorLogRepository extends JpaRepository<ErrorLog, Long> {
             WHERE (:from IS NULL OR e.createdAt >= :from)
               AND (:to IS NULL OR e.createdAt <= :to)
               AND (:errorCode IS NULL OR e.errorCode = :errorCode)
-              AND (:pathKeyword IS NULL OR LOWER(e.path) LIKE LOWER(CONCAT('%', :pathKeyword, '%')))
+              AND (:pathKeyword IS NULL OR LOWER(CAST(e.path AS string)) LIKE LOWER(CONCAT('%', :pathKeyword, '%')))
             ORDER BY e.createdAt DESC
             """)
     List<ErrorLog> search(

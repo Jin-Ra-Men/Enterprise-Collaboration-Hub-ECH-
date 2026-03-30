@@ -1919,6 +1919,9 @@ function initSocket() {
     const cid = Number(msg.channelId);
     if (cid === activeChannelId) {
       appendMessageRealtime(msg);
+      // `mention:notify` 경로가 누락/지연되는 경우 대비:
+      // 현재 채널에서 내 멘션이 포함된 메시지를 받으면 클라이언트가 폴백 토스트를 띄운다.
+      maybeShowMentionToastFromMessage(msg);
       if (msg.messageId != null) {
         markChannelReadUpTo(activeChannelId, msg.messageId).then(() => loadMyChannels());
       }
@@ -2019,6 +2022,8 @@ async function sendMessageViaApi(channelId, senderId, text) {
 let mentionSuggestTimer = null;
 let mentionSuggestResults = [];
 let mentionSelectedIndex = 0;
+// 동일 메시지에 대해 토스트가 중복 표시되지 않도록(mention:notify + 폴백 경로) 제어한다.
+const shownMentionToastMessageIds = new Set();
 
 function getMentionQueryAtCaret(value, caret) {
   const before = value.slice(0, caret);
@@ -2159,6 +2164,11 @@ function scheduleMentionSuggestUpdate() {
 function pushMentionToast(p) {
   const stack = document.getElementById("mentionToastStack");
   if (!stack || !p) return;
+  if (p.messageId != null) {
+    const mid = String(p.messageId);
+    if (shownMentionToastMessageIds.has(mid)) return;
+    shownMentionToastMessageIds.add(mid);
+  }
   const cid = Number(p.channelId);
   if (!Number.isFinite(cid)) return;
   const channelName = String(p.channelName || "채널");
@@ -2177,6 +2187,56 @@ function pushMentionToast(p) {
   setTimeout(() => {
     if (toast.parentNode) toast.remove();
   }, 25_000);
+}
+
+function extractMentionEmployeeNosFromTextClient(text) {
+  const s = String(text || "");
+  const re = /@\{([^}]*)\}/g;
+  const out = new Set();
+  let m;
+  while ((m = re.exec(s)) !== null && out.size < 20) {
+    const inner = String(m[1] ?? "");
+    const pipe = inner.indexOf("|");
+    const emp = (pipe >= 0 ? inner.slice(0, pipe) : inner).trim();
+    if (emp) out.add(emp);
+  }
+  return [...out];
+}
+
+function mentionPreviewForToastClient(body, maxLen = 120) {
+  const s = String(body || "")
+    .replace(/@\{([^}|]+)\|([^}]+)\}/g, "@$2")
+    .replace(/@\{([^}]+)\}/g, "@$1");
+  return s.length <= maxLen ? s : s.slice(0, maxLen) + "…";
+}
+
+function maybeShowMentionToastFromMessage(msg) {
+  if (!currentUser || !msg) return;
+  const receiverEmp = String(currentUser.employeeNo ?? "").trim();
+  if (!receiverEmp) return;
+
+  const senderEmp = String(msg.senderId ?? "").trim();
+  if (senderEmp && receiverEmp === senderEmp) return; // 자기 멘션은 토스트 제외
+
+  const cid = Number(msg.channelId);
+  if (!Number.isFinite(cid)) return;
+  if (activeChannelId == null || Number(activeChannelId) !== cid) return; // 폴백은 현재 채널에서만
+
+  const mentioned = extractMentionEmployeeNosFromTextClient(msg.text || "");
+  if (!mentioned.includes(receiverEmp)) return;
+
+  const channelName =
+    document.getElementById("chatChannelName")?.textContent || "채널";
+  const channelType = activeChannelType || "PUBLIC";
+
+  pushMentionToast({
+    channelId: cid,
+    channelName,
+    channelType,
+    senderName: String(msg.senderName || ""),
+    messagePreview: mentionPreviewForToastClient(msg.text || "", 160),
+    messageId: msg.messageId != null ? Number(msg.messageId) : null,
+  });
 }
 
 /* ==========================================================================
