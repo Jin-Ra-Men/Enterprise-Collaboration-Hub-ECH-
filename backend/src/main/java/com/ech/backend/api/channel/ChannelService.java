@@ -15,6 +15,7 @@ import com.ech.backend.domain.channel.ChannelMember;
 import com.ech.backend.domain.channel.ChannelMemberRole;
 import com.ech.backend.domain.channel.ChannelMemberRepository;
 import com.ech.backend.domain.channel.ChannelRepository;
+import com.ech.backend.domain.channel.ChannelMemberUserIdColumnInspector;
 import com.ech.backend.domain.channel.ChannelType;
 import com.ech.backend.domain.org.OrgGroupMember;
 import com.ech.backend.domain.org.OrgGroupMemberRepository;
@@ -27,8 +28,10 @@ import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +45,8 @@ public class ChannelService {
     private final OrgGroupMemberRepository orgGroupMemberRepository;
     private final AuditLogService auditLogService;
     private final AuthService authService;
+    private final ChannelMemberUserIdColumnInspector channelMemberUserIdColumnInspector;
+    private final JdbcTemplate jdbcTemplate;
 
     public ChannelService(
             ChannelRepository channelRepository,
@@ -49,7 +54,9 @@ public class ChannelService {
             UserRepository userRepository,
             OrgGroupMemberRepository orgGroupMemberRepository,
             AuditLogService auditLogService,
-            AuthService authService
+            AuthService authService,
+            ChannelMemberUserIdColumnInspector channelMemberUserIdColumnInspector,
+            JdbcTemplate jdbcTemplate
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
@@ -57,6 +64,8 @@ public class ChannelService {
         this.orgGroupMemberRepository = orgGroupMemberRepository;
         this.auditLogService = auditLogService;
         this.authService = authService;
+        this.channelMemberUserIdColumnInspector = channelMemberUserIdColumnInspector;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Transactional
@@ -237,7 +246,36 @@ public class ChannelService {
     }
 
     public List<ChannelSummaryResponse> getMyChannels(String employeeNo) {
-        return channelRepository.findByMemberEmployeeNo(employeeNo).stream()
+        if (employeeNo == null || employeeNo.isBlank()) {
+            return List.of();
+        }
+        String emp = employeeNo.trim();
+        List<Channel> channels;
+        if (channelMemberUserIdColumnInspector.isLegacyUserIdReferencesUserPrimaryKey()) {
+            List<Long> orderedIds = jdbcTemplate.query(
+                    """
+                            SELECT c.id FROM channels c
+                            WHERE EXISTS (
+                                SELECT 1 FROM channel_members cm
+                                INNER JOIN users u ON u.id = cm.user_id
+                                WHERE cm.channel_id = c.id AND u.employee_no = ?
+                            )
+                            ORDER BY c.created_at DESC
+                            """,
+                    (rs, rowNum) -> rs.getLong(1),
+                    emp
+            );
+            if (orderedIds.isEmpty()) {
+                return List.of();
+            }
+            Map<Long, Channel> byId = channelRepository.findAllById(orderedIds).stream()
+                    .collect(Collectors.toMap(Channel::getId, ch -> ch, (a, b) -> a));
+            channels = orderedIds.stream().map(byId::get).filter(Objects::nonNull).toList();
+        } else {
+            channels = channelRepository.findByMemberEmployeeNo(emp);
+        }
+
+        return channels.stream()
                 .map(channel -> {
                     int memberCount = channelMemberRepository.findByChannelId(channel.getId()).size();
                     return new ChannelSummaryResponse(
