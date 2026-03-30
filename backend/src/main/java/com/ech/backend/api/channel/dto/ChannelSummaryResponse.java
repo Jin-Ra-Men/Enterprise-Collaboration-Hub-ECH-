@@ -12,6 +12,7 @@ public record ChannelSummaryResponse(
         int memberCount,
         OffsetDateTime createdAt,
         int unreadCount,
-        List<String> dmPeerEmployeeNos
+        List<String> dmPeerEmployeeNos,
+        OffsetDateTime lastMessageAt
 ) {
 }

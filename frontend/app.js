@@ -16,6 +16,7 @@ const WS_KEY     = "ECH"; // 기본 워크스페이스 키
 const MAX_MSGS   = 300;
 const THEME_KEY  = "ech_theme";
 const VALID_THEMES = ["dark", "light", "blue"];
+const SIDEBAR_COLLAPSED_KEY = "ech_sidebar_collapsed";
 
 function getCurrentTheme() {
   return document.documentElement.getAttribute("data-theme") || "dark";
@@ -96,6 +97,9 @@ let orgPickerEmbedElId = null; // member/dm/channelMember 조직도 체크박스
 let profileViewEmployeeNo = null;
 /** 좌측 하단 프레즌스 메뉴 이벤트(재로그인 시 중복 바인딩 방지) */
 let sidebarPresenceUiBound = false;
+/** 사이드바 섹션 토글·접기 버튼은 initEvents가 여러 번 호출돼도 한 번만 바인딩 */
+let sidebarSectionTogglesBound = false;
+let sidebarCollapseBound = false;
 
 /* ── DOM 참조 ── */
 const loginPage      = document.getElementById("loginPage");
@@ -885,6 +889,7 @@ function showMain(user) {
     ? user.themePreference
     : (localStorage.getItem(THEME_KEY) || "dark");
   applyTheme(preferredTheme);
+  applySidebarCollapsedState();
 
   sidebarUserName.textContent = `${user.name}`;
   sidebarAvatar.textContent = avatarInitials(user.name);
@@ -960,6 +965,8 @@ logoutBtn.addEventListener("click", () => {
   // DOM 상태 완전 초기화 (다음 로그인 계정이 달라도 깨끗하게 시작)
   channelListEl.innerHTML = "";
   dmListEl.innerHTML      = "";
+  const quickUnread = document.getElementById("quickUnreadList");
+  if (quickUnread) quickUnread.innerHTML = "";
   messagesEl.innerHTML    = "";
   document.getElementById("adminSection").classList.add("hidden");
   showView("viewWelcome");
@@ -1043,6 +1050,90 @@ function formatUnreadBadgeCount(n) {
   return v > 99 ? "99+" : String(v);
 }
 
+/** 목록 정렬: 최근 활동(루트 메시지 기준 시각) — API `lastMessageAt`, 없으면 `createdAt` */
+function channelActivityTimeMs(ch) {
+  const lm = ch.lastMessageAt ?? ch.last_message_at;
+  const ca = ch.createdAt ?? ch.created_at;
+  const raw = lm || ca || "";
+  if (!raw) return 0;
+  const ms = Date.parse(String(raw));
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function setSidebarCollapsedUi(collapsed) {
+  mainApp.classList.toggle("sidebar-collapsed", collapsed);
+  const btn = document.getElementById("btnSidebarCollapse");
+  if (btn) {
+    btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    const t = collapsed ? "사이드바 펼치기" : "사이드바 접기";
+    btn.title = t;
+    btn.setAttribute("aria-label", t);
+    btn.textContent = collapsed ? "▶" : "◀";
+  }
+}
+
+function applySidebarCollapsedState() {
+  let collapsed = false;
+  try {
+    collapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
+  } catch (e) {
+    /* ignore */
+  }
+  setSidebarCollapsedUi(collapsed);
+}
+
+function toggleSidebarCollapsed() {
+  const next = !mainApp.classList.contains("sidebar-collapsed");
+  try {
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
+  } catch (e) {
+    /* ignore */
+  }
+  setSidebarCollapsedUi(next);
+}
+
+/** 미읽음이 있는 채널/DM만, 최근 메시지 시각 내림차순 */
+function renderQuickUnreadList(channels) {
+  const el = document.getElementById("quickUnreadList");
+  if (!el) return;
+  el.innerHTML = "";
+  const unread = (channels || []).filter((ch) => Number(ch.unreadCount ?? 0) > 0);
+  unread.sort((a, b) => channelActivityTimeMs(b) - channelActivityTimeMs(a));
+  if (unread.length === 0) {
+    const emptyHint = document.createElement("li");
+    emptyHint.className = "sidebar-item sidebar-quick-empty muted-item";
+    emptyHint.textContent = "미읽음 대화가 없습니다";
+    el.appendChild(emptyHint);
+    return;
+  }
+  unread.forEach((ch) => {
+    const li = document.createElement("li");
+    li.className = "sidebar-item channel-item quick-unread-item";
+    li.dataset.channelId = String(ch.channelId);
+    li.dataset.channelType = ch.channelType;
+    const displayName =
+      ch.channelType === "DM" && ch.description
+        ? ch.description
+        : ch.name;
+    li.dataset.channelName = displayName;
+    const badgeTxt = formatUnreadBadgeCount(Number(ch.unreadCount ?? 0));
+    const badgeHtml = badgeTxt
+      ? `<span class="channel-unread-badge" aria-label="미읽음 ${badgeTxt}건">${escHtml(badgeTxt)}</span>`
+      : "";
+    if (ch.channelType === "DM") {
+      const dmLead = dmSidebarLeadingHtml(ch.dmPeerEmployeeNos);
+      li.innerHTML = `${dmLead}<span class="item-label">${escHtml(displayName)}</span>${badgeHtml}`;
+    } else {
+      const icon = ch.channelType === "PRIVATE" ? "🔒" : "#";
+      li.innerHTML = `<span class="item-icon">${icon}</span><span class="item-label">${escHtml(ch.name)}</span>${badgeHtml}`;
+    }
+    li.title = displayName;
+    if (ch.channelId === activeChannelId) li.classList.add("active");
+    li.addEventListener("click", () => selectChannel(ch.channelId, displayName, ch.channelType));
+    el.appendChild(li);
+  });
+}
+
 function renderChannelList(channels) {
   channelListEl.innerHTML = "";
   dmListEl.innerHTML      = "";
@@ -1079,6 +1170,7 @@ function renderChannelList(channels) {
     li.addEventListener("click", () => selectChannel(ch.channelId, displayName, ch.channelType));
   });
 
+  renderQuickUnreadList(channels);
   refreshPresenceDots();
 }
 
@@ -2565,14 +2657,25 @@ function initEvents() {
   }
 
   // 사이드바 섹션 접기/펼치기
-  document.querySelectorAll(".section-toggle").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const targetId = btn.dataset.target;
-      if (!targetId) return;
-      const target = document.getElementById(targetId);
-      if (target) target.classList.toggle("hidden");
+  if (!sidebarSectionTogglesBound) {
+    sidebarSectionTogglesBound = true;
+    document.querySelectorAll(".section-toggle").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const targetId = btn.dataset.target;
+        if (!targetId) return;
+        const target = document.getElementById(targetId);
+        if (target) target.classList.toggle("hidden");
+      });
     });
-  });
+  }
+
+  if (!sidebarCollapseBound) {
+    sidebarCollapseBound = true;
+    document.getElementById("btnSidebarCollapse")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleSidebarCollapsed();
+    });
+  }
 
   messagesEl.addEventListener("click", (e) => {
     const t = e.target.closest(".msg-user-trigger");

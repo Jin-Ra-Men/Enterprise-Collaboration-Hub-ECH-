@@ -1,7 +1,7 @@
 package com.ech.backend.domain.message;
 
-import com.ech.backend.domain.channel.ChannelMember;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -82,4 +82,19 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
               AND (:afterId IS NULL OR m.id > :afterId)
             """)
     long countRootMessagesAfter(@Param("channelId") long channelId, @Param("afterId") Long afterId);
+
+    /**
+     * 채널별 메인 타임라인(루트) 최신 메시지 시각. 미읽음 퀵 메뉴 정렬용.
+     * {@code channelIds}가 비어 있으면 호출하지 않는다.
+     */
+    @Query("""
+            SELECT m.channel.id, MAX(m.createdAt)
+            FROM Message m
+            WHERE m.channel.id IN :channelIds
+              AND m.parentMessage IS NULL
+              AND m.archivedAt IS NULL
+              AND m.isDeleted = false
+            GROUP BY m.channel.id
+            """)
+    List<Object[]> findLatestRootMessageTimeByChannelIds(@Param("channelIds") Collection<Long> channelIds);
 }

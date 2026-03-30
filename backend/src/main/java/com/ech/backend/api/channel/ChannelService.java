@@ -30,7 +30,9 @@ import com.ech.backend.integration.realtime.RealtimeBroadcastClient;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -360,6 +362,9 @@ public class ChannelService {
             channels = channelRepository.findByMemberEmployeeNo(emp);
         }
 
+        List<Long> channelIds = channels.stream().map(Channel::getId).toList();
+        Map<Long, OffsetDateTime> lastMsgAtByChannel = fetchLatestRootMessageTimes(channelIds);
+
         return channels.stream()
                 .map(channel -> {
                     int memberCount = channelMemberRepository.findByChannelId(channel.getId()).size();
@@ -368,6 +373,7 @@ public class ChannelService {
                     List<String> dmPeers = channel.getChannelType() == ChannelType.DM
                             ? resolveDmPeerEmployeeNos(channel.getId(), emp)
                             : List.of();
+                    OffsetDateTime lastAt = lastMsgAtByChannel.get(channel.getId());
                     return new ChannelSummaryResponse(
                             channel.getId(),
                             channel.getWorkspaceKey(),
@@ -377,10 +383,46 @@ public class ChannelService {
                             memberCount,
                             channel.getCreatedAt(),
                             unread,
-                            dmPeers
+                            dmPeers,
+                            lastAt
                     );
                 })
                 .toList();
+    }
+
+    private Map<Long, OffsetDateTime> fetchLatestRootMessageTimes(List<Long> channelIds) {
+        if (channelIds == null || channelIds.isEmpty()) {
+            return Map.of();
+        }
+        List<Object[]> rows = messageRepository.findLatestRootMessageTimeByChannelIds(channelIds);
+        Map<Long, OffsetDateTime> map = new HashMap<>();
+        for (Object[] row : rows) {
+            if (row == null || row.length < 2 || row[0] == null) {
+                continue;
+            }
+            Long cid = ((Number) row[0]).longValue();
+            OffsetDateTime at = coerceToOffsetDateTime(row[1]);
+            if (at != null) {
+                map.put(cid, at);
+            }
+        }
+        return map;
+    }
+
+    private static OffsetDateTime coerceToOffsetDateTime(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof OffsetDateTime odt) {
+            return odt;
+        }
+        if (value instanceof java.time.Instant ins) {
+            return OffsetDateTime.ofInstant(ins, java.time.ZoneOffset.UTC);
+        }
+        if (value instanceof java.sql.Timestamp ts) {
+            return OffsetDateTime.ofInstant(ts.toInstant(), java.time.ZoneOffset.UTC);
+        }
+        return null;
     }
 
     /** DM 사이드바 프레즌스: 조회자(사번)를 제외한 참가자 사번, 정렬 */

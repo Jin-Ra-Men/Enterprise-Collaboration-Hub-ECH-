@@ -104,7 +104,7 @@
 - 사용자: Backend 개발자, Frontend 개발자
 - 관련 화면/경로: 채널 목록/채널 상세/채널 참여 UI
 - 관련 API:
-  - `GET /api/channels?employeeNo=...` (내 채널/DM 목록 — **DM**의 `description`은 DB 저장값이 아니라 요청 `employeeNo`(본인)을 제외한 참가자 표시명을 서버가 매번 계산; **`unreadCount`** 는 본인 읽음 포인터 이후의 **루트 메시지** 건수로 계산해 사이드바 빨간 배지에 표시; **`dmPeerEmployeeNos`** 는 DM만 조회자를 제외한 참가자 **사번** 배열(정렬) — 사이드바 DM 줄 프레즌스 점에 사용)
+  - `GET /api/channels?employeeNo=...` (내 채널/DM 목록 — **DM**의 `description`은 DB 저장값이 아니라 요청 `employeeNo`(본인)을 제외한 참가자 표시명을 서버가 매번 계산; **`unreadCount`** 는 본인 읽음 포인터 이후의 **루트 메시지** 건수로 계산해 사이드바 빨간 배지에 표시; **`lastMessageAt`** 는 채널별 루트 메시지 기준 최신 `created_at`(메시지 없으면 `null`); **`dmPeerEmployeeNos`** 는 DM만 조회자를 제외한 참가자 **사번** 배열(정렬) — 사이드바 DM 줄 프레즌스 점에 사용)
   - `POST /api/channels` (채널 생성)
   - `GET /api/channels/{channelId}` (채널 상세 조회)
   - `POST /api/channels/{channelId}/members` (채널 참여)
@@ -134,6 +134,28 @@
     - `backend/src/main/java/com/ech/backend/api/channel/ChannelController.java`
     - `backend/src/main/java/com/ech/backend/api/channel/ChannelService.java`
     - `backend/src/main/java/com/ech/backend/domain/channel/*`
+
+---
+
+## 사이드바 미읽음 퀵 메뉴·접기
+- 목적: 미읽음이 있는 채널/DM만 모아 빠르게 이동하고, 최근 메시지가 도착한 대화가 위로 오도록 하며 좌측 패널 너비를 줄일 수 있게 함
+- 사용자: 일반 채팅 사용자
+- 관련 화면/경로: `frontend/index.html` 사이드바 `quickUnreadList`, `btnSidebarCollapse`; `frontend/app.js` `renderQuickUnreadList`, `loadMyChannels`·`scheduleRefreshMyChannels`; `frontend/styles.css` `.sidebar-collapsed`
+- 관련 API: `GET /api/channels` (`unreadCount`, **`lastMessageAt`**, `createdAt` 폴백 정렬)
+- 관련 Socket 이벤트: `message:new`, `channel:system` 등 기존 디바운스 채널 목록 갱신과 동일(약 400ms) — 갱신 시 퀵 목록도 동일 데이터로 재렌더
+- 입력/출력:
+  - 퀵 목록: `unreadCount > 0` 인 항목만 표시, 정렬 키 = `lastMessageAt` ISO 시각(없으면 `createdAt`), 내림차순
+  - 미읽음 0건일 때 안내 문구 1행(접힘 모드에선 숨김)
+  - 접기: `localStorage` 키 `ech_sidebar_collapsed` (`1`/`0`), 워크스페이스 줄 `◀`/`▶` 토글, `#mainApp.sidebar-collapsed`
+- 상태 전이/예외 케이스:
+  - `lastMessageAt` 미수신·파싱 실패 시 `createdAt`만으로 정렬(둘 다 없으면 0)
+  - 퀵 목록 항목은 일반 목록과 동일하게 `selectChannel` 연동·`channel-item` active 표시
+- 권한/보안: 기존 채널 목록 API·인증과 동일
+- 로그/감사 포인트: 해당 없음
+- 테스트 기준:
+  - 타 채널에 메시지 수신 후 퀵 목록 순서·배지가 목록 갱신과 일치
+  - 접기 상태 새로고침 후 유지
+- 비고: 섹션 헤더 `▾ 미읽음`은 다른 섹션과 같이 목록 `ul` 표시 토글 가능
 
 ---
 
