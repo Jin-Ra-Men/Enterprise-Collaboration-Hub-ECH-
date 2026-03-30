@@ -456,7 +456,9 @@
     - `org_groups.group_code` / `companyGroupCode` 값은 **ASCII 전용** pretty 코드(예: `COMP_*`, `DIV_*`, `TEAM_*`)이며, 표시명(`display_name`)은 한글을 유지한다.
     - 사용자 목록은 `org_group_members`에서 `member_group_type='TEAM'`에 해당하는 유저를 사용한다.
     - 각 사용자의 `department` 값은 `TEAM` 그룹의 `display_name`으로 채운다. 직급·직위·직책은 `org_group_members`의 `JOB_LEVEL` / `JOB_POSITION` / `JOB_TITLE` 매핑만 사용한다(`users` 컬럼 fallback 없음).
-  - `GET /api/users/profile?userId=` — 동료 프로필(프론트 기본, 이름·사원번호·이메일·부서·직급; 직위(`jobPosition`)·직책(`jobTitle`)은 값이 있을 때만 모달에 표시. **DM 보내기**로 DM 채널 생성·입장). 응답에 `role`/`status`가 있어도 프로필 모달에는 표시하지 않음
+  - `GET /api/users/profile?employeeNo=` — 동료 프로필(프론트 기본, 사번 기준)
+  - `GET /api/users/profile?userId=` — 동일(숫자 사용자 ID, 호환)
+  - 프로필 내용: 이름·사원번호·이메일·부서·직급; 직위(`jobPosition`)·직책(`jobTitle`)은 값이 있을 때만 모달에 표시. **DM 보내기**로 DM 채널 생성·입장. 응답에 `role`/`status`가 있어도 프로필 모달에는 표시하지 않음
   - `GET /api/users/{userId}/profile` — 동일(경로형, 하위 호환)
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:

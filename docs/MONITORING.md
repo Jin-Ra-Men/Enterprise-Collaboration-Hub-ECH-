@@ -28,7 +28,7 @@
 
 | 지표 | 설명 | 임계치 |
 |------|------|--------|
-| 동시 WebSocket 연결 수 | presenceByUserId.size | < 5,000 |
+| 동시 WebSocket 연결 수 | socketIdToEmployeeNo.size (presence 등록 소켓) | < 5,000 |
 | 메시지 처리 지연 | socket → DB → broadcast | < 500ms |
 | DB Pool 대기 | `getPoolStats().waiting` | < 5 |
 | 프로세스 메모리 | RSS | < 512MB |

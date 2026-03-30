@@ -40,6 +40,13 @@ public class UserSearchController {
         return ApiResponse.success(userSearchService.getProfile(userId));
     }
 
+    @GetMapping(value = "/profile", params = "employeeNo")
+    public ApiResponse<UserProfileResponse> getProfileByEmployeeNoQuery(
+            @RequestParam String employeeNo
+    ) {
+        return ApiResponse.success(userSearchService.getProfileByEmployeeNo(employeeNo));
+    }
+
     @GetMapping("/{userId}/profile")
     public ApiResponse<UserProfileResponse> getProfile(@PathVariable Long userId) {
         return ApiResponse.success(userSearchService.getProfile(userId));

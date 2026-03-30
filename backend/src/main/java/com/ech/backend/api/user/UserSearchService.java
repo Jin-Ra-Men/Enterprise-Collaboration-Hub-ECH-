@@ -211,6 +211,20 @@ public class UserSearchService {
     public UserProfileResponse getProfile(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        return toUserProfileResponse(user);
+    }
+
+    public UserProfileResponse getProfileByEmployeeNo(String employeeNo) {
+        String emp = normalize(employeeNo);
+        if (emp == null) {
+            throw new IllegalArgumentException("사원번호가 필요합니다.");
+        }
+        User user = userRepository.findByEmployeeNo(emp)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        return toUserProfileResponse(user);
+    }
+
+    private UserProfileResponse toUserProfileResponse(User user) {
         String emp = user.getEmployeeNo();
         String department = lookupDisplayName(emp, "TEAM");
         String jobLevel = lookupDisplayName(emp, "JOB_LEVEL");

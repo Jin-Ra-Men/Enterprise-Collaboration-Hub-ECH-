@@ -119,7 +119,8 @@
 - 사용자 검색·프로필·조직도:
   - `GET /api/users/search?q=...&department=...`
   - `GET /api/user-directory/organization`
-  - `GET /api/users/profile?userId=...`
+  - `GET /api/users/profile?employeeNo=...` (프론트 기본)
+  - `GET /api/users/profile?userId=...` (숫자 ID, 호환)
   - `GET /api/users/{userId}/profile` (호환)
 - 칸반:
   - `POST/GET/GET{id}/DELETE /api/kanban/boards`, 컬럼·카드 CRUD, 담당자 추가/삭제, `GET /api/kanban/cards/{cardId}/history`
@@ -149,7 +150,7 @@
 
 ### Realtime 메시지 저장 연계 메모
 - Realtime 서버는 PostgreSQL에 직접 연결해 메시지를 저장합니다.
-- `message:send` payload는 숫자형 `channelId`, `senderId`, 문자열 `text`가 필요합니다.
+- `message:send` payload는 숫자형 `channelId`, **발신자 사원번호 문자열** `senderId`, 문자열 `text`가 필요합니다.
 - 본문 길이는 `MAX_MESSAGE_BODY_LENGTH`(기본 4000)를 초과하면 저장하지 않고 `MESSAGE_TOO_LARGE` 오류를 반환합니다.
 - DB 저장 성공 시에만 `message:new`가 채널 룸으로 전송됩니다.
 - `/health` 엔드포인트에서 DB 연결 상태(`db: ok/error`)를 함께 확인할 수 있습니다.
@@ -161,7 +162,8 @@
 - `GET /api/user-directory/organization?companyGroupCode=`로 선택 회사 트리만 내려보내며, 전체 옵션이면 쿼리 파라미터를 생략하여 전체 트리를 반환합니다.
 - 검색 키워드(`q`)는 이름/이메일/사번에 대해 부분 일치 조회를 수행합니다.
 - Presence는 Realtime 서버 메모리 기반으로 관리됩니다.
-- 소켓별로 사용자를 추적하며, 해당 사용자의 **모든** 소켓이 끊기면 OFFLINE 브로드캐스트 후 메모리에서 제거합니다(유령 userId 누적 방지).
+- `presence:set` / `presence:update` / `GET /presence` 스냅샷은 **`employeeNo`(문자열)** 를 키로 사용합니다(레거시 숫자 `userId`는 소켓에서 더 이상 유효하지 않음).
+- 소켓별로 사용자를 추적하며, 해당 사용자의 **모든** 소켓이 끊기면 OFFLINE 브로드캐스트 후 메모리에서 제거합니다(유령 키 누적 방지).
 - 운영 환경에서 다중 인스턴스 구성 시 Presence 저장소(예: Redis) 공유가 필요합니다.
 
 ### 테스트 조직 연동(그룹웨어 전환 대비) 인수인계 메모

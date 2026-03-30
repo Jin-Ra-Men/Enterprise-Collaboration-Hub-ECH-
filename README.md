@@ -104,7 +104,8 @@ graph LR
 - `GET /api/users/search?q=...&department=...`
 - `GET /api/user-directory/organization-filters` (조직도 팝업 회사 셀렉트 — `org_groups(COMPANY)` 기준 `label`, `companyGroupCode`)
 - `GET /api/user-directory/organization?companyGroupCode=` (선택: 전체 또는 특정 회사 트리(`companyGroupCode`)만)
-- `GET /api/users/profile?userId=...`
+- `GET /api/users/profile?employeeNo=...` (프론트 기본)
+- `GET /api/users/profile?userId=...` (숫자 ID, 호환)
 - `GET /api/users/{userId}/profile` (경로형, 호환)
 - `POST /api/kanban/boards`, `GET /api/kanban/boards`, `GET /api/kanban/boards/{boardId}`, `DELETE /api/kanban/boards/{boardId}`
 - `POST /api/kanban/boards/{boardId}/columns`, `PUT /api/kanban/boards/{boardId}/columns/{columnId}`, `DELETE .../columns/{columnId}`
@@ -161,7 +162,7 @@ graph LR
 
 ### Realtime 이벤트/엔드포인트
 - Socket: `channel:join`, `message:send`, `message:new`, `message:error` (`MESSAGE_TOO_LARGE` 등)
-- Presence: `presence:set`, `presence:update`, `presence:error` (전 소켓 종료 시 OFFLINE 정리)
+- Presence: `presence:set`/`presence:update`는 **`employeeNo`** 키 사용, `presence:error` (전 소켓 종료 시 OFFLINE 정리)
 - HTTP: `GET /health`, `GET /presence`
 
 ### 운영·성능 메모 (요약)

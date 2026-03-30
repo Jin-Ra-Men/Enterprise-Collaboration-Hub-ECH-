@@ -73,8 +73,8 @@ async function saveThemePreference(theme) {
   }
 }
 
-/** userId(number) -> ONLINE | AWAY | OFFLINE */
-const presenceByUserId = new Map();
+/** employeeNo(string) -> ONLINE | AWAY | OFFLINE */
+const presenceByEmployeeNo = new Map();
 
 /* ── 전역 상태 ── */
 let socket         = null;
@@ -87,8 +87,8 @@ let selectedDmMembers = [];
 let selectedAddMembers = [];  // 기존 채널에 추가할 사용자
 let orgPickerContext = null;  // member | dm | channelMember
 let orgPickerEmbedElId = null; // member/dm/channelMember 조직도 체크박스가 그려진 엘리먼트 id
-/** 프로필 모달에 표시 중인 사용자 ID (DM 보내기용) */
-let profileViewUserId = null;
+/** 프로필 모달에 표시 중인 사용자 사번 (DM 보내기용) */
+let profileViewEmployeeNo = null;
 
 /* ── DOM 참조 ── */
 const loginPage      = document.getElementById("loginPage");
@@ -172,7 +172,8 @@ async function fetchPresenceSnapshot() {
     const res = await fetch(`${SOCKET_URL}/presence`);
     const json = await res.json();
     (json.data || []).forEach((p) => {
-      presenceByUserId.set(Number(p.userId), String(p.status || "OFFLINE").toUpperCase());
+      const emp = String(p.employeeNo || "").trim();
+      if (emp) presenceByEmployeeNo.set(emp, String(p.status || "OFFLINE").toUpperCase());
     });
   } catch (e) {
     console.warn("프레즌스 스냅샷 실패", e);
@@ -181,24 +182,25 @@ async function fetchPresenceSnapshot() {
 
 function refreshPresenceDots() {
   document.querySelectorAll("[data-presence-user]").forEach((el) => {
-    const uid = Number(el.dataset.presenceUser);
-    const st = presenceByUserId.get(uid) || "OFFLINE";
+    const emp = String(el.dataset.presenceUser || "").trim();
+    const st = presenceByEmployeeNo.get(emp) || "OFFLINE";
     el.className = `presence-dot ${presenceCssClass(st)}`;
     el.title = presenceTitle(st);
   });
 }
 
-async function openUserProfile(userId) {
-  if (!userId || !currentUser) return;
+async function openUserProfile(employeeNo) {
+  const emp = String(employeeNo || "").trim();
+  if (!emp || !currentUser) return;
   try {
-    const res  = await apiFetch(`/api/users/profile?userId=${encodeURIComponent(userId)}`);
+    const res  = await apiFetch(`/api/users/profile?employeeNo=${encodeURIComponent(emp)}`);
     const json = await res.json();
     if (!res.ok) {
       alert(json.error?.message || "프로필을 불러올 수 없습니다.");
       return;
     }
     const u = json.data;
-    profileViewUserId = u.userId != null ? u.userId : userId;
+    profileViewEmployeeNo = u.employeeNo != null ? String(u.employeeNo).trim() : emp;
     document.getElementById("profileModalName").textContent = u.name || "-";
     document.getElementById("profileAvatarLg").textContent = avatarInitials(u.name || "?");
     document.getElementById("profileModalEmpNo").textContent = u.employeeNo || "-";
@@ -236,7 +238,7 @@ async function openUserProfile(userId) {
     }
     const dmBtn = document.getElementById("btnProfileDm");
     if (dmBtn) {
-      const self = Number(profileViewUserId) === Number(currentUser.userId);
+      const self = String(profileViewEmployeeNo) === String(currentUser.employeeNo || "").trim();
       dmBtn.disabled = self;
       dmBtn.title = self ? "자기 자신과는 DM을 시작할 수 없습니다." : "";
     }
@@ -248,15 +250,16 @@ async function openUserProfile(userId) {
 }
 
 /** 프로필·기타에서 동일 플로우로 DM 채널 생성 후 입장 */
-async function startDmWithUser(userId, displayName, peerEmployeeNo = "") {
-  if (!currentUser || userId == null || userId === "") return;
-  const uid = Number(userId);
-  if (uid === Number(currentUser.userId)) {
+async function startDmWithUser(peerEmployeeNo, displayName) {
+  if (!currentUser) return;
+  const peer = String(peerEmployeeNo || "").trim();
+  if (!peer) return;
+  if (peer === String(currentUser.employeeNo || "").trim()) {
     alert("자기 자신과는 DM을 할 수 없습니다.");
     return;
   }
   const dmName =
-    displayName && displayName !== "-" ? displayName : `user#${userId}`;
+    displayName && displayName !== "-" ? displayName : peer;
   try {
     const res = await apiFetch("/api/channels", {
       method: "POST",
@@ -266,7 +269,7 @@ async function startDmWithUser(userId, displayName, peerEmployeeNo = "") {
         description: dmName,
         channelType: "DM",
         createdByEmployeeNo: currentUser.employeeNo,
-        dmPeerEmployeeNos: [String(peerEmployeeNo || "").trim() || String(uid)],
+        dmPeerEmployeeNos: [peer],
       }),
     });
     const json = await res.json();
@@ -549,13 +552,14 @@ function renderMemberListRight() {
   if (hasKeyword) {
     // 검색어가 있으면 "선택된 회사" 범위 내 전체 팀 구성원을 대상으로 검색한다.
     // (loadOrgTree는 companySelect로 필터된 company 트리만 내려주므로 여기서 team.users를 합치면 된다.)
-    const byUserId = new Map();
+    const byEmployeeNo = new Map();
     for (const [, team] of orgPickerTeamIndex.entries()) {
       for (const u of (team.users || [])) {
-        byUserId.set(u.userId, u);
+        const e = String(u.employeeNo || "").trim();
+        if (e) byEmployeeNo.set(e, u);
       }
     }
-    candidateUsers = Array.from(byUserId.values());
+    candidateUsers = Array.from(byEmployeeNo.values());
   } else {
     if (!orgPickerSelectedTeamKey || !orgPickerTeamIndex.has(orgPickerSelectedTeamKey)) {
       listEl.innerHTML = '<li class="empty-notice">부서를 선택하세요.</li>';
@@ -565,7 +569,9 @@ function renderMemberListRight() {
     candidateUsers = (team.users || []);
   }
 
-  const allUsers = candidateUsers.filter((u) => u.userId !== currentUser?.userId);
+  const allUsers = candidateUsers.filter(
+    (u) => String(u.employeeNo || "").trim() !== String(currentUser?.employeeNo || "").trim()
+  );
   const filtered = filterUsers(allUsers, rightType, rightKeyword);
 
   if (!filtered.length) {
@@ -580,7 +586,8 @@ function renderMemberListRight() {
     .slice()
     .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "ko-KR"))
     .forEach((u) => {
-      const selected = isUserAlreadySelected(u.userId, orgPickerContext);
+      const emp = String(u.employeeNo || "").trim();
+      const selected = isUserAlreadySelected(emp, orgPickerContext);
       const item = document.createElement("li");
       item.className = "member-picker-member-item";
       item.innerHTML = `
@@ -589,13 +596,13 @@ function renderMemberListRight() {
           <div class="member-picker-member-sub">${escHtml(u.department || "")}${u.email ? " · " + escHtml(u.email) : ""}</div>
           <div class="member-picker-member-sub">${escHtml("사번: " + (u.employeeNo || ""))}</div>
         </div>
-        <button type="button" class="member-picker-member-btn" data-user-id="${u.userId}">
+        <button type="button" class="member-picker-member-btn" data-employee-no="${escHtml(emp)}">
           ${selected ? "제외" : "추가"}
         </button>
       `;
-      const btn = item.querySelector("button[data-user-id]");
+      const btn = item.querySelector("button[data-employee-no]");
       btn.addEventListener("click", () => {
-        if (selected) removeSelectedMember(u.userId, orgPickerContext);
+        if (selected) removeSelectedMember(emp, orgPickerContext);
         else addSelectedMember(u, orgPickerContext);
         renderMemberListRight();
       });
@@ -613,12 +620,13 @@ function renderPickerSelectedMembers(context) {
     : (context === "channelMember" ? selectedAddMembers : selectedMembers);
 
   (listRef || []).forEach((user) => {
+    const emp = String(user.employeeNo || "").trim();
     const tag = document.createElement("span");
     tag.className = "member-tag";
-    tag.dataset.uid = user.userId;
-    tag.innerHTML = `${escHtml(user.name)} <button type="button" data-uid="${user.userId}">✕</button>`;
+    tag.dataset.uid = emp;
+    tag.innerHTML = `${escHtml(user.name)} <button type="button" data-uid="${escHtml(emp)}">✕</button>`;
     tag.querySelector("button").addEventListener("click", () => {
-      removeSelectedMember(user.userId, context);
+      removeSelectedMember(emp, context);
     });
     wrap.appendChild(tag);
   });
@@ -685,10 +693,12 @@ async function loadOrgTree(context, embedElIdOverride = null) {
     });
 
     // 기본 선택: 현재 사용자의 속한 팀(부서)으로 맞춤
-    const myId = currentUser?.userId;
+    const myEmp = String(currentUser?.employeeNo || "").trim();
     let defaultKey = null;
     for (const [key, team] of orgPickerTeamIndex.entries()) {
-      const hasMe = (team.users || []).some((u) => Number(u.userId) === Number(myId));
+      const hasMe = (team.users || []).some(
+        (u) => String(u.employeeNo || "").trim() === myEmp && myEmp !== ""
+      );
       if (hasMe) {
         defaultKey = key;
         break;
@@ -719,20 +729,25 @@ async function loadOrgTree(context, embedElIdOverride = null) {
   }
 }
 
-function isUserAlreadySelected(userId, context) {
+function isUserAlreadySelected(employeeNo, context) {
   const ref = context === "dm"
     ? selectedDmMembers
     : (context === "channelMember" ? selectedAddMembers : selectedMembers);
-  return ref.some((u) => Number(u.userId) === Number(userId));
+  const want = String(employeeNo || "").trim();
+  return ref.some((u) => String(u.employeeNo || "").trim() === want);
 }
 
-function syncOrgCheckbox(userId, context, checked) {
+function syncOrgCheckbox(employeeNo, context, checked) {
   const id = orgPickerEmbedElId ?? ORG_EMBED_IDS[context];
   if (!id) return;
   const root = document.getElementById(id);
   if (!root) return;
-  const cb = root.querySelector(`.org-user-checkbox[data-user-id="${userId}"]`);
-  if (cb) cb.checked = checked;
+  const want = String(employeeNo || "").trim();
+  root.querySelectorAll(".org-user-checkbox").forEach((cb) => {
+    if (String(cb.getAttribute("data-employee-no") || "").trim() === want) {
+      cb.checked = checked;
+    }
+  });
 }
 
 function avatarInitials(name) {
@@ -964,8 +979,8 @@ async function loadChannelMembers(channelId) {
     const listEl = document.getElementById("memberList");
     listEl.innerHTML = "";
     members.forEach(m => {
-      const uid = Number(m.userId);
-      const pr = presenceByUserId.get(uid) || "OFFLINE";
+      const emp = String(m.employeeNo || "").trim();
+      const pr = presenceByEmployeeNo.get(emp) || "OFFLINE";
       const prCl = presenceCssClass(pr);
       const deptParts = [m.department, m.jobLevel].filter(x => x != null && String(x).trim() !== "");
       const orgLine = deptParts.length ? deptParts.map(x => String(x).trim()).join(" · ") : "조직 미지정";
@@ -982,9 +997,9 @@ async function loadChannelMembers(channelId) {
       li.innerHTML = `
         <div class="member-avatar-wrap">
           <span class="member-avatar-sm">${avatarInitials(m.name || "?")}</span>
-          <span class="presence-dot ${prCl}" data-presence-user="${uid}" title="${presenceTitle(pr)}"></span>
+          <span class="presence-dot ${prCl}" data-presence-user="${escHtml(emp)}" title="${presenceTitle(pr)}"></span>
         </div>
-        <button type="button" class="member-profile-btn" data-user-id="${uid}">
+        <button type="button" class="member-profile-btn" data-employee-no="${escHtml(emp)}">
           <span class="member-name-wrap">
             <span class="member-name-txt">${escHtml(m.name || "알 수 없음")}</span>
             <span class="member-org-txt">${escHtml(orgLine)}</span>
@@ -992,7 +1007,7 @@ async function loadChannelMembers(channelId) {
             ${dutyHtml}
           </span>
         </button>`;
-      li.querySelector(".member-profile-btn").addEventListener("click", () => openUserProfile(uid));
+      li.querySelector(".member-profile-btn").addEventListener("click", () => openUserProfile(emp));
       listEl.appendChild(li);
     });
     refreshPresenceDots();
@@ -1046,7 +1061,7 @@ function shouldShowMessageTime(msgs, i) {
   const cur = msgs[i];
   const next = msgs[i + 1];
   if (!next) return true;
-  if (Number(next.senderId) !== Number(cur.senderId)) return true;
+  if (String(next.senderId) !== String(cur.senderId)) return true;
   if (minuteKey(next.createdAt) !== minuteKey(cur.createdAt)) return true;
   return false;
 }
@@ -1054,7 +1069,7 @@ function shouldShowMessageTime(msgs, i) {
 /** 아바타+이름 행: 이전 메시지와 발신자가 다를 때만 */
 function shouldShowAvatarForMessage(msgs, i) {
   if (i === 0) return true;
-  return Number(msgs[i - 1].senderId) !== Number(msgs[i].senderId);
+  return String(msgs[i - 1].senderId) !== String(msgs[i].senderId);
 }
 
 /** API·소켓 메시지에서 파일 첨부 JSON 추출 */
@@ -1084,17 +1099,18 @@ function tryParseFilePayload(msg) {
 }
 
 function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) {
-  const senderIdNum = Number(msg.senderId);
-  const isMine = currentUser && Number(currentUser.userId) === senderIdNum;
-  const senderName = msg.senderName || `user#${senderIdNum}`;
-  const pr = presenceByUserId.get(senderIdNum) || "OFFLINE";
+  const emp = String(msg.senderId ?? "").trim();
+  const isMine =
+    currentUser && String(currentUser.employeeNo || "").trim() === emp;
+  const senderName = msg.senderName || (emp ? `emp#${emp}` : "?");
+  const pr = presenceByEmployeeNo.get(emp) || "OFFLINE";
   const prCl = presenceCssClass(pr);
   const prTip = presenceTitle(pr);
   const fileMeta = {
     id: Number(payload.fileId),
     originalFilename: payload.originalFilename,
     sizeBytes: payload.sizeBytes,
-    uploadedByUserId: senderIdNum,
+    uploadedByEmployeeNo: emp,
     uploaderName: senderName,
   };
   const timeHtml = showTime
@@ -1102,7 +1118,7 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
     : "";
   const div = document.createElement("div");
   div.className = `msg-row msg-chat ${isMine ? "msg-mine" : "msg-other"} msg-has-attachment${showAvatar ? "" : " msg-continued"}`;
-  div.dataset.senderId = String(senderIdNum);
+  div.dataset.senderId = emp;
   div.dataset.minuteKey = minuteKey(msg.createdAt);
   div.dataset.dateKey = dateKeyLocal(msg.createdAt);
 
@@ -1110,12 +1126,12 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
     const initials = avatarInitials(senderName);
     div.innerHTML = `
       <div class="msg-avatar-wrap">
-        <button type="button" class="msg-avatar msg-user-trigger" data-user-id="${senderIdNum}" title="프로필 보기">${initials}</button>
-        <span class="presence-dot ${prCl}" data-presence-user="${senderIdNum}" title="${prTip}"></span>
+        <button type="button" class="msg-avatar msg-user-trigger" data-employee-no="${escHtml(emp)}" title="프로필 보기">${initials}</button>
+        <span class="presence-dot ${prCl}" data-presence-user="${escHtml(emp)}" title="${prTip}"></span>
       </div>
       <div class="msg-body">
         <div class="msg-meta">
-          <button type="button" class="msg-sender msg-user-trigger" data-user-id="${senderIdNum}">${escHtml(senderName)}</button>
+          <button type="button" class="msg-sender msg-user-trigger" data-employee-no="${escHtml(emp)}">${escHtml(senderName)}</button>
         </div>
         <div class="msg-content-row msg-attachment-inline">
           <span class="msg-attach-icon" aria-hidden="true">📎</span>
@@ -1148,16 +1164,16 @@ function createMessageRowElement(msg, { showAvatar, showTime }) {
     return createFileAttachmentRowFromMsg(msg, filePayload, { showAvatar, showTime });
   }
 
-  const senderIdNum = Number(msg.senderId);
+  const emp = String(msg.senderId ?? "").trim();
   const isMine =
-    currentUser && Number(currentUser.userId) === senderIdNum;
-  const senderName = msg.senderName || `user#${senderIdNum}`;
-  const pr = presenceByUserId.get(senderIdNum) || "OFFLINE";
+    currentUser && String(currentUser.employeeNo || "").trim() === emp;
+  const senderName = msg.senderName || (emp ? `emp#${emp}` : "?");
+  const pr = presenceByEmployeeNo.get(emp) || "OFFLINE";
   const prCl = presenceCssClass(pr);
   const prTip = presenceTitle(pr);
   const div = document.createElement("div");
   div.className = `msg-row msg-chat ${isMine ? "msg-mine" : "msg-other"}${showAvatar ? "" : " msg-continued"}`;
-  div.dataset.senderId = String(senderIdNum);
+  div.dataset.senderId = emp;
   div.dataset.minuteKey = minuteKey(msg.createdAt);
   div.dataset.dateKey = dateKeyLocal(msg.createdAt);
 
@@ -1169,12 +1185,12 @@ function createMessageRowElement(msg, { showAvatar, showTime }) {
     const initials = avatarInitials(senderName);
     div.innerHTML = `
       <div class="msg-avatar-wrap">
-        <button type="button" class="msg-avatar msg-user-trigger" data-user-id="${senderIdNum}" title="프로필 보기">${initials}</button>
-        <span class="presence-dot ${prCl}" data-presence-user="${senderIdNum}" title="${prTip}"></span>
+        <button type="button" class="msg-avatar msg-user-trigger" data-employee-no="${escHtml(emp)}" title="프로필 보기">${initials}</button>
+        <span class="presence-dot ${prCl}" data-presence-user="${escHtml(emp)}" title="${prTip}"></span>
       </div>
       <div class="msg-body">
         <div class="msg-meta">
-          <button type="button" class="msg-sender msg-user-trigger" data-user-id="${senderIdNum}">${escHtml(senderName)}</button>
+          <button type="button" class="msg-sender msg-user-trigger" data-employee-no="${escHtml(emp)}">${escHtml(senderName)}</button>
         </div>
         <div class="msg-content-row">
           <span class="msg-text">${escHtml(msg.text)}</span>${timeHtml}
@@ -1213,7 +1229,7 @@ function renderMessages(msgs) {
 
 /** 소켓으로 도착한 한 줄: 직전 줄과 같은 사람·같은 분이면 직전 줄에서 시각 제거 후 추가 */
 function appendMessageRealtime(msg) {
-  const sid = Number(msg.senderId);
+  const sid = String(msg.senderId ?? "").trim();
   const mk = minuteKey(msg.createdAt);
   const dk = dateKeyLocal(msg.createdAt);
   const isChatRow = (el) =>
@@ -1230,7 +1246,7 @@ function appendMessageRealtime(msg) {
   const adjacentPrevChat = isChatRow(adjacentPrevEl) ? adjacentPrevEl : null;
   if (
     adjacentPrevChat &&
-    Number(adjacentPrevChat.dataset.senderId) === sid &&
+    adjacentPrevChat.dataset.senderId === sid &&
     adjacentPrevChat.dataset.minuteKey === mk
   ) {
     const timeEl = adjacentPrevChat.querySelector(".msg-time");
@@ -1239,7 +1255,7 @@ function appendMessageRealtime(msg) {
 
   const beforeAppendEl = messagesEl.lastElementChild;
   const beforeAppendChat = isChatRow(beforeAppendEl) ? beforeAppendEl : null;
-  const showAvatar = !beforeAppendChat || Number(beforeAppendChat.dataset.senderId) !== sid;
+  const showAvatar = !beforeAppendChat || beforeAppendChat.dataset.senderId !== sid;
   messagesEl.appendChild(
     createMessageRowElement(msg, { showAvatar, showTime: true })
   );
@@ -1278,7 +1294,9 @@ function initSocket() {
 
   socket.on("connect", async () => {
     await fetchPresenceSnapshot();
-    if (currentUser) socket.emit("presence:set", { userId: currentUser.userId, status: "ONLINE" });
+    if (currentUser?.employeeNo) {
+      socket.emit("presence:set", { employeeNo: currentUser.employeeNo, status: "ONLINE" });
+    }
     if (activeChannelId) socket.emit("channel:join", activeChannelId);
     refreshPresenceDots();
     if (activeChannelId) loadChannelMembers(activeChannelId);
@@ -1286,15 +1304,18 @@ function initSocket() {
 
   socket.on("reconnect", async () => {
     await fetchPresenceSnapshot();
-    if (currentUser) socket.emit("presence:set", { userId: currentUser.userId, status: "ONLINE" });
+    if (currentUser?.employeeNo) {
+      socket.emit("presence:set", { employeeNo: currentUser.employeeNo, status: "ONLINE" });
+    }
     if (activeChannelId) socket.emit("channel:join", activeChannelId);
     refreshPresenceDots();
     if (activeChannelId) loadChannelMembers(activeChannelId);
   });
 
   socket.on("presence:update", (p) => {
-    if (!p || p.userId == null) return;
-    presenceByUserId.set(Number(p.userId), String(p.status || "OFFLINE").toUpperCase());
+    const emp = String(p?.employeeNo ?? "").trim();
+    if (!emp) return;
+    presenceByEmployeeNo.set(emp, String(p.status || "OFFLINE").toUpperCase());
     refreshPresenceDots();
   });
 
@@ -1390,7 +1411,7 @@ async function sendMessage() {
 
   if (!text) return;
   try {
-    await sendMessageViaSocket(activeChannelId, currentUser.userId, text);
+    await sendMessageViaSocket(activeChannelId, currentUser.employeeNo, text);
   } catch (socketErr) {
     // 소켓 저장이 실패해도 API 경로로 한 번 더 시도해 전송 유실을 줄인다.
     console.warn("[sendMessage] socket 전송 실패, API 폴백 시도:", socketErr);
@@ -1510,16 +1531,16 @@ function renderUserSearchResults(users, listEl, context) {
     return;
   }
   users.forEach(u => {
-    if (u.userId === currentUser?.userId) return; // 본인 제외
+    if (String(u.employeeNo || "").trim() === String(currentUser?.employeeNo || "").trim()) return;
     const li = document.createElement("li");
     li.className = "user-search-item";
     li.innerHTML = `
       <div class="user-search-avatar">${avatarInitials(u.name)}</div>
       <div class="user-search-info">
         <span class="user-search-name">${escHtml(u.name)}</span>
-        <span class="user-search-dept">${escHtml([u.department, u.email, u.employeeNo, "ID:" + u.userId].filter(Boolean).join(" · "))}</span>
+        <span class="user-search-dept">${escHtml([u.department, u.email, u.employeeNo].filter(Boolean).join(" · "))}</span>
       </div>
-      <button class="btn-add-member" data-uid="${u.userId}">추가</button>`;
+      <button class="btn-add-member" data-uid="${escHtml(String(u.employeeNo || "").trim())}">추가</button>`;
     li.querySelector(".btn-add-member").addEventListener("click", () => {
       addSelectedMember(u, context);
       li.remove();
@@ -1536,35 +1557,40 @@ function addSelectedMember(user, context) {
     ? "selectedDmMembersWrap"
     : (context === "channelMember" ? "selectedAddMembersWrap" : "selectedMembersWrap");
 
-  if (listRef.find(m => m.userId === user.userId)) return;
+  const emp = String(user.employeeNo || "").trim();
+  if (!emp) return;
+  if (listRef.find((m) => String(m.employeeNo || "").trim() === emp)) return;
   listRef.push(user);
 
   const wrap = document.getElementById(wrapId);
   const tag  = document.createElement("span");
   tag.className   = "member-tag";
-  tag.dataset.uid = user.userId;
-  tag.innerHTML   = `${escHtml(user.name)} <button type="button" data-uid="${user.userId}">✕</button>`;
+  tag.dataset.uid = emp;
+  tag.innerHTML   = `${escHtml(user.name)} <button type="button" data-uid="${escHtml(emp)}">✕</button>`;
   tag.querySelector("button").addEventListener("click", () => {
-    removeSelectedMember(user.userId, context);
+    removeSelectedMember(emp, context);
   });
   wrap.appendChild(tag);
-  syncOrgCheckbox(user.userId, context, true);
+  syncOrgCheckbox(emp, context, true);
   renderPickerSelectedMembers(context);
 }
 
-function removeSelectedMember(userId, context) {
+function removeSelectedMember(employeeNo, context) {
   const listRef = context === "dm"
     ? selectedDmMembers
     : (context === "channelMember" ? selectedAddMembers : selectedMembers);
   const wrapId = context === "dm"
     ? "selectedDmMembersWrap"
     : (context === "channelMember" ? "selectedAddMembersWrap" : "selectedMembersWrap");
-  const idx = listRef.findIndex(m => m.userId === userId);
+  const want = String(employeeNo || "").trim();
+  const idx = listRef.findIndex((m) => String(m.employeeNo || "").trim() === want);
   if (idx >= 0) listRef.splice(idx, 1);
   const wrap = document.getElementById(wrapId);
-  const tag = wrap?.querySelector(`.member-tag[data-uid="${userId}"]`);
+  const tag = wrap
+    ? Array.from(wrap.querySelectorAll(".member-tag")).find((t) => t.dataset.uid === want)
+    : null;
   if (tag) tag.remove();
-  syncOrgCheckbox(userId, context, false);
+  syncOrgCheckbox(want, context, false);
   renderPickerSelectedMembers(context);
 }
 
@@ -1594,7 +1620,7 @@ document.getElementById("btnConfirmCreateChannel").addEventListener("click", asy
     for (const m of selectedMembers) {
       await apiFetch(`/api/channels/${channelId}/members`, {
         method: "POST",
-        body: JSON.stringify({ userId: m.userId, memberRole: "MEMBER" }),
+        body: JSON.stringify({ employeeNo: m.employeeNo, memberRole: "MEMBER" }),
       });
     }
 
@@ -1708,7 +1734,7 @@ document.getElementById("btnConfirmAddMembers").addEventListener("click", async 
   for (const u of selectedAddMembers) {
     const res = await apiFetch(`/api/channels/${activeChannelId}/members`, {
       method: "POST",
-      body: JSON.stringify({ userId: u.userId, memberRole: "MEMBER" }),
+      body: JSON.stringify({ employeeNo: u.employeeNo, memberRole: "MEMBER" }),
     });
     if (!res.ok) failed.push(u.name);
   }
@@ -1723,7 +1749,7 @@ document.getElementById("btnConfirmAddMembers").addEventListener("click", async 
 document.getElementById("btnProfileDm").addEventListener("click", async () => {
   const name = document.getElementById("profileModalName")?.textContent?.trim() || "";
   const peerEmployeeNo = document.getElementById("profileModalEmpNo")?.textContent?.trim() || "";
-  await startDmWithUser(profileViewUserId, name, peerEmployeeNo);
+  await startDmWithUser(profileViewEmployeeNo || peerEmployeeNo, name);
 });
 
 /* ==========================================================================
@@ -1807,7 +1833,7 @@ async function loadReleases() {
         if (!confirm(`v${btn.dataset.ver}을 운영 버전으로 활성화하시겠습니까?`)) return;
         const r = await apiFetch(`/api/admin/releases/${btn.dataset.id}/activate`, {
           method: "POST",
-          body: JSON.stringify({ actorUserId: currentUser?.userId, note: "수동 활성화" }),
+          body: JSON.stringify({ actorEmployeeNo: currentUser?.employeeNo, note: "수동 활성화" }),
         });
         alert(r.ok ? "활성화 완료" : "활성화 실패");
         loadReleases();
@@ -1816,7 +1842,7 @@ async function loadReleases() {
     tbody.querySelectorAll(".btn-delete").forEach(btn => {
       btn.addEventListener("click", async () => {
         if (!confirm("이 릴리즈 파일을 삭제하시겠습니까?")) return;
-        const r = await apiFetch(`/api/admin/releases/${btn.dataset.id}?actorUserId=${currentUser?.userId || ""}`, {
+        const r = await apiFetch(`/api/admin/releases/${btn.dataset.id}?actorEmployeeNo=${encodeURIComponent(currentUser?.employeeNo || "")}`, {
           method: "DELETE",
         });
         alert(r.ok ? "삭제 완료" : "삭제 실패");
@@ -1854,7 +1880,7 @@ document.getElementById("releaseUploadForm").addEventListener("submit", async (e
   fd.append("version", version);
   fd.append("file", file);
   if (desc) fd.append("description", desc);
-  if (currentUser?.userId) fd.append("uploadedBy", currentUser.userId);
+  if (currentUser?.employeeNo) fd.append("uploadedByEmployeeNo", currentUser.employeeNo);
   statusEl.textContent = "업로드 중...";
   try {
     const res  = await fetch(`${API_BASE}/api/admin/releases`, {
@@ -1899,7 +1925,7 @@ async function loadSettings() {
         const value = input?.value.trim() || "";
         const r     = await apiFetch(`/api/admin/settings/${encodeURIComponent(key)}`, {
           method: "PUT",
-          body: JSON.stringify({ value, updatedBy: currentUser?.userId }),
+          body: JSON.stringify({ value, updatedBy: currentUser?.employeeNo }),
         });
         const j = await r.json();
         alert(r.ok ? `"${key}" 설정이 저장되었습니다.` : `저장 실패: ${j.error?.message || "오류"}`);
@@ -1973,9 +1999,10 @@ function initEvents() {
 
   messagesEl.addEventListener("click", (e) => {
     const t = e.target.closest(".msg-user-trigger");
-    if (!t || t.dataset.userId == null) return;
+    const emp = t && String(t.dataset.employeeNo || "").trim();
+    if (!emp) return;
     e.preventDefault();
-    openUserProfile(Number(t.dataset.userId));
+    openUserProfile(emp);
   });
 }
 
