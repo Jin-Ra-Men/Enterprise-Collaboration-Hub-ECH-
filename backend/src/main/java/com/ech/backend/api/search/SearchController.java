@@ -2,6 +2,7 @@ package com.ech.backend.api.search;
 
 import com.ech.backend.api.search.dto.SearchResponse;
 import com.ech.backend.api.search.dto.SearchType;
+import com.ech.backend.api.auth.AuthService;
 import com.ech.backend.common.api.ApiResponse;
 import com.ech.backend.common.security.UserPrincipal;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,9 +16,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class SearchController {
 
     private final SearchService searchService;
+    private final AuthService authService;
 
-    public SearchController(SearchService searchService) {
+    public SearchController(SearchService searchService, AuthService authService) {
         this.searchService = searchService;
+        this.authService = authService;
     }
 
     /**
@@ -42,7 +45,10 @@ public class SearchController {
             searchType = SearchType.ALL;
         }
 
-        String employeeNo = principal != null ? principal.employeeNo() : null;
+        String employeeNo = null;
+        if (principal != null) {
+            employeeNo = authService.findUserForPrincipal(principal).map(u -> u.getEmployeeNo()).orElse(null);
+        }
         return ApiResponse.success(searchService.search(q, searchType, employeeNo, limit));
     }
 }

@@ -27,7 +27,7 @@ public class JwtUtil {
     public String generateToken(UserPrincipal principal) {
         Date now = new Date();
         Date exp = new Date(now.getTime() + expirationMs);
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(principal.employeeNo())
                 .claim("employeeNo", principal.employeeNo())
                 .claim("email", principal.email())
@@ -35,9 +35,11 @@ public class JwtUtil {
                 .claim("department", principal.department())
                 .claim("role", principal.role().name())
                 .issuedAt(now)
-                .expiration(exp)
-                .signWith(getSigningKey())
-                .compact();
+                .expiration(exp);
+        if (principal.userId() != null) {
+            builder = builder.claim("uid", principal.userId());
+        }
+        return builder.signWith(getSigningKey()).compact();
     }
 
     public Optional<UserPrincipal> parseToken(String token) {
@@ -48,7 +50,22 @@ public class JwtUtil {
                     .parseSignedClaims(token)
                     .getPayload();
 
-            String employeeNo = claims.getSubject();
+            Long userId = null;
+            Object uidObj = claims.get("uid");
+            if (uidObj instanceof Number n) {
+                userId = n.longValue();
+            }
+
+            String claimEmp = claims.get("employeeNo", String.class);
+            String subject = claims.getSubject();
+            String employeeNo = firstNonBlank(claimEmp, subject);
+            if (employeeNo != null) {
+                employeeNo = employeeNo.trim();
+            }
+            if ((employeeNo == null || employeeNo.isBlank()) && userId == null) {
+                return Optional.empty();
+            }
+
             String email = claims.get("email", String.class);
             String name = claims.get("name", String.class);
             String department = claims.get("department", String.class);
@@ -56,10 +73,20 @@ public class JwtUtil {
             if (role == null) {
                 role = AppRole.MEMBER;
             }
-            return Optional.of(new UserPrincipal(employeeNo, email, name, department, role));
+            return Optional.of(new UserPrincipal(userId, employeeNo, email, name, department, role));
         } catch (JwtException | IllegalArgumentException e) {
             return Optional.empty();
         }
+    }
+
+    private static String firstNonBlank(String a, String b) {
+        if (a != null && !a.isBlank()) {
+            return a;
+        }
+        if (b != null && !b.isBlank()) {
+            return b;
+        }
+        return null;
     }
 
     private SecretKey getSigningKey() {

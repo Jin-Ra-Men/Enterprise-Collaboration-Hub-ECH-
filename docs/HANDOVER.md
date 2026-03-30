@@ -104,7 +104,7 @@
   - `GET /api/health`
 - 채널 도메인:
   - `GET /api/channels?employeeNo=...` — 내 채널/DM 목록
-  - `POST /api/channels` — Bearer JWT의 사원번호가 생성자로 고정됨. body는 `workspaceKey`, `name`, `channelType` 등, 선택 `createdByEmployeeNo`(하위 호환), DM 시 `dmPeerEmployeeNos` (`CreateChannelRequest`)
+  - `POST /api/channels` — 생성자는 JWT에서 식별: **`uid` 클레임(= `users.id`) 우선**, 없으면 사원번호, 레거시 토큰은 숫자-only subject를 DB id로 폴백(숫자 사번과 충돌 시 재로그인 권장). body는 `workspaceKey`, `name`, `channelType` 등, 선택 `createdByEmployeeNo`(하위 호환), DM 시 `dmPeerEmployeeNos` (`CreateChannelRequest`)
   - `GET /api/channels/{channelId}`
   - `POST /api/channels/{channelId}/members` — body: `employeeNo`, `memberRole` (`JoinChannelRequest`)
   - `GET /api/channels/{channelId}/read-state?employeeNo=...`

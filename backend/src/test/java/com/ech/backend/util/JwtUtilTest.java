@@ -26,7 +26,7 @@ class JwtUtilTest {
     }
 
     private UserPrincipal adminPrincipal() {
-        return new UserPrincipal("EMP001", "admin@test.com", "관리자", "IT", AppRole.ADMIN);
+        return new UserPrincipal(101L, "EMP001", "admin@test.com", "관리자", "IT", AppRole.ADMIN);
     }
 
     @Test
@@ -36,6 +36,7 @@ class JwtUtilTest {
         Optional<UserPrincipal> parsed = jwtUtil.parseToken(token);
         assertThat(parsed).isPresent();
         assertThat(parsed.get().employeeNo()).isEqualTo("EMP001");
+        assertThat(parsed.get().userId()).isEqualTo(101L);
     }
 
     @Test
@@ -72,7 +73,7 @@ class JwtUtilTest {
     @Test
     @DisplayName("MEMBER 역할로 토큰 생성/복원")
     void member_role_token() {
-        UserPrincipal member = new UserPrincipal("EMP002", "member@test.com",
+        UserPrincipal member = new UserPrincipal(202L, "EMP002", "member@test.com",
                 "일반사용자", "개발팀", AppRole.MEMBER);
         String token = jwtUtil.generateToken(member);
         Optional<UserPrincipal> parsed = jwtUtil.parseToken(token);

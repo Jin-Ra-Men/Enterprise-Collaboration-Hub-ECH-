@@ -5,7 +5,9 @@ import com.ech.backend.api.auth.dto.LoginResponse;
 import com.ech.backend.api.auth.dto.MeResponse;
 import com.ech.backend.api.auth.dto.UpdateThemePreferenceRequest;
 import com.ech.backend.common.api.ApiResponse;
+import com.ech.backend.common.exception.UnauthorizedException;
 import com.ech.backend.common.security.UserPrincipal;
+import com.ech.backend.domain.user.User;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,13 +42,17 @@ public class AuthController {
      */
     @GetMapping("/me")
     public ApiResponse<MeResponse> me(@AuthenticationPrincipal UserPrincipal principal) {
-        String themePreference = authService.getThemePreference(principal.employeeNo());
-        Long userId = authService.getUserId(principal.employeeNo());
+        if (principal == null) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        User user = authService.findUserForPrincipal(principal)
+                .orElseThrow(() -> new UnauthorizedException("사용자 정보를 찾을 수 없습니다."));
+        String themePreference = authService.getThemePreference(user.getEmployeeNo());
         return ApiResponse.success(new MeResponse(
-                userId,
-                principal.employeeNo(),
-                principal.email(),
-                principal.name(),
+                user.getId(),
+                user.getEmployeeNo(),
+                user.getEmail(),
+                user.getName(),
                 principal.department(),
                 principal.role().name(),
                 themePreference
@@ -58,6 +64,11 @@ public class AuthController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody UpdateThemePreferenceRequest request
     ) {
-        return ApiResponse.success(authService.updateThemePreference(principal.employeeNo(), request.theme()));
+        if (principal == null) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        User user = authService.findUserForPrincipal(principal)
+                .orElseThrow(() -> new UnauthorizedException("사용자 정보를 찾을 수 없습니다."));
+        return ApiResponse.success(authService.updateThemePreference(user.getEmployeeNo(), request.theme()));
     }
 }

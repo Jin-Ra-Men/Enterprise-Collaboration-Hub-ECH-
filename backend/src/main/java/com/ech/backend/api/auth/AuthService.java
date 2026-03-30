@@ -11,6 +11,7 @@ import com.ech.backend.domain.org.OrgGroupMemberRepository;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,6 +62,7 @@ public class AuthService {
             role = AppRole.MEMBER;
         }
         UserPrincipal principal = new UserPrincipal(
+                user.getId(),
                 user.getEmployeeNo(),
                 user.getEmail(),
                 user.getName(),
@@ -103,6 +105,41 @@ public class AuthService {
         return userRepository.findByEmployeeNo(employeeNo)
                 .map(User::getId)
                 .orElse(null);
+    }
+
+    /**
+     * JWT principal에 대응하는 DB 사용자를 조회한다.
+     * <ul>
+     *   <li>{@code uid} 클레임(= {@link UserPrincipal#userId()})이 있으면 {@code users.id}로 조회</li>
+     *   <li>그렇지 않으면 사원번호로 조회</li>
+     *   <li>레거시 토큰: subject에 숫자 DB id만 있던 경우 {@code findById} 폴백</li>
+     * </ul>
+     */
+    @Transactional(readOnly = true)
+    public Optional<User> findUserForPrincipal(UserPrincipal principal) {
+        if (principal == null) {
+            return Optional.empty();
+        }
+        if (principal.userId() != null) {
+            return userRepository.findById(principal.userId());
+        }
+        String raw = principal.employeeNo();
+        if (raw == null || raw.isBlank()) {
+            return Optional.empty();
+        }
+        String emp = raw.trim();
+        Optional<User> byEmp = userRepository.findByEmployeeNo(emp);
+        if (byEmp.isPresent()) {
+            return byEmp;
+        }
+        if (emp.matches("^\\d{1,18}$")) {
+            try {
+                return userRepository.findById(Long.parseLong(emp));
+            } catch (NumberFormatException ignored) {
+                return Optional.empty();
+            }
+        }
+        return Optional.empty();
     }
 
     private String resolveDepartmentFromTeam(User user) {

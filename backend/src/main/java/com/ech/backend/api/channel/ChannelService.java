@@ -1,7 +1,9 @@
 package com.ech.backend.api.channel;
 
 import com.ech.backend.api.auditlog.AuditLogService;
+import com.ech.backend.api.auth.AuthService;
 import com.ech.backend.common.exception.NotFoundException;
+import com.ech.backend.common.security.UserPrincipal;
 import com.ech.backend.api.channel.dto.ChannelMemberResponse;
 import com.ech.backend.api.channel.dto.ChannelResponse;
 import com.ech.backend.api.channel.dto.ChannelSummaryResponse;
@@ -39,29 +41,32 @@ public class ChannelService {
     private final UserRepository userRepository;
     private final OrgGroupMemberRepository orgGroupMemberRepository;
     private final AuditLogService auditLogService;
+    private final AuthService authService;
 
     public ChannelService(
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
             UserRepository userRepository,
             OrgGroupMemberRepository orgGroupMemberRepository,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            AuthService authService
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
         this.userRepository = userRepository;
         this.orgGroupMemberRepository = orgGroupMemberRepository;
         this.auditLogService = auditLogService;
+        this.authService = authService;
     }
 
     @Transactional
-    public ChannelResponse createChannel(CreateChannelRequest request, String authenticatedEmployeeNo) {
-        if (authenticatedEmployeeNo == null || authenticatedEmployeeNo.isBlank()) {
-            throw new IllegalArgumentException("인증된 사용자 사원번호가 없습니다.");
-        }
-        String creatorEmpNo = authenticatedEmployeeNo.trim();
-        User creator = userRepository.findByEmployeeNo(creatorEmpNo)
+    public ChannelResponse createChannel(CreateChannelRequest request, UserPrincipal principal) {
+        User creator = authService.findUserForPrincipal(principal)
                 .orElseThrow(() -> new IllegalArgumentException("생성자를 찾을 수 없습니다."));
+        String creatorEmpNo = creator.getEmployeeNo() == null ? "" : creator.getEmployeeNo().trim();
+        if (creatorEmpNo.isBlank()) {
+            throw new IllegalStateException("사용자 사원번호가 비어 있습니다.");
+        }
 
         List<String> normalizedPeerNos = request.dmPeerEmployeeNos().stream()
                 .map(s -> s == null ? "" : s.trim())

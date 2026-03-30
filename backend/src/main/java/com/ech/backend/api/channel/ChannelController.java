@@ -41,10 +41,10 @@ public class ChannelController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody CreateChannelRequest request
     ) {
-        if (principal == null || principal.employeeNo() == null || principal.employeeNo().isBlank()) {
+        if (principal == null) {
             throw new UnauthorizedException("인증이 필요합니다.");
         }
-        return ApiResponse.success(channelService.createChannel(request, principal.employeeNo()));
+        return ApiResponse.success(channelService.createChannel(request, principal));
     }
 
     @GetMapping("/{channelId}")
