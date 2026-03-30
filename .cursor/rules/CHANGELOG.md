@@ -4,6 +4,9 @@
 
 ## 2026-03-30
 
+### Fixed
+- `AuditLogService.safeRecord`: 내부 `this.record()` 호출로 `@Transactional(REQUIRES_NEW)`가 무시되어 감사 INSERT 실패(또는 기타 예외) 시 **호출자 트랜잭션이 rollback-only**로 남고 `UnexpectedRollbackException`이 나던 문제 — `@Lazy` 자기 프록시로 `record()`만 별도 트랜잭션에 두고 `safeRecord`에서는 트랜잭션 미부여(멤버 내보내기 등에서 감사 실패가 본 요청을 깨지 않도록)
+
 ### Changed
 - `docs/sql/migrate_user_refs_id_to_employee_no.sql`: PostgreSQL에서 Hibernate 등이 생성한 임의 이름 FK가 남은 채 `DROP COLUMN` 하면 실패할 수 있어, 본문 전에 `users`/`users.id`를 참조하는 대상 컬럼 FK를 `DO` 블록으로 선제 제거
 

@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -22,9 +23,12 @@ public class AuditLogService {
     private static final int DETAIL_MAX_LEN = 500;
 
     private final AuditLogRepository auditLogRepository;
+    /** {@link #safeRecord}에서 {@link #record}를 프록시 경유 호출해 REQUIRES_NEW가 적용되게 한다(자기 호출 시 트랜잭션 무시로 메인 TX가 rollback-only가 되는 문제 방지). */
+    private final AuditLogService self;
 
-    public AuditLogService(AuditLogRepository auditLogRepository) {
+    public AuditLogService(AuditLogRepository auditLogRepository, @Lazy AuditLogService self) {
         this.auditLogRepository = auditLogRepository;
+        this.self = self;
     }
 
     /**
@@ -53,8 +57,12 @@ public class AuditLogService {
         ));
     }
 
-    /** 예외를 삼키는 안전 래퍼 — 감사 로깅 실패가 응답 흐름을 막지 않게 한다. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    /**
+     * 예외를 삼키는 안전 래퍼 — 감사 로깅 실패가 응답 흐름을 막지 않게 한다.
+     * <p>본 메서드에는 {@code @Transactional}을 붙이지 않는다. 내부에서 {@code this.record()}를 쓰면
+     * 프록시를 타지 않아 호출자 트랜잭션에 참여하고, 기록 실패 시 그 트랜잭션이 rollback-only로 남아
+     * {@link org.springframework.transaction.UnexpectedRollbackException}이 날 수 있다.</p>
+     */
     public void safeRecord(
             AuditEventType eventType,
             Long actorUserId,
@@ -65,7 +73,7 @@ public class AuditLogService {
             String requestId
     ) {
         try {
-            record(eventType, actorUserId, resourceType, resourceId, workspaceKey, detail, requestId);
+            self.record(eventType, actorUserId, resourceType, resourceId, workspaceKey, detail, requestId);
         } catch (Exception e) {
             log.warn("감사 로그 기록 실패 (eventType={}, resourceType={}, resourceId={}): {}",
                     eventType, resourceType, resourceId, e.getMessage());
