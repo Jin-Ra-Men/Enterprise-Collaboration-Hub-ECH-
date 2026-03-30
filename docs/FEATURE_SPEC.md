@@ -104,7 +104,7 @@
 - 사용자: Backend 개발자, Frontend 개발자
 - 관련 화면/경로: 채널 목록/채널 상세/채널 참여 UI
 - 관련 API:
-  - `GET /api/channels?employeeNo=...` (내 채널/DM 목록)
+  - `GET /api/channels?employeeNo=...` (내 채널/DM 목록 — **DM**의 `description`은 DB 저장값이 아니라 요청 `employeeNo`(본인)을 제외한 참가자 표시명을 서버가 매번 계산해 내려 사이드바에 상대방 이름이 보이게 함)
   - `POST /api/channels` (채널 생성)
   - `GET /api/channels/{channelId}` (채널 상세 조회)
   - `POST /api/channels/{channelId}/members` (채널 참여)

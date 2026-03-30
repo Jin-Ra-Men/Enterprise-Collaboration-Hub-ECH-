@@ -363,17 +363,52 @@ public class ChannelService {
         return channels.stream()
                 .map(channel -> {
                     int memberCount = channelMemberRepository.findByChannelId(channel.getId()).size();
+                    String summaryDescription = resolveChannelSummaryDescription(channel, emp);
                     return new ChannelSummaryResponse(
                             channel.getId(),
                             channel.getWorkspaceKey(),
                             channel.getName(),
-                            channel.getDescription(),
+                            summaryDescription,
                             channel.getChannelType().name(),
                             memberCount,
                             channel.getCreatedAt()
                     );
                 })
                 .toList();
+    }
+
+    /**
+     * 사이드바용 요약: DM은 DB {@code description}(생성 시점 1인 시점 라벨) 대신,
+     * 조회 중인 사용자를 제외한 참가자 표시명을 붙인다(각자 상대방 이름이 보이게).
+     */
+    private String resolveChannelSummaryDescription(Channel channel, String viewerEmployeeNo) {
+        if (channel.getChannelType() != ChannelType.DM) {
+            return channel.getDescription();
+        }
+        return buildDmPeerDisplayLabel(channel.getId(), viewerEmployeeNo);
+    }
+
+    private String buildDmPeerDisplayLabel(Long channelId, String viewerEmployeeNo) {
+        List<ChannelMember> members = channelMemberRepository.findByChannelIdFetchUsers(channelId);
+        String viewer = viewerEmployeeNo == null ? "" : viewerEmployeeNo.trim();
+        List<String> labels = new ArrayList<>();
+        for (ChannelMember cm : members) {
+            User u = cm.getUser();
+            String emp = u.getEmployeeNo() == null ? "" : u.getEmployeeNo().trim();
+            if (!viewer.isEmpty() && viewer.equals(emp)) {
+                continue;
+            }
+            String name = u.getName();
+            if (name != null && !name.isBlank()) {
+                labels.add(name.trim());
+            } else if (!emp.isEmpty()) {
+                labels.add(emp);
+            }
+        }
+        if (labels.isEmpty()) {
+            return "DM";
+        }
+        return String.join(", ", labels);
     }
 
     private ChannelResponse toResponse(Channel channel, List<ChannelMember> members) {
