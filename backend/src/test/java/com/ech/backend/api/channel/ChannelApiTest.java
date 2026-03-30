@@ -59,6 +59,27 @@ class ChannelApiTest extends BaseIntegrationTest {
     }
 
     @Test
+    @DisplayName("JWT만으로 채널 생성 성공(본문에 createdByEmployeeNo 없음)")
+    void create_channel_without_body_creator_uses_jwt() throws Exception {
+        String body = """
+                {
+                  "name": "jwt전용채널",
+                  "workspaceKey": "WS_JWT_ONLY",
+                  "channelType": "PUBLIC"
+                }
+                """;
+
+        mockMvc.perform(post("/api/channels")
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.name").value("jwt전용채널"))
+                .andExpect(jsonPath("$.data.channelId", notNullValue()))
+                .andExpect(jsonPath("$.error", nullValue()));
+    }
+
+    @Test
     @DisplayName("채널 단건 조회 성공")
     void get_channel() throws Exception {
         // 채널 생성 후 조회

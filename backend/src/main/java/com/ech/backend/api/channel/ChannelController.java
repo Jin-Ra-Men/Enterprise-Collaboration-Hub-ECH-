@@ -5,10 +5,13 @@ import com.ech.backend.api.channel.dto.ChannelSummaryResponse;
 import com.ech.backend.api.channel.dto.CreateChannelRequest;
 import com.ech.backend.api.channel.dto.JoinChannelRequest;
 import com.ech.backend.common.api.ApiResponse;
+import com.ech.backend.common.exception.UnauthorizedException;
 import com.ech.backend.common.rbac.AppRole;
 import com.ech.backend.common.rbac.RequireRole;
+import com.ech.backend.common.security.UserPrincipal;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,8 +37,14 @@ public class ChannelController {
 
     @PostMapping
     @RequireRole(AppRole.MEMBER)
-    public ApiResponse<ChannelResponse> createChannel(@Valid @RequestBody CreateChannelRequest request) {
-        return ApiResponse.success(channelService.createChannel(request));
+    public ApiResponse<ChannelResponse> createChannel(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody CreateChannelRequest request
+    ) {
+        if (principal == null || principal.employeeNo() == null || principal.employeeNo().isBlank()) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        return ApiResponse.success(channelService.createChannel(request, principal.employeeNo()));
     }
 
     @GetMapping("/{channelId}")

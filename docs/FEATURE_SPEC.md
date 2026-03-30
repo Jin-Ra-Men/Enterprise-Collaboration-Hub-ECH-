@@ -32,7 +32,7 @@
 - 관련 API: `POST /api/channels` (`channelType=DM`)
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:
-  - 입력: `workspaceKey`, `name`, `description`, `createdByEmployeeNo`, `dmPeerEmployeeNos`
+  - 입력: `workspaceKey`, `name`, `description`, 선택 `createdByEmployeeNo`(하위 호환·**서버는 JWT 사원번호만 생성자로 사용**), `dmPeerEmployeeNos`
   - 출력: DM 채널 생성 또는 기존 DM 채널 재사용 응답
 - 상태 전이/예외 케이스:
   - 구 스키마에서 `channels.channel_type` CHECK가 `PUBLIC/PRIVATE`만 허용하면 INSERT 실패 가능
@@ -110,7 +110,7 @@
   - `POST /api/channels/{channelId}/members` (채널 참여)
 - 관련 Socket 이벤트: 추후 `channel:join`과 연계 예정
 - 입력/출력:
-  - 생성 입력: `workspaceKey`, `name`, `description`, `channelType`(`PUBLIC`|`PRIVATE`|`DM`), `createdByEmployeeNo`, 선택 `dmPeerEmployeeNos`(DM일 때 상대 **사원번호** 목록 — 서버가 내부 고유 `name`(`__dm__…`)과 표시용 `description`을 구성하고, 동일 참가자 조합이면 기존 채널 반환 후 누락 멤버만 추가)
+  - 생성 입력: `workspaceKey`, `name`, `description`, `channelType`(`PUBLIC`|`PRIVATE`|`DM`), 선택 `createdByEmployeeNo`(구 클라이언트용·**실제 생성자는 Bearer JWT의 사원번호**), 선택 `dmPeerEmployeeNos`(DM일 때 상대 **사원번호** 목록 — 서버가 내부 고유 `name`(`__dm__…`)과 표시용 `description`을 구성하고, 동일 참가자 조합이면 기존 채널 반환 후 누락 멤버만 추가)
   - 참여 입력: `employeeNo`, `memberRole` (`JoinChannelRequest`)
   - 출력: 채널 기본 정보 + 멤버 목록(`members`: `employeeNo`, `name`, `department`, `jobLevel`, `jobPosition`, `jobTitle`, `memberRole`, `joinedAt` — `ChannelMemberResponse`)
 - 상태 전이/예외 케이스:

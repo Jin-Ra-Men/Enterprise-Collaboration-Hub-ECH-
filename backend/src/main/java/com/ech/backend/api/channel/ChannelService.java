@@ -55,16 +55,25 @@ public class ChannelService {
     }
 
     @Transactional
-    public ChannelResponse createChannel(CreateChannelRequest request) {
-        User creator = userRepository.findByEmployeeNo(request.createdByEmployeeNo())
+    public ChannelResponse createChannel(CreateChannelRequest request, String authenticatedEmployeeNo) {
+        if (authenticatedEmployeeNo == null || authenticatedEmployeeNo.isBlank()) {
+            throw new IllegalArgumentException("인증된 사용자 사원번호가 없습니다.");
+        }
+        String creatorEmpNo = authenticatedEmployeeNo.trim();
+        User creator = userRepository.findByEmployeeNo(creatorEmpNo)
                 .orElseThrow(() -> new IllegalArgumentException("생성자를 찾을 수 없습니다."));
 
-        boolean dmWithPeers = request.channelType() == ChannelType.DM && !request.dmPeerEmployeeNos().isEmpty();
+        List<String> normalizedPeerNos = request.dmPeerEmployeeNos().stream()
+                .map(s -> s == null ? "" : s.trim())
+                .filter(s -> !s.isBlank())
+                .toList();
+
+        boolean dmWithPeers = request.channelType() == ChannelType.DM && !normalizedPeerNos.isEmpty();
 
         if (dmWithPeers) {
             List<String> participants = new ArrayList<>();
-            participants.add(request.createdByEmployeeNo());
-            participants.addAll(request.dmPeerEmployeeNos());
+            participants.add(creatorEmpNo);
+            participants.addAll(normalizedPeerNos);
             List<String> distinctSorted = participants.stream().distinct().sorted().toList();
             for (String employeeNo : distinctSorted) {
                 if (userRepository.findByEmployeeNo(employeeNo).isEmpty()) {
@@ -76,7 +85,7 @@ public class ChannelService {
             String displayLabel = (request.name() != null && !request.name().isBlank())
                     ? request.name().trim()
                     : distinctSorted.stream()
-                            .filter(emp -> !emp.equals(request.createdByEmployeeNo()))
+                            .filter(emp -> !emp.equals(creatorEmpNo))
                             .map(emp -> userRepository.findByEmployeeNo(emp).map(User::getName).orElse("user#" + emp))
                             .collect(Collectors.joining(", "));
             if (displayLabel.isBlank()) {

@@ -4,6 +4,9 @@
 
 ## 2026-03-30
 
+### Fixed
+- 채널 생성(`POST /api/channels`): 생성자 조회를 요청 본문 `createdByEmployeeNo`가 아니라 **JWT(로그인 계정) 사원번호**로만 수행해, 세션/본문 불일치 시 「생성자를 찾을 수 없습니다」가 나던 문제 방지. `createdByEmployeeNo`는 선택 필드(하위 호환)로 완화
+
 ### Added
 - 채팅 이미지 첨부 UX: FILE 메시지 JSON에 `contentType` 저장, 프론트에서 이미지 인라인 표시·라이트박스 확대·확대 화면 다운로드, 작성 중 이미지 미리보기 썸네일
 
