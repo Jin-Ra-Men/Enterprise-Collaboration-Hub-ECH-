@@ -12,6 +12,7 @@ import com.ech.backend.common.security.UserPrincipal;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -59,5 +60,21 @@ public class ChannelController {
             @Valid @RequestBody JoinChannelRequest request
     ) {
         return ApiResponse.success(channelService.joinChannel(channelId, request));
+    }
+
+    /**
+     * 채널 개설자(JWT 사원번호 = {@code created_by})만 호출 가능. {@code targetEmployeeNo} 멤버를 제거한다.
+     */
+    @DeleteMapping("/{channelId}/members")
+    @RequireRole(AppRole.MEMBER)
+    public ApiResponse<ChannelResponse> removeMember(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long channelId,
+            @RequestParam("targetEmployeeNo") String targetEmployeeNo
+    ) {
+        if (principal == null) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        return ApiResponse.success(channelService.removeMember(channelId, principal, targetEmployeeNo));
     }
 }

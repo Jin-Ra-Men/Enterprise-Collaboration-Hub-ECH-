@@ -2,7 +2,9 @@ package com.ech.backend.api.channel;
 
 import com.ech.backend.api.auditlog.AuditLogService;
 import com.ech.backend.api.auth.AuthService;
+import com.ech.backend.common.exception.ForbiddenException;
 import com.ech.backend.common.exception.NotFoundException;
+import com.ech.backend.common.exception.UnauthorizedException;
 import com.ech.backend.common.security.UserPrincipal;
 import com.ech.backend.api.channel.dto.ChannelMemberResponse;
 import com.ech.backend.api.channel.dto.ChannelResponse;
@@ -16,6 +18,7 @@ import com.ech.backend.domain.channel.ChannelMemberRole;
 import com.ech.backend.domain.channel.ChannelMemberRepository;
 import com.ech.backend.domain.channel.ChannelRepository;
 import com.ech.backend.domain.channel.ChannelMemberUserIdColumnInspector;
+import com.ech.backend.domain.channel.ChannelReadStateRepository;
 import com.ech.backend.domain.channel.ChannelType;
 import com.ech.backend.domain.org.OrgGroupMember;
 import com.ech.backend.domain.org.OrgGroupMemberRepository;
@@ -41,6 +44,7 @@ public class ChannelService {
 
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
+    private final ChannelReadStateRepository channelReadStateRepository;
     private final UserRepository userRepository;
     private final OrgGroupMemberRepository orgGroupMemberRepository;
     private final AuditLogService auditLogService;
@@ -51,6 +55,7 @@ public class ChannelService {
     public ChannelService(
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
+            ChannelReadStateRepository channelReadStateRepository,
             UserRepository userRepository,
             OrgGroupMemberRepository orgGroupMemberRepository,
             AuditLogService auditLogService,
@@ -60,6 +65,7 @@ public class ChannelService {
     ) {
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
+        this.channelReadStateRepository = channelReadStateRepository;
         this.userRepository = userRepository;
         this.orgGroupMemberRepository = orgGroupMemberRepository;
         this.auditLogService = auditLogService;
@@ -242,6 +248,58 @@ public class ChannelService {
                 null
         );
 
+        return toResponse(channel, members);
+    }
+
+    /**
+     * 채널 개설자({@code channels.created_by})만 다른 멤버를 내보낼 수 있다. 개설자 본인은 제거할 수 없다.
+     */
+    @Transactional
+    public ChannelResponse removeMember(Long channelId, UserPrincipal principal, String targetEmployeeNoRaw) {
+        if (principal == null || principal.employeeNo() == null || principal.employeeNo().isBlank()) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        String actorEmp = principal.employeeNo().trim();
+        String targetEmp = targetEmployeeNoRaw == null ? "" : targetEmployeeNoRaw.trim();
+        if (targetEmp.isBlank()) {
+            throw new IllegalArgumentException("내보낼 사용자 사원번호(targetEmployeeNo)가 필요합니다.");
+        }
+
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new NotFoundException("채널을 찾을 수 없습니다. id=" + channelId));
+        User createdBy = channel.getCreatedBy();
+        if (createdBy == null || createdBy.getEmployeeNo() == null || createdBy.getEmployeeNo().isBlank()) {
+            throw new IllegalStateException("채널 생성자 정보가 없습니다.");
+        }
+        String creatorEmp = createdBy.getEmployeeNo().trim();
+        if (!creatorEmp.equals(actorEmp)) {
+            throw new ForbiddenException("채널 개설자만 구성원을 내보낼 수 있습니다.");
+        }
+        if (creatorEmp.equals(targetEmp)) {
+            throw new IllegalArgumentException("채널 개설자는 내보낼 수 없습니다.");
+        }
+
+        ChannelMember membership = channelMemberRepository
+                .findByChannel_IdAndUser_EmployeeNo(channelId, targetEmp)
+                .orElseThrow(() -> new IllegalArgumentException("해당 사용자는 채널 멤버가 아닙니다."));
+
+        User actorUser = userRepository.findByEmployeeNo(actorEmp).orElse(createdBy);
+        Long removedUserId = membership.getUser().getId();
+
+        channelReadStateRepository.deleteByChannel_IdAndUser_EmployeeNo(channelId, targetEmp);
+        channelMemberRepository.delete(membership);
+
+        auditLogService.safeRecord(
+                AuditEventType.CHANNEL_MEMBER_REMOVED,
+                actorUser.getId(),
+                "CHANNEL",
+                channelId,
+                channel.getWorkspaceKey(),
+                "removedUserId=" + removedUserId + ",removedEmployeeNo=" + targetEmp,
+                null
+        );
+
+        List<ChannelMember> members = channelMemberRepository.findByChannelId(channelId);
         return toResponse(channel, members);
     }
 

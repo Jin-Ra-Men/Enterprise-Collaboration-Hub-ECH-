@@ -17,6 +17,7 @@
 - 500 원인 추적: 전역 핸들러에서 미처리 예외 **ERROR 로그+스택**, `app.expose-error-detail`(기본 true, `EXPOSE_ERROR_DETAIL`로 끔) 시 응답 메시지에 예외 요약 첨부, `HttpMessageNotReadableException`→400, JWT 필터는 유효 Bearer 시 **항상** SecurityContext 설정·role null 방어. 프론트 초기화 시 `/api/auth/me` 비정상 응답을 `console.error`로 출력
 
 ### Added
+- 채널 **개설자** 전용 구성원 내보내기: `DELETE /api/channels/{channelId}/members?targetEmployeeNo=`(JWT=개설자), `channel_members`·`channel_read_states` 정리, 감사 `CHANNEL_MEMBER_REMOVED`; 프론트 멤버 패널에「내보내기」버튼
 - 채팅 이미지 첨부 UX: FILE 메시지 JSON에 `contentType` 저장, 프론트에서 이미지 인라인 표시·라이트박스 확대·확대 화면 다운로드, 작성 중 이미지 미리보기 썸네일
 - 채팅창에서 클립보드 이미지 붙여넣기(Ctrl+V): `viewChat` 캡처 단계 `paste`로 처리, 기존 `pendingFile`/업로드·전송 흐름 재사용(모달 열림 시 제외)
 

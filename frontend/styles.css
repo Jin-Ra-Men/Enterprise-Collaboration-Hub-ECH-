@@ -449,6 +449,25 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 }
 .member-role-badge { margin-left: auto; font-size: 12px; color: var(--text-muted); }
 
+/* 채널 개설자 전용: 멤버 내보내기 */
+.btn-member-kick {
+  flex-shrink: 0;
+  align-self: center;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-member-kick:hover {
+  color: #e74c3c;
+  border-color: rgba(231, 76, 60, 0.45);
+  background: rgba(231, 76, 60, 0.08);
+}
+
 /* 메시지 영역 */
 .messages-wrap {
   flex: 1;

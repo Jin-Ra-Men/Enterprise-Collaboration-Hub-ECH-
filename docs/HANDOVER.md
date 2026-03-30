@@ -116,6 +116,7 @@
   - `POST /api/channels` — 생성자는 JWT에서 식별: **`uid` 클레임(= `users.id`) 우선**, 없으면 사원번호, 레거시 토큰은 숫자-only subject를 DB id로 폴백(숫자 사번과 충돌 시 재로그인 권장). body는 `workspaceKey`, `name`, `channelType` 등, 선택 `createdByEmployeeNo`(하위 호환), DM 시 `dmPeerEmployeeNos` (`CreateChannelRequest`)
   - `GET /api/channels/{channelId}`
   - `POST /api/channels/{channelId}/members` — body: `employeeNo`, `memberRole` (`JoinChannelRequest`)
+  - `DELETE /api/channels/{channelId}/members?targetEmployeeNo=...` — **개설자(`created_by` = JWT 사원번호)만** 다른 멤버 제거; 본인(개설자) 제거는 400
   - `GET /api/channels/{channelId}/read-state?employeeNo=...`
   - `PUT /api/channels/{channelId}/read-state` — body: `employeeNo`, `lastReadMessageId`
   - `GET /api/channels/{channelId}/files?employeeNo=...`

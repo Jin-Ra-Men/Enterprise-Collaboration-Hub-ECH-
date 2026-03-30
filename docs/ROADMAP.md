@@ -24,6 +24,7 @@
   - [v] 1-4-1. 채널 생성 API (`POST /api/channels`)
   - [v] 1-4-2. 채널 조회 API (`GET /api/channels/{channelId}`)
   - [v] 1-4-3. 채널 참여 API (`POST /api/channels/{channelId}/members`)
+  - [v] 1-4-4. 채널 개설자 멤버 내보내기 API (`DELETE /api/channels/{channelId}/members`) 및 멤버 패널 UI
 - [v] 1-5. 실시간 메시지 저장 연계 (Socket 이벤트 + DB 저장)
   - [v] 1-5-1. Realtime 메시지 저장 리포지토리(`pg`) 구현
   - [v] 1-5-2. `message:send` 수신 시 DB 저장 로직 구현

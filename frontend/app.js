@@ -81,6 +81,8 @@ let socket         = null;
 let currentUser    = null;
 let activeChannelId = null;
 let activeChannelType = null; // PUBLIC / PRIVATE / DM
+/** GET /api/channels/{id} 의 createdByEmployeeNo (멤버 내보내기 버튼 표시용) */
+let activeChannelCreatorEmployeeNo = null;
 let pendingFile    = null;
 let selectedMembers = [];     // 채널/DM 생성 시 선택된 사용자
 let selectedDmMembers = [];
@@ -940,6 +942,7 @@ async function selectChannel(channelId, channelName, channelType) {
   closeModal("modalImagePreview");
   activeChannelId   = channelId;
   activeChannelType = channelType;
+  activeChannelCreatorEmployeeNo = null;
 
   // 사이드바 active 표시
   document.querySelectorAll(".channel-item").forEach(el => {
@@ -997,11 +1000,16 @@ async function loadChannelMembers(channelId) {
     const res  = await apiFetch(`/api/channels/${channelId}`);
     const json = await res.json();
     if (!res.ok) return;
+    const creatorEmp = String(json.data?.createdByEmployeeNo || "").trim();
+    activeChannelCreatorEmployeeNo = creatorEmp || null;
     const members = json.data?.members || [];
     document.getElementById("chatMemberCount").textContent = `멤버 ${members.length}명`;
 
     const listEl = document.getElementById("memberList");
     listEl.innerHTML = "";
+    const myEmp = currentUser ? String(currentUser.employeeNo || "").trim() : "";
+    const canKickOthers = myEmp !== "" && creatorEmp !== "" && myEmp === creatorEmp;
+
     members.forEach(m => {
       const emp = String(m.employeeNo || "").trim();
       const pr = presenceByEmployeeNo.get(emp) || "OFFLINE";
@@ -1016,6 +1024,10 @@ async function loadChannelMembers(channelId) {
         m.jobTitle != null && String(m.jobTitle).trim() !== ""
           ? `<span class="member-duty-txt">${escHtml(String(m.jobTitle).trim())}</span>`
           : "";
+      const showKick = canKickOthers && emp !== "" && emp !== creatorEmp;
+      const kickBtnHtml = showKick
+        ? `<button type="button" class="btn-member-kick" data-kick-emp="${escHtml(emp)}" data-kick-name="${escHtml(m.name || emp)}" title="채널에서 내보내기">내보내기</button>`
+        : "";
       const li = document.createElement("li");
       li.className = "member-list-item";
       li.innerHTML = `
@@ -1030,13 +1042,44 @@ async function loadChannelMembers(channelId) {
             ${posHtml}
             ${dutyHtml}
           </span>
-        </button>`;
+        </button>
+        ${kickBtnHtml}`;
       li.querySelector(".member-profile-btn").addEventListener("click", () => openUserProfile(emp));
+      const kickBtn = li.querySelector(".btn-member-kick");
+      if (kickBtn) {
+        kickBtn.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          removeChannelMemberFromPanel(kickBtn.dataset.kickEmp, kickBtn.dataset.kickName || emp);
+        });
+      }
       listEl.appendChild(li);
     });
     refreshPresenceDots();
   } catch (err) {
     console.error("멤버 로드 실패", err);
+  }
+}
+
+async function removeChannelMemberFromPanel(targetEmp, displayName) {
+  if (!activeChannelId || !targetEmp) return;
+  const label = displayName && String(displayName).trim() ? String(displayName).trim() : targetEmp;
+  if (!confirm(`「${label}」님을 이 채널에서 내보낼까요?`)) return;
+  try {
+    const res = await apiFetch(
+      `/api/channels/${activeChannelId}/members?targetEmployeeNo=${encodeURIComponent(targetEmp)}`,
+      { method: "DELETE" }
+    );
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      appendSystemMsg(`내보내기 실패: ${json.error?.message || res.status}`);
+      return;
+    }
+    appendSystemMsg(`${label} 님을 채널에서 내보냈습니다.`);
+    await loadChannelMembers(activeChannelId);
+    await loadMyChannels();
+  } catch (e) {
+    console.error(e);
+    appendSystemMsg("내보내기 중 오류가 발생했습니다.");
   }
 }
 

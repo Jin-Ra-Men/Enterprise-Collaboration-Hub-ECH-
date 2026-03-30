@@ -5,6 +5,7 @@ public enum AuditEventType {
     // 채널 이벤트
     CHANNEL_CREATED,
     CHANNEL_JOINED,
+    CHANNEL_MEMBER_REMOVED,
 
     // 메시지 이벤트 (본문 미기록, 메타데이터만)
     MESSAGE_SENT,

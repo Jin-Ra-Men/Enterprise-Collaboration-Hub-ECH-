@@ -108,6 +108,7 @@
   - `POST /api/channels` (채널 생성)
   - `GET /api/channels/{channelId}` (채널 상세 조회)
   - `POST /api/channels/{channelId}/members` (채널 참여)
+  - `DELETE /api/channels/{channelId}/members?targetEmployeeNo=...` (멤버 내보내기 — **JWT 사원번호가 채널 `created_by`인 개설자만**; 대상이 개설자이면 400; 비개설자면 403; 해당 멤버가 아니면 400)
 - 관련 Socket 이벤트: 추후 `channel:join`과 연계 예정
 - 입력/출력:
   - 생성 입력: `workspaceKey`, `name`, `description`, `channelType`(`PUBLIC`|`PRIVATE`|`DM`), 선택 `createdByEmployeeNo`(구 클라이언트용·**실제 생성자는 Bearer JWT의 사원번호**), 선택 `dmPeerEmployeeNos`(DM일 때 상대 **사원번호** 목록 — 서버가 내부 고유 `name`(`__dm__…`)과 표시용 `description`을 구성하고, 동일 참가자 조합이면 기존 채널 반환 후 누락 멤버만 추가)
@@ -118,6 +119,7 @@
   - 없는 사용자/채널 조회 시 예외
   - 이미 참여한 사용자 재참여 시 예외
   - 생성 시 생성자는 자동으로 `MANAGER` 멤버십 부여
+  - 내보내기 시 대상 사용자 `channel_read_states` 행 삭제 후 `channel_members` 행 삭제; 감사 `CHANNEL_MEMBER_REMOVED`
 - 권한/보안:
   - 현재는 기본 도메인 동작 중심 (인증/인가 고도화는 다음 단계)
 - 로그/감사 포인트:
@@ -126,6 +128,7 @@
   - 채널 생성 성공/중복 실패
   - 채널 상세 조회 성공/없는 채널 실패
   - 채널 참여 성공/중복 참여 실패
+  - 개설자 멤버 내보내기 성공 / 비개설자 403 / 개설자 본인 내보내기 400 (`ChannelApiTest`)
 - 비고:
   - 구현 파일:
     - `backend/src/main/java/com/ech/backend/api/channel/ChannelController.java`
@@ -557,6 +560,7 @@
 |---|---|
 | `CHANNEL_CREATED` | ChannelService |
 | `CHANNEL_JOINED` | ChannelService |
+| `CHANNEL_MEMBER_REMOVED` | ChannelService |
 | `MESSAGE_SENT` | MessageService |
 | `MESSAGE_REPLY_SENT` | MessageService |
 | `FILE_UPLOADED` | ChannelFileService |
@@ -610,6 +614,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 - 관련 API:
   - `GET /api/user-directory/organization` (조직도 트리 데이터)
   - `POST /api/channels/{channelId}/members` (채널 생성 후 추가 멤버 등록)
+  - 멤버 패널: 채널 개설자에게만 타 멤버 **내보내기** 버튼 노출 (`DELETE .../members?targetEmployeeNo=`)
   - `GET /api/channels/{channelId}/files?employeeNo=...`
   - `GET /api/channels/{channelId}/files/{fileId}/download?employeeNo=...`
 - 입력/출력:

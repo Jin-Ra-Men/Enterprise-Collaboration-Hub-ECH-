@@ -5,8 +5,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -113,5 +115,105 @@ class ChannelApiTest extends BaseIntegrationTest {
         mockMvc.perform(get("/api/channels/999999")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("채널 개설자가 멤버 내보내기 성공")
+    void remove_member_by_creator_success() throws Exception {
+        String createBody = """
+                {
+                  "name": "킥테스트채널",
+                  "workspaceKey": "WS_KICK",
+                  "channelType": "PUBLIC",
+                  "createdByEmployeeNo": "%s"
+                }
+                """.formatted(adminEmployeeNo);
+
+        String createResp = mockMvc.perform(post("/api/channels")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createBody))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        long channelId = objectMapper.readTree(createResp).path("data").path("channelId").asLong();
+
+        String joinBody = """
+                {"employeeNo":"%s","memberRole":"MEMBER"}
+                """.formatted(normalEmployeeNo);
+        mockMvc.perform(post("/api/channels/" + channelId + "/members")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(joinBody))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/channels/" + channelId + "/members")
+                        .param("targetEmployeeNo", normalEmployeeNo)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.members", hasSize(1)));
+    }
+
+    @Test
+    @DisplayName("비개설자는 멤버 내보내기 403")
+    void remove_member_forbidden_for_non_creator() throws Exception {
+        String createBody = """
+                {
+                  "name": "킥금지채널",
+                  "workspaceKey": "WS_KICK403",
+                  "channelType": "PUBLIC",
+                  "createdByEmployeeNo": "%s"
+                }
+                """.formatted(adminEmployeeNo);
+
+        String createResp = mockMvc.perform(post("/api/channels")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createBody))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        long channelId = objectMapper.readTree(createResp).path("data").path("channelId").asLong();
+
+        String joinBody = """
+                {"employeeNo":"%s","memberRole":"MEMBER"}
+                """.formatted(normalEmployeeNo);
+        mockMvc.perform(post("/api/channels/" + channelId + "/members")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(joinBody))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/channels/" + channelId + "/members")
+                        .param("targetEmployeeNo", normalEmployeeNo)
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("개설자 본인 내보내기는 400")
+    void remove_creator_self_bad_request() throws Exception {
+        String createBody = """
+                {
+                  "name": "셀프킥",
+                  "workspaceKey": "WS_SELFKICK",
+                  "channelType": "PUBLIC",
+                  "createdByEmployeeNo": "%s"
+                }
+                """.formatted(adminEmployeeNo);
+
+        String createResp = mockMvc.perform(post("/api/channels")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createBody))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        long channelId = objectMapper.readTree(createResp).path("data").path("channelId").asLong();
+
+        mockMvc.perform(delete("/api/channels/" + channelId + "/members")
+                        .param("targetEmployeeNo", adminEmployeeNo)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isBadRequest());
     }
 }
