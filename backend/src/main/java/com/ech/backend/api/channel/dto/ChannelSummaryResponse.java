@@ -9,6 +9,7 @@ public record ChannelSummaryResponse(
         String description,
         String channelType,
         int memberCount,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        int unreadCount
 ) {
 }

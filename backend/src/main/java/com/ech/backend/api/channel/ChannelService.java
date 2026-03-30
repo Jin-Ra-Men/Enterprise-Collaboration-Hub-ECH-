@@ -364,6 +364,7 @@ public class ChannelService {
                 .map(channel -> {
                     int memberCount = channelMemberRepository.findByChannelId(channel.getId()).size();
                     String summaryDescription = resolveChannelSummaryDescription(channel, emp);
+                    int unread = resolveUnreadRootCount(channel.getId(), emp);
                     return new ChannelSummaryResponse(
                             channel.getId(),
                             channel.getWorkspaceKey(),
@@ -371,10 +372,23 @@ public class ChannelService {
                             summaryDescription,
                             channel.getChannelType().name(),
                             memberCount,
-                            channel.getCreatedAt()
+                            channel.getCreatedAt(),
+                            unread
                     );
                 })
                 .toList();
+    }
+
+    private int resolveUnreadRootCount(Long channelId, String employeeNo) {
+        Long afterId = channelReadStateRepository
+                .findByChannel_IdAndUser_EmployeeNo(channelId, employeeNo)
+                .map(rs -> rs.getLastReadMessage() != null ? rs.getLastReadMessage().getId() : null)
+                .orElse(null);
+        long n = messageRepository.countRootMessagesAfter(channelId, afterId);
+        if (n > Integer.MAX_VALUE) {
+            return Integer.MAX_VALUE;
+        }
+        return (int) n;
     }
 
     /**

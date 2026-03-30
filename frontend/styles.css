@@ -290,7 +290,24 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 .sidebar-item:hover { background: var(--sidebar-item-hover-bg); color: var(--sidebar-item-fg-strong); }
 .sidebar-item.active { background: var(--sidebar-active-bg); color: var(--sidebar-item-fg-strong); font-weight: 600; border-left: 2px solid var(--accent); }
 .item-icon { flex-shrink: 0; width: 18px; text-align: center; font-size: 13px; }
-.item-label { overflow: hidden; text-overflow: ellipsis; }
+.item-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* 채널/DM 목록 미읽음 (Slack 스타일 원형 배지) */
+.channel-unread-badge {
+  flex-shrink: 0;
+  margin-left: auto;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #e11d48;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  box-sizing: border-box;
+}
 
 /* 사용자 프로필 (하단) */
 .sidebar-user {

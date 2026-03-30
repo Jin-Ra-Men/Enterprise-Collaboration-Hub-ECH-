@@ -104,7 +104,7 @@
 - 사용자: Backend 개발자, Frontend 개발자
 - 관련 화면/경로: 채널 목록/채널 상세/채널 참여 UI
 - 관련 API:
-  - `GET /api/channels?employeeNo=...` (내 채널/DM 목록 — **DM**의 `description`은 DB 저장값이 아니라 요청 `employeeNo`(본인)을 제외한 참가자 표시명을 서버가 매번 계산해 내려 사이드바에 상대방 이름이 보이게 함)
+  - `GET /api/channels?employeeNo=...` (내 채널/DM 목록 — **DM**의 `description`은 DB 저장값이 아니라 요청 `employeeNo`(본인)을 제외한 참가자 표시명을 서버가 매번 계산; **`unreadCount`** 는 본인 읽음 포인터 이후의 **루트 메시지** 건수로 계산해 사이드바 빨간 배지에 표시)
   - `POST /api/channels` (채널 생성)
   - `GET /api/channels/{channelId}` (채널 상세 조회)
   - `POST /api/channels/{channelId}/members` (채널 참여)
@@ -270,7 +270,7 @@
 ## 채널별 읽음 포인터 (마지막 읽은 메시지)
 - 목적: 채널 단위로 사용자가 마지막으로 읽은 메시지를 저장해 미읽음/스크롤 복귀 등 UX에 활용
 - 사용자: 채널 멤버
-- 관련 화면/경로: 채널 메시지 목록, 사이드바 미읽음 배지(추후)
+- 관련 화면/경로: 채널 메시지 목록, 채널/DM 사이드바 미읽음 배지(`GET /api/channels`의 `unreadCount`)
 - 관련 API:
   - `GET /api/channels/{channelId}/read-state?employeeNo=...` (조회, 미설정 시 `lastReadMessageId=null`)
   - `PUT /api/channels/{channelId}/read-state` (갱신, body: `employeeNo`, `lastReadMessageId`)

@@ -87,6 +87,9 @@ let pendingFile    = null;
 let selectedMembers = [];     // 채널/DM 생성 시 선택된 사용자
 let selectedDmMembers = [];
 let selectedAddMembers = [];  // 기존 채널에 추가할 사용자
+/** 다른 채널에 새 메시지 시 목록 갱신 디바운스 */
+let refreshChannelListTimer = null;
+let windowFocusChannelsTimer = null;
 let orgPickerContext = null;  // member | dm | channelMember
 let orgPickerEmbedElId = null; // member/dm/channelMember 조직도 체크박스가 그려진 엘리먼트 id
 /** 프로필 모달에 표시 중인 사용자 사번 (DM 보내기용) */
@@ -904,6 +907,53 @@ async function loadMyChannels() {
   }
 }
 
+function scheduleRefreshMyChannels() {
+  if (!currentUser) return;
+  if (refreshChannelListTimer) clearTimeout(refreshChannelListTimer);
+  refreshChannelListTimer = setTimeout(() => {
+    refreshChannelListTimer = null;
+    loadMyChannels();
+  }, 400);
+}
+
+async function markChannelReadUpTo(channelId, lastReadMessageId) {
+  if (!currentUser || channelId == null || lastReadMessageId == null) return;
+  const mid = Number(lastReadMessageId);
+  if (!Number.isFinite(mid)) return;
+  try {
+    const res = await apiFetch(`/api/channels/${channelId}/read-state`, {
+      method: "PUT",
+      body: JSON.stringify({ employeeNo: currentUser.employeeNo, lastReadMessageId: mid }),
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      console.warn("read-state 갱신 실패", res.status, j.error?.message || "");
+    }
+  } catch (e) {
+    console.warn("read-state 갱신 오류", e);
+  }
+}
+
+/** API 메시지 목록에서 루트 메시지 id 최댓값 (읽음 포인터 갱신용) */
+function maxRootMessageIdFromList(msgs) {
+  if (!msgs || msgs.length === 0) return null;
+  let max = null;
+  for (const m of msgs) {
+    const pid = m.parentMessageId ?? m.parent_message_id;
+    if (pid != null && pid !== "") continue;
+    const id = Number(m.messageId ?? m.message_id);
+    if (!Number.isFinite(id)) continue;
+    if (max === null || id > max) max = id;
+  }
+  return max;
+}
+
+function formatUnreadBadgeCount(n) {
+  const v = Number(n);
+  if (!Number.isFinite(v) || v <= 0) return "";
+  return v > 99 ? "99+" : String(v);
+}
+
 function renderChannelList(channels) {
   channelListEl.innerHTML = "";
   dmListEl.innerHTML      = "";
@@ -919,12 +969,18 @@ function renderChannelList(channels) {
         : ch.name;
     li.dataset.channelName = displayName;
 
+    const unread = Number(ch.unreadCount ?? 0);
+    const badgeTxt = formatUnreadBadgeCount(unread);
+    const badgeHtml = badgeTxt
+      ? `<span class="channel-unread-badge" aria-label="미읽음 ${badgeTxt}건">${escHtml(badgeTxt)}</span>`
+      : "";
+
     if (ch.channelType === "DM") {
-      li.innerHTML = `<span class="item-icon">●</span><span class="item-label">${escHtml(displayName)}</span>`;
+      li.innerHTML = `<span class="item-icon">●</span><span class="item-label">${escHtml(displayName)}</span>${badgeHtml}`;
       dmListEl.appendChild(li);
     } else {
       const icon = ch.channelType === "PRIVATE" ? "🔒" : "#";
-      li.innerHTML = `<span class="item-icon">${icon}</span><span class="item-label">${escHtml(ch.name)}</span>`;
+      li.innerHTML = `<span class="item-icon">${icon}</span><span class="item-label">${escHtml(ch.name)}</span>${badgeHtml}`;
       channelListEl.appendChild(li);
     }
 
@@ -989,6 +1045,11 @@ async function loadMessages(channelId) {
     } else {
       renderMessages(msgs);
     }
+    const maxId = maxRootMessageIdFromList(msgs);
+    if (maxId != null) {
+      await markChannelReadUpTo(channelId, maxId);
+    }
+    await loadMyChannels();
   } catch (err) {
     appendSystemMsg("메시지 로드 중 오류 발생");
     console.error(err);
@@ -1548,15 +1609,28 @@ function initSocket() {
   });
 
   socket.on("message:new", (msg) => {
-    // pg bigint → string 가능성 대비 Number()로 비교
-    if (Number(msg.channelId) === activeChannelId) {
+    const cid = Number(msg.channelId);
+    if (cid === activeChannelId) {
       appendMessageRealtime(msg);
+      if (msg.messageId != null) {
+        markChannelReadUpTo(activeChannelId, msg.messageId).then(() => loadMyChannels());
+      }
+    } else {
+      scheduleRefreshMyChannels();
     }
   });
 
   socket.on("channel:system", (p) => {
-    if (Number(p.channelId) !== activeChannelId) return;
+    const cid = Number(p.channelId);
+    if (cid !== activeChannelId) {
+      scheduleRefreshMyChannels();
+      return;
+    }
     appendSystemMsg(p.text || "", { messageId: p.messageId });
+    const mid = p.messageId != null ? Number(p.messageId) : NaN;
+    if (Number.isFinite(mid)) {
+      markChannelReadUpTo(cid, mid).then(() => loadMyChannels());
+    }
   });
 
   socket.on("message:error", (err) => {
@@ -1622,6 +1696,10 @@ async function sendMessageViaApi(channelId, senderId, text) {
     text: m.text,
     createdAt: m.createdAt,
   });
+  if (m.messageId != null) {
+    await markChannelReadUpTo(channelId, m.messageId);
+    await loadMyChannels();
+  }
 }
 
 /* ==========================================================================
@@ -2372,3 +2450,12 @@ function initEvents() {
   }
 })();
 initTheme();
+
+window.addEventListener("focus", () => {
+  if (!currentUser) return;
+  if (windowFocusChannelsTimer) clearTimeout(windowFocusChannelsTimer);
+  windowFocusChannelsTimer = setTimeout(() => {
+    windowFocusChannelsTimer = null;
+    loadMyChannels();
+  }, 500);
+});

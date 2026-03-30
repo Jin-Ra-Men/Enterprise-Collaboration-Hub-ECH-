@@ -4,6 +4,9 @@
 
 ## 2026-03-30
 
+### Added
+- **채널/DM 미읽음 배지**: `GET /api/channels` 요약에 `unreadCount`(멤버별 `channel_read_states` 이후 **루트 메시지** 건수), `MessageRepository.countRootMessagesAfter`; 프론트 사이드바 빨간 원형 숫자(99+ 상한), 채팅 로드·실시간 `message:new`/`channel:system`(열람 중)·API 전송 폴백 시 `PUT .../read-state`, 타 채널 메시지는 디바운스 목록 갱신·윈도우 포커스 시 갱신
+
 ### Fixed
 - **DM 사이드바 표시명**: `GET /api/channels` 요약의 `description`이 DM 생성 시 한쪽 기준으로만 저장되어 상대 계정에선 자기 이름만 보이던 문제 — `channelType=DM`일 때 조회 중인 `employeeNo`를 제외한 멤버 표시명을 요약 `description`으로 계산 (`getMyChannels`)
 - `AuditLogService.safeRecord`: 내부 `this.record()` 호출로 `@Transactional(REQUIRES_NEW)`가 무시되어 감사 INSERT 실패(또는 기타 예외) 시 **호출자 트랜잭션이 rollback-only**로 남고 `UnexpectedRollbackException`이 나던 문제 — `@Lazy` 자기 프록시로 `record()`만 별도 트랜잭션에 두고 `safeRecord`에서는 트랜잭션 미부여(멤버 내보내기 등에서 감사 실패가 본 요청을 깨지 않도록)

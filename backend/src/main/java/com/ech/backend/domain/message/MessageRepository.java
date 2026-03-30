@@ -69,4 +69,17 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
               AND m.isDeleted = false
             """)
     int archiveOlderThan(@Param("cutoff") OffsetDateTime cutoff, @Param("now") OffsetDateTime now);
+
+    /**
+     * 메인 타임라인(루트) 메시지 중 읽음 포인터 이후 건수. {@code afterId}가 {@code null}이면 전체 루트 메시지 수.
+     */
+    @Query("""
+            SELECT COUNT(m) FROM Message m
+            WHERE m.channel.id = :channelId
+              AND m.parentMessage IS NULL
+              AND m.archivedAt IS NULL
+              AND m.isDeleted = false
+              AND (:afterId IS NULL OR m.id > :afterId)
+            """)
+    long countRootMessagesAfter(@Param("channelId") long channelId, @Param("afterId") Long afterId);
 }
