@@ -14,6 +14,7 @@
 ### Fixed
 - 워크스페이스 **ECH** 옆 미동작 `⌄` 버튼 제거(혼란 방지)
 - 멘션 토스트 미표시: 현재 채널 `message:new` 수신 시 내 멘션을 폴백 토스트로 처리해 `mention:notify` 누락/지연에도 알림 표시
+- 관리자 `error_logs` 조회: `path`가 `bytea`로 저장된 DB에서 `lower()` 검색이 실패하던 문제를 `convert_from` 기반 변환으로 수정
 - 채널/DM 섹션 접기 시 화살표 **▾↔▸** 전환(`syncSectionToggleChevron`·`section-toggle-chevron`)
 
 ### Added
