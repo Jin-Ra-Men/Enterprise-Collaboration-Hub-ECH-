@@ -14,14 +14,12 @@ public interface ErrorLogRepository extends JpaRepository<ErrorLog, Long> {
             WHERE (:from IS NULL OR e.createdAt >= :from)
               AND (:to IS NULL OR e.createdAt <= :to)
               AND (:errorCode IS NULL OR e.errorCode = :errorCode)
-              AND (:pathKeyword IS NULL OR LOWER(FUNCTION('convert_from', e.path, 'UTF8')) LIKE LOWER(CONCAT('%', :pathKeyword, '%')))
             ORDER BY e.createdAt DESC
             """)
     List<ErrorLog> search(
             @Param("from") OffsetDateTime from,
             @Param("to") OffsetDateTime to,
             @Param("errorCode") String errorCode,
-            @Param("pathKeyword") String pathKeyword,
             Pageable pageable
     );
 

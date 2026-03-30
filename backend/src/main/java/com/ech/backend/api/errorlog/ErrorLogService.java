@@ -45,14 +45,26 @@ public class ErrorLogService {
             Integer limit
     ) {
         int size = limit == null ? 50 : Math.min(Math.max(limit, 1), MAX_DEFAULT_LIMIT);
-        return errorLogRepository.search(
-                        from,
-                        to,
-                        normalize(errorCode),
-                        normalize(pathKeyword),
-                        PageRequest.of(0, size)
-                )
-                .stream()
+        String normalizedPathKeyword = normalize(pathKeyword);
+        // DB 컬럼 타입(문자열/varchar vs bytea)이 환경마다 달라 `path` 조건을 JPQL에서 처리하면 500이 날 수 있다.
+        // 따라서 path 필터링은 Java에서 안정적으로 수행한다(최신 로그 기준으로 약간 더 많이 조회 후 잘라낸다).
+        int requestSize = normalizedPathKeyword == null ? size : Math.min(size * 5, MAX_DEFAULT_LIMIT);
+
+        List<ErrorLog> rows = errorLogRepository.search(
+                from,
+                to,
+                normalize(errorCode),
+                org.springframework.data.domain.PageRequest.of(0, requestSize)
+        );
+
+        return rows.stream()
+                .filter(e -> {
+                    if (normalizedPathKeyword == null) return true;
+                    String p = e.getPath();
+                    if (p == null) return false;
+                    return p.toLowerCase().contains(normalizedPathKeyword.toLowerCase());
+                })
+                .limit(size)
                 .map(this::toResponse)
                 .toList();
     }
