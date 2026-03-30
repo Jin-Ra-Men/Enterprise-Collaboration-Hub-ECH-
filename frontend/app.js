@@ -965,8 +965,8 @@ logoutBtn.addEventListener("click", () => {
   // DOM 상태 완전 초기화 (다음 로그인 계정이 달라도 깨끗하게 시작)
   channelListEl.innerHTML = "";
   dmListEl.innerHTML      = "";
-  const quickUnread = document.getElementById("quickUnreadList");
-  if (quickUnread) quickUnread.innerHTML = "";
+  const quickRailScroll = document.getElementById("quickRailScroll");
+  if (quickRailScroll) quickRailScroll.innerHTML = "";
   messagesEl.innerHTML    = "";
   document.getElementById("adminSection").classList.add("hidden");
   showView("viewWelcome");
@@ -1062,13 +1062,16 @@ function channelActivityTimeMs(ch) {
 
 function setSidebarCollapsedUi(collapsed) {
   mainApp.classList.toggle("sidebar-collapsed", collapsed);
-  const btn = document.getElementById("btnSidebarCollapse");
+  const btn = document.getElementById("btnSidebarEdgeToggle");
+  const icon = btn?.querySelector(".sidebar-edge-toggle-icon");
   if (btn) {
     btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
     const t = collapsed ? "사이드바 펼치기" : "사이드바 접기";
     btn.title = t;
     btn.setAttribute("aria-label", t);
-    btn.textContent = collapsed ? "▶" : "◀";
+  }
+  if (icon) {
+    icon.textContent = collapsed ? "›" : "‹";
   }
 }
 
@@ -1092,45 +1095,55 @@ function toggleSidebarCollapsed() {
   setSidebarCollapsedUi(next);
 }
 
-/** 미읽음이 있는 채널/DM만, 최근 메시지 시각 내림차순 */
+/** 퀵 레일용 짧은 캡션(한 줄) */
+function quickRailCaption(name) {
+  const s = String(name || "").trim();
+  if (s.length <= 7) return s;
+  return `${s.slice(0, 6)}…`;
+}
+
+/** 미읽음이 있는 채널/DM만, 최근 메시지 시각 내림차순 — 좌측 `#quickContainer` 세로 아이콘 레일 */
 function renderQuickUnreadList(channels) {
-  const el = document.getElementById("quickUnreadList");
+  const el = document.getElementById("quickRailScroll");
   if (!el) return;
   el.innerHTML = "";
   const unread = (channels || []).filter((ch) => Number(ch.unreadCount ?? 0) > 0);
   unread.sort((a, b) => channelActivityTimeMs(b) - channelActivityTimeMs(a));
   if (unread.length === 0) {
-    const emptyHint = document.createElement("li");
-    emptyHint.className = "sidebar-item sidebar-quick-empty muted-item";
-    emptyHint.textContent = "미읽음 대화가 없습니다";
+    const emptyHint = document.createElement("div");
+    emptyHint.className = "quick-rail-empty";
+    emptyHint.textContent = "미읽음 대화 없음";
     el.appendChild(emptyHint);
     return;
   }
   unread.forEach((ch) => {
-    const li = document.createElement("li");
-    li.className = "sidebar-item channel-item quick-unread-item";
-    li.dataset.channelId = String(ch.channelId);
-    li.dataset.channelType = ch.channelType;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "quick-rail-link channel-item";
+    btn.dataset.channelId = String(ch.channelId);
+    btn.dataset.channelType = ch.channelType;
     const displayName =
       ch.channelType === "DM" && ch.description
         ? ch.description
         : ch.name;
-    li.dataset.channelName = displayName;
+    btn.dataset.channelName = displayName;
     const badgeTxt = formatUnreadBadgeCount(Number(ch.unreadCount ?? 0));
+    const iconChar =
+      ch.channelType === "DM" ? "●" : ch.channelType === "PRIVATE" ? "🔒" : "#";
+    const cap = quickRailCaption(displayName);
     const badgeHtml = badgeTxt
-      ? `<span class="channel-unread-badge" aria-label="미읽음 ${badgeTxt}건">${escHtml(badgeTxt)}</span>`
+      ? `<em class="quick-rail-badge" aria-hidden="true">${escHtml(badgeTxt)}</em>`
       : "";
-    if (ch.channelType === "DM") {
-      const dmLead = dmSidebarLeadingHtml(ch.dmPeerEmployeeNos);
-      li.innerHTML = `${dmLead}<span class="item-label">${escHtml(displayName)}</span>${badgeHtml}`;
-    } else {
-      const icon = ch.channelType === "PRIVATE" ? "🔒" : "#";
-      li.innerHTML = `<span class="item-icon">${icon}</span><span class="item-label">${escHtml(ch.name)}</span>${badgeHtml}`;
-    }
-    li.title = displayName;
-    if (ch.channelId === activeChannelId) li.classList.add("active");
-    li.addEventListener("click", () => selectChannel(ch.channelId, displayName, ch.channelType));
-    el.appendChild(li);
+    btn.innerHTML = `<span class="quick-rail-icon">${iconChar}</span><span class="quick-rail-label">${escHtml(cap)}</span>${badgeHtml}`;
+    btn.setAttribute("data-tooltip-title", displayName);
+    btn.title = displayName;
+    const al = badgeTxt
+      ? `${displayName}, 미읽음 ${badgeTxt}건`
+      : displayName;
+    btn.setAttribute("aria-label", al);
+    if (ch.channelId === activeChannelId) btn.classList.add("active");
+    btn.addEventListener("click", () => selectChannel(ch.channelId, displayName, ch.channelType));
+    el.appendChild(btn);
   });
 }
 
@@ -2671,7 +2684,7 @@ function initEvents() {
 
   if (!sidebarCollapseBound) {
     sidebarCollapseBound = true;
-    document.getElementById("btnSidebarCollapse")?.addEventListener("click", (e) => {
+    document.getElementById("btnSidebarEdgeToggle")?.addEventListener("click", (e) => {
       e.stopPropagation();
       toggleSidebarCollapsed();
     });

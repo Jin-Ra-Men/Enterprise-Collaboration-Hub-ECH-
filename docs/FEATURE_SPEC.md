@@ -137,25 +137,25 @@
 
 ---
 
-## 사이드바 미읽음 퀵 메뉴·접기
-- 목적: 미읽음이 있는 채널/DM만 모아 빠르게 이동하고, 최근 메시지가 도착한 대화가 위로 오도록 하며 좌측 패널 너비를 줄일 수 있게 함
+## 좌측 퀵 레일(미읽음)·사이드바 접기
+- 목적: Covi/Simplebar형 **좁은 세로 퀵 레일**(`#quickContainer`, 64px)에 미읽음 대화만 아이콘·짧은 캡션·배지로 모으고, 채널/DM 목록은 우측 사이드바에 유지. 사이드바는 **우측 경계 세로 중앙 돌출 탭**(`#btnSidebarEdgeToggle`)으로 접어 너비 0에 가깝게 숨김(퀵 레일은 항상 표시).
 - 사용자: 일반 채팅 사용자
-- 관련 화면/경로: `frontend/index.html` 사이드바 `quickUnreadList`, `btnSidebarCollapse`; `frontend/app.js` `renderQuickUnreadList`, `loadMyChannels`·`scheduleRefreshMyChannels`; `frontend/styles.css` `.sidebar-collapsed`
+- 관련 화면/경로: `frontend/index.html` `#quickRailScroll`, `#sidebarColumn`·`.sidebar-slip`·`#btnSidebarEdgeToggle`; `frontend/app.js` `renderQuickUnreadList`, `loadMyChannels`·`scheduleRefreshMyChannels`; `frontend/styles.css` `.quick-rail`, `.sidebar-column`, `.sidebar-edge-toggle`, `#mainApp.sidebar-collapsed`
 - 관련 API: `GET /api/channels` (`unreadCount`, **`lastMessageAt`**, `createdAt` 폴백 정렬)
-- 관련 Socket 이벤트: `message:new`, `channel:system` 등 기존 디바운스 채널 목록 갱신과 동일(약 400ms) — 갱신 시 퀵 목록도 동일 데이터로 재렌더
+- 관련 Socket 이벤트: `message:new`, `channel:system` 등 기존 디바운스 채널 목록 갱신과 동일(약 400ms) — 갱신 시 퀵 레일도 동일 데이터로 재렌더
 - 입력/출력:
-  - 퀵 목록: `unreadCount > 0` 인 항목만 표시, 정렬 키 = `lastMessageAt` ISO 시각(없으면 `createdAt`), 내림차순
-  - 미읽음 0건일 때 안내 문구 1행(접힘 모드에선 숨김)
-  - 접기: `localStorage` 키 `ech_sidebar_collapsed` (`1`/`0`), 워크스페이스 줄 `◀`/`▶` 토글, `#mainApp.sidebar-collapsed`
+  - 퀵 레일: `unreadCount > 0` 인 항목만 버튼(`.quick-rail-link.channel-item`), 정렬 키 = `lastMessageAt`(없으면 `createdAt`) 내림차순; 전체 이름은 `title`·`data-tooltip-title`·`aria-label`
+  - 미읽음 0건: `.quick-rail-empty` 문구
+  - 접기: `localStorage` `ech_sidebar_collapsed` (`1`/`0`); `.sidebar-column` 너비 260px↔0; 탭 화살표 `‹`(펼침·접기) / `›`(접힘·펼치기)
 - 상태 전이/예외 케이스:
   - `lastMessageAt` 미수신·파싱 실패 시 `createdAt`만으로 정렬(둘 다 없으면 0)
-  - 퀵 목록 항목은 일반 목록과 동일하게 `selectChannel` 연동·`channel-item` active 표시
+  - 퀵 항목은 `selectChannel` 연동·`.channel-item`과 동일 active 표시
 - 권한/보안: 기존 채널 목록 API·인증과 동일
 - 로그/감사 포인트: 해당 없음
 - 테스트 기준:
-  - 타 채널에 메시지 수신 후 퀵 목록 순서·배지가 목록 갱신과 일치
-  - 접기 상태 새로고침 후 유지
-- 비고: 섹션 헤더 `▾ 미읽음`은 다른 섹션과 같이 목록 `ul` 표시 토글 가능
+  - 타 채널 메시지 수신 후 퀵 레일 순서·배지가 목록과 일치
+  - 돌출 탭으로 접기/펼치기 및 새로고침 후 상태 유지
+- 비고: DM 퀵 아이콘은 `●`(사이드바 DM 줄은 기존처럼 프레즌스 점 다중 표시 가능)
 
 ---
 

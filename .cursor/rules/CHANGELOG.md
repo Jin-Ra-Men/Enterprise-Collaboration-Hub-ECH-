@@ -4,8 +4,10 @@
 
 ## 2026-03-30
 
+### Changed
+- **퀵 UI**: 미읽음을 사이드바 안이 아니라 **좌측 64px 퀵 레일** `#quickContainer` / `#quickRailScroll`(세로 아이콘·짧은 라벨·`em.quick-rail-badge`, Covi/Simplebar형)로 이동; **접기**는 워크스페이스 상단 버튼 제거 → 사이드바 **우측 경계 세로 중앙 돌출 탭** `#btnSidebarEdgeToggle`(`.sidebar-edge-toggle`); 접힘 시 `.sidebar-column` 너비 0(퀵 레일 유지). 문서 `FEATURE_SPEC`/`HANDOVER`/`README`/`ROADMAP` 반영
+
 ### Added
-- 사이드바 **미읽음 퀵**(`quickUnreadList`): `unreadCount > 0` 채널/DM만, `lastMessageAt`(없으면 `createdAt`) 내림차순 정렬·배지; `loadMyChannels`·`scheduleRefreshMyChannels`(실시간)과 동기; **사이드바 접기** `#mainApp.sidebar-collapsed`·`btnSidebarCollapse`·`ech_sidebar_collapsed`; 접힘 시 아이콘·배지 중심 CSS(`frontend/index.html`, `app.js`, `styles.css`); API 요약 필드 `lastMessageAt` 명시(`docs/FEATURE_SPEC.md`, `HANDOVER.md`); 로드맵 `2-2-4`
 - 좌측 하단 본인 프레즌스 클릭 → **온라인 / 자리비움** 선택 팝업·`presence:set` 전송; 창 포커스 복귀 시 `AWAY` 선택 유지 후 재전송
 - DM 사이드바 프레즌스: `GET /api/channels` 요약에 `dmPeerEmployeeNos`(조회자 제외 멤버 사번 배열), 프론트 DM 줄에 `presence-dot`·`refreshPresenceDots` 연동; 좌측 하단 본인 상태 줄은 `● 온라인` 본문 중복 제거(CSS `::before`만)·실제 프레즌스와 라벨 동기화(`refreshSidebarUserStatusLine`)
 - **채널/DM 미읽음 배지**: `GET /api/channels` 요약에 `unreadCount`(멤버별 `channel_read_states` 이후 **루트 메시지** 건수), `MessageRepository.countRootMessagesAfter`; 프론트 사이드바 빨간 원형 숫자(99+ 상한), 채팅 로드·실시간 `message:new`/`channel:system`(열람 중)·API 전송 폴백 시 `PUT .../read-state`, 타 채널 메시지는 디바운스 목록 갱신·윈도우 포커스 시 갱신
