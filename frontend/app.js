@@ -94,6 +94,8 @@ let orgPickerContext = null;  // member | dm | channelMember
 let orgPickerEmbedElId = null; // member/dm/channelMember 조직도 체크박스가 그려진 엘리먼트 id
 /** 프로필 모달에 표시 중인 사용자 사번 (DM 보내기용) */
 let profileViewEmployeeNo = null;
+/** 좌측 하단 프레즌스 메뉴 이벤트(재로그인 시 중복 바인딩 방지) */
+let sidebarPresenceUiBound = false;
 
 /* ── DOM 참조 ── */
 const loginPage      = document.getElementById("loginPage");
@@ -233,6 +235,40 @@ function refreshSidebarUserStatusLine() {
   else if (st === "AWAY") el.classList.add("away");
   else el.classList.add("offline");
   el.textContent = st === "ONLINE" ? "온라인" : st === "AWAY" ? "자리비움" : "오프라인";
+}
+
+function closeSidebarPresenceMenu() {
+  const menu = document.getElementById("sidebarPresenceMenu");
+  const btn = document.getElementById("sidebarUserStatus");
+  if (menu) menu.classList.add("hidden");
+  if (btn) btn.setAttribute("aria-expanded", "false");
+}
+
+function toggleSidebarPresenceMenu() {
+  if (!currentUser?.employeeNo) return;
+  const menu = document.getElementById("sidebarPresenceMenu");
+  const btn = document.getElementById("sidebarUserStatus");
+  if (!menu || !btn) return;
+  menu.classList.toggle("hidden");
+  const isOpen = !menu.classList.contains("hidden");
+  btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+}
+
+/** 본인 프레즌스 전송(온라인 / 자리비움). 서버·타 사용자에 `presence:update` 반영 */
+function emitMyPresenceStatus(status) {
+  const raw = String(status || "").toUpperCase();
+  if (raw !== "ONLINE" && raw !== "AWAY") return;
+  if (!currentUser?.employeeNo) return;
+  const emp = String(currentUser.employeeNo).trim();
+  if (!emp) return;
+  closeSidebarPresenceMenu();
+  if (!socket?.connected) {
+    console.warn("[presence] 소켓 미연결 — 상태가 서버에 반영되지 않을 수 있습니다.");
+  } else {
+    socket.emit("presence:set", { employeeNo: emp, status: raw });
+  }
+  presenceByEmployeeNo.set(emp, raw);
+  refreshPresenceDots();
 }
 
 /** DM 줄 왼쪽: 상대 사번이 있으면 프레즌스 점, 없으면 기본 ● 아이콘 */
@@ -913,6 +949,7 @@ loginForm.addEventListener("submit", async (e) => {
 logoutBtn.addEventListener("click", () => {
   if (!confirm("로그아웃 하시겠습니까?")) return;
   if (socket) { socket.disconnect(); socket = null; }
+  closeSidebarPresenceMenu();
   revokeImageAttachmentBlobUrls();
   closeModal("modalImagePreview");
   clearFilePreview();
@@ -2492,11 +2529,41 @@ function initEvents() {
     imageLightboxEscapeBound = true;
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
+      const pm = document.getElementById("sidebarPresenceMenu");
+      if (pm && !pm.classList.contains("hidden")) {
+        closeSidebarPresenceMenu();
+        return;
+      }
       const mod = document.getElementById("modalImagePreview");
       if (mod && !mod.classList.contains("hidden")) {
         closeModal("modalImagePreview");
       }
     });
+  }
+
+  if (!sidebarPresenceUiBound) {
+    sidebarPresenceUiBound = true;
+    document.getElementById("sidebarUserStatus")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleSidebarPresenceMenu();
+    });
+    document.getElementById("sidebarPresenceMenu")?.addEventListener("click", (e) => {
+      const opt = e.target.closest(".sidebar-presence-option");
+      if (!opt) return;
+      const st = opt.dataset.presenceStatus;
+      if (st) emitMyPresenceStatus(st);
+    });
+    document.addEventListener(
+      "click",
+      (e) => {
+        const menuEl = document.getElementById("sidebarPresenceMenu");
+        const btnEl = document.getElementById("sidebarUserStatus");
+        if (!menuEl || menuEl.classList.contains("hidden")) return;
+        if (menuEl.contains(e.target) || btnEl?.contains(e.target)) return;
+        closeSidebarPresenceMenu();
+      },
+      true
+    );
   }
 
   // 사이드바 섹션 접기/펼치기
@@ -2558,7 +2625,10 @@ function scheduleSidebarAndPresenceSync() {
     loadMyChannels();
     fetchPresenceSnapshot().then(() => {
       if (socket?.connected && currentUser?.employeeNo) {
-        socket.emit("presence:set", { employeeNo: currentUser.employeeNo, status: "ONLINE" });
+        const emp = String(currentUser.employeeNo).trim();
+        const prev = presenceByEmployeeNo.get(emp) || "ONLINE";
+        const toSend = prev === "AWAY" ? "AWAY" : "ONLINE";
+        socket.emit("presence:set", { employeeNo: emp, status: toSend });
       }
       refreshPresenceDots();
       if (activeChannelId) loadChannelMembers(activeChannelId);

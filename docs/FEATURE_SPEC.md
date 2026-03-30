@@ -523,7 +523,7 @@
 ## 사용자 Presence 확인 기능
 - 목적: 온라인/자리비움/오프라인 상태를 실시간 확인
 - 사용자: 모든 사용자(조회), Admin/Manager(관리 화면 활용)
-- 관련 화면/경로: 채팅 메시지·멤버 패널에서 **아바타 네모칸 우측 하단**에 프레즌스 점, 프론트는 `presence:set` 후 서버가 해당 소켓에만 `presence:snapshot`(전체 목록)을 내려 주고, 보조로 `GET /presence`·`presence:update`로 맞춤; 창 포커스·탭 복귀 시 재동기화
+- 관련 화면/경로: 채팅 메시지·멤버 패널에서 **아바타 네모칸 우측 하단**에 프레즌스 점, 프론트는 `presence:set` 후 서버가 해당 소켓에만 `presence:snapshot`(전체 목록)을 내려 주고, 보조로 `GET /presence`·`presence:update`로 맞춤; 창 포커스·탭 복귀 시 재동기화(이미 **자리비움**이면 복귀 후에도 `AWAY` 유지). **좌측 하단** 본인 상태 줄 클릭 시 팝업에서 **온라인 / 자리비움(노란 점)** 선택 → `presence:set`
 - 관련 API:
   - `GET /presence` (현재 Presence 목록 조회)
 - 관련 Socket 이벤트:

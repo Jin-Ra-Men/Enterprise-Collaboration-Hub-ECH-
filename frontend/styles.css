@@ -331,8 +331,59 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   cursor: pointer;
 }
 .user-info { flex: 1; overflow: hidden; }
+.user-info-with-presence { position: relative; }
 .user-name { display: block; font-size: 14px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .user-status { font-size: 12px; color: var(--text-muted); }
+.user-status-trigger {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  text-align: left;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font: inherit;
+  padding: 2px 0 0;
+  margin: 0;
+  border-radius: 4px;
+}
+.user-status-trigger:hover {
+  color: var(--sidebar-item-fg-strong, var(--text-primary));
+}
+
+.sidebar-presence-menu {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 6px);
+  min-width: 168px;
+  padding: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  z-index: 100;
+}
+.sidebar-presence-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+}
+.sidebar-presence-option:hover {
+  background: var(--sidebar-item-hover-bg, var(--bg-message-hover));
+}
+.sidebar-presence-option .presence-dot {
+  flex-shrink: 0;
+}
 /* 본인 상태 한 줄당 점 하나(::before만 사용, 본문은 라벨만) */
 .user-status.online::before { content: "● "; color: var(--success); }
 .user-status.away::before { content: "● "; color: #fbbf24; }
