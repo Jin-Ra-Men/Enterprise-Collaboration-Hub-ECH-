@@ -13,6 +13,39 @@ BEGIN
     END IF;
 END $$;
 
+-- 0) Hibernate 등에서 이름이 임의로 붙은 FK를 먼저 제거해야 DROP COLUMN 이 동작한다.
+DO $$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN
+        SELECT DISTINCT c.conname, n.nspname AS sch, rel.relname AS tbl
+        FROM pg_constraint c
+        JOIN pg_class rel ON rel.oid = c.conrelid
+        JOIN pg_namespace n ON n.oid = rel.relnamespace
+        JOIN LATERAL (
+            SELECT a.attname
+            FROM unnest(c.conkey) AS ck(attnum)
+            JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ck.attnum
+        ) col ON true
+        WHERE c.contype = 'f'
+          AND c.confrelid = 'users'::regclass
+          AND (rel.relname, col.attname) IN (
+            ('channels', 'created_by'),
+            ('channel_members', 'user_id'),
+            ('channel_read_states', 'user_id'),
+            ('messages', 'sender_id'),
+            ('channel_files', 'uploaded_by'),
+            ('kanban_boards', 'created_by'),
+            ('kanban_card_assignees', 'user_id'),
+            ('kanban_card_events', 'actor_user_id'),
+            ('work_items', 'created_by')
+          )
+    LOOP
+        EXECUTE format('ALTER TABLE %I.%I DROP CONSTRAINT %I', r.sch, r.tbl, r.conname);
+    END LOOP;
+END $$;
+
 -- 1) channels.created_by
 ALTER TABLE channels ADD COLUMN IF NOT EXISTS created_by_emp VARCHAR(50);
 UPDATE channels c

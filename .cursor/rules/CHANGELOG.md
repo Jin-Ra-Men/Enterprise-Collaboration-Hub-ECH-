@@ -4,6 +4,9 @@
 
 ## 2026-03-30
 
+### Changed
+- `docs/sql/migrate_user_refs_id_to_employee_no.sql`: PostgreSQL에서 Hibernate 등이 생성한 임의 이름 FK가 남은 채 `DROP COLUMN` 하면 실패할 수 있어, 본문 전에 `users`/`users.id`를 참조하는 대상 컬럼 FK를 `DO` 블록으로 선제 제거
+
 ### Fixed
 - **로컬 PostgreSQL 레거시 스키마**: `channel_members.user_id`가 아직 `bigint`(`users.id`)인 DB에서 `GET /api/channels` JPQL이 `bigint = varchar`로 깨지던 문제 — `information_schema`로 컬럼 타입을 검사하고, 레거시일 때만 `users.id`로 조인하는 JDBC 보조 쿼리로 목록 조회 (`ChannelMemberUserIdColumnInspector`)
 - 채팅방 메시지·스레드 답글 로드: 레거시 DB처럼 `messages.sender_id` 또는 `channel_members.user_id`가 여전히 `bigint`(`users.id`)인 경우, 채널 메시지 목록·스레드 답글·멤버십 확인에서 JPA `JOIN`/`existsBy…EmployeeNo`가 `bigint = varchar`로 실패하던 문제 — Inspector로 `sender_id`/멤버 `user_id` 정수 FK 여부를 검사하고, 레거시일 때만 `users.id` 조인 JDBC로 `MessageResponse`를 조회·멤버십을 확인하도록 `MessageService` 보강
