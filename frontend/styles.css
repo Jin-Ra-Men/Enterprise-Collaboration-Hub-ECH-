@@ -265,6 +265,24 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   font-size: 18px;
   line-height: 1.15;
 }
+/* 퀵 레일 DM: 사이드바와 동일 data-presence-user 점( refreshPresenceDots 연동 ) */
+.quick-rail-link .quick-rail-dm-lead {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  width: 100%;
+  max-width: 52px;
+}
+.quick-rail-link .quick-rail-dm-lead .sidebar-dm-presence-wrap {
+  width: auto;
+  max-width: 50px;
+}
+.quick-rail-link .quick-rail-dm-lead .item-icon.dm-type-icon {
+  font-size: 13px;
+  line-height: 1;
+  opacity: 0.85;
+}
 .quick-rail-link .quick-rail-label {
   display: block;
   max-width: 52px;

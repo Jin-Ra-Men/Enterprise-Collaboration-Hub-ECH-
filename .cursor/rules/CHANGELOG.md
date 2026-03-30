@@ -4,6 +4,9 @@
 
 ## 2026-03-30
 
+### Added
+- 퀵 레일 **DM**에도 사이드바와 동일 **프레즌스 점**(`dmSidebarLeadingHtml`, `refreshPresenceDots`)
+
 ### Changed
 - **퀵 레일 위치**: `#quickContainer`를 `mainApp` 형제에서 **사이드바 내부** `.sidebar-body`로 이동 — **ECH 워크스페이스 헤더 전폭 최상단**, 퀵은 **검색~채널/DM 목록과 같은 세로 구간**만 차지(프로필 바 제외). 펼침 너비 **324px**(64+260).
 - **퀵 목록 로직**: 미읽음만 표시 → **미읽음 우선 정렬 후 최근 대화**까지 최대 15개(`QUICK_RAIL_MAX_ITEMS`), 배지는 미읽음에만.

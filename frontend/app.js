@@ -1140,13 +1140,15 @@ function renderQuickUnreadList(channels) {
         : ch.name;
     btn.dataset.channelName = displayName;
     const badgeTxt = formatUnreadBadgeCount(Number(ch.unreadCount ?? 0));
-    const iconChar =
-      ch.channelType === "DM" ? "●" : ch.channelType === "PRIVATE" ? "🔒" : "#";
     const cap = quickRailCaption(displayName);
     const badgeHtml = badgeTxt
       ? `<em class="quick-rail-badge" aria-hidden="true">${escHtml(badgeTxt)}</em>`
       : "";
-    btn.innerHTML = `<span class="quick-rail-icon">${iconChar}</span><span class="quick-rail-label">${escHtml(cap)}</span>${badgeHtml}`;
+    const leadHtml =
+      ch.channelType === "DM"
+        ? `<span class="quick-rail-dm-lead">${dmSidebarLeadingHtml(ch.dmPeerEmployeeNos)}</span>`
+        : `<span class="quick-rail-icon">${ch.channelType === "PRIVATE" ? "🔒" : "#"}</span>`;
+    btn.innerHTML = `${leadHtml}<span class="quick-rail-label">${escHtml(cap)}</span>${badgeHtml}`;
     btn.setAttribute("data-tooltip-title", displayName);
     btn.title = displayName;
     const al = badgeTxt
