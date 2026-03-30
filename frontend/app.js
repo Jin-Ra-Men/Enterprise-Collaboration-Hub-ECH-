@@ -256,7 +256,7 @@ function toggleSidebarPresenceMenu() {
 
 /** 본인 프레즌스 전송(온라인 / 자리비움). 서버·타 사용자에 `presence:update` 반영 */
 function emitMyPresenceStatus(status) {
-  const raw = String(status || "").toUpperCase();
+  const raw = String(status ?? "").trim().toUpperCase();
   if (raw !== "ONLINE" && raw !== "AWAY") return;
   if (!currentUser?.employeeNo) return;
   const emp = String(currentUser.employeeNo).trim();
@@ -2550,20 +2550,18 @@ function initEvents() {
     document.getElementById("sidebarPresenceMenu")?.addEventListener("click", (e) => {
       const opt = e.target.closest(".sidebar-presence-option");
       if (!opt) return;
-      const st = opt.dataset.presenceStatus;
+      e.preventDefault();
+      e.stopPropagation();
+      const st = opt.getAttribute("data-presence-status") || opt.dataset.presenceStatus;
       if (st) emitMyPresenceStatus(st);
     });
-    document.addEventListener(
-      "click",
-      (e) => {
-        const menuEl = document.getElementById("sidebarPresenceMenu");
-        const btnEl = document.getElementById("sidebarUserStatus");
-        if (!menuEl || menuEl.classList.contains("hidden")) return;
-        if (menuEl.contains(e.target) || btnEl?.contains(e.target)) return;
-        closeSidebarPresenceMenu();
-      },
-      true
-    );
+    document.addEventListener("click", (e) => {
+      const menuEl = document.getElementById("sidebarPresenceMenu");
+      const btnEl = document.getElementById("sidebarUserStatus");
+      if (!menuEl || menuEl.classList.contains("hidden")) return;
+      if (menuEl.contains(e.target) || btnEl?.contains(e.target)) return;
+      closeSidebarPresenceMenu();
+    });
   }
 
   // 사이드바 섹션 접기/펼치기

@@ -10,6 +10,7 @@
 - **채널/DM 미읽음 배지**: `GET /api/channels` 요약에 `unreadCount`(멤버별 `channel_read_states` 이후 **루트 메시지** 건수), `MessageRepository.countRootMessagesAfter`; 프론트 사이드바 빨간 원형 숫자(99+ 상한), 채팅 로드·실시간 `message:new`/`channel:system`(열람 중)·API 전송 폴백 시 `PUT .../read-state`, 타 채널 메시지는 디바운스 목록 갱신·윈도우 포커스 시 갱신
 
 ### Fixed
+- **프레즌스 상태 메뉴 미표시/미적용**: 메뉴를 `user-info` 밖(`sidebar-user-presence-host`)으로 옮겨 잘림 방지; 목록에서 항목 선택 시만 적용(토글 아님); 옵션 `stopPropagation`·`data-presence-status` 읽기; 바깥 닫기는 bubble
 - **멀티 창·계정 프레즌스 어긋남**: `presence:set` 직후 해당 소켓에 `presence:snapshot`으로 서버 전체 상태 전달, 로그인 시 프레즌스 맵 초기화, 연결 시 `presence:set`→`GET /presence` 순서 정리, 창 포커스·`visibilitychange` 시 스냅샷+`presence:set` 재동기화(`scheduleSidebarAndPresenceSync`) — `realtime/src/server.js`, `frontend/app.js`
 - **실시간 채팅 날짜 구분선·같은 분 묶음**: `appendMessageRealtime`가 `lastElementChild`만 보다 시스템 메시지 직후에는 직전 채팅 행을 못 찾아 날짜 변경 시 구분선 미표시·아바타/시간 묶음이 어긋나던 문제 — `findLastChatRowIn`/`lastTimelineDateKey`로 판단; `channel:system`은 `createdAt` 있을 때 구분선 정합(`appendSystemMsg`)
 - **DM 사이드바 표시명**: `GET /api/channels` 요약의 `description`이 DM 생성 시 한쪽 기준으로만 저장되어 상대 계정에선 자기 이름만 보이던 문제 — `channelType=DM`일 때 조회 중인 `employeeNo`를 제외한 멤버 표시명을 요약 `description`으로 계산 (`getMyChannels`)

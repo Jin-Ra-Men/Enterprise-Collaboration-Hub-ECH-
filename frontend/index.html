@@ -88,35 +88,35 @@
           </ul>
         </div>
 
-        <!-- 사용자 프로필 -->
-        <div class="sidebar-user">
+        <!-- 사용자 프로필 (프레즌스 메뉴는 행 기준으로 위로 뜨도록 이 블록에 둠 — user-info overflow 제한 회피) -->
+        <div class="sidebar-user sidebar-user-presence-host">
           <div class="user-avatar" id="sidebarAvatar">?</div>
-          <div class="user-info user-info-with-presence">
+          <div class="user-info">
             <span class="user-name" id="sidebarUserName">-</span>
             <button
               type="button"
               class="user-status user-status-trigger online"
               id="sidebarUserStatus"
-              title="클릭하여 상태 변경"
+              title="상태 선택 (온라인 · 자리비움)"
               aria-haspopup="menu"
               aria-expanded="false"
               aria-controls="sidebarPresenceMenu"
             >
               온라인
             </button>
-            <div class="sidebar-presence-menu hidden" id="sidebarPresenceMenu" role="menu" aria-label="내 프레즌스">
-              <button type="button" class="sidebar-presence-option" data-presence-status="ONLINE" role="menuitem">
-                <span class="presence-dot presence-online" aria-hidden="true"></span>
-                <span>온라인</span>
-              </button>
-              <button type="button" class="sidebar-presence-option" data-presence-status="AWAY" role="menuitem">
-                <span class="presence-dot presence-away" aria-hidden="true"></span>
-                <span>자리비움</span>
-              </button>
-            </div>
           </div>
           <button id="themeSettingsBtn" class="btn-sidebar-gear" title="테마 설정" aria-label="테마 설정">⚙</button>
           <button id="logoutBtn" class="btn-sidebar-logout" title="로그아웃">⏏</button>
+          <div class="sidebar-presence-menu hidden" id="sidebarPresenceMenu" role="menu" aria-label="내 프레즌스">
+            <button type="button" class="sidebar-presence-option" data-presence-status="ONLINE" role="menuitem">
+              <span class="presence-dot presence-online" aria-hidden="true"></span>
+              <span>온라인</span>
+            </button>
+            <button type="button" class="sidebar-presence-option" data-presence-status="AWAY" role="menuitem">
+              <span class="presence-dot presence-away" aria-hidden="true"></span>
+              <span>자리비움</span>
+            </button>
+          </div>
         </div>
       </aside>
 

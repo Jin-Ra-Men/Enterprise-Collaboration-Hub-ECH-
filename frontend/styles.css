@@ -319,6 +319,12 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   border-top: 1px solid var(--sidebar-border);
   background: var(--sidebar-user-bg);
 }
+/** 프레즌스 드롭업이 .user-info overflow:hidden 에 잘리지 않도록 행 단위 기준 */
+.sidebar-user-presence-host {
+  position: relative;
+  overflow: visible;
+  z-index: 20;
+}
 .user-avatar {
   width: 34px; height: 34px;
   border-radius: 8px;
@@ -330,8 +336,7 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   flex-shrink: 0;
   cursor: pointer;
 }
-.user-info { flex: 1; overflow: hidden; }
-.user-info-with-presence { position: relative; }
+.user-info { flex: 1; overflow: hidden; min-width: 0; }
 .user-name { display: block; font-size: 14px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .user-status { font-size: 12px; color: var(--text-muted); }
 .user-status-trigger {
@@ -353,28 +358,30 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 
 .sidebar-presence-menu {
   position: absolute;
-  left: 0;
+  left: 8px;
+  right: 8px;
   bottom: calc(100% + 6px);
-  min-width: 168px;
-  padding: 6px;
+  min-width: 0;
+  padding: 4px;
   background: var(--bg-elevated);
   border: 1px solid var(--sidebar-border);
   border-radius: 8px;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
-  z-index: 100;
+  z-index: 30;
+  font-size: 13px;
 }
 .sidebar-presence-option {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
-  padding: 8px 10px;
+  padding: 7px 9px;
   border: none;
   border-radius: 6px;
   background: transparent;
   color: var(--text-primary);
   font: inherit;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   text-align: left;
 }
