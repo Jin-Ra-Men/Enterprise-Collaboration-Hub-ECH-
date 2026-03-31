@@ -55,7 +55,7 @@ async function saveMessage({ channelId, senderEmployeeNo, body }, retries = 3) {
     WHERE cm.channel_id = $1
       AND (
         cm.user_id::text = $2
-        OR EXISTS (SELECT 1 FROM users u WHERE u.id = cm.user_id AND u.employee_no = $2)
+        OR EXISTS (SELECT 1 FROM users u WHERE u.id::text = cm.user_id::text AND u.employee_no = $2)
       )
     `,
     [channelId, emp]
@@ -168,7 +168,7 @@ async function filterEmployeeNosInChannel(channelId, employeeNos) {
     SELECT DISTINCT
       COALESCE(u.employee_no, cm.user_id::text) AS employee_no
     FROM channel_members cm
-    LEFT JOIN users u ON u.id = cm.user_id
+    LEFT JOIN users u ON u.id::text = cm.user_id::text
     WHERE cm.channel_id = $1
       AND (
         cm.user_id::text = ANY($2::text[])
