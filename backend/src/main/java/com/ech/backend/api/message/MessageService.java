@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -80,6 +81,9 @@ public class MessageService {
             replyToPreview = previewForReplyTargetBody(replyToBody);
         }
 
+        String replyToSenderName = isReply ? rs.getString("reply_to_sender_name") : null;
+
+        Integer threadCommentCount = isReply ? null : 0;
         return new MessageTimelineItemResponse(
                 rs.getLong("message_id"),
                 rs.getLong("channel_id"),
@@ -93,7 +97,11 @@ public class MessageService {
                 replyToMessageId,
                 replyToKind,
                 replyToRootMessageId,
-                replyToPreview
+                replyToPreview,
+                replyToSenderName,
+                threadCommentCount,
+                null,
+                null
         );
     };
 
@@ -395,10 +403,12 @@ public class MessageService {
                                    m.message_type,
                                    pm.id AS reply_to_message_id,
                                    pm.parent_message_id AS reply_to_parent_message_id,
-                                   pm.body AS reply_to_body
+                                   pm.body AS reply_to_body,
+                                   pu.name AS reply_to_sender_name
                             FROM messages m
                             INNER JOIN users u ON u.id = m.sender_id
                             LEFT JOIN messages pm ON pm.id = m.parent_message_id
+                            LEFT JOIN users pu ON pu.id = pm.sender_id
                             WHERE m.channel_id = ?
                               AND m.archived_at IS NULL
                               AND m.is_deleted = false
@@ -411,7 +421,7 @@ public class MessageService {
                     cap
             );
             Collections.reverse(rows);
-            return rows;
+            return attachThreadCommentSummaries(rows);
         }
 
         List<Message> messages = messageRepository.findTimelineByChannelId(
@@ -419,7 +429,7 @@ public class MessageService {
                 PageRequest.of(0, cap)
         );
         Collections.reverse(messages);
-        return messages.stream().map(m -> {
+        List<MessageTimelineItemResponse> mapped = messages.stream().map(m -> {
             Long parentMessageId = m.getParentMessage() == null ? null : m.getParentMessage().getId();
             boolean isReply = parentMessageId != null && m.getMessageType() != null && m.getMessageType().toUpperCase().startsWith("REPLY");
 
@@ -437,6 +447,10 @@ public class MessageService {
                         null,
                         null,
                         null,
+                        null,
+                        null,
+                        0,
+                        null,
                         null
                 );
             }
@@ -445,6 +459,7 @@ public class MessageService {
             Message replyToParent = replyTo.getParentMessage(); // null이면 ROOT
             Long replyToRootMessageId = replyToParent == null ? replyTo.getId() : replyToParent.getId();
             String replyToKind = replyToParent == null ? "ROOT" : "COMMENT";
+            String replyTargetAuthor = replyTo.getSender() != null ? replyTo.getSender().getName() : null;
 
             return new MessageTimelineItemResponse(
                     m.getId(),
@@ -459,9 +474,85 @@ public class MessageService {
                     replyTo.getId(),
                     replyToKind,
                     replyToRootMessageId,
-                    previewForReplyTargetBody(replyTo.getBody())
+                    previewForReplyTargetBody(replyTo.getBody()),
+                    replyTargetAuthor,
+                    null,
+                    null,
+                    null
             );
         }).toList();
+        return attachThreadCommentSummaries(mapped);
+    }
+
+    private List<MessageTimelineItemResponse> attachThreadCommentSummaries(List<MessageTimelineItemResponse> items) {
+        List<Long> rootIds = items.stream()
+                .filter(i -> !i.isReply())
+                .map(MessageTimelineItemResponse::messageId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, ThreadCommentAgg> aggByRoot = aggregateThreadCommentsForRoots(rootIds);
+        return items.stream()
+                .map(i -> {
+                    if (i.isReply()) {
+                        return i;
+                    }
+                    ThreadCommentAgg a = aggByRoot.get(i.messageId());
+                    int c = a == null ? 0 : a.count;
+                    OffsetDateTime lastAt = c > 0 && a != null ? a.lastAt : null;
+                    String lastSender = c > 0 && a != null ? a.lastSenderName : null;
+                    return new MessageTimelineItemResponse(
+                            i.messageId(),
+                            i.channelId(),
+                            i.senderId(),
+                            i.senderName(),
+                            i.parentMessageId(),
+                            i.text(),
+                            i.createdAt(),
+                            i.messageType(),
+                            false,
+                            i.replyToMessageId(),
+                            i.replyToKind(),
+                            i.replyToRootMessageId(),
+                            i.replyToPreview(),
+                            i.replyToSenderName(),
+                            c,
+                            lastAt,
+                            lastSender
+                    );
+                })
+                .toList();
+    }
+
+    private Map<Long, ThreadCommentAgg> aggregateThreadCommentsForRoots(List<Long> rootIds) {
+        if (rootIds.isEmpty()) {
+            return Map.of();
+        }
+        List<Message> comments = messageRepository.findCommentsUnderRootMessages(rootIds);
+        Map<Long, ThreadCommentAgg> map = new HashMap<>();
+        for (Message cm : comments) {
+            if (cm.getParentMessage() == null) {
+                continue;
+            }
+            Long rid = cm.getParentMessage().getId();
+            map.computeIfAbsent(rid, k -> new ThreadCommentAgg()).accept(cm);
+        }
+        return map;
+    }
+
+    private static final class ThreadCommentAgg {
+        private int count;
+        private OffsetDateTime lastAt;
+        private String lastSenderName;
+
+        void accept(Message cm) {
+            count++;
+            OffsetDateTime t = cm.getCreatedAt();
+            if (lastAt == null || t.isAfter(lastAt)) {
+                lastAt = t;
+                lastSenderName = cm.getSender() != null ? cm.getSender().getName() : null;
+            }
+        }
     }
 
     private boolean isUserMemberOfChannel(Long channelId, String employeeNo) {

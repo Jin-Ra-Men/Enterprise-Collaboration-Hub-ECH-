@@ -289,7 +289,7 @@
 - 관련 화면/경로: 채널 메시지 목록, 스레드 패널
 - 관련 API:
   - `GET /api/channels/{channelId}/messages?employeeNo=...&limit=` (채널 **루트** 메시지 목록)
-  - `GET /api/channels/{channelId}/messages/timeline?employeeNo=...&limit=` (메인 타임라인: 루트 + `REPLY_*` 답글, `isReply`·`replyTo*` 메타 포함)
+  - `GET /api/channels/{channelId}/messages/timeline?employeeNo=...&limit=` (메인 타임라인: 루트 + `REPLY_*` 답글, `isReply`·`replyTo*`·**`replyToSenderName`**(답장 대상 작성자 표시명)·`replyToPreview` 메타 포함)
   - `POST /api/channels/{channelId}/messages` (부모 메시지 생성)
   - `POST /api/channels/{channelId}/messages/{parentMessageId}/replies` (답글 생성)
   - `POST /api/channels/{channelId}/messages/{parentMessageId}/comments` (댓글 생성, `COMMENT_*`)

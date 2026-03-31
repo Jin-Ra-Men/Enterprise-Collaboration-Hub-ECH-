@@ -2008,13 +2008,20 @@ function createReplyTimelineRowElement(tlMsg, { showAvatar, showTime }) {
   }
 
   const preview = String(tlMsg.replyToPreview || "").trim();
-  const jumpLabel = preview || (tlMsg.replyToKind === "COMMENT" ? "댓글" : "원글");
+  const fallbackKind = tlMsg.replyToKind === "COMMENT" ? "댓글" : "원글";
+  const targetName = String(
+    tlMsg.replyToSenderName ?? tlMsg.reply_to_sender_name ?? ""
+  ).trim();
+  const titleName = targetName || fallbackKind;
+  const snippet = preview || "(미리보기 없음)";
 
   const replyToBlock = document.createElement("div");
   replyToBlock.className = "msg-reply-to";
   replyToBlock.innerHTML = `
-    <span class="msg-reply-to-label">답글 대상</span>
-    <button type="button" class="msg-reply-to-jump">${escHtml(jumpLabel)}</button>
+    <button type="button" class="msg-reply-to-card" aria-label="답장 대상으로 이동">
+      <div class="msg-reply-to-card-title">${escHtml(titleName)}에게 답장</div>
+      <div class="msg-reply-to-card-snippet">${escHtml(snippet)}</div>
+    </button>
   `;
 
   const body = row.querySelector(".msg-body");
@@ -2024,9 +2031,9 @@ function createReplyTimelineRowElement(tlMsg, { showAvatar, showTime }) {
     else body.prepend(replyToBlock);
   }
 
-  const jumpBtn = row.querySelector(".msg-reply-to-jump");
-  if (jumpBtn) {
-    jumpBtn.addEventListener("click", (e) => {
+  const cardBtn = replyToBlock.querySelector(".msg-reply-to-card");
+  if (cardBtn) {
+    cardBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
       jumpToReplyTarget({

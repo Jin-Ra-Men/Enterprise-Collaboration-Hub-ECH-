@@ -23,7 +23,16 @@ public record MessageTimelineItemResponse(
         Long replyToMessageId,
         String replyToKind, // "ROOT" | "COMMENT"
         Long replyToRootMessageId,
-        String replyToPreview
+        String replyToPreview,
+        /** REPLY 전용: 답장 대상(부모) 메시지 작성자 표시명 */
+        String replyToSenderName,
+
+        /** ROOT 전용: 해당 원글에 달린 댓글(COMMENT_*) 개수. REPLY 행은 null. */
+        Integer threadCommentCount,
+        /** ROOT 전용: 가장 최근 댓글 시각 */
+        OffsetDateTime lastCommentAt,
+        /** ROOT 전용: 가장 최근 댓글 작성자 표시명 */
+        String lastCommentSenderName
 ) {
 }
 
