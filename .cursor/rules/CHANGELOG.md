@@ -14,6 +14,8 @@
 - 스레드 모달 댓글 입력창: 가로 폭을 최대화하도록 CSS 조정
 - 채팅방 멤버 패널: 조직/직급 값이 비어있을 때 직위/직책 fallback으로 최소 정보 노출
 - 멘션 토스트: Realtime 서버에서 멘션 수신자를 채널 멤버로 필터할 때 DB 타입 차이(bigint vs employee_no)로 인해 누락되던 문제 수정
+- Realtime 멘션 수신자 필터: `channel_members.user_id`가 `users.id(bigint)`로 저장된 경우에도 `employee_no`로 정규화해 정확히 토스트 전송
+- 채널 멤버의 조직/직급 표시: `org_group_members.member_group_type` 대소문자 불일치에 대비해 memberGroupType 비교를 case-insensitive로 보강
 - 멘션 입력 UX: 자동완성 선택 시 입력창에는 `@임보안`만 보이고, 전송 시에만 `@{emp|임보안}` 토큰으로 변환
 
 ### Added

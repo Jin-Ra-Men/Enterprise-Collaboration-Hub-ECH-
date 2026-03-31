@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-03-31 — `./gradlew test` 실패 (JVM 8 실행)
+
+- **에러 요약**: `backend/./gradlew.bat test` 실행 시 Spring Boot Gradle plugin 요구 버전 미충족으로 빌드 실패
+- **발생 위치(파일/명령/기능)**: 명령 `backend/./gradlew.bat test`
+- **원인**: 이 셸에서 JVM이 Java 8로 실행되어 프로젝트 요구사항(Java 17+)을 만족하지 못함
+- **해결/현재 상태**: `JAVA_HOME`을 JDK 17으로 지정 후 재실행하여 `./gradlew test`는 통과(BUILD SUCCESSFUL)
+
+---
+
 ## 2026-03-27 — DM 생성 실패 (channels channel_type 체크 제약)
 
 - **에러 요약**: DM 생성 API(`POST /api/channels`, `channelType=DM`) 호출 시 내부 오류 발생
