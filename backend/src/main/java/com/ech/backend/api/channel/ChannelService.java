@@ -239,11 +239,24 @@ public class ChannelService {
     }
 
     @Transactional
-    public ChannelResponse joinChannel(Long channelId, JoinChannelRequest request) {
+    public ChannelResponse joinChannel(Long channelId, UserPrincipal principal, JoinChannelRequest request) {
+        if (principal == null || principal.employeeNo() == null || principal.employeeNo().isBlank()) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        String actorEmp = principal.employeeNo().trim();
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new IllegalArgumentException("채널을 찾을 수 없습니다."));
         User user = userRepository.findByEmployeeNo(request.employeeNo())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+        User creator = channel.getCreatedBy();
+        String creatorEmp = creator != null && creator.getEmployeeNo() != null
+                ? creator.getEmployeeNo().trim()
+                : "";
+        boolean isDm = channel.getChannelType() == ChannelType.DM;
+        if (!isDm && !creatorEmp.equals(actorEmp)) {
+            throw new ForbiddenException("채널 개설자만 구성원을 추가할 수 있습니다.");
+        }
 
         if (channelMemberRepository.existsByChannelIdAndUserEmployeeNo(channelId, request.employeeNo())) {
             throw new IllegalArgumentException("이미 채널에 참여한 사용자입니다.");

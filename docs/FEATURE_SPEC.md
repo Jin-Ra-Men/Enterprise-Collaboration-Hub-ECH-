@@ -107,7 +107,7 @@
   - `GET /api/channels?employeeNo=...` (내 채널/DM 목록 — **DM**의 `description`은 DB 저장값이 아니라 요청 `employeeNo`(본인)을 제외한 참가자 표시명을 서버가 매번 계산; **`unreadCount`** 는 본인 읽음 포인터 이후의 **루트 메시지** 건수로 계산해 사이드바 빨간 배지에 표시; **`lastMessageAt`** 는 채널별 루트 메시지 기준 최신 `created_at`(메시지 없으면 `null`); **`dmPeerEmployeeNos`** 는 DM만 조회자를 제외한 참가자 **사번** 배열(정렬) — 사이드바 DM 줄 프레즌스 점에 사용)
   - `POST /api/channels` (채널 생성)
   - `GET /api/channels/{channelId}` (채널 상세 조회)
-  - `POST /api/channels/{channelId}/members` (채널 참여)
+  - `POST /api/channels/{channelId}/members` (구성원 추가 — **PUBLIC/PRIVATE는 채널 개설자만**, **DM은 멤버면 누구나** 가능)
   - `DELETE /api/channels/{channelId}/members?targetEmployeeNo=...` (멤버 내보내기 — **JWT 사원번호가 채널 `created_by`인 개설자만**; 대상이 개설자이면 400; 비개설자면 403; 해당 멤버가 아니면 400)
 - 관련 Socket 이벤트: 추후 `channel:join`과 연계 예정
 - 입력/출력:
@@ -120,6 +120,9 @@
   - 이미 참여한 사용자 재참여 시 예외
   - 생성 시 생성자는 자동으로 `MANAGER` 멤버십 부여
   - 내보내기 시 대상 사용자 `channel_read_states` 행 삭제 후 `channel_members` 행 삭제; 감사 `CHANNEL_MEMBER_REMOVED`; 동일 트랜잭션에서 `messages`에 `message_type=SYSTEM` 본문(내보내진 사용자 표시명 포함) 저장, 커밋 후 Realtime **내부 HTTP**로 `channel:system` 브로드캐스트 → 모든 접속 클라이언트가 채팅에 동일 시스템 줄 표시·재조회 시에도 유지
+  - 구성원 추가 권한:
+    - 채널 타입이 `DM`이 아니면 `created_by`와 JWT 사번이 같은 개설자만 허용(아니면 403)
+    - 채널 타입이 `DM`이면 기존 멤버 권한 범위에서 추가 허용
 - 권한/보안:
   - 현재는 기본 도메인 동작 중심 (인증/인가 고도화는 다음 단계)
 - 로그/감사 포인트:
@@ -675,6 +678,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 - 입력/출력:
   - **통합 피커**: 채널 생성·DM 생성·구성원 추가 모두 **동일한 `+` 버튼 기반 팝업**(`modalAddMemberPicker`)을 사용합니다. 팝업에서 좌측 조직도(회사>본부>팀) + 우측 검색/결과로 사용자 선택 후 상위 모달의 선택 태그에 반영됩니다.
   - 멤버 패널: `department`·`jobLevel`을 한 줄 요약, `jobPosition`·`jobTitle`은 값이 있을 때만 추가 표시
+  - 멤버 패널: 개설자 사번(`createdByEmployeeNo`)과 일치하는 멤버에 `개설자` 배지 표시
   - 파일 업로드 성공 시: 일반 텍스트 메시지와 동일한 **메시지 행**(아바타·발신자·시간) 안에 첨부 인라인 표시 — **이미지**(`contentType` 또는 확장자 기준)는 썸네일 + 클릭 시 확대 모달(`modalImagePreview`) + 모달 내 다운로드, 그 외는 파일명·크기·다운로드 버튼 행
   - 채팅 패널(`#viewChat`) 포커스 상태에서 클립보드에 이미지가 있으면 **붙여넣기(Ctrl+V)** 로 로컬 파일 선택과 동일하게 첨부 미리보기에 올린 뒤 전송 버튼(또는 Enter)으로 업로드·`FILE` 메시지 생성(열린 모달·`modal-overlay` 포커스일 때는 기본 붙여넣기 유지)
   - **날짜 구분선**: 초기 목록(`renderMessages`)과 동일하게 로컬 날짜가 바뀔 때 pill 표시. **실시간**(`appendMessageRealtime`)은 마지막 DOM 형제가 시스템 메시지여도 뒤에서 마지막 채팅 행·이전 날짜 키를 찾아 구분선·같은 분 묶음을 맞춤; `channel:system`은 서버 `createdAt`이 있을 때 구분선 정합

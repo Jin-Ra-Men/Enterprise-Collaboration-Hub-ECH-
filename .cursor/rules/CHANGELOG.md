@@ -28,6 +28,8 @@
 - 채팅 발신자 헤더: 이름 아래 줄이 아니라 이름 옆(같은 줄)으로 조직/직급(`msg-sender-sub`) 배치
 - 멤버 패널: 조직/직급 중복 표시 제거(`member-org-line`만 유지), 직위/직책(`member-position-txt`/`member-duty-txt`)은 조직/직급 라인 다음에 표시하도록 순서 조정
 - 채널 진입/갱신 시 조직/직급 라벨 안정화: `loadChannelMembers` 완료 후 기존 메시지 DOM의 발신자 라벨을 재동기화(`syncSenderOrgLabelsInMessageList`)하고, `selectChannel`에서 멤버 로드 완료를 기다려 표시가 나왔다/안나왔다 반복되는 현상 완화
+- 채널 구성원 추가 권한: `POST /api/channels/{channelId}/members`에서 PUBLIC/PRIVATE는 개설자만 허용, DM은 개설자 여부와 무관하게 허용
+- 우측 멤버 패널: 채널 개설자에게 `개설자` 배지 노출, 구성원 추가 버튼은 권한 없을 때 숨김(채널 진입 시 기본 숨김 후 멤버 로드 시 규칙 적용)
 - 멘션 입력 UX: 자동완성 선택 시 입력창에는 `@임보안`만 보이고, 전송 시에만 `@{emp|임보안}` 토큰으로 변환
 
 ### Added

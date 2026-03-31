@@ -116,6 +116,7 @@
   - `POST /api/channels` — 생성자는 JWT에서 식별: **`uid` 클레임(= `users.id`) 우선**, 없으면 사원번호, 레거시 토큰은 숫자-only subject를 DB id로 폴백(숫자 사번과 충돌 시 재로그인 권장). body는 `workspaceKey`, `name`, `channelType` 등, 선택 `createdByEmployeeNo`(하위 호환), DM 시 `dmPeerEmployeeNos` (`CreateChannelRequest`)
   - `GET /api/channels/{channelId}`
   - `POST /api/channels/{channelId}/members` — body: `employeeNo`, `memberRole` (`JoinChannelRequest`)
+    - 권한: `PUBLIC/PRIVATE`는 채널 개설자(`created_by`)만 추가 가능, `DM`은 개설자가 아니어도 멤버 추가 가능
   - `DELETE /api/channels/{channelId}/members?targetEmployeeNo=...` — **개설자(`created_by` = JWT 사원번호)만** 다른 멤버 제거; 본인(개설자) 제거는 400
   - `GET /api/channels/{channelId}/read-state?employeeNo=...`
   - `PUT /api/channels/{channelId}/read-state` — body: `employeeNo`, `lastReadMessageId`
@@ -163,6 +164,7 @@
 - 채널 **생성** 시 `createdByEmployeeNo`는 자동으로 해당 채널 멤버(`MANAGER`)로 등록됩니다.
 - **DM** 생성 시 `dmPeerEmployeeNos`에 상대 사번 목록을 넣습니다(프론트 `startDmWithUser`).
 - **멤버 추가**는 `POST .../members` body의 `employeeNo` + `memberRole`입니다.
+- **멤버 추가 권한**: 일반 채널(PUBLIC/PRIVATE)은 개설자만, DM은 멤버면 추가 가능.
 - 채널명은 워크스페이스 기준으로 유니크합니다. (`workspaceKey + name`)
 - 멤버 중복 참여는 서버에서 차단합니다.
 - DB 컬럼명 `channel_members.user_id` 등은 역사적 이름이며, **값은 `users.employee_no`** 와 FK로 연결됩니다(스키마 초안·마이그레이션 참고).

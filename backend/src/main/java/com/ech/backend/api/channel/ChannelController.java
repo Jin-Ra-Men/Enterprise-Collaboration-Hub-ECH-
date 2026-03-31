@@ -56,10 +56,14 @@ public class ChannelController {
     @PostMapping("/{channelId}/members")
     @RequireRole(AppRole.MEMBER)
     public ApiResponse<ChannelResponse> joinChannel(
+            @AuthenticationPrincipal UserPrincipal principal,
             @PathVariable Long channelId,
             @Valid @RequestBody JoinChannelRequest request
     ) {
-        return ApiResponse.success(channelService.joinChannel(channelId, request));
+        if (principal == null) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        return ApiResponse.success(channelService.joinChannel(channelId, principal, request));
     }
 
     /**

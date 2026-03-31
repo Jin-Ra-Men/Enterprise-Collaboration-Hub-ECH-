@@ -1305,6 +1305,7 @@ async function selectChannel(channelId, channelName, channelType) {
   document.getElementById("chatMemberCount").textContent   = "";
   document.getElementById("memberPanel").classList.add("hidden");
   document.getElementById("memberList").innerHTML = "";
+  document.getElementById("btnAddMembersLater")?.classList.add("hidden");
 
   showView("viewChat");
   messagesEl.innerHTML = "";
@@ -1456,6 +1457,9 @@ async function loadChannelMembers(channelId) {
     listEl.innerHTML = "";
     const myEmp = currentUser ? String(currentUser.employeeNo || "").trim() : "";
     const canKickOthers = myEmp !== "" && creatorEmp !== "" && myEmp === creatorEmp;
+    const canAddMembers = String(activeChannelType || "").toUpperCase() === "DM" || canKickOthers;
+    const addBtn = document.getElementById("btnAddMembersLater");
+    if (addBtn) addBtn.classList.toggle("hidden", !canAddMembers);
 
     const normalizeOrgValueForDisplay = (v) => {
       const s = v == null ? "" : String(v).trim();
@@ -1490,6 +1494,9 @@ async function loadChannelMembers(channelId) {
           ? `<span class="member-duty-txt">${escHtml(jobTitle)}</span>`
           : "";
       const showKick = canKickOthers && emp !== "" && emp !== creatorEmp;
+      const ownerBadgeHtml = emp !== "" && emp === creatorEmp
+        ? `<span class="member-role-badge owner">개설자</span>`
+        : "";
       const kickBtnHtml = showKick
         ? `<button type="button" class="btn-member-kick" data-kick-emp="${escHtml(emp)}" data-kick-name="${escHtml(m.name || emp)}" title="채널에서 내보내기">내보내기</button>`
         : "";
@@ -1504,6 +1511,7 @@ async function loadChannelMembers(channelId) {
           <button type="button" class="member-profile-btn" data-employee-no="${escHtml(emp)}">
             <span class="member-name-wrap">
               <span class="member-name-txt">${escHtml(m.name || "알 수 없음")}</span>
+              ${ownerBadgeHtml}
             </span>
           </button>
           <div class="member-org-line">${escHtml(orgLine)}</div>
