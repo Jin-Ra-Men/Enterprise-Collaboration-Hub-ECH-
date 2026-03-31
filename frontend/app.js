@@ -1475,7 +1475,7 @@ async function loadChannelMembers(channelId) {
         <button type="button" class="member-profile-btn" data-employee-no="${escHtml(emp)}">
           <span class="member-name-wrap">
             <span class="member-name-txt">${escHtml(m.name || "알 수 없음")}</span>
-            <span class="member-org-txt">${escHtml(orgLine)}</span>
+            <span class="member-org-txt" title="${escHtml(orgLine)}">조직/직급: ${escHtml(orgLine)}</span>
             ${posHtml}
             ${dutyHtml}
           </span>

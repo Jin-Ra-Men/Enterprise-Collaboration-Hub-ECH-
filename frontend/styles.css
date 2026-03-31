@@ -1943,8 +1943,26 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
 }
 .member-name-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .member-name-wrap { display: inline-flex; flex-direction: column; min-width: 0; }
-.member-org-txt { font-size: 12px; color: var(--text-muted); }
-.member-duty-txt { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.member-org-txt {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+.member-position-txt {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.member-duty-txt {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
 
 /* 프로필 모달 */
 .profile-body { text-align: center; }

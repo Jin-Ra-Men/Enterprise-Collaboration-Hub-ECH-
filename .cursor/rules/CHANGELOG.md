@@ -20,6 +20,7 @@
 - 채팅 발화 구분: 시스템 메시지/날짜선 바로 뒤에서 같은 사용자가 말해도 새 발화(avatar/time 묶음)가 시작되도록 realtime 렌더 경계 처리 보강
 - 채팅방 멤버 패널: `department/jobLevel`에 placeholder(예: `TEAM`) 값이 내려오는 경우 비워서 frontend fallback(직위/직책 표시)되게 처리
 - 채널 멤버 조직/직급 조회: `member_group_type` 비교를 `TRIM+LOWER`로 강화하고, JPA 누락 시 `org_group_members + org_groups` JDBC fallback 조회로 보강
+- 채팅방 멤버 패널 UI: 조직/직급 텍스트를 `조직/직급: ...` 형식으로 명확히 노출하고 스타일(색/굵기/블록) 가시성을 강화
 - 멘션 입력 UX: 자동완성 선택 시 입력창에는 `@임보안`만 보이고, 전송 시에만 `@{emp|임보안}` 토큰으로 변환
 
 ### Added
