@@ -5,6 +5,7 @@
 ## 2026-03-31
 
 ### Fixed
+- 검색 결과 인터랙션: 메시지/댓글 결과 클릭 시 해당 채널·메시지 포커스 이동, 파일 결과 클릭 시 다운로드, 이미지 파일은 확대 미리보기+다운로드 모달로 분기
 - 통합 검색 확장: 검색 타입에 `COMMENTS`/`CHANNELS` 추가, 댓글(`COMMENT_*`) 본문 및 채널명/설명 검색 지원, 프론트 검색 필터(댓글/채널명) 연동
 - Realtime 서버: `listen(PORT, HOST)`로 기본 `SOCKET_HOST=0.0.0.0` 바인딩(포트는 `SOCKET_PORT`), LAN 등 비-localhost 접속 시 연결 거절 완화
 - 프론트: `connect_error`·프레즌스 `fetch` 실패 시 콘솔/토스트에 **Realtime 미기동(npm run dev)** 안내 문구 보강

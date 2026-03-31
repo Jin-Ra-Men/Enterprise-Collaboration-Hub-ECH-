@@ -203,6 +203,10 @@
   - 출력 유형 확장: `COMMENT`, `CHANNEL`
   - `COMMENT`: 본인이 속한 채널의 `COMMENT_*` 메시지 본문 검색 결과 반환
   - `CHANNEL`: 본인이 속한 채널의 `name`/`description` 검색 결과 반환
+  - 검색 결과 클릭 동작:
+    - `MESSAGE`/`COMMENT`: 해당 채널로 이동 후 메시지 DOM(`msg-{id}`) 포커스 시도
+    - `FILE`: 이미지(`image/*` 또는 확장자)면 이미지 라이트박스(크게보기+다운로드), 그 외 파일은 즉시 다운로드
+    - `CHANNEL`: 해당 채널로 이동
 - 상태 전이/예외 케이스:
   - 검색어 2자 미만은 기존과 동일하게 400
   - 댓글/채널 검색도 멤버십 필터를 통과한 채널만 결과 포함
@@ -212,6 +216,7 @@
   - `type=COMMENTS` 요청 시 `$.data.type == COMMENTS`
   - `type=CHANNELS` 요청 시 `$.data.type == CHANNELS`
   - 프론트 검색 타입 셀렉트에서 댓글/채널명 필터 표시 확인
+  - 검색 결과 클릭 시 타입별 이동/다운로드/이미지 팝업 동작 확인
 - 비고: 구현 `SearchService`, `MessageRepository.searchCommentsInJoinedChannels`, `ChannelRepository.searchByKeywordInJoinedChannels`
 
 ---

@@ -1902,6 +1902,13 @@ html[data-theme="blue"] .theme-option-btn.active {
   padding: 12px 0;
   border-bottom: 1px solid var(--border-subtle);
 }
+.search-item-clickable {
+  cursor: pointer;
+  border-radius: 8px;
+}
+.search-item-clickable:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
 .search-item:last-child { border-bottom: none; }
 .search-type-badge {
   display: inline-block;

@@ -236,6 +236,10 @@
 - **성능**: `docs/sql/postgresql_schema_draft.sql`의 `CREATE EXTENSION pg_trgm` + GIN 인덱스 적용 권장
 - **한계**: 현재 ILIKE 기반, 대규모 데이터셋에서는 전용 검색엔진(Elasticsearch 등) 도입 고려
 - **구현 파일**: `backend/.../api/search/` (SearchService, SearchController, dto/)
+- **프론트 결과 클릭 동작** (`frontend/app.js` `handleSearchResultClick`):
+  - `MESSAGE`/`COMMENT`: `selectChannel(..., { targetMessageId })`로 채널 이동 + 메시지 포커스
+  - `FILE`: `download-info` 조회 후 이미지면 `modalImagePreview` 오픈(다운로드 버튼), 일반 파일은 `downloadChannelFile`로 즉시 다운로드
+  - `CHANNEL`: 채널 카드 클릭과 동일하게 채널 진입
 
 ### 관리자 배포 관리 인수인계 메모
 - **목적**: 백엔드 WAR/JAR 파일을 웹 UI에서 업로드하고, 버전 전환(활성화) 및 롤백을 관리한다.

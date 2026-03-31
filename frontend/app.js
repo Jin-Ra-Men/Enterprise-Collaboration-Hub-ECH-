@@ -712,6 +712,26 @@ async function downloadChannelFile(fileId, filename, channelId) {
   }
 }
 
+async function fetchChannelFileDownloadInfo(channelId, fileId) {
+  if (!channelId || !fileId || !currentUser) return null;
+  try {
+    const res = await apiFetch(
+      `/api/channels/${channelId}/files/${fileId}/download-info?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`
+    );
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) return null;
+    return json.data || null;
+  } catch {
+    return null;
+  }
+}
+
+function isImageContentType(contentType, filename) {
+  const ct = String(contentType || "").trim().toLowerCase();
+  if (ct.startsWith("image/")) return true;
+  return INLINE_IMAGE_EXT.test(String(filename || ""));
+}
+
 const ORG_EMBED_IDS = {
   member: "orgTreeEmbedMember",
   dm: "orgTreeEmbedDm",
@@ -3978,6 +3998,59 @@ async function loadSettings() {
 const TYPE_ICON  = { MESSAGE: "💬", COMMENT: "🧵", CHANNEL: "#", FILE: "📎", WORK_ITEM: "✅", KANBAN_CARD: "📋" };
 const TYPE_LABEL = { MESSAGE: "메시지", COMMENT: "댓글", CHANNEL: "채널", FILE: "파일", WORK_ITEM: "업무", KANBAN_CARD: "칸반" };
 
+function resolveChannelMetaForSelect(channelId, fallbackName) {
+  const cid = Number(channelId);
+  const fallback = { channelId: cid, channelName: fallbackName || "채널", channelType: "PUBLIC" };
+  if (!Number.isFinite(cid)) return fallback;
+  const el = document.querySelector(`.channel-item[data-channel-id="${cid}"]`);
+  if (!el) return fallback;
+  return {
+    channelId: cid,
+    channelName: el.dataset.channelName || fallback.channelName,
+    channelType: el.dataset.channelType || fallback.channelType,
+  };
+}
+
+async function handleSearchResultClick(item) {
+  if (!item) return;
+  const type = String(item.type || "").toUpperCase();
+  const contextId = Number(item.contextId);
+  const id = Number(item.id);
+
+  // 메시지/댓글 검색 결과: 해당 채널로 이동 후 메시지 포커스 시도
+  if ((type === "MESSAGE" || type === "COMMENT") && Number.isFinite(contextId) && Number.isFinite(id)) {
+    const meta = resolveChannelMetaForSelect(contextId, item.contextName || "채널");
+    await selectChannel(meta.channelId, meta.channelName, meta.channelType, { targetMessageId: id });
+    closeModal("searchModal");
+    return;
+  }
+
+  // 채널 검색 결과: 해당 채널 진입
+  if (type === "CHANNEL" && Number.isFinite(id)) {
+    const meta = resolveChannelMetaForSelect(id, item.title || item.contextName || "채널");
+    await selectChannel(meta.channelId, meta.channelName, meta.channelType);
+    closeModal("searchModal");
+    return;
+  }
+
+  // 파일 검색 결과: 이미지면 라이트박스, 아니면 다운로드
+  if (type === "FILE" && Number.isFinite(contextId) && Number.isFinite(id)) {
+    const info = await fetchChannelFileDownloadInfo(contextId, id);
+    const filename = info?.originalFilename || item.title || "download";
+    if (isImageContentType(info?.contentType || "", filename)) {
+      try {
+        const blobUrl = await getAuthedImageBlobUrl(contextId, id);
+        openImageLightbox(blobUrl, id, filename, contextId);
+      } catch {
+        alert("이미지를 불러올 수 없습니다.");
+      }
+    } else {
+      await downloadChannelFile(id, filename, contextId);
+    }
+    return;
+  }
+}
+
 document.getElementById("searchForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const q = document.getElementById("searchInput").value.trim();
@@ -4006,7 +4079,8 @@ async function runSearch(q, type) {
     resultsEl.innerHTML = "";
     items.forEach(item => {
       const div = document.createElement("div");
-      div.className = "search-item";
+      div.className = "search-item search-item-clickable";
+      div.tabIndex = 0;
       div.innerHTML = `
         <div class="search-item-type">
           <span class="search-type-badge">${TYPE_ICON[item.type] || ""} ${TYPE_LABEL[item.type] || item.type}</span>
@@ -4016,6 +4090,13 @@ async function runSearch(q, type) {
           ${item.preview ? `<p class="search-item-preview">${escHtml(item.preview)}</p>` : ""}
           <p class="search-item-meta">${escHtml(item.contextName || "")} · ${fmtDate(item.createdAt)}</p>
         </div>`;
+      div.addEventListener("click", () => { handleSearchResultClick(item); });
+      div.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleSearchResultClick(item);
+        }
+      });
       resultsEl.appendChild(div);
     });
   } catch { resultsEl.innerHTML = '<p class="empty-notice">서버 연결 오류</p>'; }
