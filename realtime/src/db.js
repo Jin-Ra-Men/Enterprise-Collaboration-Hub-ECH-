@@ -161,11 +161,27 @@ function extractMentionEmployeeNosFromBody(body) {
 
 async function filterEmployeeNosInChannel(channelId, employeeNos) {
   if (!employeeNos || employeeNos.length === 0) return [];
+  // channel_members.user_id 타입이 users.id(bigint) 인지, users.employee_no(varchar) 인지 레거시 차이가 있을 수 있다.
+  // 둘 다 대응하도록 users.employee_no 기준으로 존재 여부를 보정한다.
   const r = await pool.query(
-    `SELECT user_id FROM channel_members WHERE channel_id = $1 AND user_id = ANY($2::text[])`,
+    `
+    SELECT DISTINCT
+      cm.user_id::text AS user_id_text
+    FROM channel_members cm
+    WHERE cm.channel_id = $1
+      AND (
+        cm.user_id::text = ANY($2::text[])
+        OR EXISTS (
+          SELECT 1
+          FROM users u
+          WHERE u.id = cm.user_id
+            AND u.employee_no = ANY($2::text[])
+        )
+      )
+    `,
     [channelId, employeeNos]
   );
-  return r.rows.map((row) => row.user_id);
+  return r.rows.map((row) => String(row.user_id_text));
 }
 
 async function getChannelMentionMeta(channelId) {

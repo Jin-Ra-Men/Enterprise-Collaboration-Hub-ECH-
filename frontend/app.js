@@ -1433,7 +1433,13 @@ async function loadChannelMembers(channelId) {
       const pr = presenceByEmployeeNo.get(emp) || "OFFLINE";
       const prCl = presenceCssClass(pr);
       const deptParts = [m.department, m.jobLevel].filter(x => x != null && String(x).trim() !== "");
-      const orgLine = deptParts.length ? deptParts.map(x => String(x).trim()).join(" · ") : "조직 미지정";
+      // 조직/직급이 비어 있는 경우 레거시/시드 불일치로 인해,
+      // 최소한 직위/직책이라도 보여주도록 보정한다.
+      let orgLine = deptParts.length ? deptParts.map(x => String(x).trim()).join(" · ") : "";
+      if (!orgLine) {
+        const fallbackParts = [m.jobPosition, m.jobTitle].filter(x => x != null && String(x).trim() !== "");
+        orgLine = fallbackParts.length ? fallbackParts.map(x => String(x).trim()).join(" · ") : "조직 미지정";
+      }
       const posHtml =
         m.jobPosition != null && String(m.jobPosition).trim() !== ""
           ? `<span class="member-position-txt">${escHtml(String(m.jobPosition).trim())}</span>`
@@ -2657,6 +2663,11 @@ let mentionSelectedIndex = 0;
 // 동일 메시지에 대해 토스트가 중복 표시되지 않도록(mention:notify + 폴백 경로) 제어한다.
 const shownMentionToastMessageIds = new Set();
 
+// composer 화면에는 `@표시명`만 보이게 삽입하고,
+// 전송 시에만 `@{사번|표시명}` 토큰으로 변환하기 위한 매핑.
+// key: 표시명(display), value: 사번(employeeNo)
+const mentionDisplayToEmployeeNo = new Map();
+
 function getMentionQueryAtCaret(value, caret) {
   const before = value.slice(0, caret);
   const at = before.lastIndexOf("@");
@@ -2723,13 +2734,27 @@ function mentionPickIndex(i) {
   const caret = messageInputEl.selectionStart;
   const info = getMentionQueryAtCaret(v, caret);
   if (!info) return;
-  const token = `@{${emp}|${display}}`;
-  const next = v.slice(0, info.start) + token + " " + v.slice(caret);
+  mentionDisplayToEmployeeNo.set(display, emp);
+  const visible = `@${display}`;
+  const next = v.slice(0, info.start) + visible + " " + v.slice(caret);
   messageInputEl.value = next;
-  const pos = info.start + token.length + 1;
+  const pos = info.start + visible.length + 1;
   messageInputEl.setSelectionRange(pos, pos);
   messageInputEl.focus();
   closeMentionSuggest();
+}
+
+function applyMentionTokensForSend(text) {
+  if (!text) return text;
+  let out = String(text);
+  for (const [display, emp] of mentionDisplayToEmployeeNo.entries()) {
+    const visible = `@${display}`;
+    const token = `@{${emp}|${display}}`;
+    if (out.includes(visible)) {
+      out = out.split(visible).join(token);
+    }
+  }
+  return out;
 }
 
 async function fetchMentionUsers(query) {
@@ -2877,6 +2902,7 @@ function maybeShowMentionToastFromMessage(msg) {
 async function sendMessage() {
   if (!activeChannelId || !currentUser) return;
   const text = messageInputEl.value.trim();
+  const preparedText = applyMentionTokensForSend(text);
   closeMentionSuggest();
 
   // 답글 모드: 선택된 메시지를 parent로 해서 REPLY 저장
@@ -2890,21 +2916,22 @@ async function sendMessage() {
         reloadMode: "timeline",
       });
       clearFilePreview();
-      if (!text) {
+      if (!preparedText) {
         messageInputEl.value = "";
         clearReplyComposerTarget();
+        mentionDisplayToEmployeeNo.clear();
         return;
       }
     }
 
-    if (!text) return;
+    if (!preparedText) return;
 
     try {
       const res = await apiFetch(
         `/api/channels/${activeChannelId}/messages/${parentMessageId}/replies`,
         {
           method: "POST",
-          body: JSON.stringify({ senderId: currentUser.employeeNo, text }),
+          body: JSON.stringify({ senderId: currentUser.employeeNo, text: preparedText }),
         }
       );
       const json = await res.json().catch(() => ({}));
@@ -2912,6 +2939,7 @@ async function sendMessage() {
 
       messageInputEl.value = "";
       clearReplyComposerTarget();
+      mentionDisplayToEmployeeNo.clear();
       await loadMessages(activeChannelId);
     } catch (e) {
       appendSystemMsg("답글 전송 실패: " + (e?.message || "오류"));
@@ -2924,23 +2952,24 @@ async function sendMessage() {
   if (pendingFile) {
     await uploadFile(pendingFile);
     clearFilePreview();
-    if (!text) { messageInputEl.value = ""; return; }
+    if (!preparedText) { messageInputEl.value = ""; mentionDisplayToEmployeeNo.clear(); return; }
   }
 
-  if (!text) return;
+  if (!preparedText) return;
   try {
-    await sendMessageViaSocket(activeChannelId, currentUser.employeeNo, text);
+    await sendMessageViaSocket(activeChannelId, currentUser.employeeNo, preparedText);
   } catch (socketErr) {
     // 소켓 저장이 실패해도 API 경로로 한 번 더 시도해 전송 유실을 줄인다.
     console.warn("[sendMessage] socket 전송 실패, API 폴백 시도:", socketErr);
     try {
-      await sendMessageViaApi(activeChannelId, currentUser.employeeNo, text);
+      await sendMessageViaApi(activeChannelId, currentUser.employeeNo, preparedText);
     } catch (apiErr) {
       appendSystemMsg("전송 실패: " + (apiErr?.message || "오류"));
       return;
     }
   }
   messageInputEl.value = "";
+  mentionDisplayToEmployeeNo.clear();
 }
 
 document.getElementById("btnSend").addEventListener("click", sendMessage);
