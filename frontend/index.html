@@ -89,6 +89,18 @@
           <ul class="sidebar-list" id="dmList"></ul>
         </div>
 
+        <!-- 미확인 멘션 -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-header">
+            <button type="button" class="section-toggle" data-target="mentionList">
+              <span class="section-toggle-chevron" aria-hidden="true">▾</span>
+              <span class="section-toggle-label">멘션</span>
+            </button>
+            <span class="channel-unread-badge hidden" id="mentionUnreadBadge">0</span>
+          </div>
+          <ul class="sidebar-list mention-list" id="mentionList"></ul>
+        </div>
+
         <!-- 관리자 전용 -->
         <div class="sidebar-section admin-only hidden" id="adminSection">
           <div class="sidebar-section-header">

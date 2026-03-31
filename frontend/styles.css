@@ -495,6 +495,29 @@ span.section-toggle-static { cursor: default; }
 .sidebar-item.active { background: var(--sidebar-active-bg); color: var(--sidebar-item-fg-strong); font-weight: 600; border-left: 2px solid var(--accent); }
 .item-icon { flex-shrink: 0; width: 18px; text-align: center; font-size: 13px; }
 .item-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.mention-list .sidebar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  white-space: normal;
+}
+.mention-item-title {
+  width: 100%;
+  font-size: 12px;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mention-item-preview {
+  width: 100%;
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* 채널/DM 목록 미읽음 (Slack 스타일 원형 배지) */
 .channel-unread-badge {
@@ -511,6 +534,13 @@ span.section-toggle-static { cursor: default; }
   line-height: 18px;
   text-align: center;
   box-sizing: border-box;
+}
+.msg-row.msg-mention-focus {
+  animation: mentionFlash 1.2s ease;
+}
+@keyframes mentionFlash {
+  0% { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+  100% { background: transparent; }
 }
 
 /* 사용자 프로필 (하단) */

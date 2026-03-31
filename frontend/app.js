@@ -90,6 +90,8 @@ let activeChannelCreatorEmployeeNo = null;
 let activeChannelMemberMentionList = [];
 /** 현재 채널 멤버의 조직/직급 캐시(employeeNo -> 조직표시문구) */
 const activeChannelMemberOrgLineByEmployeeNo = new Map();
+/** 미확인 멘션 목록(사이드바 전용) */
+let mentionInboxItems = [];
 let pendingFile    = null;
 // 스레드(댓글) 모달 상태
 let threadPendingFile = null;
@@ -123,6 +125,7 @@ let sidebarPresenceUiBound = false;
 /** 사이드바 섹션 토글·접기 버튼은 initEvents가 여러 번 호출돼도 한 번만 바인딩 */
 let sidebarSectionTogglesBound = false;
 let sidebarCollapseBound = false;
+let mentionInboxUiBound = false;
 
 /* ── DOM 참조 ── */
 const loginPage      = document.getElementById("loginPage");
@@ -170,6 +173,121 @@ function saveSession(token, user) {
 function clearSession() {
   sessionStorage.removeItem(TOKEN_KEY);
   sessionStorage.removeItem(USER_KEY);
+}
+
+function mentionInboxStorageKey() {
+  const emp = String(currentUser?.employeeNo || "").trim();
+  if (!emp) return "";
+  return `ech_mention_inbox_${emp}`;
+}
+
+function loadMentionInboxFromStorage() {
+  const key = mentionInboxStorageKey();
+  if (!key) return [];
+  try {
+    const raw = localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((x) => x && Number.isFinite(Number(x.channelId)))
+      .map((x) => ({
+        id: String(x.id || ""),
+        messageId: x.messageId != null && Number.isFinite(Number(x.messageId)) ? Number(x.messageId) : null,
+        channelId: Number(x.channelId),
+        channelName: String(x.channelName || "채널"),
+        channelType: String(x.channelType || "PUBLIC"),
+        senderName: String(x.senderName || ""),
+        messagePreview: String(x.messagePreview || ""),
+        createdAt: String(x.createdAt || ""),
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function saveMentionInboxToStorage() {
+  const key = mentionInboxStorageKey();
+  if (!key) return;
+  try {
+    localStorage.setItem(key, JSON.stringify(mentionInboxItems.slice(0, 100)));
+  } catch {
+    /* ignore */
+  }
+}
+
+function renderMentionInboxList() {
+  const listEl = document.getElementById("mentionList");
+  const badgeEl = document.getElementById("mentionUnreadBadge");
+  if (!listEl || !badgeEl) return;
+  listEl.innerHTML = "";
+  const count = mentionInboxItems.length;
+  badgeEl.textContent = String(Math.min(count, 99));
+  badgeEl.classList.toggle("hidden", count === 0);
+  if (count === 0) {
+    const li = document.createElement("li");
+    li.className = "sidebar-item";
+    li.textContent = "미확인 멘션 없음";
+    listEl.appendChild(li);
+    return;
+  }
+  mentionInboxItems.forEach((it) => {
+    const li = document.createElement("li");
+    li.className = "sidebar-item mention-item";
+    li.dataset.mentionId = it.id;
+    li.innerHTML = `
+      <span class="mention-item-title">${escHtml(`${it.senderName || "알림"} · ${it.channelName}`)}</span>
+      <span class="mention-item-preview">${escHtml(it.messagePreview || "(미리보기 없음)")}</span>
+    `;
+    listEl.appendChild(li);
+  });
+}
+
+function enqueueUnreadMention(payload) {
+  if (!payload) return;
+  const channelId = Number(payload.channelId);
+  if (!Number.isFinite(channelId)) return;
+  const senderEmp = String(payload.senderEmployeeNo || "").trim();
+  const myEmp = String(currentUser?.employeeNo || "").trim();
+  if (senderEmp && myEmp && senderEmp === myEmp) return;
+  const messageId = payload.messageId != null && Number.isFinite(Number(payload.messageId))
+    ? Number(payload.messageId)
+    : null;
+  if (messageId != null && mentionInboxItems.some((x) => x.messageId === messageId)) return;
+  const id = messageId != null
+    ? `m_${messageId}`
+    : `c_${channelId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  mentionInboxItems.unshift({
+    id,
+    messageId,
+    channelId,
+    channelName: String(payload.channelName || "채널"),
+    channelType: String(payload.channelType || "PUBLIC"),
+    senderName: String(payload.senderName || ""),
+    messagePreview: String(payload.messagePreview || "").slice(0, 200),
+    createdAt: String(payload.createdAt || new Date().toISOString()),
+  });
+  mentionInboxItems = mentionInboxItems.slice(0, 100);
+  saveMentionInboxToStorage();
+  renderMentionInboxList();
+}
+
+function removeUnreadMentionById(id) {
+  const target = String(id || "").trim();
+  if (!target) return null;
+  const idx = mentionInboxItems.findIndex((x) => x.id === target);
+  if (idx < 0) return null;
+  const [picked] = mentionInboxItems.splice(idx, 1);
+  saveMentionInboxToStorage();
+  renderMentionInboxList();
+  return picked;
+}
+
+async function openUnreadMentionById(id) {
+  const item = removeUnreadMentionById(id);
+  if (!item) return;
+  await selectChannel(item.channelId, item.channelName, item.channelType, {
+    targetMessageId: item.messageId,
+  });
 }
 
 /** 인증된 다운로드로 만든 이미지 blob URL (채널 전환·목록 갱신 시 revoke) */
@@ -962,6 +1080,8 @@ function showMain(user) {
 
   /** 다른 계정 재로그인 시 이전 세션 프레즌스 캐시 제거 */
   presenceByEmployeeNo.clear();
+  mentionInboxItems = loadMentionInboxFromStorage();
+  renderMentionInboxList();
 
   // 로그인 계정이 바뀌어도 정확한 권한 상태를 반영하도록 항상 초기화 후 설정
   document.getElementById("adminSection").classList.add("hidden");
@@ -1026,6 +1146,8 @@ logoutBtn.addEventListener("click", () => {
   clearFilePreview();
   activeChannelId = null;
   activeChannelMemberMentionList = [];
+  mentionInboxItems = [];
+  renderMentionInboxList();
   currentUser     = null;
   clearSession();
 
@@ -1285,7 +1407,7 @@ function renderChannelList(channels) {
 /* ==========================================================================
  * 채널 선택 / 메시지 로드
  * ========================================================================== */
-async function selectChannel(channelId, channelName, channelType) {
+async function selectChannel(channelId, channelName, channelType, options = {}) {
   revokeImageAttachmentBlobUrls();
   closeModal("modalImagePreview");
   activeChannelId   = channelId;
@@ -1323,9 +1445,23 @@ async function selectChannel(channelId, channelName, channelType) {
   // 멤버 목록/조직 정보 로드 완료 대기(조직/직급 라벨 들쭉날쭉 방지)
   await membersPromise;
 
+  const targetMid = options?.targetMessageId;
+  if (targetMid != null && Number.isFinite(Number(targetMid))) {
+    focusMessageByIdInCurrentTimeline(Number(targetMid));
+  }
+
   loadChannelFiles(channelId);
 
   messageInputEl.focus();
+}
+
+function focusMessageByIdInCurrentTimeline(messageId) {
+  if (!messagesEl || !Number.isFinite(Number(messageId))) return;
+  const el = document.getElementById(`msg-${Number(messageId)}`);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  el.classList.add("msg-mention-focus");
+  setTimeout(() => el.classList.remove("msg-mention-focus"), 1400);
 }
 
 function syncSenderOrgLabelsInMessageList() {
@@ -2922,13 +3058,31 @@ function pushMentionToast(p) {
   const channelType = String(p.channelType || "PUBLIC");
   const senderName = String(p.senderName || "");
   const preview = String(p.messagePreview || "").slice(0, 160);
+  const isDifferentChannel = activeChannelId == null || Number(activeChannelId) !== cid;
+  if (isDifferentChannel) {
+    enqueueUnreadMention({
+      channelId: cid,
+      channelName,
+      channelType,
+      senderName,
+      senderEmployeeNo: String(p.senderEmployeeNo || ""),
+      messagePreview: preview,
+      messageId: p.messageId != null ? Number(p.messageId) : null,
+      createdAt: p.createdAt || new Date().toISOString(),
+    });
+  }
   const toast = document.createElement("button");
   toast.type = "button";
   toast.className = "mention-toast";
   toast.innerHTML = `<span class="mention-toast-title">멘션</span><span class="mention-toast-sub">${escHtml(senderName)} · ${escHtml(channelName)}</span><span class="mention-toast-preview">${escHtml(preview)}</span>`;
   toast.addEventListener("click", () => {
     toast.remove();
-    selectChannel(cid, channelName, channelType);
+    if (p.messageId != null) {
+      removeUnreadMentionById(`m_${Number(p.messageId)}`);
+    }
+    selectChannel(cid, channelName, channelType, {
+      targetMessageId: p.messageId != null ? Number(p.messageId) : null,
+    });
   });
   stack.appendChild(toast);
   setTimeout(() => {
@@ -2981,8 +3135,10 @@ function maybeShowMentionToastFromMessage(msg) {
     channelName,
     channelType,
     senderName: String(msg.senderName || ""),
+    senderEmployeeNo: String(msg.senderId || ""),
     messagePreview: mentionPreviewForToastClient(msg.text || "", 160),
     messageId: msg.messageId != null ? Number(msg.messageId) : null,
+    createdAt: msg.createdAt || new Date().toISOString(),
   });
 }
 
@@ -3843,6 +3999,16 @@ function initEvents() {
     document.getElementById("btnSidebarEdgeToggle")?.addEventListener("click", (e) => {
       e.stopPropagation();
       toggleSidebarCollapsed();
+    });
+  }
+
+  if (!mentionInboxUiBound) {
+    mentionInboxUiBound = true;
+    document.getElementById("mentionList")?.addEventListener("click", (e) => {
+      const row = e.target.closest(".mention-item[data-mention-id]");
+      if (!row) return;
+      e.preventDefault();
+      openUnreadMentionById(row.dataset.mentionId);
     });
   }
 

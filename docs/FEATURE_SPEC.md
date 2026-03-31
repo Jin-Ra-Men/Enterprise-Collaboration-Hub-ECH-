@@ -165,9 +165,9 @@
 ---
 
 ## 채팅 @멘션·알림
-- 목적: `@` 입력 후 사용자 검색 자동완성으로 멘션 삽입, 멘션된 **채널 멤버**에게 실시간 알림, 알림 클릭 시 해당 채팅방으로 이동
+- 목적: `@` 입력 후 사용자 검색 자동완성으로 멘션 삽입, 멘션된 **채널 멤버**에게 실시간 알림, 알림/미확인 목록 클릭 시 해당 채팅방·메시지로 이동
 - 사용자: 일반 채팅 사용자
-- 관련 화면/경로: `frontend/index.html` `messageInput`, `#mentionSuggest`, `#mentionToastStack`; `frontend/app.js` `formatMessageWithMentions`, `scheduleMentionSuggestUpdate`, `pushMentionToast`, `mention:notify` 수신
+- 관련 화면/경로: `frontend/index.html` `messageInput`, `#mentionSuggest`, `#mentionToastStack`, `#mentionList`; `frontend/app.js` `formatMessageWithMentions`, `scheduleMentionSuggestUpdate`, `pushMentionToast`, `mention:notify` 수신, `renderMentionInboxList`
 - 관련 API: **`GET /api/channels/{channelId}`** 응답의 `members`로 @자동완성(이름·사번 부분 일치, **현재 채널 멤버만**). 멘션 저장·알림 검증은 기존과 동일(`channel_members`).
 - 관련 Socket 이벤트:
   - 출력(멘션 수신자에게만): `mention:notify` — payload: `channelId`, `channelName`, `channelType`, `senderName`, `messagePreview`, `messageId`
@@ -177,9 +177,11 @@
   - 자동완성 후보는 **해당 채팅방 멤버만**(본인 제외); 전사 `GET /api/users/search`는 멘션 입력에 사용하지 않음
   - 본문당 토큰 최대 20개(Realtime·Java 공통)
   - 발신자 본인·비멤버 사번은 알림 제외
+  - 미확인 멘션 목록: 현재 보고 있지 않은 채널의 멘션 토스트를 사용자별 localStorage(`ech_mention_inbox_{employeeNo}`)에 최대 100건 보관, 확인(클릭) 시 목록에서 제거
 - 상태 전이/예외 케이스:
   - Realtime 미기동/내부 URL 비어 있으면 Java 쪽 `notifyMentions`는 HTTP 실패를 로그만 남기고 메시지 저장은 유지
   - `mention:notify`가 누락/지연되는 경우(소켓 emit 경로 불일치 등) 현재 채널에서 `message:new` 수신 시 본문 토큰을 클라이언트가 파싱해 내 멘션이면 폴백 토스트를 표시
+  - 미확인 목록 항목 클릭 시 `selectChannel(..., { targetMessageId })`로 이동 후 해당 메시지 DOM(`msg-{id}`)으로 스크롤·강조, 메시지가 현재 타임라인 범위 밖이면 채널 이동까지만 보장
 - 권한/보안:
   - 알림 대상은 **해당 채널 멤버**인 사번만(DB 검증)
 - 로그/감사 포인트: 해당 없음(메시지 전송 감사는 기존 `MESSAGE_SENT`)
