@@ -1747,6 +1747,7 @@ function shouldShowMessageTime(msgs, i) {
   if (!next) return true;
   const nextMt = String(next.messageType || next.message_type || "").toUpperCase();
   if (nextMt === "SYSTEM") return true;
+  if (dateKeyLocal(next.createdAt) !== dateKeyLocal(cur.createdAt)) return true;
   if (String(next.senderId) !== String(cur.senderId)) return true;
   if (minuteKey(next.createdAt) !== minuteKey(cur.createdAt)) return true;
   return false;
@@ -1760,6 +1761,7 @@ function shouldShowAvatarForMessage(msgs, i) {
   const curMt = String(cur.messageType || cur.message_type || "").toUpperCase();
   const prevMt = String(prev.messageType || prev.message_type || "").toUpperCase();
   if (prevMt === "SYSTEM" || curMt === "SYSTEM") return true;
+  if (dateKeyLocal(prev.createdAt) !== dateKeyLocal(cur.createdAt)) return true;
   return String(prev.senderId) !== String(cur.senderId);
 }
 
