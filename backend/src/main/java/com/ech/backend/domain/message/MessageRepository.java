@@ -44,6 +44,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             SELECT m FROM Message m
             JOIN FETCH m.sender s
             LEFT JOIN FETCH m.parentMessage pm
+            LEFT JOIN FETCH pm.sender pms
             WHERE m.channel.id = :channelId
               AND m.isDeleted = false
               AND m.archivedAt IS NULL
@@ -114,4 +115,23 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             GROUP BY m.channel.id
             """)
     List<Object[]> findLatestRootMessageTimeByChannelIds(@Param("channelIds") Collection<Long> channelIds);
+
+    /**
+     * 원글 스레드 활동: 루트에 직접 달린 댓글(COMMENT_*), 루트에 직접 달린 답글(REPLY_*),
+     * 댓글에 달린 답글(REPLY_*, 부모의 부모가 루트)까지 포함 — 건수·최신 시각 집계용.
+     */
+    @Query("""
+            SELECT m FROM Message m
+            JOIN FETCH m.sender s
+            JOIN FETCH m.parentMessage p
+            LEFT JOIN FETCH p.parentMessage pRoot
+            WHERE m.archivedAt IS NULL
+              AND m.isDeleted = false
+              AND (
+                (p.id IN :rootIds AND UPPER(m.messageType) LIKE 'COMMENT%')
+                OR (p.id IN :rootIds AND UPPER(m.messageType) LIKE 'REPLY%' AND pRoot IS NULL)
+                OR (UPPER(m.messageType) LIKE 'REPLY%' AND pRoot IS NOT NULL AND pRoot.id IN :rootIds)
+              )
+            """)
+    List<Message> findThreadActivityUnderRoots(@Param("rootIds") Collection<Long> rootIds);
 }

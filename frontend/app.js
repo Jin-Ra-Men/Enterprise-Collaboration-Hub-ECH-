@@ -2569,7 +2569,7 @@ async function sendMessageViaSocket(channelId, senderId, text) {
       const err = new Error("실시간 ACK 응답이 지연되었습니다.");
       err.code = "SOCKET_ACK_TIMEOUT";
       reject(err);
-    }, 2500);
+    }, 8000);
 
     socket.emit(
       "message:send",
@@ -2901,7 +2901,6 @@ async function sendMessage() {
     console.warn("[sendMessage] socket 전송 실패, API 폴백 시도:", socketErr);
     try {
       await sendMessageViaApi(activeChannelId, currentUser.employeeNo, text);
-      appendSystemMsg("실시간 경로 오류로 API 경로로 전송했습니다.");
     } catch (apiErr) {
       appendSystemMsg("전송 실패: " + (apiErr?.message || "오류"));
       return;

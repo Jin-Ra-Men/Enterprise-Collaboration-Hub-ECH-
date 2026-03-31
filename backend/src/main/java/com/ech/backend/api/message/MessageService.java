@@ -528,7 +528,7 @@ public class MessageService {
         if (rootIds.isEmpty()) {
             return Map.of();
         }
-        List<Message> comments = messageRepository.findCommentsUnderRootMessages(rootIds);
+        List<Message> comments = messageRepository.findThreadActivityUnderRoots(rootIds);
         Map<Long, ThreadCommentAgg> map = new HashMap<>();
         for (Message cm : comments) {
             if (cm.getParentMessage() == null) {

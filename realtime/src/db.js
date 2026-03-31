@@ -48,8 +48,16 @@ async function saveMessage({ channelId, senderEmployeeNo, body }, retries = 3) {
   }
   const senderName = senderLookup.rows[0].name || null;
 
+  // channel_members.user_id 가 users.id(bigint) FK 이거나 employee_no 문자열 저장인 DB 모두 지원
   const memberCheck = await pool.query(
-    `SELECT 1 FROM channel_members WHERE channel_id = $1 AND user_id = $2`,
+    `
+    SELECT 1 FROM channel_members cm
+    WHERE cm.channel_id = $1
+      AND (
+        cm.user_id::text = $2
+        OR EXISTS (SELECT 1 FROM users u WHERE u.id = cm.user_id AND u.employee_no = $2)
+      )
+    `,
     [channelId, emp]
   );
   if (memberCheck.rowCount === 0) {

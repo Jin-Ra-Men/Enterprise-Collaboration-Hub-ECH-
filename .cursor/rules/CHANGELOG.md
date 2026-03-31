@@ -4,6 +4,12 @@
 
 ## 2026-03-31
 
+### Fixed
+- Realtime `saveMessage`: `channel_members.user_id`가 `users.id`(bigint)인 DB에서 사번만으로는 멤버십이 맞지 않아 소켓 전송이 실패하던 문제 — `employee_no` 조인·텍스트 비교 병행
+- 메시지 전송: 소켓 실패 후 API 폴백 **성공 시** 불필요한 시스템 안내 문구 제거, ACK 타임아웃 8초로 완화
+- 타임라인 쿼리에 `parentMessage.sender` fetch 추가 → `replyToSenderName` 누락·「원글에게 답장」표시 완화
+- 댓글 개수 집계: 루트 직계 COMMENT·REPLY 및 **댓글에 달린 REPLY**까지 포함해 `threadCommentCount`가 0으로만 나오던 경우 보완
+
 ### Added
 - 채팅 타임라인: 원글 하단에 **댓글 N개 + 마지막 댓글 시각** 요약(클릭 시 스레드 모달), 답글 모드 시 **입력창 위 답장 미리보기 바**(대상·내용 스니펫·닫기)
 - 타임라인 **REPLY** 행: 답글 대상을 **「표시명에게 답장」+ 원문 스니펫** 카드로 표시(`replyToSenderName` API 필드)
