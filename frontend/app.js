@@ -88,6 +88,8 @@ let activeChannelType = null; // PUBLIC / PRIVATE / DM
 let activeChannelCreatorEmployeeNo = null;
 /** 현재 채널 멤버만 @자동완성 (전사 검색 대신). selectChannel 시 비움 → loadChannelMembers에서 채움 */
 let activeChannelMemberMentionList = [];
+/** 현재 채널 멤버의 조직/직급 캐시(employeeNo -> 조직표시문구) */
+const activeChannelMemberOrgLineByEmployeeNo = new Map();
 let pendingFile    = null;
 // 스레드(댓글) 모달 상태
 let threadPendingFile = null;
@@ -1413,6 +1415,7 @@ async function loadChannelMembers(channelId) {
     const creatorEmp = String(json.data?.createdByEmployeeNo || "").trim();
     activeChannelCreatorEmployeeNo = creatorEmp || null;
     const members = json.data?.members || [];
+    activeChannelMemberOrgLineByEmployeeNo.clear();
     document.getElementById("chatMemberCount").textContent = `멤버 ${members.length}명`;
 
     const myEmpMention = currentUser ? String(currentUser.employeeNo || "").trim() : "";
@@ -1452,6 +1455,9 @@ async function loadChannelMembers(channelId) {
         const jobTitle = normalizeOrgValueForDisplay(m.jobTitle);
         const fallbackParts = [jobPosition, jobTitle].filter(x => x != null && String(x).trim() !== "");
         orgLine = fallbackParts.length ? fallbackParts.map(x => String(x).trim()).join(" · ") : "조직 미지정";
+      }
+      if (emp) {
+        activeChannelMemberOrgLineByEmployeeNo.set(emp, orgLine);
       }
       const posHtml =
         m.jobPosition != null && String(m.jobPosition).trim() !== ""
@@ -1835,6 +1841,11 @@ function createImageAttachmentRowFromMsg(msg, payload, { showAvatar, showTime })
           </div>
         </div>`;
 
+  const senderOrgLine = activeChannelMemberOrgLineByEmployeeNo.get(emp) || "";
+  const senderOrgHtml = senderOrgLine
+    ? `<div class="msg-sender-sub">${escHtml(senderOrgLine)}</div>`
+    : "";
+
   if (showAvatar) {
     const initials = avatarInitials(senderName);
     div.innerHTML = `
@@ -1844,7 +1855,10 @@ function createImageAttachmentRowFromMsg(msg, payload, { showAvatar, showTime })
       </div>
       <div class="msg-body">
         <div class="msg-meta">
-          <button type="button" class="msg-sender msg-user-trigger" data-employee-no="${escHtml(emp)}">${escHtml(senderName)}</button>
+          <div class="msg-sender-block">
+            <button type="button" class="msg-sender msg-user-trigger" data-employee-no="${escHtml(emp)}">${escHtml(senderName)}</button>
+            ${senderOrgHtml}
+          </div>
         </div>
         ${imageBlock}
       </div>`;
@@ -1918,6 +1932,11 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
     div.dataset.rootMessageId = pid == null ? String(mid) : String(pid);
   }
 
+  const senderOrgLine = activeChannelMemberOrgLineByEmployeeNo.get(emp) || "";
+  const senderOrgHtml = senderOrgLine
+    ? `<div class="msg-sender-sub">${escHtml(senderOrgLine)}</div>`
+    : "";
+
   if (showAvatar) {
     const initials = avatarInitials(senderName);
     div.innerHTML = `
@@ -1927,7 +1946,10 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
       </div>
       <div class="msg-body">
         <div class="msg-meta">
-          <button type="button" class="msg-sender msg-user-trigger" data-employee-no="${escHtml(emp)}">${escHtml(senderName)}</button>
+          <div class="msg-sender-block">
+            <button type="button" class="msg-sender msg-user-trigger" data-employee-no="${escHtml(emp)}">${escHtml(senderName)}</button>
+            ${senderOrgHtml}
+          </div>
         </div>
         <div class="msg-content-row msg-attachment-inline">
           <span class="msg-attach-icon" aria-hidden="true">📎</span>
@@ -1957,6 +1979,10 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
 
 function createMessageRowElement(msg, { showAvatar, showTime }) {
   const mt = String(msg.messageType || msg.message_type || "").toUpperCase();
+  const senderOrgLine = activeChannelMemberOrgLineByEmployeeNo.get(emp) || "";
+  const senderOrgHtml = senderOrgLine
+    ? `<div class="msg-sender-sub">${escHtml(senderOrgLine)}</div>`
+    : "";
   if (mt === "SYSTEM") {
     const div = document.createElement("div");
     div.className = "msg-system";
@@ -2002,7 +2028,10 @@ function createMessageRowElement(msg, { showAvatar, showTime }) {
       </div>
       <div class="msg-body">
         <div class="msg-meta">
-          <button type="button" class="msg-sender msg-user-trigger" data-employee-no="${escHtml(emp)}">${escHtml(senderName)}</button>
+          <div class="msg-sender-block">
+            <button type="button" class="msg-sender msg-user-trigger" data-employee-no="${escHtml(emp)}">${escHtml(senderName)}</button>
+            ${senderOrgHtml}
+          </div>
         </div>
         <div class="msg-content-row">
           <span class="msg-text">${formatMessageWithMentions(msg.text)}</span>${timeHtml}
