@@ -2487,6 +2487,37 @@ async function jumpToReplyTarget({ replyToKind, replyToMessageId, replyToRootMes
   }
 }
 
+/** 타임라인 캐시 밖 원글을 스레드 모달용으로 로드 */
+async function fetchChannelMessageForModal(channelId, messageId) {
+  const emp = String(currentUser?.employeeNo || "").trim();
+  const ch = Number(channelId);
+  const mid = Number(messageId);
+  if (!emp || !Number.isFinite(ch) || !Number.isFinite(mid)) return null;
+  try {
+    const res = await apiFetch(
+      `/api/channels/${ch}/messages/${mid}?employeeNo=${encodeURIComponent(emp)}`
+    );
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) return null;
+    return json.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function focusThreadMessageRowById(messageId) {
+  const id = Number(messageId);
+  if (!Number.isFinite(id)) return;
+  const run = () => {
+    const targetEl = document.getElementById(`thread-msg-${id}`);
+    if (!targetEl) return;
+    targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    targetEl.classList.add("msg-mention-focus");
+    setTimeout(() => targetEl.classList.remove("msg-mention-focus"), 1400);
+  };
+  requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(run, 50)));
+}
+
 async function openThreadModal(rootMessageId, { targetCommentMessageId = null } = {}) {
   if (!activeChannelId || !currentUser) return;
   const rootId = Number(rootMessageId);
@@ -2501,10 +2532,15 @@ async function openThreadModal(rootMessageId, { targetCommentMessageId = null } 
   openModal("modalThread");
   isRenderingThreadModal = true;
 
-  // ROOT 메시지(타임라인에서 캐시로 재사용)
-  const rootMsg = timelineRootMessageById.get(rootId);
+  // ROOT 메시지(타임라인에서 캐시로 재사용; 없으면 단건 API)
+  let rootMsg = timelineRootMessageById.get(rootId);
   threadRootContainerEl.innerHTML = "";
   threadCommentsContainerEl.innerHTML = "";
+
+  if (!rootMsg) {
+    rootMsg = await fetchChannelMessageForModal(activeChannelId, rootId);
+    if (rootMsg) timelineRootMessageById.set(rootId, rootMsg);
+  }
 
   if (!rootMsg) {
     threadRootContainerEl.textContent = "원글을 찾을 수 없습니다.";
@@ -2582,8 +2618,7 @@ async function openThreadModal(rootMessageId, { targetCommentMessageId = null } 
       threadCommentsContainerEl.appendChild(node);
     }
     if (targetCommentMessageId != null) {
-      const targetEl = document.getElementById(`thread-msg-${targetCommentMessageId}`);
-      if (targetEl) targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      focusThreadMessageRowById(targetCommentMessageId);
     }
   } catch (e) {
     threadCommentsContainerEl.textContent = "스레드 로딩 중 오류";
@@ -3997,6 +4032,15 @@ async function loadSettings() {
  * ========================================================================== */
 const TYPE_ICON  = { MESSAGE: "💬", COMMENT: "🧵", CHANNEL: "#", FILE: "📎", WORK_ITEM: "✅", KANBAN_CARD: "📋" };
 const TYPE_LABEL = { MESSAGE: "메시지", COMMENT: "댓글", CHANNEL: "채널", FILE: "파일", WORK_ITEM: "업무", KANBAN_CARD: "칸반" };
+const SEARCH_TYPE_ITEM_MAP = {
+  ALL: null,
+  MESSAGES: ["MESSAGE"],
+  COMMENTS: ["COMMENT"],
+  CHANNELS: ["CHANNEL"],
+  FILES: ["FILE"],
+  WORK_ITEMS: ["WORK_ITEM"],
+  KANBAN_CARDS: ["KANBAN_CARD"],
+};
 
 function resolveChannelMetaForSelect(channelId, fallbackName) {
   const cid = Number(channelId);
@@ -4017,11 +4061,24 @@ async function handleSearchResultClick(item) {
   const contextId = Number(item.contextId);
   const id = Number(item.id);
 
-  // 메시지/댓글 검색 결과: 해당 채널로 이동 후 메시지 포커스 시도
-  if ((type === "MESSAGE" || type === "COMMENT") && Number.isFinite(contextId) && Number.isFinite(id)) {
+  // 메시지 검색: 채널 이동 후 타임라인에서 해당 메시지 포커스
+  if (type === "MESSAGE" && Number.isFinite(contextId) && Number.isFinite(id)) {
     const meta = resolveChannelMetaForSelect(contextId, item.contextName || "채널");
     await selectChannel(meta.channelId, meta.channelName, meta.channelType, { targetMessageId: id });
     closeModal("searchModal");
+    return;
+  }
+
+  // 댓글 검색: 채널 이동 후 스레드 모달에서 해당 댓글(또는 답글) 행으로 스크롤·강조
+  if (type === "COMMENT" && Number.isFinite(contextId) && Number.isFinite(id)) {
+    const meta = resolveChannelMetaForSelect(contextId, item.contextName || "채널");
+    const rootId = Number(item.threadRootMessageId);
+    const channelOpts = Number.isFinite(rootId) ? {} : { targetMessageId: id };
+    await selectChannel(meta.channelId, meta.channelName, meta.channelType, channelOpts);
+    closeModal("searchModal");
+    if (Number.isFinite(rootId)) {
+      await openThreadModal(rootId, { targetCommentMessageId: id });
+    }
     return;
   }
 
@@ -4055,39 +4112,70 @@ document.getElementById("searchForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const q = document.getElementById("searchInput").value.trim();
   if (q.length < 2) return;
-  document.getElementById("searchTypeSelect").value = "ALL";
-  await runSearch(q, "ALL");
+  const selectedType = document.getElementById("searchTypeSelect").value || "ALL";
+  const modalInput = document.getElementById("searchModalInput");
+  if (modalInput) modalInput.value = q;
+  await runSearch(q, selectedType);
   openModal("searchModal");
 });
 
 document.getElementById("searchTypeSelect").addEventListener("change", () => {
-  const q = document.getElementById("searchInput").value.trim();
+  const qModal = document.getElementById("searchModalInput")?.value?.trim?.() || "";
+  const qSidebar = document.getElementById("searchInput").value.trim();
+  const q = qModal || qSidebar;
   if (q.length >= 2) runSearch(q, document.getElementById("searchTypeSelect").value);
+});
+
+document.getElementById("searchModalSubmitBtn")?.addEventListener("click", async () => {
+  const q = document.getElementById("searchModalInput")?.value?.trim?.() || "";
+  if (q.length < 2) return;
+  document.getElementById("searchInput").value = q;
+  const selectedType = document.getElementById("searchTypeSelect").value || "ALL";
+  await runSearch(q, selectedType);
+});
+
+document.getElementById("searchModalInput")?.addEventListener("keydown", async (e) => {
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  const q = document.getElementById("searchModalInput")?.value?.trim?.() || "";
+  if (q.length < 2) return;
+  document.getElementById("searchInput").value = q;
+  const selectedType = document.getElementById("searchTypeSelect").value || "ALL";
+  await runSearch(q, selectedType);
 });
 
 async function runSearch(q, type) {
   const resultsEl = document.getElementById("searchResults");
   resultsEl.innerHTML = '<p class="empty-notice">검색 중...</p>';
   document.getElementById("searchModalTitle").textContent = `"${q}" 검색 결과`;
+  const modalInput = document.getElementById("searchModalInput");
+  if (modalInput && modalInput.value !== q) modalInput.value = q;
   openModal("searchModal");
   try {
     const res  = await apiFetch(`/api/search?q=${encodeURIComponent(q)}&type=${type}&limit=30`);
     const json = await res.json();
     if (!res.ok) { resultsEl.innerHTML = `<p class="empty-notice">${json.error?.message || "오류"}</p>`; return; }
-    const items = json.data?.items || [];
+    const rawItems = Array.isArray(json.data?.items) ? json.data.items : [];
+    const allowTypes = SEARCH_TYPE_ITEM_MAP[String(type || "ALL").toUpperCase()] || null;
+    const items = allowTypes
+      ? rawItems.filter((it) => allowTypes.includes(String(it?.type || "").toUpperCase()))
+      : rawItems;
     if (items.length === 0) { resultsEl.innerHTML = '<p class="empty-notice">검색 결과가 없습니다.</p>'; return; }
     resultsEl.innerHTML = "";
     items.forEach(item => {
       const div = document.createElement("div");
       div.className = "search-item search-item-clickable";
       div.tabIndex = 0;
+      const titleText = String(item.title || "").trim();
+      const previewText = String(item.preview || "").trim();
+      const showPreview = previewText && previewText !== titleText;
       div.innerHTML = `
         <div class="search-item-type">
           <span class="search-type-badge">${TYPE_ICON[item.type] || ""} ${TYPE_LABEL[item.type] || item.type}</span>
         </div>
         <div class="search-item-body">
           <p class="search-item-title">${escHtml(item.title || "")}</p>
-          ${item.preview ? `<p class="search-item-preview">${escHtml(item.preview)}</p>` : ""}
+          ${showPreview ? `<p class="search-item-preview">${escHtml(item.preview)}</p>` : ""}
           <p class="search-item-meta">${escHtml(item.contextName || "")} · ${fmtDate(item.createdAt)}</p>
         </div>`;
       div.addEventListener("click", () => { handleSearchResultClick(item); });

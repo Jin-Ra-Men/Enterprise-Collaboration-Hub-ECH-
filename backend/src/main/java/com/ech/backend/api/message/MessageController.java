@@ -72,6 +72,19 @@ public class MessageController {
         return ApiResponse.success(messageService.getChannelTimelineMessages(channelId, employeeNo, limit));
     }
 
+    /**
+     * 채널 내 메시지 단건(타임라인 범위 밖 원글 로드 등). 경로는 리터럴 {@code /timeline} 다음,
+     * {@code /{id}/replies}보다 짧은 한 세그먼트만 매칭된다.
+     */
+    @GetMapping("/{messageId}")
+    public ApiResponse<MessageResponse> getChannelMessage(
+            @PathVariable Long channelId,
+            @PathVariable Long messageId,
+            @RequestParam String employeeNo
+    ) {
+        return ApiResponse.success(messageService.getChannelMessage(channelId, messageId, employeeNo));
+    }
+
     @GetMapping("/{parentMessageId}/replies")
     public ApiResponse<List<MessageResponse>> getThreadReplies(
             @PathVariable Long channelId,

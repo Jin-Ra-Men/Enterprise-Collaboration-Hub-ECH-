@@ -248,6 +248,15 @@ class MessageThreadApiTest extends BaseIntegrationTest {
         org.junit.jupiter.api.Assertions.assertTrue(rootCount >= 1, "ROOT 메시지가 타임라인에 없어야 함");
         org.junit.jupiter.api.Assertions.assertTrue(replyCount >= 2, "REPLY 메시지가 2개 이상이어야 함(텍스트+파일)");
         org.junit.jupiter.api.Assertions.assertTrue(foundRootMessage, "타임라인에 rootMessageId가 존재해야 합니다.");
+
+        // 10) 단건 메시지 조회(원글): 멤버 + employeeNo로 ROOT 본문 확인
+        mockMvc.perform(get("/api/channels/" + channelId + "/messages/" + rootMessageId)
+                        .param("employeeNo", adminEmployeeNo)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.messageId").value((int) rootMessageId))
+                .andExpect(jsonPath("$.data.text").value("root message"))
+                .andExpect(jsonPath("$.data.parentMessageId").isEmpty());
     }
 
     private String normalUserToken() {

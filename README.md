@@ -104,6 +104,7 @@ graph LR
 - `GET /api/channels/{channelId}/files/{fileId}/download-info?userId=...`
 - `POST /api/channels/{channelId}/messages`
 - `POST /api/channels/{channelId}/messages/{parentMessageId}/replies`
+- `GET /api/channels/{channelId}/messages/{messageId}?employeeNo=...`
 - `GET /api/channels/{channelId}/messages/{parentMessageId}/replies`
 - `GET /api/users/search?q=...&department=...`
 - `GET /api/user-directory/organization-filters` (조직도 팝업 회사 셀렉트 — `org_groups(COMPANY)` 기준 `label`, `companyGroupCode`)
@@ -145,7 +146,7 @@ graph LR
 - API: `GET /api/search?q=keyword&type=ALL&limit=20` (JWT 인증 필요)
 - 성능: PostgreSQL `pg_trgm` 확장 + GIN 인덱스 기반
 - 프론트엔드: 상단 검색바 + 결과 모달(유형별 필터: 메시지/댓글/채널명/파일/업무/칸반)
-- 검색 결과 클릭: 메시지/댓글은 해당 채널·메시지로 이동, 파일은 다운로드, 이미지 파일은 크게보기+다운로드 팝업 제공
+- 검색 결과 클릭: 메시지는 해당 채널·메시지로 이동, 댓글은 스레드 모달을 열어 대상 댓글/답글 위치로 정확히 이동, 파일은 다운로드, 이미지 파일은 크게보기+다운로드 팝업 제공
 
 ### 관리자 배포 관리(Phase 3-5)
 - WAR/JAR 릴리즈 파일 업로드 (SHA-256 체크섬, 파일 크기 제한 설정)

@@ -4,15 +4,6 @@
 
 ---
 
-## 2026-03-31 — SearchApiTest 실행 실패 (JVM 8)
-
-- **에러 요약**: `backend/gradlew.bat test --tests com.ech.backend.api.search.SearchApiTest` 실행 시 Spring Boot Gradle plugin 버전 요구 미충족으로 실패
-- **발생 위치(파일/명령/기능)**: 명령 `backend/gradlew.bat test --tests com.ech.backend.api.search.SearchApiTest`
-- **원인**: 현재 셸 JVM이 Java 8로 실행되어 프로젝트 요구사항(Java 17+)을 만족하지 못함
-- **해결/현재 상태**: `JAVA_HOME`을 JDK 17로 설정 후 동일 테스트를 재실행해 확인
-
----
-
 ## 2026-03-31 — 프론트 `xhr poll error` / `Failed to fetch` (Realtime `:3001`)
 
 - **에러 요약**: 콘솔에 `[ECH] Realtime connect_error … xhr poll error`, `프레즌스 스냅샷 실패 TypeError: Failed to fetch`
@@ -22,30 +13,12 @@
 
 ---
 
-## 2026-03-31 — `./gradlew test` 실패 (JVM 8 실행)
-
-- **에러 요약**: `backend/./gradlew.bat test` 실행 시 Spring Boot Gradle plugin 요구 버전 미충족으로 빌드 실패
-- **발생 위치(파일/명령/기능)**: 명령 `backend/./gradlew.bat test`
-- **원인**: 이 셸에서 JVM이 Java 8로 실행되어 프로젝트 요구사항(Java 17+)을 만족하지 못함
-- **해결/현재 상태**: `JAVA_HOME`을 JDK 17으로 지정 후 재실행하여 `./gradlew test`는 통과(BUILD SUCCESSFUL)
-
----
-
 ## 2026-03-27 — DM 생성 실패 (channels channel_type 체크 제약)
 
 - **에러 요약**: DM 생성 API(`POST /api/channels`, `channelType=DM`) 호출 시 내부 오류 발생
 - **발생 위치(파일/명령/기능)**: 채널 생성 기능, DB `channels` 테이블 제약 `channels_channel_type_check`
 - **원인**: 기존 로컬 DB 제약이 `PUBLIC/PRIVATE`만 허용하고 `DM`을 허용하지 않아 INSERT 실패
 - **해결/현재 상태**: `DataInitializer` 기동 보정 로직으로 제약을 `PUBLIC/PRIVATE/DM`으로 재생성, 수동 적용용 SQL `docs/sql/migrate_channels_allow_dm_type.sql` 추가
-
----
-
-## 2026-03-27 — `./gradlew test` 실패 (JVM 8 실행)
-
-- **에러 요약**: `./gradlew test` 실행 시 Spring Boot Gradle plugin 요구 버전 미충족으로 빌드 실패
-- **발생 위치(파일/명령/기능)**: 명령 `backend/./gradlew.bat test`
-- **원인**: 현재 셸 JVM이 Java 8로 실행되어, 프로젝트 요구사항(Java 17+)을 만족하지 못함
-- **해결/현재 상태**: `JAVA_HOME`을 JDK 17으로 지정 후 재실행하여 검증 진행 (2026-03-27 재확인: 동일 원인으로 테스트 미실행 상태)
 
 ---
 
@@ -191,15 +164,6 @@
   - `NotFoundException` 신규 추가 → `GlobalExceptionHandler` 404 핸들러, `ChannelService`에서 사용
   - `SecurityConfig`에 `.exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(UNAUTHORIZED)))` 추가
   - `ChannelApiTest` JSON `"type"` → `"channelType"` 수정
-
----
-
-## 2026-03-24
-
-- **에러 요약**: 백엔드 실행 환경 점검 중 Java/Gradle 미충족 확인
-- **발생 위치**: `java -version`, `gradle -v`
-- **원인**: 로컬 Java가 1.8이며, 프로젝트 요구사항(Java 17+)과 불일치. 시스템 Gradle 미설치.
-- **해결**: Java 17 설치/적용 완료, Backend `gradlew.bat` 생성 및 실행 검증 완료. 이슈 해소.
 
 ---
 

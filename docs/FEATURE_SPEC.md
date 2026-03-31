@@ -196,27 +196,36 @@
 - 목적: 기존 통합 검색에서 메시지/파일/업무/칸반 외에 `채널명`, `댓글(COMMENT_*)`도 동일 모달에서 검색 가능하게 확장
 - 사용자: 일반 채팅 사용자
 - 관련 화면/경로: `frontend/index.html` `#searchTypeSelect` (`COMMENTS`, `CHANNELS` 옵션), `frontend/app.js` `runSearch`, `TYPE_ICON`, `TYPE_LABEL`
-- 관련 API: `GET /api/search?q={keyword}&type={SearchType}&limit=...`
+- 관련 API:
+  - `GET /api/search?q={keyword}&type={SearchType}&limit=...`
+  - `GET /api/channels/{channelId}/messages/{messageId}?employeeNo=...` (스레드 모달 원글 단건 보강 로드)
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:
   - 입력 타입 확장: `SearchType` = `ALL | MESSAGES | COMMENTS | CHANNELS | FILES | WORK_ITEMS | KANBAN_CARDS`
   - 출력 유형 확장: `COMMENT`, `CHANNEL`
-  - `COMMENT`: 본인이 속한 채널의 `COMMENT_*` 메시지 본문 검색 결과 반환
+  - `MESSAGES`: 루트 텍스트 메시지 중심 검색(`COMMENT_*`/`REPLY_*`/`FILE_*` 제외)
+  - `COMMENT`: 본인이 속한 채널의 `COMMENT_*` 메시지 본문 검색 결과 반환 (`threadRootMessageId` 포함)
   - `CHANNEL`: 본인이 속한 채널의 `name`/`description` 검색 결과 반환
+  - DM 채널 결과의 채널명 표시는 내부 키(`__dm__...`) 대신 표시용 설명(상대방 이름 요약)을 우선 사용
   - 검색 결과 클릭 동작:
-    - `MESSAGE`/`COMMENT`: 해당 채널로 이동 후 메시지 DOM(`msg-{id}`) 포커스 시도
+    - `MESSAGE`: 해당 채널로 이동 후 메시지 DOM(`msg-{id}`) 포커스
+    - `COMMENT`: 해당 채널로 이동 후 `threadRootMessageId` 기준으로 스레드 모달 오픈, 대상 댓글/답글 행 DOM(`thread-msg-{id}`)으로 스크롤 + 강조
     - `FILE`: 이미지(`image/*` 또는 확장자)면 이미지 라이트박스(크게보기+다운로드), 그 외 파일은 즉시 다운로드
     - `CHANNEL`: 해당 채널로 이동
 - 상태 전이/예외 케이스:
   - 검색어 2자 미만은 기존과 동일하게 400
   - 댓글/채널 검색도 멤버십 필터를 통과한 채널만 결과 포함
+  - 검색 submit 시 선택된 검색 타입을 유지하며, 타입을 강제로 `ALL`로 리셋하지 않음
 - 권한/보안: JWT 인증 필수, 채널 권한 범위(멤버십) 외 데이터는 검색 결과에서 제외
 - 로그/감사 포인트: 기존 통합 검색 정책과 동일
 - 테스트 기준:
   - `type=COMMENTS` 요청 시 `$.data.type == COMMENTS`
   - `type=CHANNELS` 요청 시 `$.data.type == CHANNELS`
+  - 댓글 검색 결과에 `threadRootMessageId` 포함 여부 확인
+  - `GET /api/channels/{channelId}/messages/{messageId}` 단건 조회 성공/권한 검증
   - 프론트 검색 타입 셀렉트에서 댓글/채널명 필터 표시 확인
   - 검색 결과 클릭 시 타입별 이동/다운로드/이미지 팝업 동작 확인
+  - 댓글 검색 결과 클릭 시 스레드 모달이 열리고 해당 댓글/답글 위치로 정확히 포커스되는지 확인
 - 비고: 구현 `SearchService`, `MessageRepository.searchCommentsInJoinedChannels`, `ChannelRepository.searchByKeywordInJoinedChannels`
 
 ---

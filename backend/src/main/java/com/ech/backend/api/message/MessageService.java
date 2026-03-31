@@ -6,6 +6,7 @@ import com.ech.backend.api.message.dto.MessageTimelineItemResponse;
 import com.ech.backend.api.message.dto.MessageResponse;
 import com.ech.backend.common.mention.MentionParser;
 import com.ech.backend.common.exception.ForbiddenException;
+import com.ech.backend.common.exception.NotFoundException;
 import com.ech.backend.domain.audit.AuditEventType;
 import com.ech.backend.domain.channel.Channel;
 import com.ech.backend.domain.channel.ChannelMemberRepository;
@@ -344,6 +345,22 @@ public class MessageService {
         return messageRepository.findByParentMessageIdOrderByCreatedAtAsc(parentMessageId).stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    /**
+     * 채널 내 단건 메시지 조회(멤버십 검증, 삭제·보관 제외).
+     * 스레드 모달에서 타임라인 캐시에 없는 원글을 불러올 때 사용한다.
+     */
+    public MessageResponse getChannelMessage(Long channelId, Long messageId, String employeeNo) {
+        if (!isUserMemberOfChannel(channelId, employeeNo)) {
+            throw new ForbiddenException("채널에 참여한 사용자가 아닙니다.");
+        }
+        Message message = messageRepository.findByIdAndChannel_Id(messageId, channelId)
+                .orElseThrow(() -> new NotFoundException("메시지를 찾을 수 없습니다."));
+        if (message.isDeleted() || message.isArchived()) {
+            throw new NotFoundException("메시지를 찾을 수 없습니다.");
+        }
+        return toResponse(message);
     }
 
     public List<MessageResponse> getChannelMessages(Long channelId, String employeeNo, int limit) {

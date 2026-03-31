@@ -41,6 +41,8 @@
   --workspace-btn-fg: #fff;
   --sidebar-search-input-fg: #fff;
   --sidebar-search-placeholder: rgba(255,255,255,.5);
+  --layout-header-height: 58px;
+  --layout-footer-height: 64px;
 }
 
 html[data-theme="light"] {
@@ -401,7 +403,9 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  height: var(--layout-header-height);
+  min-height: var(--layout-header-height);
+  padding: 0 16px;
   border-bottom: 1px solid var(--sidebar-border);
   cursor: pointer;
   user-select: none;
@@ -550,7 +554,8 @@ span.section-toggle-static { cursor: default; }
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 14px;
+  min-height: var(--layout-footer-height);
+  padding: 0 14px;
   border-top: 1px solid var(--sidebar-border);
   background: var(--sidebar-user-bg);
 }
@@ -713,7 +718,9 @@ span.section-toggle-static { cursor: default; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  height: var(--layout-header-height);
+  min-height: var(--layout-header-height);
+  padding: 0 20px;
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-elevated);
   flex-shrink: 0;
@@ -729,11 +736,11 @@ span.section-toggle-static { cursor: default; }
 /* 멤버 패널 */
 .member-panel {
   position: absolute;
-  top: 57px; right: 0;
+  top: var(--layout-header-height); right: 0;
   width: 240px;
   background: var(--bg-elevated);
   border-left: 1px solid var(--border-subtle);
-  height: calc(100% - 57px);
+  height: calc(100% - var(--layout-header-height));
   z-index: 100;
   display: flex;
   flex-direction: column;
@@ -1144,7 +1151,8 @@ html[data-theme="light"] .msg-reply-to-card:hover {
 /* 메시지 입력 (composer) */
 .composer {
   position: relative;
-  padding: 10px 20px 16px;
+  min-height: var(--layout-footer-height);
+  padding: 8px 20px;
   background: var(--bg-elevated);
   flex-shrink: 0;
   border-top: 1px solid var(--border-subtle);
@@ -1884,7 +1892,7 @@ html[data-theme="blue"] .theme-option-btn.active {
 .member-tag button { cursor: pointer; color: var(--accent); font-size: 14px; }
 .member-tag button:hover { color: #f472b6; }
 
-.search-filter-wrap { margin-right: 10px; }
+.search-filter-wrap { margin-right: 8px; }
 .search-filter-wrap select {
   padding: 5px 10px;
   border: 1px solid var(--border-subtle);
@@ -1893,14 +1901,92 @@ html[data-theme="blue"] .theme-option-btn.active {
   background: var(--bg-input);
   color: var(--text-primary);
 }
+.search-modal-query-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 8px;
+}
+.search-modal-query-input {
+  width: 220px;
+  padding: 5px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+.search-modal-query-input::placeholder { color: var(--text-muted); }
+.search-modal-query-btn {
+  padding: 5px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.search-modal-query-btn:hover { background: var(--bg-sidebar-hover); }
+
+/* 검색 모달: 제목 바로 아래 검색 툴바 */
+#searchModal .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+#searchModal .modal-header h3 {
+  flex: 1;
+  margin: 0;
+  min-width: 0;
+  white-space: nowrap;
+  word-break: keep-all;
+  line-height: 1.2;
+}
+#searchModal .search-results {
+  max-height: 54vh;
+}
+#searchModal .search-modal-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+#searchModal .search-filter-wrap {
+  margin-right: 0;
+  flex-shrink: 0;
+}
+#searchModal .search-modal-query-wrap {
+  flex: 1;
+  min-width: 0;
+  margin-right: 0;
+}
+#searchModal .search-modal-query-input {
+  width: 100%;
+  min-width: 0;
+}
+#searchModal .search-modal-query-btn {
+  white-space: nowrap;
+  word-break: keep-all;
+  min-width: 52px;
+  flex-shrink: 0;
+}
 
 /* 검색 결과 */
 .search-results { padding: 12px 20px; overflow-y: auto; max-height: 60vh; }
 .search-item {
   display: flex;
+  align-items: flex-start;
   gap: 12px;
   padding: 12px 0;
   border-bottom: 1px solid var(--border-subtle);
+}
+.search-item-type {
+  flex: 0 0 86px;
+  width: 86px;
+  display: flex;
+  justify-content: flex-start;
 }
 .search-item-clickable {
   cursor: pointer;
@@ -1911,11 +1997,13 @@ html[data-theme="blue"] .theme-option-btn.active {
 }
 .search-item:last-child { border-bottom: none; }
 .search-type-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   padding: 3px 8px;
   border-radius: 4px;
   background: rgba(255,255,255,.08);
   font-size: 12px;
+  min-height: 22px;
   white-space: nowrap;
   color: var(--text-secondary);
 }

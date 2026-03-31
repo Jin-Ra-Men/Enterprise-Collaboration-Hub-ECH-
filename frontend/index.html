@@ -517,6 +517,9 @@
       <div class="modal modal-wide">
         <div class="modal-header">
           <h3 id="searchModalTitle">검색 결과</h3>
+          <button class="modal-close" data-modal="searchModal">✕</button>
+        </div>
+        <div class="search-modal-toolbar">
           <div class="search-filter-wrap">
             <select id="searchTypeSelect">
               <option value="ALL">전체</option>
@@ -528,7 +531,16 @@
               <option value="KANBAN_CARDS">칸반 카드</option>
             </select>
           </div>
-          <button class="modal-close" data-modal="searchModal">✕</button>
+          <div class="search-modal-query-wrap">
+            <input
+              id="searchModalInput"
+              type="search"
+              class="search-modal-query-input"
+              placeholder="검색어 입력"
+              autocomplete="off"
+            />
+            <button type="button" id="searchModalSubmitBtn" class="search-modal-query-btn">검색</button>
+          </div>
         </div>
         <div id="searchResults" class="search-results"></div>
       </div>

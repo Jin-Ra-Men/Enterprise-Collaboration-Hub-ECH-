@@ -32,10 +32,7 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
                 SELECT cm FROM ChannelMember cm
                 WHERE cm.channel.id = c.id AND cm.user.employeeNo = :employeeNo
             )
-              AND (
-                LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(COALESCE(c.description, '')) LIKE LOWER(CONCAT('%', :keyword, '%'))
-              )
+              AND LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
             ORDER BY c.createdAt DESC
             """)
     List<Channel> searchByKeywordInJoinedChannels(@Param("keyword") String keyword,

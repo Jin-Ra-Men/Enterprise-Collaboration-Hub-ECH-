@@ -227,7 +227,7 @@
 ### 통합 검색 인수인계 메모
 - **API**: `GET /api/search?q={keyword}&type={SearchType}&limit={1~50}` (JWT 인증 필요)
 - **검색 범위**:
-  - MESSAGES: 본인이 속한 채널의 메시지 본문 (아카이브/삭제 제외)
+  - MESSAGES: 본인이 속한 채널의 루트 텍스트 메시지 본문 (아카이브/삭제 제외, `COMMENT_*`/`REPLY_*`/`FILE_*` 제외)
   - COMMENTS: 본인이 속한 채널의 댓글(`COMMENT_*`) 본문 (아카이브/삭제 제외)
   - CHANNELS: 본인이 속한 채널의 채널명/설명
   - FILES: 본인이 속한 채널의 파일명
@@ -237,9 +237,13 @@
 - **한계**: 현재 ILIKE 기반, 대규모 데이터셋에서는 전용 검색엔진(Elasticsearch 등) 도입 고려
 - **구현 파일**: `backend/.../api/search/` (SearchService, SearchController, dto/)
 - **프론트 결과 클릭 동작** (`frontend/app.js` `handleSearchResultClick`):
-  - `MESSAGE`/`COMMENT`: `selectChannel(..., { targetMessageId })`로 채널 이동 + 메시지 포커스
+  - `MESSAGE`: `selectChannel(..., { targetMessageId })`로 채널 이동 + 메시지 포커스
+  - `COMMENT`: 검색 응답의 `threadRootMessageId`가 있으면 채널 이동 후 `openThreadModal(threadRootMessageId, { targetCommentMessageId })`로 스레드 모달을 열고 대상 댓글/답글 위치(`thread-msg-{id}`)로 스크롤·강조. `threadRootMessageId`가 없으면 기존 채널 이동+메시지 포커스 폴백
   - `FILE`: `download-info` 조회 후 이미지면 `modalImagePreview` 오픈(다운로드 버튼), 일반 파일은 `downloadChannelFile`로 즉시 다운로드
   - `CHANNEL`: 채널 카드 클릭과 동일하게 채널 진입
+  - 검색 submit 시 `#searchTypeSelect` 값 유지(강제 `ALL` 리셋 제거)로 타입별 결과 오염 방지
+  - DM 채널 결과 컨텍스트명은 내부 채널 키 대신 표시용 설명(상대방 이름 요약)을 우선 노출
+  - 스레드 모달 원글이 타임라인 캐시에 없을 때는 `GET /api/channels/{channelId}/messages/{messageId}?employeeNo=...` 단건 API로 원글을 로드
 
 ### 관리자 배포 관리 인수인계 메모
 - **목적**: 백엔드 WAR/JAR 파일을 웹 UI에서 업로드하고, 버전 전환(활성화) 및 롤백을 관리한다.

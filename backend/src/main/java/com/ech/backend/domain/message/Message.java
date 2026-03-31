@@ -101,6 +101,10 @@ public class Message {
         return archivedAt != null;
     }
 
+    public boolean isDeleted() {
+        return this.isDeleted;
+    }
+
     public OffsetDateTime getCreatedAt() {
         return createdAt;
     }

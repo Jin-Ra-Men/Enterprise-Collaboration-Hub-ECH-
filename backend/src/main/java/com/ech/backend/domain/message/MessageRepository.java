@@ -63,6 +63,10 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             WHERE LOWER(m.body) LIKE LOWER(CONCAT('%', :keyword, '%'))
               AND m.archivedAt IS NULL
               AND m.isDeleted = false
+              AND m.parentMessage IS NULL
+              AND UPPER(COALESCE(m.messageType, '')) NOT LIKE 'COMMENT%'
+              AND UPPER(COALESCE(m.messageType, '')) NOT LIKE 'REPLY%'
+              AND UPPER(COALESCE(m.messageType, '')) NOT LIKE 'FILE%'
               AND EXISTS (
                 SELECT cm FROM ChannelMember cm
                 WHERE cm.channel.id = ch.id
@@ -80,6 +84,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     @Query("""
             SELECT m FROM Message m
             JOIN FETCH m.channel ch
+            JOIN FETCH m.parentMessage p
             WHERE LOWER(m.body) LIKE LOWER(CONCAT('%', :keyword, '%'))
               AND m.archivedAt IS NULL
               AND m.isDeleted = false
