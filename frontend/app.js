@@ -1449,23 +1449,19 @@ async function loadChannelMembers(channelId) {
       const deptParts = [department, jobLevel].filter(x => x != null && String(x).trim() !== "");
       // 조직/직급이 비어 있는 경우 레거시/시드 불일치로 인해,
       // 최소한 직위/직책이라도 보여주도록 보정한다.
-      let orgLine = deptParts.length ? deptParts.map(x => String(x).trim()).join(" · ") : "";
-      if (!orgLine) {
-        const jobPosition = normalizeOrgValueForDisplay(m.jobPosition);
-        const jobTitle = normalizeOrgValueForDisplay(m.jobTitle);
-        const fallbackParts = [jobPosition, jobTitle].filter(x => x != null && String(x).trim() !== "");
-        orgLine = fallbackParts.length ? fallbackParts.map(x => String(x).trim()).join(" · ") : "조직 미지정";
-      }
+      let orgLine = deptParts.length ? deptParts.map(x => String(x).trim()).join(" · ") : "조직 미지정";
       if (emp) {
         activeChannelMemberOrgLineByEmployeeNo.set(emp, orgLine);
       }
+      const jobPosition = normalizeOrgValueForDisplay(m.jobPosition);
+      const jobTitle = normalizeOrgValueForDisplay(m.jobTitle);
       const posHtml =
-        m.jobPosition != null && String(m.jobPosition).trim() !== ""
-          ? `<span class="member-position-txt">${escHtml(String(m.jobPosition).trim())}</span>`
+        jobPosition
+          ? `<span class="member-position-txt">${escHtml(jobPosition)}</span>`
           : "";
       const dutyHtml =
-        m.jobTitle != null && String(m.jobTitle).trim() !== ""
-          ? `<span class="member-duty-txt">${escHtml(String(m.jobTitle).trim())}</span>`
+        jobTitle
+          ? `<span class="member-duty-txt">${escHtml(jobTitle)}</span>`
           : "";
       const showKick = canKickOthers && emp !== "" && emp !== creatorEmp;
       const kickBtnHtml = showKick
@@ -1482,12 +1478,11 @@ async function loadChannelMembers(channelId) {
           <button type="button" class="member-profile-btn" data-employee-no="${escHtml(emp)}">
             <span class="member-name-wrap">
               <span class="member-name-txt">${escHtml(m.name || "알 수 없음")}</span>
-              <span class="member-org-txt" title="${escHtml(orgLine)}">${escHtml(orgLine)}</span>
-              ${posHtml}
-              ${dutyHtml}
             </span>
           </button>
           <div class="member-org-line">${escHtml(orgLine)}</div>
+          ${posHtml}
+          ${dutyHtml}
         </div>
         ${kickBtnHtml}`;
       li.querySelector(".member-profile-btn").addEventListener("click", () => openUserProfile(emp));
@@ -1843,7 +1838,7 @@ function createImageAttachmentRowFromMsg(msg, payload, { showAvatar, showTime })
 
   const senderOrgLine = activeChannelMemberOrgLineByEmployeeNo.get(emp) || "";
   const senderOrgHtml = senderOrgLine
-    ? `<div class="msg-sender-sub">${escHtml(senderOrgLine)}</div>`
+    ? `<span class="msg-sender-sub">${escHtml(senderOrgLine)}</span>`
     : "";
 
   if (showAvatar) {
@@ -1934,7 +1929,7 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
 
   const senderOrgLine = activeChannelMemberOrgLineByEmployeeNo.get(emp) || "";
   const senderOrgHtml = senderOrgLine
-    ? `<div class="msg-sender-sub">${escHtml(senderOrgLine)}</div>`
+    ? `<span class="msg-sender-sub">${escHtml(senderOrgLine)}</span>`
     : "";
 
   if (showAvatar) {
@@ -1995,7 +1990,7 @@ function createMessageRowElement(msg, { showAvatar, showTime }) {
   const emp = String(msg.senderId ?? "").trim();
   const senderOrgLine = activeChannelMemberOrgLineByEmployeeNo.get(emp) || "";
   const senderOrgHtml = senderOrgLine
-    ? `<div class="msg-sender-sub">${escHtml(senderOrgLine)}</div>`
+    ? `<span class="msg-sender-sub">${escHtml(senderOrgLine)}</span>`
     : "";
   const isMine =
     currentUser && String(currentUser.employeeNo || "").trim() === emp;
