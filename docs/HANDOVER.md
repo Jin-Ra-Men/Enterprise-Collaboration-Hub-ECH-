@@ -179,6 +179,7 @@
 - 백엔드는 커밋 후 `POST {app.realtime.internal-base-url}/internal/broadcast-channel-system`(선택 `X-Internal-Token` = `REALTIME_INTERNAL_TOKEN`)으로 채널 룸에 시스템 알림을 쏠 수 있다. 토큰 미설정 시 Realtime은 로컬 개발 편의상 인증 생략.
 - 멘션: `POST .../internal/notify-mentions` — body `{ items: [{ targetEmployeeNo, channelId, channelName, channelType, senderName, messagePreview, messageId }] }`(동일 토큰 규칙). `message:send` 저장 직후에도 Realtime이 본문 파싱으로 동일 이벤트를 쏜다(소켓 전송 경로).
 - 프론트 미확인 멘션 목록: 현재 채널이 아닌 곳에서 받은 `mention:notify`를 사용자별 localStorage 키(`ech_mention_inbox_{employeeNo}`)에 최대 100건 보관한다. 사이드바 `멘션` 섹션에서 미확인 목록만 표시하며, 항목 클릭 시 해당 채널로 이동하고 `targetMessageId`로 메시지 위치를 포커스한 뒤 목록에서 제거한다.
+- 프론트 실시간 URL: 기본은 `{페이지 프로토콜}//{hostname}:3001`(API는 페이지 `origin`). `localhost` vs `127.0.0.1` 불일치로 소켓만 실패하는 경우가 있어 자동 맞춤한다. 운영은 `<meta name="ech-realtime-url">` 또는 `localStorage ech_realtime_url`로 지정 가능. HTTPS 페이지에서 HTTP 소켓은 차단될 수 있어 프록시/TLS 필요.
 
 ### 사용자 검색/Presence 인수인계 메모
 - 사용자 검색은 `org_group_members(TEAM)` + `org_groups.display_name`(팀 표시명)을 사용해 부서 필터를 지원합니다.

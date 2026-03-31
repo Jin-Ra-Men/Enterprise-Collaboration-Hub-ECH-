@@ -213,4 +213,5 @@ cd backend
 
 ### 4) Frontend 확인
 - 백엔드를 띄운 뒤 **`http://localhost:8080/`** 로 접속해 UI를 확인합니다(백엔드가 `index.html` / `styles.css` / `app.js` 만 서빙).
-- 기본 소켓 서버 주소는 `http://localhost:3001`입니다.
+- 실시간(멘션·프레즌스·소켓 메시지) 기본 URL은 **페이지와 같은 호스트의 `:3001`** 입니다(예: 주소창이 `http://127.0.0.1:8080`이면 `http://127.0.0.1:3001`). 예전처럼 `localhost`만 하드코딩하면 `127.0.0.1`로 열 때 소켓이 끊길 수 있습니다.
+- 배포 환경에서 포트가 다르면 `index.html`의 `<meta name="ech-realtime-url" content="https://...">` 또는 브라우저에서 `localStorage.setItem('ech_realtime_url','https://...')` 로 덮어쓸 수 있습니다. HTTPS 페이지에서 HTTP 소켓은 브라우저 혼합 콘텐츠 정책으로 차단될 수 있으므로, TLS 또는 동일 오리진 리버스 프록시 구성이 필요합니다.

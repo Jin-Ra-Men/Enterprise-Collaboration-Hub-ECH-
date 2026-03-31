@@ -8,8 +8,58 @@
  * - 관리자 전용: 배포 관리, 앱 설정
  * ========================================================================== */
 
-const API_BASE   = "http://localhost:8080";
-const SOCKET_URL = "http://localhost:3001";
+function readEchMeta(name) {
+  try {
+    const el = document.querySelector(`meta[name="${name}"]`);
+    const c = el?.getAttribute("content");
+    if (c == null) return "";
+    const t = String(c).trim();
+    return t.length ? t : "";
+  } catch {
+    return "";
+  }
+}
+
+/** REST API 베이스(기본: 현재 페이지 origin). 메타 `ech-api-base` 또는 운영 프록시에서 주입 가능. */
+function resolveApiBase() {
+  const meta = readEchMeta("ech-api-base");
+  if (meta) return meta.replace(/\/$/, "");
+  try {
+    const o = window.location?.origin;
+    if (o && o !== "null") return o;
+  } catch {
+    /* ignore */
+  }
+  return "http://localhost:8080";
+}
+
+/**
+ * Socket.io 실시간 서버 URL.
+ * 우선순위: localStorage `ech_realtime_url` > meta `ech-realtime-url` > `{pageProto}//{hostname}:3001`
+ * (127.0.0.1로 열면 127.0.0.1:3001로 붙어 localhost 고정 시 흔한 불일치를 방지)
+ */
+function resolveSocketUrl() {
+  try {
+    const ls = localStorage.getItem("ech_realtime_url");
+    if (ls && String(ls).trim()) return String(ls).trim().replace(/\/$/, "");
+  } catch {
+    /* ignore */
+  }
+  const meta = readEchMeta("ech-realtime-url");
+  if (meta) return meta.replace(/\/$/, "");
+  try {
+    const { protocol, hostname } = window.location;
+    const host = hostname || "localhost";
+    const scheme = protocol === "https:" ? "https" : "http";
+    return `${scheme}://${host}:3001`;
+  } catch {
+    /* ignore */
+  }
+  return "http://localhost:3001";
+}
+
+const API_BASE = resolveApiBase();
+const SOCKET_URL = resolveSocketUrl();
 const TOKEN_KEY  = "ech_token";
 const USER_KEY   = "ech_user";
 const WS_KEY     = "ECH"; // 기본 워크스페이스 키
@@ -2718,8 +2768,23 @@ function trimMessages() {
 /* ==========================================================================
  * Socket.io
  * ========================================================================== */
+/** 실시간 연결 실패 시 사용자에게 한 번만 안내(멘션·프레즌스 미동작 원인 파악용) */
+function pushRealtimeNoticeToast(message) {
+  const stack = document.getElementById("mentionToastStack");
+  if (!stack || !message) return;
+  const t = document.createElement("div");
+  t.className = "mention-toast mention-toast-notice";
+  t.setAttribute("role", "status");
+  t.textContent = String(message);
+  stack.appendChild(t);
+  setTimeout(() => {
+    if (t.parentNode) t.remove();
+  }, 14_000);
+}
+
 function initSocket() {
   if (socket) socket.disconnect();
+  let realtimeConnectErrorToasted = false;
   socket = io(SOCKET_URL, {
     reconnection: true,
     reconnectionAttempts: Infinity,
@@ -2729,7 +2794,18 @@ function initSocket() {
     timeout: 10000,
   });
 
+  socket.on("connect_error", (err) => {
+    console.warn("[ECH] Realtime connect_error", SOCKET_URL, err?.message || err);
+    if (!realtimeConnectErrorToasted) {
+      realtimeConnectErrorToasted = true;
+      pushRealtimeNoticeToast(
+        `실시간 연결 실패: ${SOCKET_URL} — 멘션·프레즌스·즉시 수신이 안 될 수 있습니다. realtime 서버 기동 여부를 확인하거나, meta ech-realtime-url / localStorage ech_realtime_url 로 URL을 지정하세요.`
+      );
+    }
+  });
+
   socket.on("connect", async () => {
+    realtimeConnectErrorToasted = false;
     if (currentUser?.employeeNo) {
       socket.emit("presence:set", { employeeNo: currentUser.employeeNo, status: "ONLINE" });
     }

@@ -1348,6 +1348,15 @@ html[data-theme="light"] .reply-composer-banner {
   max-height: 3.8em;
   overflow: hidden;
 }
+.mention-toast-notice {
+  max-width: 420px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  border-color: color-mix(in srgb, var(--text-muted) 45%, var(--border-subtle));
+  cursor: default;
+  pointer-events: auto;
+}
 
 .msg-mention {
   color: var(--accent);
