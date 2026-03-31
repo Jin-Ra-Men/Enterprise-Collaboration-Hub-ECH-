@@ -104,6 +104,8 @@ let contextMenuSelectedRootMessageId = null;
 let contextMenuSelectedIsReply = false;
 // 타임라인에서 로드된 ROOT 메시지 캐시(스레드 모달 렌더용)
 let timelineRootMessageById = new Map();
+// loadMessages(preserveScroll=true)일 때만 렌더 함수의 자동 스크롤을 억제/복원하기 위한 비율
+let pendingScrollRestoreRatio = null;
 let selectedMembers = [];     // 채널/DM 생성 시 선택된 사용자
 let selectedDmMembers = [];
 let selectedAddMembers = [];  // 기존 채널에 추가할 사용자
@@ -1320,10 +1322,18 @@ async function selectChannel(channelId, channelName, channelType) {
   messageInputEl.focus();
 }
 
-async function loadMessages(channelId) {
+async function loadMessages(channelId, { preserveScroll = false } = {}) {
   if (!currentUser) return;
   revokeImageAttachmentBlobUrls();
   try {
+    if (preserveScroll && messagesEl) {
+      const prevH = messagesEl.scrollHeight || 1;
+      const prevTop = messagesEl.scrollTop || 0;
+      pendingScrollRestoreRatio = prevH > 0 ? prevTop / prevH : 0;
+    } else {
+      pendingScrollRestoreRatio = null;
+    }
+
     const empQ = encodeURIComponent(currentUser.employeeNo);
     const timelineUrl = `/api/channels/${channelId}/messages/timeline?employeeNo=${empQ}&limit=50`;
     const legacyUrl = `/api/channels/${channelId}/messages?employeeNo=${empQ}&limit=50`;
@@ -1374,6 +1384,14 @@ async function loadMessages(channelId) {
       }
     }
 
+    // preserveScroll=true이면 render에서 자동 스크롤을 억제했으므로 여기서 비율로 복원한다.
+    if (preserveScroll && pendingScrollRestoreRatio != null && Number.isFinite(pendingScrollRestoreRatio)) {
+      const newH = messagesEl.scrollHeight || 0;
+      const nextTop = Math.max(0, Math.min(newH, newH * pendingScrollRestoreRatio));
+      messagesEl.scrollTop = nextTop;
+      pendingScrollRestoreRatio = null;
+    }
+
     const maxId = maxRootMessageIdFromList(msgs);
     if (maxId != null) {
       await markChannelReadUpTo(channelId, maxId);
@@ -1382,6 +1400,8 @@ async function loadMessages(channelId) {
   } catch (err) {
     appendSystemMsg("메시지 로드 중 오류 발생");
     console.error(err);
+  } finally {
+    pendingScrollRestoreRatio = null;
   }
 }
 
@@ -1995,7 +2015,11 @@ function renderMessages(msgs) {
   });
   trimMessages();
   refreshPresenceDots();
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+  // 댓글 전송 등에서 스크롤 위치를 유지해야 하는 경우(= loadMessages(preserveScroll=true))
+  // render 단계에서 자동 하단 스크롤을 하지 않고 loadMessages에서 복원한다.
+  if (pendingScrollRestoreRatio == null) {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
 }
 
 function createReplyTimelineRowElement(tlMsg, { showAvatar, showTime }) {
@@ -2072,7 +2096,9 @@ function renderTimelineMessages(items) {
   });
   trimMessages();
   refreshPresenceDots();
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+  if (pendingScrollRestoreRatio == null) {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
 }
 
 /* ==========================================================================
@@ -2304,7 +2330,7 @@ async function sendThreadComment() {
     const createdId = json.data?.messageId ?? null;
     threadMessageInputEl.value = "";
     await openThreadModal(rootId, { targetCommentMessageId: createdId });
-    if (activeChannelId) await loadMessages(activeChannelId);
+    if (activeChannelId) await loadMessages(activeChannelId, { preserveScroll: true });
   } catch (e) {
     appendSystemMsg("댓글 전송 실패: " + (e?.message || "오류"));
     console.error(e);
