@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-03-31 — 프론트 `xhr poll error` / `Failed to fetch` (Realtime `:3001`)
+
+- **에러 요약**: 콘솔에 `[ECH] Realtime connect_error … xhr poll error`, `프레즌스 스냅샷 실패 TypeError: Failed to fetch`
+- **발생 위치(파일/명령/기능)**: 브라우저 `frontend/app.js` Socket.io 연결·`GET {SOCKET_URL}/presence`
+- **원인**: Node Realtime 서버가 **기동되지 않았거나** 해당 호스트·포트(기본 `:3001`)로 연결할 수 없음(방화벽·URL 불일치 등)
+- **해결/현재 상태**: 저장소 `realtime`에서 `npm install` 후 `npm run dev` 로 프로세스 실행. `GET http://localhost:3001/health` 가 `ok`인지 확인. 서버는 기본 `SOCKET_HOST=0.0.0.0`·`SOCKET_PORT=3001`로 listen.
+
+---
+
 ## 2026-03-31 — `./gradlew test` 실패 (JVM 8 실행)
 
 - **에러 요약**: `backend/./gradlew.bat test` 실행 시 Spring Boot Gradle plugin 요구 버전 미충족으로 빌드 실패

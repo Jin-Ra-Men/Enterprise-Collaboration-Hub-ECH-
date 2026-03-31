@@ -431,14 +431,25 @@ function presenceTitle(status) {
 
 async function fetchPresenceSnapshot() {
   try {
-    const res = await fetch(`${SOCKET_URL}/presence`);
+    const res = await fetch(`${SOCKET_URL}/presence`, { cache: "no-store" });
+    if (!res.ok) {
+      console.warn("[ECH] 프레즌스 HTTP 오류", SOCKET_URL, "status=", res.status);
+      return;
+    }
     const json = await res.json();
     (json.data || []).forEach((p) => {
       const emp = String(p.employeeNo || "").trim();
       if (emp) presenceByEmployeeNo.set(emp, String(p.status || "OFFLINE").toUpperCase());
     });
   } catch (e) {
-    console.warn("프레즌스 스냅샷 실패", e);
+    const name = e && e.name;
+    const msg = e && e.message;
+    console.warn(
+      "[ECH] 프레즌스 스냅샷 실패 —",
+      SOCKET_URL,
+      name ? `${name}: ${msg}` : msg || e,
+      "| 대개 원인: Realtime 서버 미기동(포트 3001). 저장소 `realtime`에서 `npm install` 후 `npm run dev` 실행."
+    );
   }
 }
 
@@ -2799,7 +2810,7 @@ function initSocket() {
     if (!realtimeConnectErrorToasted) {
       realtimeConnectErrorToasted = true;
       pushRealtimeNoticeToast(
-        `실시간 연결 실패: ${SOCKET_URL} — 멘션·프레즌스·즉시 수신이 안 될 수 있습니다. realtime 서버 기동 여부를 확인하거나, meta ech-realtime-url / localStorage ech_realtime_url 로 URL을 지정하세요.`
+        `실시간 연결 실패: ${SOCKET_URL} (xhr poll 등) — 보통 Node Realtime이 꺼져 있을 때 납니다. 저장소 루트의 realtime 폴더에서 npm install 후 npm run dev 를 실행하세요(기본 :3001). 방화벽·프록시 사용 시 URL은 meta ech-realtime-url 또는 localStorage ech_realtime_url 로 지정 가능합니다.`
       );
     }
   });

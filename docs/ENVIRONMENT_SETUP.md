@@ -23,6 +23,12 @@
 2. `npm install`
 3. `npm run dev`
 
+### 4-1) 브라우저에 `xhr poll error`, `Failed to fetch`, `[ECH] Realtime connect_error` 가 나올 때
+- **원인**: 프론트가 붙는 URL(기본 `http://<페이지호스트>:3001`)에 **Realtime(Node) 프로세스가 없음**이 가장 흔합니다.
+- **조치**: 터미널에서 `realtime` 폴더로 이동 후 `npm run dev` 가 떠 있는지 확인합니다. 콘솔에 `ECH realtime server listening on http://0.0.0.0:3001` 유사 로그가 보여야 합니다.
+- **점검**: 브라우저나 터미널에서 `GET http://localhost:3001/health` — `status: ok` JSON이면 HTTP 수신은 정상입니다.
+- (선택) 바인딩 주소: 환경변수 `SOCKET_HOST`(기본 `0.0.0.0`), 포트: `SOCKET_PORT`(기본 `3001`).
+
 ## 5) 환경 변수 표준 (`.env.example`)
 아래 값은 프로젝트 기본 표준입니다.
 

@@ -10,7 +10,9 @@ const {
   mentionPreviewForToast,
 } = require("./db");
 
-const PORT = process.env.SOCKET_PORT || 3001;
+const PORT = Number(process.env.SOCKET_PORT || 3001);
+/** 기본 0.0.0.0 — LAN/다른 기기에서 접속할 때 localhost 바인딩만 되는 환경을 피함 */
+const HOST = process.env.SOCKET_HOST || "0.0.0.0";
 /** @type {Map<string, { employeeNo: string, status: string, updatedAt: string }>} */
 const presenceByEmployeeNo = new Map();
 /** @type {Map<string, string>} socket.id -> employeeNo (presence 등록된 소켓만) */
@@ -373,8 +375,8 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`ECH realtime server running on :${PORT}`);
+server.listen(PORT, HOST, () => {
+  console.log(`ECH realtime server listening on http://${HOST}:${PORT}`);
 });
 
 async function gracefulShutdown(signal) {

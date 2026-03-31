@@ -5,6 +5,8 @@
 ## 2026-03-31
 
 ### Fixed
+- Realtime 서버: `listen(PORT, HOST)`로 기본 `SOCKET_HOST=0.0.0.0` 바인딩(포트는 `SOCKET_PORT`), LAN 등 비-localhost 접속 시 연결 거절 완화
+- 프론트: `connect_error`·프레즌스 `fetch` 실패 시 콘솔/토스트에 **Realtime 미기동(npm run dev)** 안내 문구 보강
 - 프론트 실시간·API 베이스 URL: `localhost`/`127.0.0.1` 고정 제거 → 페이지 호스트·프로토콜 기준으로 자동(`API`는 `origin`, 소켓은 동일 호스트 `:3001`), `ech-realtime-url` 메타·`ech_realtime_url` localStorage로 덮어쓰기 가능. 소켓 `connect_error` 시 우하단 안내 토스트 1회 표시
 - Realtime `saveMessage`: `channel_members.user_id`가 `users.id`(bigint)인 DB에서 사번만으로는 멤버십이 맞지 않아 소켓 전송이 실패하던 문제 — `employee_no` 조인·텍스트 비교 병행
 - 메시지 전송: 소켓 실패 후 API 폴백 **성공 시** 불필요한 시스템 안내 문구 제거, ACK 타임아웃 8초로 완화
