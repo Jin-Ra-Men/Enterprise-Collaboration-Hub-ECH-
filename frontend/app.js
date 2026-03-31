@@ -1472,14 +1472,17 @@ async function loadChannelMembers(channelId) {
           <span class="member-avatar-sm">${avatarInitials(m.name || "?")}</span>
           <span class="presence-dot ${prCl}" data-presence-user="${escHtml(emp)}" title="${presenceTitle(pr)}"></span>
         </div>
-        <button type="button" class="member-profile-btn" data-employee-no="${escHtml(emp)}">
-          <span class="member-name-wrap">
-            <span class="member-name-txt">${escHtml(m.name || "알 수 없음")}</span>
-            <span class="member-org-txt" title="${escHtml(orgLine)}">조직/직급: ${escHtml(orgLine)}</span>
-            ${posHtml}
-            ${dutyHtml}
-          </span>
-        </button>
+        <div class="member-meta-wrap">
+          <button type="button" class="member-profile-btn" data-employee-no="${escHtml(emp)}">
+            <span class="member-name-wrap">
+              <span class="member-name-txt">${escHtml(m.name || "알 수 없음")}</span>
+              <span class="member-org-txt" title="${escHtml(orgLine)}">조직/직급: ${escHtml(orgLine)}</span>
+              ${posHtml}
+              ${dutyHtml}
+            </span>
+          </button>
+          <div class="member-org-line">${escHtml(orgLine)}</div>
+        </div>
         ${kickBtnHtml}`;
       li.querySelector(".member-profile-btn").addEventListener("click", () => openUserProfile(emp));
       const kickBtn = li.querySelector(".btn-member-kick");
