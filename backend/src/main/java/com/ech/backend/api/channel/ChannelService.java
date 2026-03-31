@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -538,7 +539,7 @@ public class ChannelService {
                 memberGroupType,
                 employeeNos
         );
-        return rows.stream().collect(Collectors.toMap(
+        Map<String, String> byEmp = rows.stream().collect(Collectors.toMap(
                 m -> m.getUser().getEmployeeNo(),
                 m -> {
                     String dn = m.getGroup() != null ? m.getGroup().getDisplayName() : null;
@@ -550,6 +551,42 @@ public class ChannelService {
                 },
                 (a, b) -> a
         ));
+        if (byEmp.size() < employeeNos.size()) {
+            // JPA 매핑/데이터 편차(공백, 레거시 행 등)로 일부 누락될 때 DB 원본 조인으로 보강
+            Map<String, String> fallback = membershipDisplayByEmpJdbc(memberGroupType, employeeNos);
+            fallback.forEach(byEmp::putIfAbsent);
+        }
+        return byEmp;
+    }
+
+    private Map<String, String> membershipDisplayByEmpJdbc(String memberGroupType, List<String> employeeNos) {
+        if (employeeNos.isEmpty()) return Map.of();
+        String placeholders = IntStream.range(0, employeeNos.size())
+                .mapToObj(i -> "?")
+                .collect(Collectors.joining(","));
+        String sql = """
+                SELECT u.employee_no AS employee_no,
+                       og.display_name AS display_name
+                FROM org_group_members ogm
+                JOIN users u ON u.employee_no = ogm.employee_no
+                JOIN org_groups og ON og.group_code = ogm.group_code
+                WHERE TRIM(LOWER(ogm.member_group_type)) = TRIM(LOWER(?))
+                  AND u.employee_no IN (%s)
+                """.formatted(placeholders);
+        List<Object> params = new ArrayList<>(employeeNos.size() + 1);
+        params.add(memberGroupType);
+        params.addAll(employeeNos);
+        Map<String, String> out = new HashMap<>();
+        jdbcTemplate.query(sql, rs -> {
+            String emp = rs.getString("employee_no");
+            String dn = rs.getString("display_name");
+            if (emp == null || emp.isBlank()) return;
+            String t = dn == null ? "" : dn.trim();
+            if (t.isEmpty()) return;
+            if (t.equalsIgnoreCase(memberGroupType)) return;
+            out.putIfAbsent(emp, t);
+        }, params.toArray());
+        return out;
     }
 
     /** {@code message_type=SYSTEM} 저장 후 커밋 시점에 실시간 브로드캐스트. */

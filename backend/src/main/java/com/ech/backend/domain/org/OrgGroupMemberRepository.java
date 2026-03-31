@@ -16,7 +16,7 @@ public interface OrgGroupMemberRepository extends JpaRepository<OrgGroupMember, 
             FROM OrgGroupMember m
             JOIN FETCH m.user u
             JOIN FETCH m.group g
-            WHERE LOWER(m.memberGroupType) = LOWER(:memberGroupType)
+            WHERE TRIM(LOWER(m.memberGroupType)) = TRIM(LOWER(:memberGroupType))
               AND g.groupCode IN :groupCodes
             """)
     List<OrgGroupMember> findMembersByMemberGroupTypeAndGroupCodes(
@@ -29,7 +29,7 @@ public interface OrgGroupMemberRepository extends JpaRepository<OrgGroupMember, 
             FROM OrgGroupMember m
             JOIN FETCH m.user u
             JOIN FETCH m.group g
-            WHERE LOWER(m.memberGroupType) = LOWER(:memberGroupType)
+            WHERE TRIM(LOWER(m.memberGroupType)) = TRIM(LOWER(:memberGroupType))
               AND u.employeeNo IN :employeeNos
             """)
     List<OrgGroupMember> findMembersByMemberGroupTypeAndEmployeeNos(
