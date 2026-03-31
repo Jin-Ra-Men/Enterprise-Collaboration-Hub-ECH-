@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-03-31 — SearchApiTest 실행 실패 (JVM 8)
+
+- **에러 요약**: `backend/gradlew.bat test --tests com.ech.backend.api.search.SearchApiTest` 실행 시 Spring Boot Gradle plugin 버전 요구 미충족으로 실패
+- **발생 위치(파일/명령/기능)**: 명령 `backend/gradlew.bat test --tests com.ech.backend.api.search.SearchApiTest`
+- **원인**: 현재 셸 JVM이 Java 8로 실행되어 프로젝트 요구사항(Java 17+)을 만족하지 못함
+- **해결/현재 상태**: `JAVA_HOME`을 JDK 17로 설정 후 동일 테스트를 재실행해 확인
+
+---
+
 ## 2026-03-31 — 프론트 `xhr poll error` / `Failed to fetch` (Realtime `:3001`)
 
 - **에러 요약**: 콘솔에 `[ECH] Realtime connect_error … xhr poll error`, `프레즌스 스냅샷 실패 TypeError: Failed to fetch`

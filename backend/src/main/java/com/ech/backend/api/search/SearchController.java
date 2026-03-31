@@ -28,7 +28,7 @@ public class SearchController {
      * JWT 인증이 필요하며, 채널 메시지/파일은 본인이 속한 채널만 검색된다.
      *
      * @param q      검색 키워드 (2자 이상)
-     * @param type   검색 유형 (ALL / MESSAGES / FILES / WORK_ITEMS / KANBAN_CARDS, 기본 ALL)
+     * @param type   검색 유형 (ALL / MESSAGES / COMMENTS / CHANNELS / FILES / WORK_ITEMS / KANBAN_CARDS, 기본 ALL)
      * @param limit  결과 최대 건수 (1~50, 기본 20)
      */
     @GetMapping

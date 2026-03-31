@@ -192,6 +192,30 @@
 
 ---
 
+## 통합 검색 확장(채널명/댓글)
+- 목적: 기존 통합 검색에서 메시지/파일/업무/칸반 외에 `채널명`, `댓글(COMMENT_*)`도 동일 모달에서 검색 가능하게 확장
+- 사용자: 일반 채팅 사용자
+- 관련 화면/경로: `frontend/index.html` `#searchTypeSelect` (`COMMENTS`, `CHANNELS` 옵션), `frontend/app.js` `runSearch`, `TYPE_ICON`, `TYPE_LABEL`
+- 관련 API: `GET /api/search?q={keyword}&type={SearchType}&limit=...`
+- 관련 Socket 이벤트: 해당 없음
+- 입력/출력:
+  - 입력 타입 확장: `SearchType` = `ALL | MESSAGES | COMMENTS | CHANNELS | FILES | WORK_ITEMS | KANBAN_CARDS`
+  - 출력 유형 확장: `COMMENT`, `CHANNEL`
+  - `COMMENT`: 본인이 속한 채널의 `COMMENT_*` 메시지 본문 검색 결과 반환
+  - `CHANNEL`: 본인이 속한 채널의 `name`/`description` 검색 결과 반환
+- 상태 전이/예외 케이스:
+  - 검색어 2자 미만은 기존과 동일하게 400
+  - 댓글/채널 검색도 멤버십 필터를 통과한 채널만 결과 포함
+- 권한/보안: JWT 인증 필수, 채널 권한 범위(멤버십) 외 데이터는 검색 결과에서 제외
+- 로그/감사 포인트: 기존 통합 검색 정책과 동일
+- 테스트 기준:
+  - `type=COMMENTS` 요청 시 `$.data.type == COMMENTS`
+  - `type=CHANNELS` 요청 시 `$.data.type == CHANNELS`
+  - 프론트 검색 타입 셀렉트에서 댓글/채널명 필터 표시 확인
+- 비고: 구현 `SearchService`, `MessageRepository.searchCommentsInJoinedChannels`, `ChannelRepository.searchByKeywordInJoinedChannels`
+
+---
+
 ## 실시간 메시지 저장 연계 (Socket + PostgreSQL)
 - 목적: `message:send` 요청을 DB에 먼저 저장한 뒤 저장 성공 데이터만 브로드캐스트
 - 사용자: Frontend 개발자, Realtime/Backend 개발자

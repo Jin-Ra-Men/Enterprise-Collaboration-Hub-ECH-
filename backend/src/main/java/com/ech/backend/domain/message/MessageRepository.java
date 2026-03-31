@@ -75,6 +75,28 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
                                          Pageable pageable);
 
     /**
+     * 통합 검색: 사용자가 속한 채널의 댓글(COMMENT_*) 본문을 키워드로 검색.
+     */
+    @Query("""
+            SELECT m FROM Message m
+            JOIN FETCH m.channel ch
+            WHERE LOWER(m.body) LIKE LOWER(CONCAT('%', :keyword, '%'))
+              AND m.archivedAt IS NULL
+              AND m.isDeleted = false
+              AND m.parentMessage IS NOT NULL
+              AND UPPER(m.messageType) LIKE 'COMMENT%'
+              AND EXISTS (
+                SELECT cm FROM ChannelMember cm
+                WHERE cm.channel.id = ch.id
+                  AND cm.user.employeeNo = :employeeNo
+              )
+            ORDER BY m.createdAt DESC
+            """)
+    List<Message> searchCommentsInJoinedChannels(@Param("keyword") String keyword,
+                                                 @Param("employeeNo") String employeeNo,
+                                                 Pageable pageable);
+
+    /**
      * 보존 정책 적용: 지정 기간 이전의 메시지를 아카이브 처리 (soft delete).
      * 이미 아카이브된 메시지와 삭제된 메시지는 건드리지 않는다.
      */

@@ -228,6 +228,8 @@
 - **API**: `GET /api/search?q={keyword}&type={SearchType}&limit={1~50}` (JWT 인증 필요)
 - **검색 범위**:
   - MESSAGES: 본인이 속한 채널의 메시지 본문 (아카이브/삭제 제외)
+  - COMMENTS: 본인이 속한 채널의 댓글(`COMMENT_*`) 본문 (아카이브/삭제 제외)
+  - CHANNELS: 본인이 속한 채널의 채널명/설명
   - FILES: 본인이 속한 채널의 파일명
   - WORK_ITEMS: 업무 제목/설명 (워크스페이스 전체)
   - KANBAN_CARDS: 칸반 카드 제목/설명 (워크스페이스 전체)

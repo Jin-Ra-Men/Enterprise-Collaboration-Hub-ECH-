@@ -7,6 +7,8 @@ package com.ech.backend.api.search.dto;
 public enum SearchType {
     ALL,
     MESSAGES,
+    COMMENTS,
+    CHANNELS,
     FILES,
     WORK_ITEMS,
     KANBAN_CARDS

@@ -51,6 +51,28 @@ class SearchApiTest extends BaseIntegrationTest {
     }
 
     @Test
+    @DisplayName("타입 필터(COMMENTS) 지정 검색")
+    void search_with_comments_type_filter() throws Exception {
+        mockMvc.perform(get("/api/search")
+                        .param("q", "hello")
+                        .param("type", "COMMENTS")
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.type").value("COMMENTS"));
+    }
+
+    @Test
+    @DisplayName("타입 필터(CHANNELS) 지정 검색")
+    void search_with_channels_type_filter() throws Exception {
+        mockMvc.perform(get("/api/search")
+                        .param("q", "hello")
+                        .param("type", "CHANNELS")
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.type").value("CHANNELS"));
+    }
+
+    @Test
     @DisplayName("limit 파라미터 적용 확인")
     void search_with_limit() throws Exception {
         mockMvc.perform(get("/api/search")

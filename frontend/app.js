@@ -3975,8 +3975,8 @@ async function loadSettings() {
 /* ==========================================================================
  * 통합 검색
  * ========================================================================== */
-const TYPE_ICON  = { MESSAGE: "💬", FILE: "📎", WORK_ITEM: "✅", KANBAN_CARD: "📋" };
-const TYPE_LABEL = { MESSAGE: "메시지", FILE: "파일", WORK_ITEM: "업무", KANBAN_CARD: "칸반" };
+const TYPE_ICON  = { MESSAGE: "💬", COMMENT: "🧵", CHANNEL: "#", FILE: "📎", WORK_ITEM: "✅", KANBAN_CARD: "📋" };
+const TYPE_LABEL = { MESSAGE: "메시지", COMMENT: "댓글", CHANNEL: "채널", FILE: "파일", WORK_ITEM: "업무", KANBAN_CARD: "칸반" };
 
 document.getElementById("searchForm").addEventListener("submit", async (e) => {
   e.preventDefault();

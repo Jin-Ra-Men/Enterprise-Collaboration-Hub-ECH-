@@ -3,6 +3,7 @@ package com.ech.backend.api.search;
 import com.ech.backend.api.search.dto.SearchResponse;
 import com.ech.backend.api.search.dto.SearchResultItem;
 import com.ech.backend.api.search.dto.SearchType;
+import com.ech.backend.domain.channel.ChannelRepository;
 import com.ech.backend.domain.file.ChannelFileRepository;
 import com.ech.backend.domain.kanban.KanbanCardRepository;
 import com.ech.backend.domain.message.MessageRepository;
@@ -22,17 +23,20 @@ public class SearchService {
     private static final int PREVIEW_LENGTH = 150;
 
     private final MessageRepository messageRepository;
+    private final ChannelRepository channelRepository;
     private final ChannelFileRepository channelFileRepository;
     private final WorkItemRepository workItemRepository;
     private final KanbanCardRepository kanbanCardRepository;
 
     public SearchService(
             MessageRepository messageRepository,
+            ChannelRepository channelRepository,
             ChannelFileRepository channelFileRepository,
             WorkItemRepository workItemRepository,
             KanbanCardRepository kanbanCardRepository
     ) {
         this.messageRepository = messageRepository;
+        this.channelRepository = channelRepository;
         this.channelFileRepository = channelFileRepository;
         this.workItemRepository = workItemRepository;
         this.kanbanCardRepository = kanbanCardRepository;
@@ -69,6 +73,32 @@ public class SearchService {
                             m.getChannel().getId(),
                             m.getChannel().getName(),
                             m.getCreatedAt()
+                    )));
+        }
+
+        if (searchType == SearchType.ALL || searchType == SearchType.COMMENTS) {
+            messageRepository.searchCommentsInJoinedChannels(kw, employeeNo, page)
+                    .forEach(m -> items.add(new SearchResultItem(
+                            "COMMENT",
+                            m.getId(),
+                            SearchResultItem.truncate(m.getBody(), 60),
+                            SearchResultItem.truncate(m.getBody(), PREVIEW_LENGTH),
+                            m.getChannel().getId(),
+                            m.getChannel().getName(),
+                            m.getCreatedAt()
+                    )));
+        }
+
+        if (searchType == SearchType.ALL || searchType == SearchType.CHANNELS) {
+            channelRepository.searchByKeywordInJoinedChannels(kw, employeeNo, page)
+                    .forEach(c -> items.add(new SearchResultItem(
+                            "CHANNEL",
+                            c.getId(),
+                            c.getName(),
+                            SearchResultItem.truncate(c.getDescription(), PREVIEW_LENGTH),
+                            c.getId(),
+                            c.getName(),
+                            c.getCreatedAt()
                     )));
         }
 
