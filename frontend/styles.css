@@ -1315,7 +1315,7 @@ html[data-theme="light"] .reply-composer-banner {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-width: 380px;
+  max-width: 460px;
   pointer-events: none;
 }
 .mention-toast-stack .mention-toast {
@@ -1325,8 +1325,9 @@ html[data-theme="light"] .reply-composer-banner {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
-  padding: 14px 18px;
+  gap: 6px;
+  min-width: 340px;
+  padding: 16px 20px;
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
   background: var(--bg-elevated);
@@ -1342,15 +1343,20 @@ html[data-theme="light"] .reply-composer-banner {
   to { opacity: 1; transform: translateY(0); }
 }
 .mention-toast-title {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--accent);
 }
-.mention-toast-sub { font-size: 14px; font-weight: 600; }
-.mention-toast-preview {
+.mention-toast-sub { font-size: 14px; font-weight: 700; }
+.mention-toast-loc {
   font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.mention-toast-preview {
+  font-size: 14px;
   color: var(--text-muted);
   line-height: 1.45;
   max-height: 3.8em;

@@ -3200,6 +3200,11 @@ function pushMentionToast(p) {
   const channelType = String(p.channelType || "PUBLIC");
   const senderName = String(p.senderName || "");
   const preview = String(p.messagePreview || "").slice(0, 160);
+  const isDm = channelType === "DM";
+  const locationText = isDm
+    ? `DM · ${channelName}`
+    : `채널 · #${channelName}`;
+  const senderText = senderName || "알 수 없음";
   const isDifferentChannel = activeChannelId == null || Number(activeChannelId) !== cid;
   if (isDifferentChannel) {
     enqueueUnreadMention({
@@ -3216,7 +3221,7 @@ function pushMentionToast(p) {
   const toast = document.createElement("button");
   toast.type = "button";
   toast.className = "mention-toast";
-  toast.innerHTML = `<span class="mention-toast-title">멘션</span><span class="mention-toast-sub">${escHtml(senderName)} · ${escHtml(channelName)}</span><span class="mention-toast-preview">${escHtml(preview)}</span>`;
+  toast.innerHTML = `<span class="mention-toast-title">새 멘션</span><span class="mention-toast-sub">${escHtml(senderText)}</span><span class="mention-toast-loc">${escHtml(locationText)}</span><span class="mention-toast-preview">${escHtml(preview)}</span>`;
   toast.addEventListener("click", () => {
     toast.remove();
     if (p.messageId != null) {
