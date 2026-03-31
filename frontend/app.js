@@ -1428,16 +1428,29 @@ async function loadChannelMembers(channelId) {
     const myEmp = currentUser ? String(currentUser.employeeNo || "").trim() : "";
     const canKickOthers = myEmp !== "" && creatorEmp !== "" && myEmp === creatorEmp;
 
+    const normalizeOrgValueForDisplay = (v) => {
+      const s = v == null ? "" : String(v).trim();
+      if (!s) return "";
+      const up = s.toUpperCase();
+      // DB placeholder 값(예: display_name='TEAM')이 그대로 내려올 때를 대비
+      if (up === "TEAM" || up === "JOB_LEVEL" || up === "JOB_POSITION" || up === "JOB_TITLE") return "";
+      return s;
+    };
+
     members.forEach(m => {
       const emp = String(m.employeeNo || "").trim();
       const pr = presenceByEmployeeNo.get(emp) || "OFFLINE";
       const prCl = presenceCssClass(pr);
-      const deptParts = [m.department, m.jobLevel].filter(x => x != null && String(x).trim() !== "");
+      const department = normalizeOrgValueForDisplay(m.department);
+      const jobLevel = normalizeOrgValueForDisplay(m.jobLevel);
+      const deptParts = [department, jobLevel].filter(x => x != null && String(x).trim() !== "");
       // 조직/직급이 비어 있는 경우 레거시/시드 불일치로 인해,
       // 최소한 직위/직책이라도 보여주도록 보정한다.
       let orgLine = deptParts.length ? deptParts.map(x => String(x).trim()).join(" · ") : "";
       if (!orgLine) {
-        const fallbackParts = [m.jobPosition, m.jobTitle].filter(x => x != null && String(x).trim() !== "");
+        const jobPosition = normalizeOrgValueForDisplay(m.jobPosition);
+        const jobTitle = normalizeOrgValueForDisplay(m.jobTitle);
+        const fallbackParts = [jobPosition, jobTitle].filter(x => x != null && String(x).trim() !== "");
         orgLine = fallbackParts.length ? fallbackParts.map(x => String(x).trim()).join(" · ") : "조직 미지정";
       }
       const posHtml =
@@ -2444,7 +2457,12 @@ function appendMessageRealtime(msg) {
     messagesEl.appendChild(createDateDividerElement(msg.createdAt));
   }
 
-  const adjacentPrevChat = findLastChatRowIn(messagesEl);
+  // speech block 분리를 위해, 직전 DOM이 시스템/날짜선이면 "연속 발화"로 보지 않는다.
+  const lastEl = messagesEl.lastElementChild;
+  const adjacentPrevChat =
+    lastEl && lastEl.classList?.contains("msg-row") && lastEl.classList?.contains("msg-chat")
+      ? lastEl
+      : null;
   if (
     adjacentPrevChat &&
     adjacentPrevChat.dataset.senderId === sid &&
@@ -2454,7 +2472,7 @@ function appendMessageRealtime(msg) {
     if (timeEl) timeEl.remove();
   }
 
-  const beforeAppendChat = findLastChatRowIn(messagesEl);
+  const beforeAppendChat = adjacentPrevChat;
   const showAvatar = !beforeAppendChat || beforeAppendChat.dataset.senderId !== sid;
   const row = createMessageRowElement(msg, { showAvatar, showTime: true });
   const mid = msg.messageId ?? msg.message_id;
@@ -2582,6 +2600,9 @@ function initSocket() {
   });
 
   socket.on("message:error", (err) => {
+    // sendMessage()가 이미 소켓 실패 → API 폴백을 수행하는 중일 수 있어,
+    // 이때 뜨는 `message:error`는 사용자에게 중복 오류로 보일 수 있다.
+    if (socketSendInFlight) return;
     appendSystemMsg("전송 실패: " + (err?.message || "알 수 없는 오류"));
   });
 
@@ -2662,6 +2683,10 @@ let mentionSuggestResults = [];
 let mentionSelectedIndex = 0;
 // 동일 메시지에 대해 토스트가 중복 표시되지 않도록(mention:notify + 폴백 경로) 제어한다.
 const shownMentionToastMessageIds = new Set();
+
+// socket으로 전송 시도 중이면, server가 내려주는 `message:error` 시스템 문구가
+// (API 폴백 성공 케이스에서도) 중복으로 남을 수 있다. 이 플래그로 억제한다.
+let socketSendInFlight = false;
 
 // composer 화면에는 `@표시명`만 보이게 삽입하고,
 // 전송 시에만 `@{사번|표시명}` 토큰으로 변환하기 위한 매핑.
@@ -2957,6 +2982,7 @@ async function sendMessage() {
 
   if (!preparedText) return;
   try {
+    socketSendInFlight = true;
     await sendMessageViaSocket(activeChannelId, currentUser.employeeNo, preparedText);
   } catch (socketErr) {
     // 소켓 저장이 실패해도 API 경로로 한 번 더 시도해 전송 유실을 줄인다.
@@ -2967,6 +2993,8 @@ async function sendMessage() {
       appendSystemMsg("전송 실패: " + (apiErr?.message || "오류"));
       return;
     }
+  } finally {
+    socketSendInFlight = false;
   }
   messageInputEl.value = "";
   mentionDisplayToEmployeeNo.clear();

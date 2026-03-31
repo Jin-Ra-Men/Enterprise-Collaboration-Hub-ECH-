@@ -16,6 +16,9 @@
 - 멘션 토스트: Realtime 서버에서 멘션 수신자를 채널 멤버로 필터할 때 DB 타입 차이(bigint vs employee_no)로 인해 누락되던 문제 수정
 - Realtime 멘션 수신자 필터: `channel_members.user_id`가 `users.id(bigint)`로 저장된 경우에도 `employee_no`로 정규화해 정확히 토스트 전송
 - 채널 멤버의 조직/직급 표시: `org_group_members.member_group_type` 대소문자 불일치에 대비해 memberGroupType 비교를 case-insensitive로 보강
+- 채팅 전송: 소켓 실패 후 API 폴백으로 메시지는 저장되는데도 `message:error`가 중복 토스트로 남던 문제를 억제
+- 채팅 발화 구분: 시스템 메시지/날짜선 바로 뒤에서 같은 사용자가 말해도 새 발화(avatar/time 묶음)가 시작되도록 realtime 렌더 경계 처리 보강
+- 채팅방 멤버 패널: `department/jobLevel`에 placeholder(예: `TEAM`) 값이 내려오는 경우 비워서 frontend fallback(직위/직책 표시)되게 처리
 - 멘션 입력 UX: 자동완성 선택 시 입력창에는 `@임보안`만 보이고, 전송 시에만 `@{emp|임보안}` 토큰으로 변환
 
 ### Added

@@ -540,7 +540,14 @@ public class ChannelService {
         );
         return rows.stream().collect(Collectors.toMap(
                 m -> m.getUser().getEmployeeNo(),
-                m -> m.getGroup().getDisplayName(),
+                m -> {
+                    String dn = m.getGroup() != null ? m.getGroup().getDisplayName() : null;
+                    String t = dn == null ? "" : dn.trim();
+                    // placeholder(예: display_name='TEAM')가 그대로 내려오는 경우를 대비
+                    if (t.isEmpty()) return "";
+                    if (t.equalsIgnoreCase(memberGroupType)) return "";
+                    return t;
+                },
                 (a, b) -> a
         ));
     }
