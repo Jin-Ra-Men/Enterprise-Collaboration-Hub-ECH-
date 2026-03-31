@@ -1648,16 +1648,17 @@ html[data-theme="light"] .reply-composer-banner {
   flex-direction: column;
   gap: 10px;
 }
-.thread-composer { flex: 0 0 auto; }
+.thread-composer { flex: 1 1 auto; }
 .thread-composer-controls {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-wrap: wrap;
+  width: 100%;
+  flex-wrap: nowrap;
 }
 .thread-composer #threadMessageInput {
   flex: 1;
-  min-width: 220px;
+  min-width: 0;
 }
 
 .form-group { margin-bottom: 16px; }
