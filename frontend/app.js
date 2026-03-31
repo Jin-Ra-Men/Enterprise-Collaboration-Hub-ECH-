@@ -1313,15 +1313,41 @@ async function selectChannel(channelId, channelName, channelType) {
   // 소켓 채널 입장
   joinSocketChannel(channelId);
 
+  // 메시지/멤버를 함께 로드하고, 멤버 조직 캐시는 멤버 로드 완료 시점에 화면에 동기화한다.
+  const membersPromise = loadChannelMembers(channelId);
+
   // 메시지 내역 로드
   await loadMessages(channelId);
 
-  // 멤버 목록 로드
-  loadChannelMembers(channelId);
+  // 멤버 목록/조직 정보 로드 완료 대기(조직/직급 라벨 들쭉날쭉 방지)
+  await membersPromise;
 
   loadChannelFiles(channelId);
 
   messageInputEl.focus();
+}
+
+function syncSenderOrgLabelsInMessageList() {
+  if (!messagesEl) return;
+  const rows = messagesEl.querySelectorAll(".msg-row.msg-chat[data-sender-id]");
+  rows.forEach((row) => {
+    const emp = String(row.dataset.senderId || "").trim();
+    if (!emp) return;
+    const block = row.querySelector(".msg-sender-block");
+    if (!block) return;
+    const orgLine = String(activeChannelMemberOrgLineByEmployeeNo.get(emp) || "").trim();
+    let sub = block.querySelector(".msg-sender-sub");
+    if (!orgLine) {
+      if (sub) sub.remove();
+      return;
+    }
+    if (!sub) {
+      sub = document.createElement("span");
+      sub.className = "msg-sender-sub";
+      block.appendChild(sub);
+    }
+    sub.textContent = orgLine;
+  });
 }
 
 async function loadMessages(channelId, { preserveScroll = false } = {}) {
@@ -1495,6 +1521,8 @@ async function loadChannelMembers(channelId) {
       }
       listEl.appendChild(li);
     });
+    // 메시지를 먼저 렌더한 경우에도 발신자 조직/직급 라벨을 즉시 동기화한다.
+    syncSenderOrgLabelsInMessageList();
     refreshPresenceDots();
   } catch (err) {
     console.error("멤버 로드 실패", err);
