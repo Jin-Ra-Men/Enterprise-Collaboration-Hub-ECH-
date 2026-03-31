@@ -93,6 +93,8 @@ let pendingFile    = null;
 let threadPendingFile = null;
 let threadPendingFilePreviewUrl = null;
 let threadRootMessageId = null;
+// 스레드 모달 내부에서 렌더링 중인지 여부(메인용 댓글 요약 버튼 숨김용)
+let isRenderingThreadModal = false;
 // 타임라인 답글 모드(메시지 입력창으로 답글 생성)
 let replyComposerTargetMessageId = null;
 let replyComposerOriginalPlaceholder = "";
@@ -1549,6 +1551,7 @@ function fmtThreadCommentRelativeLabel(iso) {
 
 /** 메시지 하단: N개의 댓글 + 마지막 댓글 시각(클릭 시 스레드 모달) */
 function attachThreadCommentFooter(row, msg) {
+  if (isRenderingThreadModal) return;
   const n = threadCommentCountFromMsg(msg);
   if (n <= 0) return;
   const lastAt = msg.lastCommentAt ?? msg.last_comment_at ?? null;
@@ -2169,6 +2172,7 @@ async function openThreadModal(rootMessageId, { targetCommentMessageId = null } 
   clearThreadFilePreview();
   hideMessageContextMenu();
   openModal("modalThread");
+  isRenderingThreadModal = true;
 
   // ROOT 메시지(타임라인에서 캐시로 재사용)
   const rootMsg = timelineRootMessageById.get(rootId);
@@ -2177,6 +2181,7 @@ async function openThreadModal(rootMessageId, { targetCommentMessageId = null } 
 
   if (!rootMsg) {
     threadRootContainerEl.textContent = "원글을 찾을 수 없습니다.";
+    isRenderingThreadModal = false;
     return;
   }
 
@@ -2188,6 +2193,7 @@ async function openThreadModal(rootMessageId, { targetCommentMessageId = null } 
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
       threadCommentsContainerEl.textContent = "댓글 불러오기 실패";
+      isRenderingThreadModal = false;
       return;
     }
 
@@ -2255,7 +2261,9 @@ async function openThreadModal(rootMessageId, { targetCommentMessageId = null } 
   } catch (e) {
     threadCommentsContainerEl.textContent = "스레드 로딩 중 오류";
     console.error(e);
+    isRenderingThreadModal = false;
   }
+  isRenderingThreadModal = false;
 }
 
 async function sendThreadComment() {
