@@ -1075,6 +1075,119 @@ span.section-toggle-static { cursor: default; }
   border-top: 1px solid var(--border-subtle);
 }
 
+/* 답글 모드: 입력창 위 미리보기(참조 UI — 반투명 바) */
+.reply-composer-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  margin: 0 0 8px 0;
+  border-radius: 10px;
+  background: rgba(30, 32, 36, 0.72);
+  color: #f4f4f5;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+}
+.reply-composer-banner.hidden { display: none !important; }
+.reply-composer-banner-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.reply-composer-banner-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+.reply-composer-banner-preview {
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.78);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.reply-composer-banner-close {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.reply-composer-banner-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+html[data-theme="light"] .reply-composer-banner {
+  background: rgba(55, 60, 68, 0.85);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.composer:has(.reply-composer-banner:not(.hidden)) .composer-inner {
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+}
+
+/* 원글 하단: 댓글 개수·마지막 댓글 시각 */
+.msg-thread-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  width: 100%;
+  max-width: 100%;
+  border: none;
+  border-radius: 8px;
+  background: rgba(74, 144, 226, 0.12);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.msg-thread-summary:hover {
+  background: rgba(74, 144, 226, 0.2);
+}
+.msg-thread-summary-avatar {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: var(--accent, #4a90e2);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.msg-thread-summary-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  min-width: 0;
+}
+.msg-thread-summary-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent, #4a90e2);
+}
+.msg-thread-summary-time {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 .mention-suggest {
   position: absolute;
   left: 20px;

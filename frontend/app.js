@@ -143,6 +143,10 @@ const threadFilePreviewEl = document.getElementById("threadFilePreview");
 const threadFilePreviewThumbEl = document.getElementById("threadFilePreviewThumb");
 const threadFilePreviewNameEl = document.getElementById("threadFilePreviewName");
 const threadBtnClearFileEl = document.getElementById("threadBtnClearFile");
+const replyComposerBannerEl = document.getElementById("replyComposerBanner");
+const replyComposerBannerTitleEl = document.getElementById("replyComposerBannerTitle");
+const replyComposerBannerPreviewEl = document.getElementById("replyComposerBannerPreview");
+const replyComposerBannerCloseEl = document.getElementById("replyComposerBannerClose");
 
 if (messageInputEl && replyComposerOriginalPlaceholder === "") {
   replyComposerOriginalPlaceholder = messageInputEl.placeholder || "메시지 입력…";
@@ -1515,6 +1519,112 @@ function createDateDividerElement(iso) {
   return div;
 }
 
+/** 타임라인 API: 원글에 달린 댓글 개수(양수만) */
+function threadCommentCountFromMsg(msg) {
+  const raw = msg.threadCommentCount ?? msg.thread_comment_count;
+  if (raw == null || raw === "") return 0;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+/** 댓글 요약 줄용: 「오늘 오전 1:13에」 형태 */
+function fmtThreadCommentRelativeLabel(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (!Number.isFinite(d.getTime())) return "";
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startThat = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diffDays = Math.round((startThat - startToday) / 86400000);
+  const hh = d.getHours();
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  const ampm = hh < 12 ? "오전" : "오후";
+  const h12 = hh % 12 === 0 ? 12 : hh % 12;
+  const timePart = `${ampm} ${h12}:${mm}`;
+  if (diffDays === 0) return `오늘 ${timePart}에`;
+  if (diffDays === -1) return `어제 ${timePart}에`;
+  if (diffDays < -1 && diffDays >= -6) return `${-diffDays}일 전 ${timePart}에`;
+  return `${d.toLocaleDateString("ko-KR", { month: "numeric", day: "numeric" })} ${timePart}에`;
+}
+
+/** 메시지 하단: N개의 댓글 + 마지막 댓글 시각(클릭 시 스레드 모달) */
+function attachThreadCommentFooter(row, msg) {
+  const n = threadCommentCountFromMsg(msg);
+  if (n <= 0) return;
+  const lastAt = msg.lastCommentAt ?? msg.last_comment_at ?? null;
+  const lastName = String(msg.lastCommentSenderName ?? msg.last_comment_sender_name ?? "").trim();
+  const initials = avatarInitials(lastName || "?");
+  const timeLabel = fmtThreadCommentRelativeLabel(lastAt);
+  const rootId = row.dataset.rootMessageId || row.dataset.messageId;
+  if (!rootId) return;
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "msg-thread-summary";
+  btn.dataset.openThreadRoot = rootId;
+  btn.innerHTML = `
+    <span class="msg-thread-summary-avatar" aria-hidden="true">${escHtml(initials)}</span>
+    <span class="msg-thread-summary-main">
+      <span class="msg-thread-summary-count">${n}개의 댓글</span>
+      <span class="msg-thread-summary-time">${escHtml(timeLabel)}</span>
+    </span>
+  `;
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openThreadModal(Number(rootId), { targetCommentMessageId: null });
+  });
+  const body = row.querySelector(".msg-body");
+  if (body) body.appendChild(btn);
+}
+
+function snippetForReplyComposerBanner(messageId) {
+  const id = Number(messageId);
+  if (!Number.isFinite(id)) return { senderLabel: "메시지", snippet: "" };
+  const row = document.querySelector(`.msg-row.msg-chat[data-message-id="${id}"]`);
+  let senderLabel = "메시지";
+  let snippet = "";
+  if (row) {
+    const sBtn = row.querySelector(".msg-sender");
+    if (sBtn && sBtn.textContent) senderLabel = String(sBtn.textContent).trim() || senderLabel;
+    const tEl = row.querySelector(".msg-text");
+    if (tEl && tEl.textContent) snippet = String(tEl.textContent).trim().slice(0, 160);
+    if (!snippet) {
+      const fn = row.querySelector(".msg-attach-name");
+      if (fn && fn.textContent) snippet = "📎 " + String(fn.textContent).trim();
+    }
+  } else {
+    const cached = timelineRootMessageById.get(id);
+    if (cached) {
+      senderLabel = String(cached.senderName || cached.sender_name || senderLabel).trim() || senderLabel;
+      const bodyText = cached.text ?? cached.body ?? "";
+      if (bodyText) {
+        const filePayload = tryParseFilePayload({ text: bodyText, messageType: cached.messageType });
+        snippet = filePayload?.originalFilename
+          ? "📎 " + String(filePayload.originalFilename).trim()
+          : String(bodyText).replace(/\s+/g, " ").trim().slice(0, 160);
+      }
+    }
+  }
+  return { senderLabel, snippet: snippet || "(미리보기 없음)" };
+}
+
+function updateReplyComposerBanner() {
+  if (!replyComposerBannerEl) return;
+  if (replyComposerTargetMessageId == null || !Number.isFinite(replyComposerTargetMessageId)) {
+    replyComposerBannerEl.classList.add("hidden");
+    return;
+  }
+  const { senderLabel, snippet } = snippetForReplyComposerBanner(replyComposerTargetMessageId);
+  if (replyComposerBannerTitleEl) {
+    replyComposerBannerTitleEl.textContent = `${senderLabel}에게 답장`;
+  }
+  if (replyComposerBannerPreviewEl) {
+    replyComposerBannerPreviewEl.textContent = snippet;
+  }
+  replyComposerBannerEl.classList.remove("hidden");
+}
+
 /** 직전 채팅 행(시스템·날짜선 뒤에 있어도 탐색) */
 function findLastChatRowIn(container) {
   let el = container.lastElementChild;
@@ -1725,6 +1835,7 @@ function createImageAttachmentRowFromMsg(msg, payload, { showAvatar, showTime })
       placeholder.textContent = "이미지를 불러올 수 없습니다";
     });
 
+  attachThreadCommentFooter(div, msg);
   return div;
 }
 
@@ -1795,6 +1906,7 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
   div.querySelector(".btn-attach-dl").addEventListener("click", () => {
     downloadChannelFile(fileMeta.id, fileMeta.originalFilename, channelId);
   });
+  attachThreadCommentFooter(div, msg);
   return div;
 }
 
@@ -1860,6 +1972,7 @@ function createMessageRowElement(msg, { showAvatar, showTime }) {
         </div>
       </div>`;
   }
+  attachThreadCommentFooter(div, msg);
   return div;
 }
 
@@ -1964,12 +2077,14 @@ function setReplyComposerTarget(messageId) {
   if (!messageId || !Number.isFinite(Number(messageId))) return;
   replyComposerTargetMessageId = Number(messageId);
   if (messageInputEl) messageInputEl.placeholder = "답글 입력…";
+  updateReplyComposerBanner();
   messageInputEl?.focus?.();
 }
 
 function clearReplyComposerTarget() {
   replyComposerTargetMessageId = null;
   if (messageInputEl) messageInputEl.placeholder = replyComposerOriginalPlaceholder || "메시지 보내기… @이름 멘션 · 이미지 Ctrl+V";
+  if (replyComposerBannerEl) replyComposerBannerEl.classList.add("hidden");
 }
 
 function clearThreadFilePreview() {
@@ -2174,6 +2289,7 @@ async function sendThreadComment() {
     const createdId = json.data?.messageId ?? null;
     threadMessageInputEl.value = "";
     await openThreadModal(rootId, { targetCommentMessageId: createdId });
+    if (activeChannelId) await loadMessages(activeChannelId);
   } catch (e) {
     appendSystemMsg("댓글 전송 실패: " + (e?.message || "오류"));
     console.error(e);
@@ -2186,6 +2302,9 @@ if (threadBtnAttachEl && threadFileInputEl) {
 }
 if (threadBtnClearFileEl) {
   threadBtnClearFileEl.addEventListener("click", clearThreadFilePreview);
+}
+if (replyComposerBannerCloseEl) {
+  replyComposerBannerCloseEl.addEventListener("click", () => clearReplyComposerTarget());
 }
 if (threadFileInputEl) {
   threadFileInputEl.addEventListener("change", () => {
@@ -2985,6 +3104,7 @@ async function uploadFile(
       if (threadRootMessageId != null) {
         await openThreadModal(threadRootMessageId, { targetCommentMessageId: null });
       }
+      if (activeChannelId) await loadMessages(activeChannelId);
       return;
     }
 

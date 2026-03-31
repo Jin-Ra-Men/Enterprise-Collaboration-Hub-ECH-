@@ -4,6 +4,9 @@
 
 ## 2026-03-31
 
+### Added
+- 채팅 타임라인: 원글 하단에 **댓글 N개 + 마지막 댓글 시각** 요약(클릭 시 스레드 모달), 답글 모드 시 **입력창 위 답장 미리보기 바**(대상·내용 스니펫·닫기)
+
 ### Fixed
 - 채팅 메시지 로드: `GET .../messages/timeline`이 404(구버전 백엔드 등)일 때 `GET .../messages`로 자동 폴백해 채팅을 읽을 수 있게 함
 - `MessageController`: `GET /timeline` 매핑을 `/{parentMessageId}/replies` 앞에 배치해 경로 매칭 안정화
