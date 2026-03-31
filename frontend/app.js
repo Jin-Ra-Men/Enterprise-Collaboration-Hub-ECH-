@@ -1482,7 +1482,7 @@ async function loadChannelMembers(channelId) {
           <button type="button" class="member-profile-btn" data-employee-no="${escHtml(emp)}">
             <span class="member-name-wrap">
               <span class="member-name-txt">${escHtml(m.name || "알 수 없음")}</span>
-              <span class="member-org-txt" title="${escHtml(orgLine)}">조직/직급: ${escHtml(orgLine)}</span>
+              <span class="member-org-txt" title="${escHtml(orgLine)}">${escHtml(orgLine)}</span>
               ${posHtml}
               ${dutyHtml}
             </span>
@@ -1979,10 +1979,6 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
 
 function createMessageRowElement(msg, { showAvatar, showTime }) {
   const mt = String(msg.messageType || msg.message_type || "").toUpperCase();
-  const senderOrgLine = activeChannelMemberOrgLineByEmployeeNo.get(emp) || "";
-  const senderOrgHtml = senderOrgLine
-    ? `<div class="msg-sender-sub">${escHtml(senderOrgLine)}</div>`
-    : "";
   if (mt === "SYSTEM") {
     const div = document.createElement("div");
     div.className = "msg-system";
@@ -1997,6 +1993,10 @@ function createMessageRowElement(msg, { showAvatar, showTime }) {
   }
 
   const emp = String(msg.senderId ?? "").trim();
+  const senderOrgLine = activeChannelMemberOrgLineByEmployeeNo.get(emp) || "";
+  const senderOrgHtml = senderOrgLine
+    ? `<div class="msg-sender-sub">${escHtml(senderOrgLine)}</div>`
+    : "";
   const isMine =
     currentUser && String(currentUser.employeeNo || "").trim() === emp;
   const senderName = msg.senderName || (emp ? `emp#${emp}` : "?");
