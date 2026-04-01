@@ -10,9 +10,14 @@ import org.springframework.data.repository.query.Param;
 public interface KanbanCardRepository extends JpaRepository<KanbanCard, Long> {
     Optional<KanbanCard> findByIdAndColumn_Board_Id(Long cardId, Long boardId);
 
+    /**
+     * 보드 소속 카드와 담당자를 한 번에 로드한다.
+     * PostgreSQL은 {@code SELECT DISTINCT}와 {@code ORDER BY}에 select list에 없는 표현을 허용하지 않아
+     * JPQL에서 정렬을 제거하고, 보드 조립 시 서비스에서 컬럼·카드 {@code sortOrder} 기준으로 정렬한다.
+     */
     @Query(
             "select distinct c from KanbanCard c join fetch c.assignees asn join fetch asn.user "
-                    + "join c.column col where col.board.id = :boardId order by col.sortOrder asc, c.sortOrder asc"
+                    + "join c.column col where col.board.id = :boardId"
     )
     List<KanbanCard> findAllForBoardWithAssignees(@Param("boardId") Long boardId);
 

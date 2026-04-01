@@ -32,6 +32,7 @@ import com.ech.backend.common.rbac.AppRole;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -127,6 +128,7 @@ public class KanbanService {
                 bucket.add(card);
             }
         }
+        cardsByColumn.values().forEach(bucket -> bucket.sort(Comparator.comparingInt(KanbanCard::getSortOrder)));
         List<KanbanColumnResponse> columnResponses = columns.stream()
                 .map(col -> new KanbanColumnResponse(
                         col.getId(),

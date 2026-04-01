@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-04-01 — 칸반 보드 조회 `InvalidDataAccessResourceUsageException` (PostgreSQL DISTINCT + ORDER BY)
+
+- **에러 요약**: `서버 내부 오류` / `InvalidDataAccessResourceUsageException: 오류: SELECT DISTINCT, ORDER BY 표현식을 위해서 반드시 select list 에 나타나야만 합니다`
+- **발생 위치(파일/명령/기능)**: `KanbanCardRepository.findAllForBoardWithAssignees`, 칸반 채널 보드 조회(`GET /api/kanban/channels/{channelId}/board` 등) 시 `KanbanService.getBoard` 경로
+- **원인**: JPQL `SELECT DISTINCT c ... ORDER BY col.sortOrder, c.sortOrder`가 PostgreSQL에서 `DISTINCT`와 `ORDER BY` 표현 불일치 규칙에 걸림
+- **해결/현재 상태**: JPQL에서 `ORDER BY` 제거, `KanbanService.getBoard`에서 컬럼 버킷별로 `KanbanCard.getSortOrder()` 기준 정렬
+
+---
+
 ## 2026-03-31 — 프론트 `xhr poll error` / `Failed to fetch` (Realtime `:3001`)
 
 - **에러 요약**: 콘솔에 `[ECH] Realtime connect_error … xhr poll error`, `프레즌스 스냅샷 실패 TypeError: Failed to fetch`
