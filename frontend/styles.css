@@ -2472,6 +2472,10 @@ html[data-theme="blue"] .theme-option-btn.active {
   opacity: 0.65;
   cursor: grabbing;
 }
+.kanban-card-item.kanban-drop-before {
+  border-top: 2px solid var(--accent);
+  padding-top: 6px;
+}
 .kanban-column {
   overflow: visible;
 }
@@ -2972,6 +2976,7 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
 }
 .app-dialog-modal {
   max-width: 440px;
+  overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border-subtle));
   box-shadow:
     0 22px 48px rgba(0, 0, 0, 0.32),
@@ -2980,6 +2985,7 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
 }
 .app-dialog-header {
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 16%, var(--bg-elevated)) 0%, var(--bg-elevated) 100%);
+  border-bottom: none;
 }
 .app-dialog-title-wrap {
   display: flex;
@@ -3001,7 +3007,7 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22);
 }
 .app-dialog-message {
-  margin: 4px 0 2px;
+  margin: 6px 0 4px;
   line-height: 1.5;
   color: var(--text-primary);
   white-space: pre-wrap;
@@ -3018,6 +3024,9 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
 #appDialogInput:focus {
   border-color: var(--border-focus);
   box-shadow: 0 0 0 2px var(--focus-ring);
+}
+#modalAppDialog .modal-footer {
+  border-top: none;
 }
 #modalAppDialog[data-dialog-tone="danger"] .app-dialog-badge {
   background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);

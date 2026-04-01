@@ -573,6 +573,64 @@
       </div>
     </div>
 
+    <div id="modalWorkItemDetail" class="modal-overlay hidden modal-stacked">
+      <div class="modal modal-narrow">
+        <div class="modal-header">
+          <h3>업무 항목 상세</h3>
+          <button class="modal-close" data-modal="modalWorkItemDetail">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="workItemDetailTitle">제목</label>
+            <input id="workItemDetailTitle" type="text" maxlength="500" />
+          </div>
+          <div class="form-group">
+            <label for="workItemDetailDesc">설명</label>
+            <textarea id="workItemDetailDesc" rows="5" maxlength="8000"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="workItemDetailStatus">상태</label>
+            <select id="workItemDetailStatus">
+              <option value="OPEN">대기</option>
+              <option value="IN_PROGRESS">진행 중</option>
+              <option value="DONE">완료</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-primary" id="btnSaveWorkItemDetail">적용</button>
+          <button type="button" class="btn-cancel" data-modal="modalWorkItemDetail">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modalKanbanCardDetail" class="modal-overlay hidden modal-stacked">
+      <div class="modal modal-narrow">
+        <div class="modal-header">
+          <h3>칸반 카드 상세</h3>
+          <button class="modal-close" data-modal="modalKanbanCardDetail">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="kanbanCardDetailTitle">제목</label>
+            <input id="kanbanCardDetailTitle" type="text" maxlength="500" />
+          </div>
+          <div class="form-group">
+            <label for="kanbanCardDetailDesc">설명</label>
+            <textarea id="kanbanCardDetailDesc" rows="5" maxlength="8000"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="kanbanCardDetailColumn">상태</label>
+            <select id="kanbanCardDetailColumn"></select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-primary" id="btnSaveKanbanCardDetail">적용</button>
+          <button type="button" class="btn-cancel" data-modal="modalKanbanCardDetail">닫기</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ===================== 사용자 프로필 모달 ===================== -->
     <div id="modalUserProfile" class="modal-overlay hidden">
       <div class="modal modal-narrow">

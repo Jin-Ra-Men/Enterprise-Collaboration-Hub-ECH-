@@ -470,8 +470,6 @@ public class ChannelService {
                 .orElseThrow(() -> new IllegalArgumentException("해당 사용자는 채널 멤버가 아닙니다."));
         channel.transferManager(targetMember.getUser());
         channelRepository.save(channel);
-        channelMemberRepository.delete(targetMember);
-        channelMemberRepository.save(new ChannelMember(channel, targetMember.getUser(), ChannelMemberRole.MANAGER));
         List<ChannelMember> members = channelMemberRepository.findByChannelId(channelId);
         return toResponse(channel, members);
     }
@@ -541,7 +539,16 @@ public class ChannelService {
         if (!creatorEmp.equals(actorEmp)) {
             throw new ForbiddenException("채널 관리자만 채널 폐쇄를 할 수 있습니다.");
         }
-        channelRepository.delete(channel);
+        List<ChannelMember> members = channelMemberRepository.findByChannelId(channelId);
+        for (ChannelMember m : members) {
+            String emp = m.getUser() != null && m.getUser().getEmployeeNo() != null
+                    ? m.getUser().getEmployeeNo().trim()
+                    : "";
+            if (!emp.isBlank()) {
+                channelReadStateRepository.deleteByChannel_IdAndUser_EmployeeNo(channelId, emp);
+            }
+        }
+        channelMemberRepository.deleteAll(members);
     }
 
     public List<ChannelSummaryResponse> getMyChannels(String employeeNo) {

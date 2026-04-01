@@ -178,10 +178,14 @@ let kanbanNewCardAssigneeUiBound = false;
 let workHubChannelMembersForAssignee = [];
 /** 업무 허브: 저장 시 반영할 업무 상태 변경 (workItemId → status) */
 let workHubPendingWorkStatus = new Map();
+let workHubPendingWorkTitle = new Map();
+let workHubPendingWorkDescription = new Map();
 /** 업무 허브: 저장 시 반영할 칸반 카드 컬럼 이동 (cardId → columnId) */
 let workHubPendingCardColumn = new Map();
 /** 업무 허브: 저장 시 반영할 칸반 카드 정렬값 (cardId -> sortOrder) */
 let workHubPendingCardSortOrder = new Map();
+let workHubPendingCardTitle = new Map();
+let workHubPendingCardDescription = new Map();
 /** 업무 허브: 저장 시 반영할 업무 항목 삭제 ID */
 let workHubPendingWorkDeleteIds = new Set();
 /** 업무 허브: 저장 시 반영할 칸반 카드 삭제 ID */
@@ -194,6 +198,8 @@ let workHubPendingNewKanbanCards = [];
 let workHubPendingCardAssigneeAdd = new Map();
 let workHubPendingCardAssigneeRemove = new Map();
 let workHubWorkListDeleteBound = false;
+let workHubSelectedWorkItemMeta = null;
+let workHubSelectedKanbanCardMeta = null;
 /** 다른 채널에 새 메시지 시 목록 갱신 디바운스 */
 let refreshChannelListTimer = null;
 let windowFocusChannelsTimer = null;
@@ -4045,12 +4051,18 @@ function renderChannelWorkItems(items) {
     if (!isDraft) {
       li.setAttribute("data-work-item-id", String(id));
     }
+    const baseTitle = !isDraft && workHubPendingWorkTitle.has(Number(id))
+      ? workHubPendingWorkTitle.get(Number(id))
+      : item.title;
+    const baseDesc = !isDraft && workHubPendingWorkDescription.has(Number(id))
+      ? workHubPendingWorkDescription.get(Number(id))
+      : item.description;
     const base = normalizeWorkStatusLabel(item.status);
     const pending = !isDraft ? workHubPendingWorkStatus.get(id) : null;
     const status = pending != null ? normalizeWorkStatusLabel(pending) : base;
     li.innerHTML = `
       <div class="channel-work-item-head">
-        <strong class="channel-work-item-title">${escHtml(item.title || "(제목 없음)")}</strong>
+        <strong class="channel-work-item-title">${escHtml(baseTitle || "(제목 없음)")}</strong>
         <div class="channel-work-item-head-actions">
           <select class="work-item-status-select" data-work-item-id="${escHtml(String(id))}" data-is-draft="${isDraft ? "1" : "0"}" aria-label="업무 상태">
             <option value="OPEN" ${status === "OPEN" ? "selected" : ""}>${escHtml(WORK_ITEM_STATUS_LABEL.OPEN)}</option>
@@ -4060,7 +4072,7 @@ function renderChannelWorkItems(items) {
           <button type="button" class="btn-icon-delete work-item-delete-btn" data-work-item-id="${escHtml(String(id))}" data-is-draft="${isDraft ? "1" : "0"}" title="삭제" aria-label="삭제">✕</button>
         </div>
       </div>
-      <div class="channel-work-item-meta">${escHtml(item.description || "설명 없음")}</div>
+      <div class="channel-work-item-meta">${escHtml(baseDesc || "설명 없음")}</div>
     `;
     listEl.appendChild(li);
   });
@@ -4086,6 +4098,13 @@ function ensureWorkHubWorkListDeleteBound() {
   if (!listEl || workHubWorkListDeleteBound) return;
   workHubWorkListDeleteBound = true;
   listEl.addEventListener("click", async (e) => {
+    const row = e.target.closest(".channel-work-item");
+    if (row && !e.target.closest(".work-item-status-select") && !e.target.closest(".work-item-delete-btn")) {
+      const rawId = String(row.querySelector(".work-item-delete-btn")?.dataset.workItemId || "");
+      const isDraft = row.querySelector(".work-item-delete-btn")?.dataset.isDraft === "1";
+      openWorkItemDetailModal(rawId, isDraft);
+      return;
+    }
     const del = e.target.closest(".work-item-delete-btn");
     if (!del || !currentUser) return;
     e.preventDefault();
@@ -4100,6 +4119,8 @@ function ensureWorkHubWorkListDeleteBound() {
       workHubPendingNewWorkItems.splice(idx, 1);
     } else {
       workHubPendingWorkStatus.delete(Number(id));
+      workHubPendingWorkTitle.delete(Number(id));
+      workHubPendingWorkDescription.delete(Number(id));
       workHubPendingWorkDeleteIds.add(Number(id));
     }
     await loadChannelWorkItems();
@@ -4108,8 +4129,12 @@ function ensureWorkHubWorkListDeleteBound() {
 
 function clearWorkHubPendingMaps() {
   workHubPendingWorkStatus.clear();
+  workHubPendingWorkTitle.clear();
+  workHubPendingWorkDescription.clear();
   workHubPendingCardColumn.clear();
   workHubPendingCardSortOrder.clear();
+  workHubPendingCardTitle.clear();
+  workHubPendingCardDescription.clear();
   workHubPendingWorkDeleteIds.clear();
   workHubPendingCardDeleteIds.clear();
   workHubPendingCardAssigneeAdd.clear();
@@ -4194,13 +4219,24 @@ async function flushWorkHubSave() {
     }
     workHubPendingNewWorkItems = [];
 
-    for (const [workItemId, status] of workHubPendingWorkStatus.entries()) {
+    const pendingWorkIds = new Set([
+      ...Array.from(workHubPendingWorkStatus.keys()),
+      ...Array.from(workHubPendingWorkTitle.keys()),
+      ...Array.from(workHubPendingWorkDescription.keys()),
+    ]);
+    for (const workItemIdRaw of pendingWorkIds.values()) {
+      const workItemId = Number(workItemIdRaw);
       if (workHubPendingWorkDeleteIds.has(Number(workItemId))) continue;
+      const status = workHubPendingWorkStatus.get(workItemId);
+      const title = workHubPendingWorkTitle.get(workItemId);
+      const description = workHubPendingWorkDescription.get(workItemId);
       const res = await apiFetch(`/api/work-items/${Number(workItemId)}`, {
         method: "PUT",
         body: JSON.stringify({
           actorEmployeeNo: currentUser.employeeNo,
-          status,
+          ...(status != null ? { status } : {}),
+          ...(title != null ? { title } : {}),
+          ...(description != null ? { description } : {}),
         }),
       });
       const j = await res.json().catch(() => ({}));
@@ -4209,6 +4245,8 @@ async function flushWorkHubSave() {
       }
     }
     workHubPendingWorkStatus.clear();
+    workHubPendingWorkTitle.clear();
+    workHubPendingWorkDescription.clear();
     for (const workItemId of workHubPendingWorkDeleteIds.values()) {
       const res = await apiFetch(
         `/api/work-items/${Number(workItemId)}?actorEmployeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
@@ -4249,19 +4287,25 @@ async function flushWorkHubSave() {
     const pendingCardIds = new Set([
       ...Array.from(workHubPendingCardColumn.keys()),
       ...Array.from(workHubPendingCardSortOrder.keys()),
+      ...Array.from(workHubPendingCardTitle.keys()),
+      ...Array.from(workHubPendingCardDescription.keys()),
     ]);
     for (const cardIdStr of pendingCardIds.values()) {
       const cardId = Number(cardIdStr);
       if (workHubPendingCardDeleteIds.has(cardId)) continue;
       const pendingColumnId = workHubPendingCardColumn.get(cardId);
       const pendingSortOrder = workHubPendingCardSortOrder.get(cardId);
-      if (pendingColumnId == null && pendingSortOrder == null) continue;
+      const pendingTitle = workHubPendingCardTitle.get(cardId);
+      const pendingDescription = workHubPendingCardDescription.get(cardId);
+      if (pendingColumnId == null && pendingSortOrder == null && pendingTitle == null && pendingDescription == null) continue;
       const res = await apiFetch(`/api/kanban/cards/${cardId}`, {
         method: "PUT",
         body: JSON.stringify({
           actorEmployeeNo: currentUser.employeeNo,
           ...(pendingColumnId != null ? { columnId: Number(pendingColumnId) } : {}),
           ...(pendingSortOrder != null ? { sortOrder: Number(pendingSortOrder) } : {}),
+          ...(pendingTitle != null ? { title: pendingTitle } : {}),
+          ...(pendingDescription != null ? { description: pendingDescription } : {}),
         }),
       });
       const j = await res.json().catch(() => ({}));
@@ -4271,6 +4315,8 @@ async function flushWorkHubSave() {
     }
     workHubPendingCardColumn.clear();
     workHubPendingCardSortOrder.clear();
+    workHubPendingCardTitle.clear();
+    workHubPendingCardDescription.clear();
     for (const cardId of workHubPendingCardDeleteIds.values()) {
       const res = await apiFetch(
         `/api/kanban/cards/${Number(cardId)}?actorEmployeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
@@ -4529,6 +4575,59 @@ function clearPendingNewKanbanAssignees() {
   renderPendingNewKanbanAssigneeChips();
 }
 
+function openWorkItemDetailModal(rawId, isDraft) {
+  const titleEl = document.getElementById("workItemDetailTitle");
+  const descEl = document.getElementById("workItemDetailDesc");
+  const statusEl = document.getElementById("workItemDetailStatus");
+  if (!titleEl || !descEl || !statusEl) return;
+  if (isDraft) {
+    const idx = Number(String(rawId).replace("draft-", ""));
+    const item = Number.isFinite(idx) ? workHubPendingNewWorkItems[idx] : null;
+    if (!item) return;
+    workHubSelectedWorkItemMeta = { rawId, isDraft: true, idx };
+    titleEl.value = String(item.title || "");
+    descEl.value = String(item.description || "");
+    statusEl.value = normalizeWorkStatusLabel(item.status || "OPEN");
+  } else {
+    const id = Number(rawId);
+    if (!id) return;
+    const row = document.querySelector(`#channelWorkItemsList .work-item-delete-btn[data-work-item-id="${id}"]`)?.closest(".channel-work-item");
+    workHubSelectedWorkItemMeta = { rawId: String(id), isDraft: false, id };
+    titleEl.value = workHubPendingWorkTitle.get(id) ?? String(row?.querySelector(".channel-work-item-title")?.textContent || "");
+    descEl.value = workHubPendingWorkDescription.get(id) ?? String(row?.querySelector(".channel-work-item-meta")?.textContent || "").replace(/^설명 없음$/, "");
+    statusEl.value = normalizeWorkStatusLabel(workHubPendingWorkStatus.get(id) || row?.querySelector(".work-item-status-select")?.value || "OPEN");
+  }
+  openModal("modalWorkItemDetail");
+}
+
+function openKanbanCardDetailModal(rawId, isDraft) {
+  const titleEl = document.getElementById("kanbanCardDetailTitle");
+  const descEl = document.getElementById("kanbanCardDetailDesc");
+  const colEl = document.getElementById("kanbanCardDetailColumn");
+  if (!titleEl || !descEl || !colEl) return;
+  colEl.innerHTML = activeWorkHubColumns.map((c) => `<option value="${Number(c.id)}">${escHtml(c.name || "")}</option>`).join("");
+  if (isDraft) {
+    const idx = Number(String(rawId).replace("draft-card-", ""));
+    const card = Number.isFinite(idx) ? workHubPendingNewKanbanCards[idx] : null;
+    if (!card) return;
+    workHubSelectedKanbanCardMeta = { rawId, isDraft: true, idx };
+    titleEl.value = String(card.title || "");
+    descEl.value = String(card.description || "");
+    colEl.value = String(Number(card.columnId || activeWorkHubFirstColumnId || 0));
+  } else {
+    const id = Number(rawId);
+    if (!id) return;
+    const el = document.querySelector(`.kanban-card-item[data-kanban-card-id="${id}"]`);
+    workHubSelectedKanbanCardMeta = { rawId: String(id), isDraft: false, id };
+    titleEl.value = workHubPendingCardTitle.get(id) ?? String(el?.querySelector(".kanban-card-item-header strong")?.textContent || "");
+    descEl.value = workHubPendingCardDescription.get(id) ?? String(el?.querySelector("p")?.textContent || "");
+    const pendingCol = workHubPendingCardColumn.get(id);
+    const selVal = pendingCol != null ? pendingCol : Number(el?.querySelector(".kanban-card-column-select")?.value || 0);
+    colEl.value = String(Number(selVal || activeWorkHubFirstColumnId || 0));
+  }
+  openModal("modalKanbanCardDetail");
+}
+
 async function runNewKanbanCardAssigneeSuggest(input, ul) {
   const q = String(input.value || "").trim();
   if (!currentUser) {
@@ -4599,6 +4698,13 @@ function ensureKanbanBoardAssigneeUiBound() {
   if (!root || kanbanBoardAssigneeUiBound) return;
   kanbanBoardAssigneeUiBound = true;
   root.addEventListener("click", async (e) => {
+    const cardItem = e.target.closest(".kanban-card-item");
+    if (cardItem && !e.target.closest(".kanban-card-delete-btn") && !e.target.closest(".kanban-card-column-select") && !e.target.closest(".kanban-assignee-add") && !e.target.closest(".kanban-assignee-remove")) {
+      const raw = String(cardItem.dataset.cardRawId || "");
+      const isDraft = cardItem.dataset.isDraft === "1";
+      openKanbanCardDetailModal(raw, isDraft);
+      return;
+    }
     const delCard = e.target.closest(".kanban-card-delete-btn");
     if (delCard) {
       e.preventDefault();
@@ -4615,6 +4721,8 @@ function ensureKanbanBoardAssigneeUiBound() {
         const cid = Number(cardId);
         workHubPendingCardColumn.delete(cid);
         workHubPendingCardSortOrder.delete(cid);
+        workHubPendingCardTitle.delete(cid);
+        workHubPendingCardDescription.delete(cid);
         workHubPendingCardAssigneeAdd.delete(cid);
         workHubPendingCardAssigneeRemove.delete(cid);
         workHubPendingCardDeleteIds.add(cid);
@@ -4792,13 +4900,19 @@ function renderKanbanBoard(board) {
                           .filter(Boolean)
                           .join("")}</div>`
                       : `<div class="kanban-assignee-chips kanban-assignee-chips-empty"><span class="muted">담당 없음</span></div>`;
+                    const effectiveTitle = !isDraft && Number.isFinite(cardNumId) && workHubPendingCardTitle.has(cardNumId)
+                      ? workHubPendingCardTitle.get(cardNumId)
+                      : card.title;
+                    const effectiveDesc = !isDraft && Number.isFinite(cardNumId) && workHubPendingCardDescription.has(cardNumId)
+                      ? workHubPendingCardDescription.get(cardNumId)
+                      : card.description;
                     return `
-              <article class="kanban-card-item" data-kanban-card-id="${isDraft ? "" : Number(card.id)}">
+              <article class="kanban-card-item" data-kanban-card-id="${isDraft ? "" : Number(card.id)}" data-card-raw-id="${escHtml(cardRawId)}" data-is-draft="${isDraft ? "1" : "0"}">
                 <div class="kanban-card-item-header">
-                  <strong>${escHtml(card.title || "(제목 없음)")}</strong>
+                  <strong>${escHtml(effectiveTitle || "(제목 없음)")}</strong>
                   <button type="button" class="btn-icon-delete kanban-card-delete-btn" data-card-id="${escHtml(cardRawId)}" data-is-draft="${isDraft ? "1" : "0"}" title="삭제" aria-label="삭제">✕</button>
                 </div>
-                <p>${escHtml(card.description || "")}</p>
+                <p>${escHtml(effectiveDesc || "")}</p>
                 <div class="kanban-card-assignees">
                   ${assigneesHtml}
                   <div class="kanban-assignee-add">
@@ -4867,15 +4981,21 @@ function renderKanbanBoard(board) {
       const dragging = listEl.querySelector(".kanban-card-dragging");
       if (!dragging) return;
       const cards = [...listEl.querySelectorAll(".kanban-card-item:not(.kanban-card-dragging)")];
+      cards.forEach((c) => c.classList.remove("kanban-drop-before"));
       const next = cards.find((c) => ev.clientY <= c.getBoundingClientRect().top + c.offsetHeight / 2);
       if (next) {
+        next.classList.add("kanban-drop-before");
         listEl.insertBefore(dragging, next);
       } else {
         listEl.appendChild(dragging);
       }
     });
+    listEl.addEventListener("dragleave", () => {
+      [...listEl.querySelectorAll(".kanban-card-item")].forEach((c) => c.classList.remove("kanban-drop-before"));
+    });
     listEl.addEventListener("drop", async (ev) => {
       ev.preventDefault();
+      [...listEl.querySelectorAll(".kanban-card-item")].forEach((c) => c.classList.remove("kanban-drop-before"));
       const colEl = listEl.closest(".kanban-column");
       const colId = Number(colEl?.dataset.columnId || 0);
       if (!colId) return;
@@ -4973,6 +5093,58 @@ document.getElementById("btnWorkHubSave")?.addEventListener("click", async () =>
   const ok = await flushWorkHubSave();
   if (!ok) return;
   document.getElementById("workHubModal")?.classList.add("hidden");
+});
+
+document.getElementById("btnSaveWorkItemDetail")?.addEventListener("click", async () => {
+  const meta = workHubSelectedWorkItemMeta;
+  if (!meta) return;
+  const title = String(document.getElementById("workItemDetailTitle")?.value || "").trim();
+  const description = String(document.getElementById("workItemDetailDesc")?.value || "").trim();
+  const status = normalizeWorkStatusLabel(document.getElementById("workItemDetailStatus")?.value || "OPEN");
+  if (!title) {
+    await uiAlert("업무 제목을 입력하세요.");
+    return;
+  }
+  if (meta.isDraft) {
+    const d = workHubPendingNewWorkItems[meta.idx];
+    if (!d) return;
+    d.title = title;
+    d.description = description || null;
+    d.status = status;
+  } else {
+    const id = Number(meta.id);
+    workHubPendingWorkTitle.set(id, title);
+    workHubPendingWorkDescription.set(id, description || null);
+    workHubPendingWorkStatus.set(id, status);
+  }
+  closeModal("modalWorkItemDetail");
+  await loadChannelWorkItems();
+});
+
+document.getElementById("btnSaveKanbanCardDetail")?.addEventListener("click", async () => {
+  const meta = workHubSelectedKanbanCardMeta;
+  if (!meta) return;
+  const title = String(document.getElementById("kanbanCardDetailTitle")?.value || "").trim();
+  const description = String(document.getElementById("kanbanCardDetailDesc")?.value || "").trim();
+  const columnId = Number(document.getElementById("kanbanCardDetailColumn")?.value || 0);
+  if (!title) {
+    await uiAlert("카드 제목을 입력하세요.");
+    return;
+  }
+  if (meta.isDraft) {
+    const d = workHubPendingNewKanbanCards[meta.idx];
+    if (!d) return;
+    d.title = title;
+    d.description = description || null;
+    d.columnId = columnId || d.columnId;
+  } else {
+    const id = Number(meta.id);
+    workHubPendingCardTitle.set(id, title);
+    workHubPendingCardDescription.set(id, description || null);
+    if (columnId) workHubPendingCardColumn.set(id, columnId);
+  }
+  closeModal("modalKanbanCardDetail");
+  await loadChannelKanbanBoard();
 });
 
 async function clearActiveChannelAndReload() {
