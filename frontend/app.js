@@ -179,6 +179,10 @@ let workHubChannelMembersForAssignee = [];
 let workHubPendingWorkStatus = new Map();
 /** 업무 허브: 저장 시 반영할 칸반 카드 컬럼 이동 (cardId → columnId) */
 let workHubPendingCardColumn = new Map();
+/** 업무 허브: 저장 시 반영할 업무 항목 삭제 ID */
+let workHubPendingWorkDeleteIds = new Set();
+/** 업무 허브: 저장 시 반영할 칸반 카드 삭제 ID */
+let workHubPendingCardDeleteIds = new Set();
 let workHubWorkListDeleteBound = false;
 /** 다른 채널에 새 메시지 시 목록 갱신 디바운스 */
 let refreshChannelListTimer = null;
@@ -3841,12 +3845,15 @@ function normalizeWorkStatusLabel(status) {
 function renderChannelWorkItems(items) {
   const listEl = document.getElementById("channelWorkItemsList");
   if (!listEl) return;
-  if (!Array.isArray(items) || !items.length) {
+  const visibleItems = Array.isArray(items)
+    ? items.filter((item) => !workHubPendingWorkDeleteIds.has(Number(item.id)))
+    : [];
+  if (!visibleItems.length) {
     listEl.innerHTML = `<li class="empty-notice">등록된 업무 항목이 없습니다.</li>`;
     return;
   }
   listEl.innerHTML = "";
-  items.forEach((item) => {
+  visibleItems.forEach((item) => {
     const li = document.createElement("li");
     li.className = "channel-work-item";
     const id = Number(item.id);
@@ -3891,15 +3898,7 @@ function ensureWorkHubWorkListDeleteBound() {
     if (!id) return;
     if (!confirm("이 업무 항목을 삭제할까요?")) return;
     workHubPendingWorkStatus.delete(id);
-    const res = await apiFetch(
-      `/api/work-items/${id}?actorEmployeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
-      { method: "DELETE" }
-    );
-    const j = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      alert(j.error?.message || "삭제에 실패했습니다.");
-      return;
-    }
+    workHubPendingWorkDeleteIds.add(id);
     await loadChannelWorkItems();
   });
 }
@@ -3907,6 +3906,8 @@ function ensureWorkHubWorkListDeleteBound() {
 function clearWorkHubPendingMaps() {
   workHubPendingWorkStatus.clear();
   workHubPendingCardColumn.clear();
+  workHubPendingWorkDeleteIds.clear();
+  workHubPendingCardDeleteIds.clear();
 }
 
 async function flushWorkHubSave() {
@@ -3924,6 +3925,8 @@ async function flushWorkHubSave() {
     const hasPending =
       workHubPendingWorkStatus.size > 0 ||
       workHubPendingCardColumn.size > 0 ||
+      workHubPendingWorkDeleteIds.size > 0 ||
+      workHubPendingCardDeleteIds.size > 0 ||
       Boolean(newWorkTitle) ||
       Boolean(newCardTitle);
     if (!hasPending) {
@@ -3951,6 +3954,7 @@ async function flushWorkHubSave() {
     }
 
     for (const [workItemId, status] of workHubPendingWorkStatus.entries()) {
+      if (workHubPendingWorkDeleteIds.has(Number(workItemId))) continue;
       const res = await apiFetch(`/api/work-items/${Number(workItemId)}`, {
         method: "PUT",
         body: JSON.stringify({
@@ -3964,6 +3968,17 @@ async function flushWorkHubSave() {
       }
     }
     workHubPendingWorkStatus.clear();
+    for (const workItemId of workHubPendingWorkDeleteIds.values()) {
+      const res = await apiFetch(
+        `/api/work-items/${Number(workItemId)}?actorEmployeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
+        { method: "DELETE" }
+      );
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(j.error?.message || `업무 삭제에 실패했습니다. (${workItemId})`);
+      }
+    }
+    workHubPendingWorkDeleteIds.clear();
 
     if (newCardTitle) {
       if (!activeWorkHubBoardId || !activeWorkHubFirstColumnId) {
@@ -3993,6 +4008,7 @@ async function flushWorkHubSave() {
 
     for (const [cardIdStr, columnId] of workHubPendingCardColumn.entries()) {
       const cardId = Number(cardIdStr);
+      if (workHubPendingCardDeleteIds.has(cardId)) continue;
       const res = await apiFetch(`/api/kanban/cards/${cardId}`, {
         method: "PUT",
         body: JSON.stringify({
@@ -4006,6 +4022,17 @@ async function flushWorkHubSave() {
       }
     }
     workHubPendingCardColumn.clear();
+    for (const cardId of workHubPendingCardDeleteIds.values()) {
+      const res = await apiFetch(
+        `/api/kanban/cards/${Number(cardId)}?actorEmployeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
+        { method: "DELETE" }
+      );
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(j.error?.message || `카드 삭제에 실패했습니다. (${cardId})`);
+      }
+    }
+    workHubPendingCardDeleteIds.clear();
 
     await Promise.all([loadChannelWorkItems(), loadChannelKanbanBoard()]);
   } catch (e) {
@@ -4295,15 +4322,7 @@ function ensureKanbanBoardAssigneeUiBound() {
       if (!cardId || !currentUser) return;
       if (!confirm("이 칸반 카드를 삭제할까요?")) return;
       workHubPendingCardColumn.delete(cardId);
-      const res = await apiFetch(
-        `/api/kanban/cards/${cardId}?actorEmployeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
-        { method: "DELETE" }
-      );
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(j.error?.message || "삭제에 실패했습니다.");
-        return;
-      }
+      workHubPendingCardDeleteIds.add(cardId);
       await loadChannelKanbanBoard();
       return;
     }
@@ -4397,7 +4416,9 @@ function renderKanbanBoard(board) {
   }
   boardEl.innerHTML = cols
     .map((col) => {
-      const cards = Array.isArray(col.cards) ? col.cards : [];
+      const cards = Array.isArray(col.cards)
+        ? col.cards.filter((card) => !workHubPendingCardDeleteIds.has(Number(card.id)))
+        : [];
       const options = cols
         .map((c) => `<option value="${Number(c.id)}">${escHtml(c.name || "")}</option>`)
         .join("");
