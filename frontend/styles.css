@@ -2396,10 +2396,13 @@ html[data-theme="blue"] .theme-option-btn.active {
 .kanban-assignee-suggest li {
   margin: 0;
 }
+.kanban-assignee-suggest li + li {
+  border-top: 1px solid var(--border-subtle);
+}
 .kanban-assignee-pick {
   width: 100%;
   text-align: left;
-  padding: 8px 10px;
+  padding: 9px 10px;
   border: none;
   background: transparent;
   cursor: pointer;
@@ -2416,14 +2419,38 @@ html[data-theme="blue"] .theme-option-btn.active {
 }
 .kanban-card-move-row {
   margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .kanban-card-move-row select {
-  width: 100%;
+  flex: 1 1 auto;
+  width: auto;
   padding: 7px 8px;
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
   color: var(--text-primary);
   background: var(--bg-elevated);
+}
+.btn-card-order {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.btn-card-order:hover {
+  border-color: var(--border-focus);
+}
+.kanban-column {
+  overflow: hidden;
+}
+.kanban-card-list {
+  max-height: 52vh;
+  overflow-y: auto;
 }
 .work-item-status-select {
   min-width: 132px;

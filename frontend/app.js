@@ -179,6 +179,8 @@ let workHubChannelMembersForAssignee = [];
 let workHubPendingWorkStatus = new Map();
 /** 업무 허브: 저장 시 반영할 칸반 카드 컬럼 이동 (cardId → columnId) */
 let workHubPendingCardColumn = new Map();
+/** 업무 허브: 저장 시 반영할 칸반 카드 정렬값 (cardId -> sortOrder) */
+let workHubPendingCardSortOrder = new Map();
 /** 업무 허브: 저장 시 반영할 업무 항목 삭제 ID */
 let workHubPendingWorkDeleteIds = new Set();
 /** 업무 허브: 저장 시 반영할 칸반 카드 삭제 ID */
@@ -3941,6 +3943,7 @@ function ensureWorkHubWorkListDeleteBound() {
 function clearWorkHubPendingMaps() {
   workHubPendingWorkStatus.clear();
   workHubPendingCardColumn.clear();
+  workHubPendingCardSortOrder.clear();
   workHubPendingWorkDeleteIds.clear();
   workHubPendingCardDeleteIds.clear();
   workHubPendingCardAssigneeAdd.clear();
@@ -3949,12 +3952,65 @@ function clearWorkHubPendingMaps() {
   workHubPendingNewKanbanCards = [];
 }
 
+function getEffectiveSavedCardsByColumn(cols) {
+  const flat = cols.flatMap((c) => (Array.isArray(c.cards) ? c.cards : []));
+  const kept = flat.filter((card) => !workHubPendingCardDeleteIds.has(Number(card.id)));
+  return kept.map((card) => {
+    const id = Number(card.id);
+    return {
+      ...card,
+      _effectiveColumnId: Number(workHubPendingCardColumn.get(id) ?? card.columnId),
+      _effectiveSortOrder: Number(workHubPendingCardSortOrder.get(id) ?? card.sortOrder ?? 0),
+    };
+  });
+}
+
+function moveKanbanCardOrder(rawCardId, isDraft, dir, columnId) {
+  const step = dir === "up" ? -1 : 1;
+  if (isDraft) {
+    const idx = Number(String(rawCardId).replace("draft-card-", ""));
+    if (!Number.isFinite(idx) || !workHubPendingNewKanbanCards[idx]) return;
+    const draft = workHubPendingNewKanbanCards[idx];
+    const sameColIdx = workHubPendingNewKanbanCards
+      .map((d, i) => ({ d, i }))
+      .filter((x) => Number(x.d.columnId || activeWorkHubFirstColumnId) === Number(columnId))
+      .map((x) => x.i);
+    const pos = sameColIdx.indexOf(idx);
+    const nextPos = pos + step;
+    if (pos < 0 || nextPos < 0 || nextPos >= sameColIdx.length) return;
+    const swapIdx = sameColIdx[nextPos];
+    const tmp = workHubPendingNewKanbanCards[idx];
+    workHubPendingNewKanbanCards[idx] = workHubPendingNewKanbanCards[swapIdx];
+    workHubPendingNewKanbanCards[swapIdx] = tmp;
+    return;
+  }
+  const cardId = Number(rawCardId);
+  if (!cardId) return;
+  const saved = getEffectiveSavedCardsByColumn(activeWorkHubColumns)
+    .filter((c) => Number(c._effectiveColumnId) === Number(columnId))
+    .sort((a, b) => {
+      const so = Number(a._effectiveSortOrder) - Number(b._effectiveSortOrder);
+      if (so !== 0) return so;
+      return Number(a.id) - Number(b.id);
+    });
+  const pos = saved.findIndex((c) => Number(c.id) === cardId);
+  const nextPos = pos + step;
+  if (pos < 0 || nextPos < 0 || nextPos >= saved.length) return;
+  const curr = saved[pos];
+  const next = saved[nextPos];
+  const currSort = Number(curr._effectiveSortOrder);
+  const nextSort = Number(next._effectiveSortOrder);
+  workHubPendingCardSortOrder.set(Number(curr.id), nextSort);
+  workHubPendingCardSortOrder.set(Number(next.id), currSort);
+}
+
 async function flushWorkHubSave() {
   if (!activeChannelId || !currentUser) return;
   try {
     const hasPending =
       workHubPendingWorkStatus.size > 0 ||
       workHubPendingCardColumn.size > 0 ||
+      workHubPendingCardSortOrder.size > 0 ||
       workHubPendingWorkDeleteIds.size > 0 ||
       workHubPendingCardDeleteIds.size > 0 ||
       workHubPendingCardAssigneeAdd.size > 0 ||
@@ -4035,14 +4091,22 @@ async function flushWorkHubSave() {
     }
     workHubPendingNewKanbanCards = [];
 
-    for (const [cardIdStr, columnId] of workHubPendingCardColumn.entries()) {
+    const pendingCardIds = new Set([
+      ...Array.from(workHubPendingCardColumn.keys()),
+      ...Array.from(workHubPendingCardSortOrder.keys()),
+    ]);
+    for (const cardIdStr of pendingCardIds.values()) {
       const cardId = Number(cardIdStr);
       if (workHubPendingCardDeleteIds.has(cardId)) continue;
+      const pendingColumnId = workHubPendingCardColumn.get(cardId);
+      const pendingSortOrder = workHubPendingCardSortOrder.get(cardId);
+      if (pendingColumnId == null && pendingSortOrder == null) continue;
       const res = await apiFetch(`/api/kanban/cards/${cardId}`, {
         method: "PUT",
         body: JSON.stringify({
           actorEmployeeNo: currentUser.employeeNo,
-          columnId: Number(columnId),
+          ...(pendingColumnId != null ? { columnId: Number(pendingColumnId) } : {}),
+          ...(pendingSortOrder != null ? { sortOrder: Number(pendingSortOrder) } : {}),
         }),
       });
       const j = await res.json().catch(() => ({}));
@@ -4051,6 +4115,7 @@ async function flushWorkHubSave() {
       }
     }
     workHubPendingCardColumn.clear();
+    workHubPendingCardSortOrder.clear();
     for (const cardId of workHubPendingCardDeleteIds.values()) {
       const res = await apiFetch(
         `/api/kanban/cards/${Number(cardId)}?actorEmployeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
@@ -4377,6 +4442,18 @@ function ensureKanbanBoardAssigneeUiBound() {
   if (!root || kanbanBoardAssigneeUiBound) return;
   kanbanBoardAssigneeUiBound = true;
   root.addEventListener("click", async (e) => {
+    const orderBtn = e.target.closest(".btn-card-order");
+    if (orderBtn) {
+      e.preventDefault();
+      const dir = String(orderBtn.dataset.orderDir || "up");
+      const cardId = String(orderBtn.dataset.cardId || "");
+      const isDraft = orderBtn.dataset.isDraft === "1";
+      const columnId = Number(orderBtn.dataset.columnId);
+      if (!cardId || !columnId) return;
+      moveKanbanCardOrder(cardId, isDraft, dir, columnId);
+      await loadChannelKanbanBoard();
+      return;
+    }
     const delCard = e.target.closest(".kanban-card-delete-btn");
     if (delCard) {
       e.preventDefault();
@@ -4392,6 +4469,7 @@ function ensureKanbanBoardAssigneeUiBound() {
       } else {
         const cid = Number(cardId);
         workHubPendingCardColumn.delete(cid);
+        workHubPendingCardSortOrder.delete(cid);
         workHubPendingCardAssigneeAdd.delete(cid);
         workHubPendingCardAssigneeRemove.delete(cid);
         workHubPendingCardDeleteIds.add(cid);
@@ -4510,14 +4588,19 @@ function renderKanbanBoard(board) {
     assigneeEmployeeNos: Array.isArray(d.assigneeEmployeeNos) ? d.assigneeEmployeeNos : [],
     _isDraft: true,
   }));
+  const effectiveSavedCards = getEffectiveSavedCardsByColumn(cols);
   boardEl.innerHTML = cols
     .map((col) => {
-      const savedCards = Array.isArray(col.cards)
-        ? col.cards.filter((card) => !workHubPendingCardDeleteIds.has(Number(card.id)))
-        : [];
+      const savedCards = effectiveSavedCards
+        .filter((c) => Number(c._effectiveColumnId) === Number(col.id))
+        .sort((a, b) => {
+          const so = Number(a._effectiveSortOrder) - Number(b._effectiveSortOrder);
+          if (so !== 0) return so;
+          return Number(a.id) - Number(b.id);
+        });
       const cards = [
-        ...draftCards.filter((dc) => Number(dc.columnId) === Number(col.id)),
         ...savedCards,
+        ...draftCards.filter((dc) => Number(dc.columnId) === Number(col.id)),
       ];
       const options = cols
         .map((c) => `<option value="${Number(c.id)}">${escHtml(c.name || "")}</option>`)
@@ -4582,6 +4665,8 @@ function renderKanbanBoard(board) {
                   <select class="kanban-card-column-select" data-card-id="${escHtml(cardRawId)}" data-is-draft="${isDraft ? "1" : "0"}">
                     ${options}
                   </select>
+                  <button type="button" class="btn-card-order" data-order-dir="up" data-card-id="${escHtml(cardRawId)}" data-is-draft="${isDraft ? "1" : "0"}" data-column-id="${Number(col.id)}" title="위로">↑</button>
+                  <button type="button" class="btn-card-order" data-order-dir="down" data-card-id="${escHtml(cardRawId)}" data-is-draft="${isDraft ? "1" : "0"}" data-column-id="${Number(col.id)}" title="아래로">↓</button>
                 </div>
               </article>`;
                   })
@@ -4602,8 +4687,7 @@ function renderKanbanBoard(board) {
       sel.value = String(Number(d?.columnId || activeWorkHubFirstColumnId));
     } else {
       const cardId = Number(rawId);
-      const allCards = cols.flatMap((c) => (Array.isArray(c.cards) ? c.cards : []));
-      const card = allCards.find((c) => Number(c.id) === cardId);
+      const card = effectiveSavedCards.find((c) => Number(c.id) === cardId);
       const pending = workHubPendingCardColumn.get(cardId);
       sel.value = String(Number(pending != null ? pending : card?.columnId));
     }
@@ -4621,6 +4705,7 @@ function renderKanbanBoard(board) {
         if (!cid) return;
         workHubPendingCardColumn.set(cid, targetColumnId);
       }
+      void loadChannelKanbanBoard();
     });
   });
   ensureKanbanBoardAssigneeUiBound();
