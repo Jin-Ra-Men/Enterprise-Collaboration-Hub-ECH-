@@ -2154,28 +2154,19 @@ html[data-theme="blue"] .theme-option-btn.active {
   height: auto;
   align-self: center;
 }
-.work-hub-draft-list {
-  list-style: none;
-  margin: 0 0 10px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.work-hub-draft-item {
+.kanban-assignee-add {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  padding: 6px 8px;
-  border: 1px dashed var(--border-subtle);
-  border-radius: 8px;
-  background: var(--bg-elevated);
-  font-size: 12px;
 }
-.work-hub-draft-item .title {
-  color: var(--text-primary);
+.kanban-assignee-add > input {
+  flex: 1 1 auto;
   min-width: 0;
+}
+.kanban-assignee-add > .btn-work-add {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 .channel-work-item-highlight {
   outline: 2px solid var(--accent, #3b82f6);
@@ -2375,9 +2366,6 @@ html[data-theme="blue"] .theme-option-btn.active {
 }
 .kanban-assignee-remove:hover {
   color: var(--text-primary);
-}
-.kanban-assignee-add {
-  position: relative;
 }
 .kanban-assignee-search {
   width: 100%;
