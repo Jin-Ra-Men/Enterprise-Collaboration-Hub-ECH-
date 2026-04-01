@@ -481,6 +481,10 @@ public class ChannelService {
             channelRepository.delete(channel);
             return;
         }
+        if (channel.getChannelType() == ChannelType.DM) {
+            // DM은 상대가 나가도 남은 사용자의 대화 이력을 유지한다.
+            return;
+        }
         User actorUser = userRepository.findByEmployeeNo(actorEmp).orElse(channel.getCreatedBy());
         String actorLabel = actorUser != null && actorUser.getName() != null && !actorUser.getName().isBlank()
                 ? actorUser.getName().trim()
@@ -638,7 +642,11 @@ public class ChannelService {
         if (dmMemberCount > 2 && !custom.isBlank()) {
             return custom;
         }
-        return buildDmPeerDisplayLabel(channel.getId(), viewerEmployeeNo);
+        String peerLabel = buildDmPeerDisplayLabel(channel.getId(), viewerEmployeeNo);
+        if (!peerLabel.isBlank() && !"DM".equals(peerLabel)) {
+            return peerLabel;
+        }
+        return custom.isBlank() ? "DM" : custom;
     }
 
     private String buildDmPeerDisplayLabel(Long channelId, String viewerEmployeeNo) {
