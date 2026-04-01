@@ -500,12 +500,12 @@
               <input id="workItemTitleInput" type="text" maxlength="500" placeholder="업무 제목" required />
               <textarea id="workItemDescInput" rows="3" maxlength="8000" placeholder="업무 설명(선택)"></textarea>
               <div class="work-item-create-row">
-                <select id="workItemStatusSelect">
-                  <option value="OPEN">OPEN</option>
-                  <option value="IN_PROGRESS">IN_PROGRESS</option>
-                  <option value="DONE">DONE</option>
+                <select id="workItemStatusSelect" aria-label="업무 상태">
+                  <option value="OPEN">대기</option>
+                  <option value="IN_PROGRESS">진행 중</option>
+                  <option value="DONE">완료</option>
                 </select>
-                <button type="submit" class="btn-primary btn-sm">업무 추가</button>
+                <button type="submit" class="btn-primary btn-sm btn-work-add">업무 추가</button>
               </div>
             </form>
             <ul id="channelWorkItemsList" class="channel-work-item-list"></ul>
@@ -523,7 +523,7 @@
                     id="kanbanNewCardAssigneeSearch"
                     type="search"
                     maxlength="100"
-                    placeholder="이름·사번 검색 후 선택 (자동완성)"
+                    placeholder="채널 멤버 검색 (↑↓·Enter)"
                     autocomplete="off"
                   />
                   <ul id="kanbanNewCardAssigneeSuggest" class="kanban-assignee-suggest hidden" role="listbox" aria-label="담당자 검색"></ul>

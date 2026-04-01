@@ -2100,8 +2100,39 @@ html[data-theme="blue"] .theme-option-btn.active {
 }
 .work-item-create-row {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 8px;
+  flex-wrap: nowrap;
+}
+.work-item-create-row select {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto !important;
+}
+.work-item-create-row .btn-work-add {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 8px 14px;
+  line-height: 1.2;
+  height: auto;
+  align-self: center;
+}
+.channel-work-item-highlight {
+  outline: 2px solid var(--accent, #3b82f6);
+  outline-offset: 2px;
+  transition: outline 0.2s ease;
+}
+.kanban-card-highlight {
+  outline: 2px solid var(--accent, #3b82f6);
+  outline-offset: 2px;
+  border-radius: 8px;
+  transition: outline 0.2s ease;
+}
+.kanban-assignee-pick.kanban-suggest-active,
+.kanban-assignee-pick-new.kanban-suggest-active {
+  background: var(--bg-elevated) !important;
+  outline: 1px solid var(--border-subtle);
 }
 .channel-work-item-list {
   max-height: 520px;

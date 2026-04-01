@@ -243,6 +243,8 @@
   - `COMMENT`: 검색 응답의 `threadRootMessageId`가 있으면 채널 이동 후 `openThreadModal(threadRootMessageId, { targetCommentMessageId })`로 스레드 모달을 열고 대상 댓글/답글 위치(`thread-msg-{id}`)로 스크롤·강조. `threadRootMessageId`가 없으면 기존 채널 이동+메시지 포커스 폴백
   - `FILE`: `download-info` 조회 후 이미지면 `modalImagePreview` 오픈(다운로드 버튼), 일반 파일은 `downloadChannelFile`로 즉시 다운로드
   - `CHANNEL`: 채널 카드 클릭과 동일하게 채널 진입
+  - `WORK_ITEM`: `relatedChannelId`로 채널 전환 후 `업무 · 칸반` 모달 오픈, `data-work-item-id` 행 스크롤·강조
+  - `KANBAN_CARD`: `relatedChannelId`가 있으면 동일하게 모달 오픈 후 `data-kanban-card-id` 카드 강조; 없으면(워크스페이스 전용 보드 등) 안내 토스트만
   - 검색 submit 시 `#searchTypeSelect` 값 유지(강제 `ALL` 리셋 제거)로 타입별 결과 오염 방지
   - DM 채널 결과 컨텍스트명은 내부 채널 키 대신 표시용 설명(상대방 이름 요약)을 우선 노출
   - 스레드 모달 원글이 타임라인 캐시에 없을 때는 `GET /api/channels/{channelId}/messages/{messageId}?employeeNo=...` 단건 API로 원글을 로드
@@ -306,7 +308,7 @@
 - 채널 연동 보드는 `kanban_boards.source_channel_id`로 연결되며, 첫 조회 시 `할 일/진행 중/완료` 기본 컬럼을 자동 생성합니다.
 - 카드 생성(`POST .../columns/.../cards`)·이동(`PUT /api/kanban/cards/{id}`)은 컨트롤러에서 `MEMBER` 이상이면 호출 가능하고, 서비스에서 채널 연동 보드는 **해당 채널 멤버**(`actorEmployeeNo`), 채널 미연동 보드는 **앱 역할 MANAGER 이상**으로 제한한다.
 - 보드 상세 조회 시 카드 로드는 `findAllForBoardWithAssignees`에서 `assignees`를 **LEFT JOIN FETCH**한다. `JOIN FETCH`만 쓰면 담당자 0건 카드가 INNER JOIN처럼 빠져 UI에 안 보인다.
-- 채널 허브 칸반 카드 담당: `POST/DELETE /api/kanban/cards/{id}/assignees`는 `MEMBER`+`assertCanMutateCard`(채널 보드는 채널 멤버, 워크스페이스 보드는 `MANAGER` 이상). 프론트는 `GET /api/users/search`로 후보 검색 후 호출한다.
+- 채널 허브 칸반 카드 담당: `POST/DELETE /api/kanban/cards/{id}/assignees`는 `MEMBER`+`assertCanMutateCard`(채널 보드는 채널 멤버, 워크스페이스 보드는 `MANAGER` 이상). 서비스는 채널 연동 보드에서 `assertAssigneeIsChannelMemberIfApplicable`로 담당 사번이 채널 멤버인지 검증. **채널 허브 UI**에서는 `GET /api/channels/{id}` 멤버 목록으로 담당 자동완성(↑↓·Enter, 열린 상태에서 미선택 Enter는 폼 제출 방지).
 
 ### 채널 파일 메타데이터 인수인계 메모
 - 바이너리는 외부 스토리지에 두고 `channel_files`에 메타만 저장합니다.

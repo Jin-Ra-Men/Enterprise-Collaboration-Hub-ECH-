@@ -13,6 +13,7 @@ import java.time.OffsetDateTime;
  * @param contextName        채널명 또는 보드명
  * @param createdAt          생성 일시
  * @param threadRootMessageId 댓글(`COMMENT`) 검색 시 스레드 원글(루트) 메시지 ID — 그 외 타입은 {@code null}
+ * @param relatedChannelId    {@code KANBAN_CARD}이면 채널 연동 보드일 때 허브 이동용 채널 ID, 그 외 {@code null}
  */
 public record SearchResultItem(
         String type,
@@ -22,7 +23,8 @@ public record SearchResultItem(
         Long contextId,
         String contextName,
         OffsetDateTime createdAt,
-        Long threadRootMessageId
+        Long threadRootMessageId,
+        Long relatedChannelId
 ) {
     /** preview 문자열을 안전하게 잘라 반환한다. */
     public static String truncate(String text, int max) {

@@ -212,6 +212,8 @@
     - `COMMENT`: 해당 채널로 이동 후 `threadRootMessageId` 기준으로 스레드 모달 오픈, 대상 댓글/답글 행 DOM(`thread-msg-{id}`)으로 스크롤 + 강조
     - `FILE`: 이미지(`image/*` 또는 확장자)면 이미지 라이트박스(크게보기+다운로드), 그 외 파일은 즉시 다운로드
     - `CHANNEL`: 해당 채널로 이동
+    - `WORK_ITEM`: 응답의 `relatedChannelId`(소스 채널)가 있으면 해당 채널로 전환 후 `업무 · 칸반` 모달을 열고 해당 업무 행(`data-work-item-id`)으로 스크롤·강조
+    - `KANBAN_CARD`: 응답의 `relatedChannelId`(보드의 `source_channel_id`)가 있으면 해당 채널로 전환 후 동일 모달을 열고 해당 카드(`data-kanban-card-id`) 강조; 채널 미연동 보드 카드는 `relatedChannelId`가 없을 수 있어 안내 후 동작 생략 가능
 - 상태 전이/예외 케이스:
   - 검색어 2자 미만은 기존과 동일하게 400
   - 댓글/채널 검색도 멤버십 필터를 통과한 채널만 결과 포함
@@ -475,9 +477,9 @@
   - `PUT /api/work-items/{workItemId}` — 채널 업무 수정(`actorEmployeeNo`, 부분 갱신)
   - `GET /api/kanban/channels/{channelId}/board?employeeNo=` — 채널 기본 칸반 보드 조회/없으면 자동 생성
 - 입력/출력:
-  - 업무 상태는 `OPEN`/`IN_PROGRESS`/`DONE`
+  - 업무 상태는 API 값은 `OPEN`/`IN_PROGRESS`/`DONE`이며, UI 셀렉트·목록은 한글 라벨(예: 미착수·진행 중·완료)로 표시
   - 칸반 보드는 채널당 1개를 기본으로 사용하며, 최초 조회 시 `할 일/진행 중/완료` 컬럼을 자동 생성
-  - 칸반 카드: 응답 `assigneeEmployeeNos`, UI에서 `GET /api/users/search`(빈 `q`면 목록 기반 자동완성) 후 생성 시 body `assigneeEmployeeNos` 또는 `POST /api/kanban/cards/{cardId}/assignees`로 담당 추가, `DELETE .../assignees/{assigneeEmployeeNo}` 로 해제
+  - 칸반 카드 담당: **채널 연동 보드**에서는 `GET /api/channels/{channelId}` 등으로 조회한 **채널 멤버**만 후보로 자동완성(전사 `GET /api/users/search` 사용 안 함). 생성 시 body `assigneeEmployeeNos` 또는 `POST /api/kanban/cards/{cardId}/assignees`로 추가, `DELETE .../assignees/{assigneeEmployeeNo}` 로 해제. 서버는 채널 연동 보드에서 담당 사번이 채널 멤버인지 검증
 - 상태 전이/예외 케이스:
   - 비멤버 조회/생성/수정 시 예외
   - `sourceMessageId` 지정 시 다른 채널 메시지를 참조하면 생성 거부

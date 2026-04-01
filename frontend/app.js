@@ -172,6 +172,8 @@ let kanbanBoardAssigneeUiBound = false;
 /** 신규 카드 폼에 미리 넣을 담당자 `{ employeeNo, name }` */
 let pendingNewKanbanCardAssignees = [];
 let kanbanNewCardAssigneeUiBound = false;
+/** 채널 허브 담당 검색용 멤버 목록 (`GET /api/channels/{id}`) */
+let workHubChannelMembersForAssignee = [];
 /** 다른 채널에 새 메시지 시 목록 갱신 디바운스 */
 let refreshChannelListTimer = null;
 let windowFocusChannelsTimer = null;
@@ -3801,6 +3803,8 @@ document.getElementById("btnOpenFileHub").addEventListener("click", async () => 
   openModal("modalFileHub");
 });
 
+const WORK_ITEM_STATUS_LABEL = { OPEN: "대기", IN_PROGRESS: "진행 중", DONE: "완료" };
+
 function normalizeWorkStatusLabel(status) {
   const s = String(status || "OPEN").toUpperCase();
   if (s === "IN_PROGRESS") return "IN_PROGRESS";
@@ -3819,14 +3823,15 @@ function renderChannelWorkItems(items) {
   items.forEach((item) => {
     const li = document.createElement("li");
     li.className = "channel-work-item";
+    li.setAttribute("data-work-item-id", String(Number(item.id)));
     const status = normalizeWorkStatusLabel(item.status);
     li.innerHTML = `
       <div class="channel-work-item-head">
         <strong class="channel-work-item-title">${escHtml(item.title || "(제목 없음)")}</strong>
-        <select class="work-item-status-select" data-work-item-id="${Number(item.id)}">
-          <option value="OPEN" ${status === "OPEN" ? "selected" : ""}>OPEN</option>
-          <option value="IN_PROGRESS" ${status === "IN_PROGRESS" ? "selected" : ""}>IN_PROGRESS</option>
-          <option value="DONE" ${status === "DONE" ? "selected" : ""}>DONE</option>
+        <select class="work-item-status-select" data-work-item-id="${Number(item.id)}" aria-label="업무 상태">
+          <option value="OPEN" ${status === "OPEN" ? "selected" : ""}>${escHtml(WORK_ITEM_STATUS_LABEL.OPEN)}</option>
+          <option value="IN_PROGRESS" ${status === "IN_PROGRESS" ? "selected" : ""}>${escHtml(WORK_ITEM_STATUS_LABEL.IN_PROGRESS)}</option>
+          <option value="DONE" ${status === "DONE" ? "selected" : ""}>${escHtml(WORK_ITEM_STATUS_LABEL.DONE)}</option>
         </select>
       </div>
       <div class="channel-work-item-meta">${escHtml(item.description || "설명 없음")}</div>
@@ -3894,13 +3899,91 @@ async function enrichKanbanAssigneeLabels(boardEl) {
   );
 }
 
-async function fetchUsersForKanbanAssigneeSuggest(keyword) {
-  const q = String(keyword || "").trim();
-  const path = q ? `/api/users/search?q=${encodeURIComponent(q)}` : `/api/users/search`;
-  const res = await apiFetch(path);
+async function loadWorkHubChannelMembersForAssignee() {
+  workHubChannelMembersForAssignee = [];
+  if (!activeChannelId || !currentUser) return;
+  const res = await apiFetch(`/api/channels/${activeChannelId}`);
   const json = await res.json().catch(() => ({}));
-  const users = Array.isArray(json.data) ? json.data : [];
-  return users.slice(0, 40);
+  if (!res.ok) return;
+  workHubChannelMembersForAssignee = Array.isArray(json.data?.members) ? json.data.members : [];
+}
+
+function filterChannelMembersForAssigneeKeyword(keyword) {
+  const q = String(keyword || "").trim().toLowerCase();
+  const mine = String(currentUser?.employeeNo || "").trim();
+  let list = workHubChannelMembersForAssignee.filter((m) => {
+    const emp = String(m.employeeNo || "").trim();
+    return emp && emp !== mine;
+  });
+  if (q) {
+    list = list.filter((m) => {
+      const name = String(m.name || "").toLowerCase();
+      const emp = String(m.employeeNo || "").toLowerCase();
+      const dept = String(m.department || "").toLowerCase();
+      return name.includes(q) || emp.includes(q) || dept.includes(q);
+    });
+  }
+  return list.slice(0, 40);
+}
+
+async function fetchUsersForKanbanAssigneeSuggest(keyword) {
+  if (!workHubChannelMembersForAssignee.length && activeChannelId) {
+    await loadWorkHubChannelMembersForAssignee();
+  }
+  return filterChannelMembersForAssigneeKeyword(keyword);
+}
+
+function resetKanbanSuggestActive(ul) {
+  if (!ul) return;
+  ul.querySelectorAll(".kanban-suggest-active").forEach((el) => el.classList.remove("kanban-suggest-active"));
+  ul._kanbanActiveIdx = -1;
+}
+
+function bindModalWorkHubKanbanSuggestKeyboard() {
+  const modal = document.getElementById("modalWorkHub");
+  if (!modal || modal.dataset.kanbanSuggestKb) return;
+  modal.dataset.kanbanSuggestKb = "1";
+  modal.addEventListener("keydown", (e) => {
+    const input = e.target.closest(".kanban-assignee-search, #kanbanNewCardAssigneeSearch");
+    if (!input) return;
+    const ul = input.closest(".kanban-assignee-add")?.querySelector(".kanban-assignee-suggest");
+    if (!ul || ul.classList.contains("hidden")) return;
+    const buttons = [...ul.querySelectorAll("button.kanban-assignee-pick, button.kanban-assignee-pick-new")];
+    if (buttons.length === 0) return;
+    let idx = typeof ul._kanbanActiveIdx === "number" ? ul._kanbanActiveIdx : -1;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (idx >= 0) buttons[idx].classList.remove("kanban-suggest-active");
+      idx = idx < buttons.length - 1 ? idx + 1 : 0;
+      ul._kanbanActiveIdx = idx;
+      buttons[idx].classList.add("kanban-suggest-active");
+      buttons[idx].scrollIntoView({ block: "nearest" });
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (idx >= 0) buttons[idx].classList.remove("kanban-suggest-active");
+      idx = idx > 0 ? idx - 1 : buttons.length - 1;
+      ul._kanbanActiveIdx = idx;
+      buttons[idx].classList.add("kanban-suggest-active");
+      buttons[idx].scrollIntoView({ block: "nearest" });
+      return;
+    }
+    if (e.key === "Enter" && idx >= 0) {
+      e.preventDefault();
+      buttons[idx].click();
+      return;
+    }
+    if (e.key === "Enter" && idx < 0) {
+      e.preventDefault();
+      return;
+    }
+    if (e.key === "Escape") {
+      ul.classList.add("hidden");
+      ul.innerHTML = "";
+      resetKanbanSuggestActive(ul);
+    }
+  });
 }
 
 async function runKanbanAssigneeSuggest(input, ul) {
@@ -3914,6 +3997,7 @@ async function runKanbanAssigneeSuggest(input, ul) {
     return;
   }
   const users = await fetchUsersForKanbanAssigneeSuggest(q);
+  resetKanbanSuggestActive(ul);
   const mine = String(currentUser.employeeNo || "").trim();
   const list = users
     .filter((u) => {
@@ -3986,6 +4070,7 @@ async function runNewKanbanCardAssigneeSuggest(input, ul) {
   }
   const pendingEmp = new Set(pendingNewKanbanCardAssignees.map((x) => x.employeeNo));
   const users = await fetchUsersForKanbanAssigneeSuggest(q);
+  resetKanbanSuggestActive(ul);
   const mine = String(currentUser.employeeNo || "").trim();
   const list = users
     .filter((u) => {
@@ -4163,13 +4248,13 @@ function renderKanbanBoard(board) {
                           .join("")}</div>`
                       : `<div class="kanban-assignee-chips kanban-assignee-chips-empty"><span class="muted">담당 없음</span></div>`;
                     return `
-              <article class="kanban-card-item">
+              <article class="kanban-card-item" data-kanban-card-id="${Number(card.id)}">
                 <strong>${escHtml(card.title || "(제목 없음)")}</strong>
                 <p>${escHtml(card.description || "")}</p>
                 <div class="kanban-card-assignees">
                   ${assigneesHtml}
                   <div class="kanban-assignee-add">
-                    <input type="search" class="kanban-assignee-search" data-card-id="${Number(card.id)}" data-assigned-emp="${escHtml(assignedPipe)}" placeholder="이름·사번 검색 (포커스 시 자동완성)" autocomplete="off" />
+                    <input type="search" class="kanban-assignee-search" data-card-id="${Number(card.id)}" data-assigned-emp="${escHtml(assignedPipe)}" placeholder="채널 멤버 검색 (↑↓·Enter)" autocomplete="off" />
                     <ul class="kanban-assignee-suggest hidden" role="listbox" aria-label="담당자 검색 결과"></ul>
                   </div>
                 </div>
@@ -4236,8 +4321,11 @@ document.getElementById("btnOpenWorkHub")?.addEventListener("click", async () =>
   }
   try {
     clearPendingNewKanbanAssignees();
-    await loadChannelWorkItems();
-    await loadChannelKanbanBoard();
+    await Promise.all([
+      loadWorkHubChannelMembersForAssignee(),
+      loadChannelWorkItems(),
+      loadChannelKanbanBoard(),
+    ]);
     openModal("modalWorkHub");
   } catch (e) {
     alert(e?.message || "업무/칸반 정보를 불러오지 못했습니다.");
@@ -4615,6 +4703,55 @@ async function handleSearchResultClick(item) {
     return;
   }
 
+  // 업무 항목: 채널 이동 후 업무·칸반 허브에서 해당 행 강조
+  if (type === "WORK_ITEM" && Number.isFinite(contextId) && Number.isFinite(id)) {
+    const meta = resolveChannelMetaForSelect(contextId, item.contextName || "채널");
+    await selectChannel(meta.channelId, meta.channelName, meta.channelType);
+    closeModal("searchModal");
+    await Promise.all([
+      loadWorkHubChannelMembersForAssignee(),
+      loadChannelWorkItems(),
+      loadChannelKanbanBoard(),
+    ]);
+    openModal("modalWorkHub");
+    requestAnimationFrame(() => {
+      const row = document.querySelector(`#channelWorkItemsList [data-work-item-id="${id}"]`);
+      if (row) {
+        row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        row.classList.add("channel-work-item-highlight");
+        setTimeout(() => row.classList.remove("channel-work-item-highlight"), 2200);
+      }
+    });
+    return;
+  }
+
+  // 칸반 카드: 채널 연동 보드만 허브로 이동 후 카드 강조
+  if (type === "KANBAN_CARD" && Number.isFinite(id)) {
+    const chId = Number(item.relatedChannelId);
+    if (!Number.isFinite(chId)) {
+      alert("채널에 연결된 칸반 카드만 업무·칸반 창에서 열 수 있습니다.");
+      return;
+    }
+    const meta = resolveChannelMetaForSelect(chId, item.contextName || "채널");
+    await selectChannel(meta.channelId, meta.channelName, meta.channelType);
+    closeModal("searchModal");
+    await Promise.all([
+      loadWorkHubChannelMembersForAssignee(),
+      loadChannelWorkItems(),
+      loadChannelKanbanBoard(),
+    ]);
+    openModal("modalWorkHub");
+    requestAnimationFrame(() => {
+      const cardEl = document.querySelector(`#channelKanbanBoard .kanban-card-item[data-kanban-card-id="${id}"]`);
+      if (cardEl) {
+        cardEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        cardEl.classList.add("kanban-card-highlight");
+        setTimeout(() => cardEl.classList.remove("kanban-card-highlight"), 2200);
+      }
+    });
+    return;
+  }
+
   // 파일 검색 결과: 이미지면 라이트박스, 아니면 다운로드
   if (type === "FILE" && Number.isFinite(contextId) && Number.isFinite(id)) {
     const info = await fetchChannelFileDownloadInfo(contextId, id);
@@ -4802,6 +4939,7 @@ function initEvents() {
   });
 
   ensureKanbanNewCardAssigneeUiBound();
+  bindModalWorkHubKanbanSuggestKeyboard();
 }
 
 /* ==========================================================================

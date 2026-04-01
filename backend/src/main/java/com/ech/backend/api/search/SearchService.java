@@ -183,6 +183,7 @@ public class SearchService {
                                 m.getChannel().getId(),
                                 resolveChannelDisplayName(m.getChannel(), employeeNo),
                                 m.getCreatedAt(),
+                                null,
                                 null
                         ));
                     });
@@ -200,7 +201,8 @@ public class SearchService {
                                 m.getChannel().getId(),
                                 resolveChannelDisplayName(m.getChannel(), employeeNo),
                                 m.getCreatedAt(),
-                                resolveThreadRootMessageId(m)
+                                resolveThreadRootMessageId(m),
+                                null
                         ));
                     });
         }
@@ -217,6 +219,7 @@ public class SearchService {
                                 c.getId(),
                                 displayName,
                                 c.getCreatedAt(),
+                                null,
                                 null
                         ));
                     });
@@ -232,6 +235,7 @@ public class SearchService {
                             f.getChannel().getId(),
                             resolveChannelDisplayName(f.getChannel(), employeeNo),
                             f.getCreatedAt(),
+                            null,
                             null
                     )));
         }
@@ -246,22 +250,28 @@ public class SearchService {
                             w.getSourceChannel().getId(),
                             w.getSourceChannel().getName(),
                             w.getCreatedAt(),
+                            null,
                             null
                     )));
         }
 
         if (searchType == SearchType.ALL || searchType == SearchType.KANBAN_CARDS) {
             kanbanCardRepository.searchByKeyword(kw, page)
-                    .forEach(c -> items.add(new SearchResultItem(
-                            "KANBAN_CARD",
-                            c.getId(),
-                            c.getTitle(),
-                            SearchResultItem.truncate(c.getDescription(), PREVIEW_LENGTH),
-                            c.getColumn().getBoard().getId(),
-                            c.getColumn().getBoard().getName(),
-                            c.getCreatedAt(),
-                            null
-                    )));
+                    .forEach(c -> {
+                        var board = c.getColumn().getBoard();
+                        Long relCh = board.getSourceChannel() != null ? board.getSourceChannel().getId() : null;
+                        items.add(new SearchResultItem(
+                                "KANBAN_CARD",
+                                c.getId(),
+                                c.getTitle(),
+                                SearchResultItem.truncate(c.getDescription(), PREVIEW_LENGTH),
+                                board.getId(),
+                                board.getName(),
+                                c.getCreatedAt(),
+                                null,
+                                relCh
+                        ));
+                    });
         }
 
         // 최신순 정렬 후 limit 적용

@@ -272,6 +272,23 @@ public class KanbanService {
         }
     }
 
+    /**
+     * 채널 연동 보드에서는 담당자가 해당 채널 멤버여야 한다. 워크스페이스 전용 보드는 제한 없음.
+     */
+    private void assertAssigneeIsChannelMemberIfApplicable(KanbanBoard board, String assigneeEmployeeNo) {
+        if (board.getSourceChannel() == null) {
+            return;
+        }
+        String emp = assigneeEmployeeNo == null ? "" : assigneeEmployeeNo.trim();
+        if (emp.isBlank()) {
+            throw new IllegalArgumentException("담당자 사번이 비어 있습니다.");
+        }
+        Long channelId = board.getSourceChannel().getId();
+        if (!channelMemberRepository.existsByChannelIdAndUserEmployeeNo(channelId, emp)) {
+            throw new IllegalArgumentException("해당 채널 멤버만 담당으로 지정할 수 있습니다.");
+        }
+    }
+
     @Transactional
     public KanbanCardResponse createCard(Long boardId, Long columnId, CreateKanbanCardRequest request, AppRole callerRole) {
         User actor = userRepository.findByEmployeeNo(request.actorEmployeeNo())
@@ -329,6 +346,7 @@ public class KanbanService {
             if (emp.isBlank() || !seen.add(emp)) {
                 continue;
             }
+            assertAssigneeIsChannelMemberIfApplicable(card.getColumn().getBoard(), emp);
             User assignee = userRepository.findByEmployeeNo(emp)
                     .orElseThrow(() -> new IllegalArgumentException("담당자 사용자를 찾을 수 없습니다: " + emp));
             if (assigneeRepository.existsByCard_IdAndUser_EmployeeNo(card.getId(), emp)) {
@@ -413,6 +431,7 @@ public class KanbanService {
         KanbanCard card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new IllegalArgumentException("카드를 찾을 수 없습니다."));
         assertCanMutateCard(card.getColumn().getBoard(), request.actorEmployeeNo(), callerRole);
+        assertAssigneeIsChannelMemberIfApplicable(card.getColumn().getBoard(), request.assigneeEmployeeNo());
         User actor = userRepository.findByEmployeeNo(request.actorEmployeeNo())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         User assignee = userRepository.findByEmployeeNo(request.assigneeEmployeeNo())

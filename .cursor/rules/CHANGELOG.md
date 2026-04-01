@@ -4,6 +4,12 @@
 
 ## 2026-04-01
 
+### Changed
+- 칸반 담당: 전사 사용자 검색 대신 **해당 채널 멤버**만 후보로 표시·백엔드에서 채널 연동 보드는 담당 사번이 채널 멤버인지 검증
+- 통합 검색: `WORK_ITEM`/`KANBAN_CARD` 결과 클릭 시 해당 채널에서 `업무·칸반` 모달을 열고 항목 강조(`SearchResultItem.relatedChannelId` 추가)
+- 업무 허브: 업무 상태 라벨 한글화, 업무 추가 행 한 줄 레이아웃, 담당 자동완성 **↑↓·Enter** 키 지원(드롭다운 열린 채 미선택 Enter 시 폼 제출 방지)
+- `docs/FEATURE_SPEC.md`·`docs/HANDOVER.md`·`README.md`: 위 검색·담당·허브 동작 반영
+
 ### Added
 - 칸반 담당 자동완성: 빈 검색·포커스 시 사용자 목록, 입력 시 `GET /api/users/search`로 후보 표시(디바운스), 기존 카드·신규 카드 폼 공통
 - 카드 생성 시 담당: `POST .../cards` body `assigneeEmployeeNos`로 생성과 동시에 담당 지정, 프론트는 신규 카드 폼에서 담당 칩·검색으로 선택
@@ -13,10 +19,6 @@
 - 칸반 카드 미표시: `findAllForBoardWithAssignees`가 `JOIN FETCH assignees`만 사용해 INNER JOIN처럼 동작, 담당자 없는 신규 카드가 보드 조회 결과에서 빠지던 문제 수정 — `column`은 `JOIN FETCH`, `assignees`·담당 `user`는 `LEFT JOIN FETCH`로 변경
 - 칸반 보드 조회: `findAllForBoardWithAssignees`의 `SELECT DISTINCT` + `ORDER BY` 조합이 PostgreSQL에서 `InvalidDataAccessResourceUsageException`을 유발하던 문제 수정 — JPQL에서 정렬 제거 후 `KanbanService.getBoard`에서 컬럼별 카드 `sortOrder`로 정렬
 - 채널 연동 칸반: 카드 생성/이동 API가 `MANAGER` 전용이어서 일반 멤버(`MEMBER`)가 헤더 `📋` 흐름에서 403이 나던 문제 수정 — `MEMBER` 인증으로 완화하고, 채널 보드는 채널 멤버십·워크스페이스 전용 보드는 `MANAGER` 이상으로 서비스 레이어에서 구분
-
-### Changed
-- `docs/FEATURE_SPEC.md`: 채널 연동 업무/칸반 허브·RBAC 섹션 권한 설명을 위 동작에 맞게 갱신
-- `docs/HANDOVER.md`: 칸반 카드 생성/이동 권한·보드 조회 시 assignee `LEFT JOIN FETCH` 메모 추가
 
 ## 2026-03-31
 
