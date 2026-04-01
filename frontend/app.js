@@ -166,6 +166,9 @@ let selectedAddMembers = [];  // 기존 채널에 추가할 사용자
 let activeWorkHubBoardId = null;
 let activeWorkHubFirstColumnId = null;
 let activeWorkHubColumns = [];
+/** 칸반 카드 담당자 표시명 캐시(사번 → 이름) */
+const kanbanAssigneeNameCache = Object.create(null);
+let kanbanBoardAssigneeUiBound = false;
 /** 다른 채널에 새 메시지 시 목록 갱신 디바운스 */
 let refreshChannelListTimer = null;
 let windowFocusChannelsTimer = null;
@@ -3858,6 +3861,138 @@ async function loadChannelWorkItems() {
   renderChannelWorkItems(Array.isArray(json.data) ? json.data : []);
 }
 
+async function getUserDisplayNameForKanban(employeeNo) {
+  const emp = String(employeeNo || "").trim();
+  if (!emp) return "";
+  if (kanbanAssigneeNameCache[emp]) return kanbanAssigneeNameCache[emp];
+  try {
+    const res = await apiFetch(`/api/users/profile?employeeNo=${encodeURIComponent(emp)}`);
+    const json = await res.json().catch(() => ({}));
+    const name = res.ok && json.data?.name ? String(json.data.name).trim() : "";
+    if (name) {
+      kanbanAssigneeNameCache[emp] = name;
+      return name;
+    }
+  } catch {
+    /* ignore */
+  }
+  kanbanAssigneeNameCache[emp] = emp;
+  return emp;
+}
+
+async function enrichKanbanAssigneeLabels(boardEl) {
+  const labels = boardEl.querySelectorAll(".kanban-assignee-label[data-emp]");
+  await Promise.all(
+    Array.from(labels).map(async (el) => {
+      const emp = el.getAttribute("data-emp");
+      const name = await getUserDisplayNameForKanban(emp);
+      el.textContent = name;
+    })
+  );
+}
+
+async function runKanbanAssigneeSuggest(input, ul) {
+  const q = String(input.value || "").trim();
+  const cardId = Number(input.dataset.cardId);
+  const assignedRaw = String(input.dataset.assignedEmp || "");
+  const assigned = new Set(assignedRaw.split("|").map((s) => s.trim()).filter(Boolean));
+  if (!q || !currentUser || !cardId) {
+    ul.classList.add("hidden");
+    ul.innerHTML = "";
+    return;
+  }
+  const res = await apiFetch(`/api/users/search?q=${encodeURIComponent(q)}`);
+  const json = await res.json().catch(() => ({}));
+  const users = Array.isArray(json.data) ? json.data : [];
+  const mine = String(currentUser.employeeNo || "").trim();
+  const list = users
+    .filter((u) => {
+      const emp = String(u.employeeNo || "").trim();
+      return emp && emp !== mine && !assigned.has(emp);
+    })
+    .slice(0, 8);
+  if (list.length === 0) {
+    ul.innerHTML = '<li class="kanban-assignee-suggest-empty">추가할 사용자가 없습니다</li>';
+    ul.classList.remove("hidden");
+    return;
+  }
+  ul.innerHTML = list
+    .map(
+      (u) =>
+        `<li><button type="button" class="kanban-assignee-pick" data-card-id="${cardId}" data-pick-emp="${escHtml(String(u.employeeNo || "").trim())}">
+          ${escHtml(u.name || "")} <span class="muted">${escHtml(u.employeeNo || "")}</span>
+        </button></li>`
+    )
+    .join("");
+  ul.classList.remove("hidden");
+}
+
+function ensureKanbanBoardAssigneeUiBound() {
+  const root = document.getElementById("channelKanbanBoard");
+  if (!root || kanbanBoardAssigneeUiBound) return;
+  kanbanBoardAssigneeUiBound = true;
+  root.addEventListener("click", async (e) => {
+    const pick = e.target.closest(".kanban-assignee-pick");
+    if (pick) {
+      e.preventDefault();
+      const cardId = Number(pick.dataset.cardId);
+      const emp = String(pick.dataset.pickEmp || "").trim();
+      if (!cardId || !emp || !currentUser) return;
+      const res = await apiFetch(`/api/kanban/cards/${cardId}/assignees`, {
+        method: "POST",
+        body: JSON.stringify({
+          actorEmployeeNo: currentUser.employeeNo,
+          assigneeEmployeeNo: emp,
+        }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(j.error?.message || "담당 추가에 실패했습니다.");
+        return;
+      }
+      const inp = root.querySelector(`.kanban-assignee-search[data-card-id="${cardId}"]`);
+      if (inp) inp.value = "";
+      await loadChannelKanbanBoard();
+      return;
+    }
+    const rem = e.target.closest(".kanban-assignee-remove");
+    if (rem) {
+      e.preventDefault();
+      const cardId = Number(rem.dataset.cardId);
+      const assigneeEmp = String(rem.dataset.assigneeEmp || "").trim();
+      if (!cardId || !assigneeEmp || !currentUser) return;
+      const res = await apiFetch(
+        `/api/kanban/cards/${cardId}/assignees/${encodeURIComponent(assigneeEmp)}?actorEmployeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
+        { method: "DELETE" }
+      );
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(j.error?.message || "담당 해제에 실패했습니다.");
+        return;
+      }
+      await loadChannelKanbanBoard();
+    }
+  });
+  root.addEventListener("input", (e) => {
+    const input = e.target.closest(".kanban-assignee-search");
+    if (!input) return;
+    const ul = input.closest(".kanban-assignee-add")?.querySelector(".kanban-assignee-suggest");
+    if (!ul) return;
+    clearTimeout(input._assignSuggestTimer);
+    input._assignSuggestTimer = setTimeout(() => void runKanbanAssigneeSuggest(input, ul), 280);
+  });
+  if (!window._echKanbanSuggestDocClick) {
+    window._echKanbanSuggestDocClick = true;
+    document.addEventListener("click", (ev) => {
+      if (ev.target.closest?.(".kanban-assignee-add")) return;
+      document.querySelectorAll("#channelKanbanBoard .kanban-assignee-suggest").forEach((u) => {
+        u.classList.add("hidden");
+        u.innerHTML = "";
+      });
+    });
+  }
+}
+
 function renderKanbanBoard(board) {
   const boardEl = document.getElementById("channelKanbanBoard");
   if (!boardEl) return;
@@ -3881,18 +4016,43 @@ function renderKanbanBoard(board) {
           ${
             cards.length
               ? cards
-                  .map(
-                    (card) => `
+                  .map((card) => {
+                    const assigns = Array.isArray(card.assigneeEmployeeNos) ? card.assigneeEmployeeNos : [];
+                    const assignedPipe = assigns
+                      .map((x) => String(x || "").trim())
+                      .filter(Boolean)
+                      .join("|");
+                    const assigneesHtml = assigns.length
+                      ? `<div class="kanban-assignee-chips">${assigns
+                          .map((raw) => {
+                            const emp = String(raw || "").trim();
+                            if (!emp) return "";
+                            return `<span class="kanban-assignee-chip">
+          <span class="kanban-assignee-label" data-emp="${escHtml(emp)}">${escHtml(emp)}</span>
+          <button type="button" class="kanban-assignee-remove" data-card-id="${Number(card.id)}" data-assignee-emp="${escHtml(emp)}" title="담당 해제">✕</button>
+        </span>`;
+                          })
+                          .filter(Boolean)
+                          .join("")}</div>`
+                      : `<div class="kanban-assignee-chips kanban-assignee-chips-empty"><span class="muted">담당 없음</span></div>`;
+                    return `
               <article class="kanban-card-item">
                 <strong>${escHtml(card.title || "(제목 없음)")}</strong>
                 <p>${escHtml(card.description || "")}</p>
+                <div class="kanban-card-assignees">
+                  ${assigneesHtml}
+                  <div class="kanban-assignee-add">
+                    <input type="search" class="kanban-assignee-search" data-card-id="${Number(card.id)}" data-assigned-emp="${escHtml(assignedPipe)}" placeholder="이름·사번으로 담당 추가" autocomplete="off" />
+                    <ul class="kanban-assignee-suggest hidden" role="listbox" aria-label="담당자 검색 결과"></ul>
+                  </div>
+                </div>
                 <div class="kanban-card-move-row">
                   <select class="kanban-card-column-select" data-card-id="${Number(card.id)}">
                     ${options}
                   </select>
                 </div>
-              </article>`
-                  )
+              </article>`;
+                  })
                   .join("")
               : `<div class="empty-notice">카드 없음</div>`
           }
@@ -3924,6 +4084,8 @@ function renderKanbanBoard(board) {
       await loadChannelKanbanBoard();
     });
   });
+  ensureKanbanBoardAssigneeUiBound();
+  void enrichKanbanAssigneeLabels(boardEl);
 }
 
 async function loadChannelKanbanBoard() {

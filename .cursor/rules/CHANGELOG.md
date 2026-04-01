@@ -4,6 +4,9 @@
 
 ## 2026-04-01
 
+### Added
+- 채널 `업무 · 칸반` 모달: 칸반 카드별 담당자 표시·검색 추가(`GET /api/users/search`)·해제(✕), 백엔드 담당 API를 채널 보드에서 `MEMBER`가 쓰도록 `assertCanMutateCard`와 동일 정책으로 정렬
+
 ### Fixed
 - 칸반 카드 미표시: `findAllForBoardWithAssignees`가 `JOIN FETCH assignees`만 사용해 INNER JOIN처럼 동작, 담당자 없는 신규 카드가 보드 조회 결과에서 빠지던 문제 수정 — `column`은 `JOIN FETCH`, `assignees`·담당 `user`는 `LEFT JOIN FETCH`로 변경
 - 칸반 보드 조회: `findAllForBoardWithAssignees`의 `SELECT DISTINCT` + `ORDER BY` 조합이 PostgreSQL에서 `InvalidDataAccessResourceUsageException`을 유발하던 문제 수정 — JPQL에서 정렬 제거 후 `KanbanService.getBoard`에서 컬럼별 카드 `sortOrder`로 정렬

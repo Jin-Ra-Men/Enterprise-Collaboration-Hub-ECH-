@@ -2207,6 +2207,92 @@ html[data-theme="blue"] .theme-option-btn.active {
   color: var(--text-secondary);
   white-space: pre-wrap;
 }
+.kanban-card-assignees {
+  margin-top: 8px;
+}
+.kanban-assignee-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.kanban-assignee-chips-empty {
+  margin-bottom: 4px;
+}
+.kanban-assignee-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+.kanban-assignee-remove {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.kanban-assignee-remove:hover {
+  color: var(--text-primary);
+}
+.kanban-assignee-add {
+  position: relative;
+}
+.kanban-assignee-search {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  box-sizing: border-box;
+}
+.kanban-assignee-suggest {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin: 4px 0 0;
+  padding: 4px 0;
+  list-style: none;
+  max-height: 200px;
+  overflow: auto;
+  z-index: 5;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-chat);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+.kanban-assignee-suggest li {
+  margin: 0;
+}
+.kanban-assignee-pick {
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+.kanban-assignee-pick:hover {
+  background: var(--bg-elevated);
+}
+.kanban-assignee-suggest-empty {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
 .kanban-card-move-row {
   margin-top: 8px;
 }

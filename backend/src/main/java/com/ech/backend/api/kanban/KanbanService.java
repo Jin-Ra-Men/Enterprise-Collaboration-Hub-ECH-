@@ -371,13 +371,14 @@ public class KanbanService {
     }
 
     @Transactional
-    public KanbanCardResponse addAssignee(Long cardId, KanbanAssigneeMutationRequest request) {
+    public KanbanCardResponse addAssignee(Long cardId, KanbanAssigneeMutationRequest request, AppRole callerRole) {
+        KanbanCard card = cardRepository.findById(cardId)
+                .orElseThrow(() -> new IllegalArgumentException("카드를 찾을 수 없습니다."));
+        assertCanMutateCard(card.getColumn().getBoard(), request.actorEmployeeNo(), callerRole);
         User actor = userRepository.findByEmployeeNo(request.actorEmployeeNo())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         User assignee = userRepository.findByEmployeeNo(request.assigneeEmployeeNo())
                 .orElseThrow(() -> new IllegalArgumentException("담당자 사용자를 찾을 수 없습니다."));
-        KanbanCard card = cardRepository.findById(cardId)
-                .orElseThrow(() -> new IllegalArgumentException("카드를 찾을 수 없습니다."));
         if (assigneeRepository.existsByCard_IdAndUser_EmployeeNo(cardId, request.assigneeEmployeeNo())) {
             throw new IllegalArgumentException("이미 담당으로 지정된 사용자입니다.");
         }
@@ -397,11 +398,12 @@ public class KanbanService {
     }
 
     @Transactional
-    public KanbanCardResponse removeAssignee(Long cardId, String assigneeEmployeeNo, String actorEmployeeNo) {
-        User actor = userRepository.findByEmployeeNo(actorEmployeeNo)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+    public KanbanCardResponse removeAssignee(Long cardId, String assigneeEmployeeNo, String actorEmployeeNo, AppRole callerRole) {
         KanbanCard card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new IllegalArgumentException("카드를 찾을 수 없습니다."));
+        assertCanMutateCard(card.getColumn().getBoard(), actorEmployeeNo, callerRole);
+        User actor = userRepository.findByEmployeeNo(actorEmployeeNo)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         KanbanCardAssignee link = assigneeRepository.findByCard_IdAndUser_EmployeeNo(cardId, assigneeEmployeeNo)
                 .orElseThrow(() -> new IllegalArgumentException("해당 담당자가 없습니다."));
         assigneeRepository.delete(link);

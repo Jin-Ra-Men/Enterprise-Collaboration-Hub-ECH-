@@ -477,12 +477,13 @@
 - 입력/출력:
   - 업무 상태는 `OPEN`/`IN_PROGRESS`/`DONE`
   - 칸반 보드는 채널당 1개를 기본으로 사용하며, 최초 조회 시 `할 일/진행 중/완료` 컬럼을 자동 생성
+  - 칸반 카드: 응답 `assigneeEmployeeNos`, UI에서 `GET /api/users/search`로 검색 후 `POST /api/kanban/cards/{cardId}/assignees`(body: `actorEmployeeNo`, `assigneeEmployeeNo`)로 담당 추가, `DELETE /api/kanban/cards/{cardId}/assignees/{assigneeEmployeeNo}?actorEmployeeNo=` 로 해제
 - 상태 전이/예외 케이스:
   - 비멤버 조회/생성/수정 시 예외
   - `sourceMessageId` 지정 시 다른 채널 메시지를 참조하면 생성 거부
 - 권한/보안:
   - 채널 멤버십 기준으로 접근 제어
-  - 칸반 카드 생성/이동 API는 `MEMBER` 이상 인증이 필요하며, **채널 연동 보드**(`source_channel_id`가 있는 보드)는 해당 채널 멤버만 카드 변경 가능. **워크스페이스 전용 보드**(채널 미연동)는 앱 역할 `MANAGER` 이상만 카드 생성/이동 가능
+  - 칸반 카드 생성/이동/담당 추가·해제 API는 `MEMBER` 이상 인증이 필요하며, **채널 연동 보드**(`source_channel_id`가 있는 보드)는 해당 채널 멤버만 변경 가능. **워크스페이스 전용 보드**(채널 미연동)는 앱 역할 `MANAGER` 이상만 변경 가능
 - 테스트 기준:
   - 채널 업무 생성/조회/상태 변경이 동일 채널에서 반영되는지 검증
   - 채널 칸반 첫 진입 시 기본 보드/컬럼 자동 생성 검증
@@ -530,7 +531,7 @@
   - 공통: `X-User-Role` 헤더(`MEMBER|MANAGER|ADMIN`) 또는 JWT `role` 클레임
   - `ADMIN`: `/api/admin/org-sync/**`
   - `MANAGER+`: `GET /api/users/search`, 채널 생성/멤버 추가, 칸반 보드·컬럼 구조 변경 및 워크스페이스 전용(채널 미연동) 보드의 카드 변경
-  - `MEMBER+`: 채널 연동 칸반 카드 생성/이동(`POST .../columns/.../cards`, `PUT /api/kanban/cards/{cardId}`) — 해당 채널 멤버만 허용(서비스에서 `source_channel_id` 기준 검증)
+  - `MEMBER+`: 채널 연동 칸반 카드 생성/이동/담당 추가·해제(`POST .../columns/.../cards`, `PUT /api/kanban/cards/{cardId}`, `POST/DELETE .../assignees`) — 해당 채널 멤버만 허용(서비스에서 `source_channel_id` 기준 검증)
 - 설계:
   - `@RequireRole` 어노테이션으로 엔드포인트 최소 역할 선언
   - `RoleGuardInterceptor`가 요청 헤더를 해석하고 계층 비교(`ADMIN >= MANAGER >= MEMBER`)
@@ -545,7 +546,7 @@
   - `ADMIN` 헤더로 관리자 API 접근 성공
   - `MANAGER`/`MEMBER` 헤더로 관리자 API 접근 실패
   - `MANAGER` 헤더로 사용자 검색/채널 생성/칸반 보드·컬럼 변경 성공
-  - `MEMBER` JWT로 채널 연동 칸반 카드 생성/이동 성공(채널 멤버인 경우)
+  - `MEMBER` JWT로 채널 연동 칸반 카드 생성/이동·담당 변경 성공(채널 멤버인 경우)
 - 비고:
   - 매트릭스 문서: `docs/RBAC_MATRIX.md`
   - 구현: `backend/.../common/rbac/*`, `@RequireRole` 적용된 컨트롤러들

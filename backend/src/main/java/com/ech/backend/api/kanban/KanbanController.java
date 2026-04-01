@@ -133,22 +133,31 @@ public class KanbanController {
     }
 
     @PostMapping("/cards/{cardId}/assignees")
-    @RequireRole(AppRole.MANAGER)
+    @RequireRole(AppRole.MEMBER)
     public ApiResponse<KanbanCardResponse> addAssignee(
             @PathVariable Long cardId,
-            @Valid @RequestBody KanbanAssigneeMutationRequest request
+            @Valid @RequestBody KanbanAssigneeMutationRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        return ApiResponse.success(kanbanService.addAssignee(cardId, request));
+        if (principal == null) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        return ApiResponse.success(kanbanService.addAssignee(cardId, request, principal.role()));
     }
 
     @DeleteMapping("/cards/{cardId}/assignees/{assigneeEmployeeNo}")
-    @RequireRole(AppRole.MANAGER)
+    @RequireRole(AppRole.MEMBER)
     public ApiResponse<KanbanCardResponse> removeAssignee(
             @PathVariable Long cardId,
             @PathVariable String assigneeEmployeeNo,
-            @RequestParam String actorEmployeeNo
+            @RequestParam String actorEmployeeNo,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        return ApiResponse.success(kanbanService.removeAssignee(cardId, assigneeEmployeeNo, actorEmployeeNo));
+        if (principal == null) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        return ApiResponse.success(
+                kanbanService.removeAssignee(cardId, assigneeEmployeeNo, actorEmployeeNo, principal.role()));
     }
 
     @GetMapping("/cards/{cardId}/history")
