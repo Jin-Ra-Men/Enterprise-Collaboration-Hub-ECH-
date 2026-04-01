@@ -12,12 +12,17 @@ public interface KanbanCardRepository extends JpaRepository<KanbanCard, Long> {
 
     /**
      * 보드 소속 카드와 담당자를 한 번에 로드한다.
+     * 담당자가 없는 카드도 포함해야 하므로 {@code assignees}/{@code user}는 {@code LEFT JOIN FETCH}로 연결한다
+     * ({@code JOIN FETCH}만 쓰면 INNER JOIN이 되어 assignee 0건 카드가 결과에서 빠짐).
      * PostgreSQL은 {@code SELECT DISTINCT}와 {@code ORDER BY}에 select list에 없는 표현을 허용하지 않아
-     * JPQL에서 정렬을 제거하고, 보드 조립 시 서비스에서 컬럼·카드 {@code sortOrder} 기준으로 정렬한다.
+     * 정렬은 서비스에서 컬럼·카드 {@code sortOrder} 기준으로 수행한다.
      */
     @Query(
-            "select distinct c from KanbanCard c join fetch c.assignees asn join fetch asn.user "
-                    + "join c.column col where col.board.id = :boardId"
+            "select distinct c from KanbanCard c "
+                    + "join fetch c.column col "
+                    + "left join fetch c.assignees asn "
+                    + "left join fetch asn.user "
+                    + "where col.board.id = :boardId"
     )
     List<KanbanCard> findAllForBoardWithAssignees(@Param("boardId") Long boardId);
 

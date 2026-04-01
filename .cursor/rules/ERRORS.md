@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-04-01 — 칸반에 카드 추가 후 목록에 안 보임 (JOIN FETCH assignees가 INNER JOIN)
+
+- **에러 요약**: 카드 추가 API는 성공하는데 보드 새로고침 후에도 칸반에 카드가 비어 있음
+- **발생 위치(파일/명령/기능)**: `KanbanCardRepository.findAllForBoardWithAssignees`, `KanbanService.getBoard`
+- **원인**: JPQL `JOIN FETCH c.assignees`가 담당자 0건인 카드를 결과에서 제외(INNER JOIN과 동일한 효과)
+- **해결/현재 상태**: `assignees`·`asn.user`를 `LEFT JOIN FETCH`로 바꾸고 `column`은 `JOIN FETCH`로 유지
+
+---
+
 ## 2026-04-01 — 칸반 보드 조회 `InvalidDataAccessResourceUsageException` (PostgreSQL DISTINCT + ORDER BY)
 
 - **에러 요약**: `서버 내부 오류` / `InvalidDataAccessResourceUsageException: 오류: SELECT DISTINCT, ORDER BY 표현식을 위해서 반드시 select list 에 나타나야만 합니다`

@@ -5,12 +5,13 @@
 ## 2026-04-01
 
 ### Fixed
+- 칸반 카드 미표시: `findAllForBoardWithAssignees`가 `JOIN FETCH assignees`만 사용해 INNER JOIN처럼 동작, 담당자 없는 신규 카드가 보드 조회 결과에서 빠지던 문제 수정 — `column`은 `JOIN FETCH`, `assignees`·담당 `user`는 `LEFT JOIN FETCH`로 변경
 - 칸반 보드 조회: `findAllForBoardWithAssignees`의 `SELECT DISTINCT` + `ORDER BY` 조합이 PostgreSQL에서 `InvalidDataAccessResourceUsageException`을 유발하던 문제 수정 — JPQL에서 정렬 제거 후 `KanbanService.getBoard`에서 컬럼별 카드 `sortOrder`로 정렬
 - 채널 연동 칸반: 카드 생성/이동 API가 `MANAGER` 전용이어서 일반 멤버(`MEMBER`)가 헤더 `📋` 흐름에서 403이 나던 문제 수정 — `MEMBER` 인증으로 완화하고, 채널 보드는 채널 멤버십·워크스페이스 전용 보드는 `MANAGER` 이상으로 서비스 레이어에서 구분
 
 ### Changed
 - `docs/FEATURE_SPEC.md`: 채널 연동 업무/칸반 허브·RBAC 섹션 권한 설명을 위 동작에 맞게 갱신
-- `docs/HANDOVER.md`: 칸반 카드 생성/이동 권한(채널 보드 vs 워크스페이스 보드) 메모 추가
+- `docs/HANDOVER.md`: 칸반 카드 생성/이동 권한·보드 조회 시 assignee `LEFT JOIN FETCH` 메모 추가
 
 ## 2026-03-31
 

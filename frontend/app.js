@@ -4006,8 +4006,9 @@ document.getElementById("kanbanCardCreateForm")?.addEventListener("submit", asyn
       status: "OPEN",
     }),
   });
+  const createJson = await res.json().catch(() => ({}));
   if (!res.ok) {
-    alert("카드 생성에 실패했습니다.");
+    alert(createJson.error?.message || "카드 생성에 실패했습니다.");
     return;
   }
   if (titleEl) titleEl.value = "";

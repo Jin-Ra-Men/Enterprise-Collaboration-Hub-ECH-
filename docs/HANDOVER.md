@@ -305,6 +305,7 @@
 - 보드 목록·카드 이력 API는 각각 100건 상한입니다.
 - 채널 연동 보드는 `kanban_boards.source_channel_id`로 연결되며, 첫 조회 시 `할 일/진행 중/완료` 기본 컬럼을 자동 생성합니다.
 - 카드 생성(`POST .../columns/.../cards`)·이동(`PUT /api/kanban/cards/{id}`)은 컨트롤러에서 `MEMBER` 이상이면 호출 가능하고, 서비스에서 채널 연동 보드는 **해당 채널 멤버**(`actorEmployeeNo`), 채널 미연동 보드는 **앱 역할 MANAGER 이상**으로 제한한다.
+- 보드 상세 조회 시 카드 로드는 `findAllForBoardWithAssignees`에서 `assignees`를 **LEFT JOIN FETCH**한다. `JOIN FETCH`만 쓰면 담당자 0건 카드가 INNER JOIN처럼 빠져 UI에 안 보인다.
 
 ### 채널 파일 메타데이터 인수인계 메모
 - 바이너리는 외부 스토리지에 두고 `channel_files`에 메타만 저장합니다.
