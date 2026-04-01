@@ -118,11 +118,11 @@ async function saveThemePreference(theme) {
     });
     if (!res.ok) {
       const json = await res.json().catch(() => ({}));
-      alert(json.error?.message || "테마 저장에 실패했습니다.");
+      await uiAlert(json.error?.message || "테마 저장에 실패했습니다.");
     }
   } catch (e) {
     console.error("테마 저장 실패", e);
-    alert("테마 저장 중 오류가 발생했습니다.");
+    await uiAlert("테마 저장 중 오류가 발생했습니다.");
   }
 }
 
@@ -674,7 +674,7 @@ async function openUserProfile(employeeNo) {
     const res  = await apiFetch(`/api/users/profile?employeeNo=${encodeURIComponent(emp)}`);
     const json = await res.json();
     if (!res.ok) {
-      alert(json.error?.message || "프로필을 불러올 수 없습니다.");
+      await uiAlert(json.error?.message || "프로필을 불러올 수 없습니다.");
       return;
     }
     const u = json.data;
@@ -723,7 +723,7 @@ async function openUserProfile(employeeNo) {
     openModal("modalUserProfile");
   } catch (e) {
     console.error(e);
-    alert("프로필 요청 중 오류가 발생했습니다.");
+    await uiAlert("프로필 요청 중 오류가 발생했습니다.");
   }
 }
 
@@ -733,7 +733,7 @@ async function startDmWithUser(peerEmployeeNo, displayName) {
   const peer = String(peerEmployeeNo || "").trim();
   if (!peer) return;
   if (peer === String(currentUser.employeeNo || "").trim()) {
-    alert("자기 자신과는 DM을 할 수 없습니다.");
+    await uiAlert("자기 자신과는 DM을 할 수 없습니다.");
     return;
   }
   const dmName =
@@ -752,7 +752,7 @@ async function startDmWithUser(peerEmployeeNo, displayName) {
     });
     const json = await res.json();
     if (!res.ok) {
-      alert("DM 생성 실패: " + (json.error?.message || ""));
+      await uiAlert("DM 생성 실패: " + (json.error?.message || ""));
       return;
     }
     const channelId = json.data?.channelId;
@@ -761,7 +761,7 @@ async function startDmWithUser(peerEmployeeNo, displayName) {
     selectChannel(channelId, dmName, "DM");
   } catch (e) {
     console.error(e);
-    alert("DM 생성 중 오류 발생");
+    await uiAlert("DM 생성 중 오류 발생");
   }
 }
 
@@ -813,7 +813,7 @@ async function downloadChannelFile(fileId, filename, channelId) {
       const err = await res.json().catch(() => ({}));
       const code = err.error?.code;
       const msg = err.error?.message;
-      alert(
+      await uiAlert(
         msg ||
           (code === "FILE_IO_ERROR"
             ? "파일을 읽는 중 오류가 발생했습니다."
@@ -830,7 +830,7 @@ async function downloadChannelFile(fileId, filename, channelId) {
     URL.revokeObjectURL(url);
   } catch (e) {
     console.error(e);
-    alert("다운로드 중 오류가 발생했습니다.");
+    await uiAlert("다운로드 중 오류가 발생했습니다.");
   }
 }
 
@@ -3908,7 +3908,7 @@ document.getElementById("btnConfirmCreateChannel").addEventListener("click", asy
   const name     = document.getElementById("newChannelName").value.trim();
   const desc     = document.getElementById("newChannelDesc").value.trim();
   const type     = document.getElementById("newChannelType").value;
-  if (!name) { alert("채널 이름을 입력하세요."); return; }
+  if (!name) { await uiAlert("채널 이름을 입력하세요."); return; }
   if (!currentUser) return;
 
   try {
@@ -3923,7 +3923,7 @@ document.getElementById("btnConfirmCreateChannel").addEventListener("click", asy
       }),
     });
     const json = await res.json();
-    if (!res.ok) { alert("채널 생성 실패: " + (json.error?.message || "")); return; }
+    if (!res.ok) { await uiAlert("채널 생성 실패: " + (json.error?.message || "")); return; }
 
     const channelId = json.data?.channelId;
     // 선택한 멤버 추가
@@ -3938,7 +3938,7 @@ document.getElementById("btnConfirmCreateChannel").addEventListener("click", asy
     await loadMyChannels();
     selectChannel(channelId, name, type);
   } catch {
-    alert("채널 생성 중 오류 발생");
+    await uiAlert("채널 생성 중 오류 발생");
   }
 });
 
@@ -3954,7 +3954,7 @@ document.getElementById("btnCreateDm").addEventListener("click", async () => {
 // DM 생성 모달도 + 버튼 기반으로 멤버를 선택합니다.
 
 document.getElementById("btnConfirmCreateDm").addEventListener("click", async () => {
-  if (selectedDmMembers.length === 0) { alert("대화 상대를 선택하세요."); return; }
+  if (selectedDmMembers.length === 0) { await uiAlert("대화 상대를 선택하세요."); return; }
   if (!currentUser) return;
 
   const dmName = selectedDmMembers.map(m => m.name).join(", ");
@@ -3972,7 +3972,7 @@ document.getElementById("btnConfirmCreateDm").addEventListener("click", async ()
       }),
     });
     const json = await res.json();
-    if (!res.ok) { alert("DM 생성 실패: " + (json.error?.message || "")); return; }
+    if (!res.ok) { await uiAlert("DM 생성 실패: " + (json.error?.message || "")); return; }
 
     const channelId = json.data?.channelId;
 
@@ -3980,7 +3980,7 @@ document.getElementById("btnConfirmCreateDm").addEventListener("click", async ()
     await loadMyChannels();
     selectChannel(channelId, dmName, "DM");
   } catch {
-    alert("DM 생성 중 오류 발생");
+    await uiAlert("DM 생성 중 오류 발생");
   }
 });
 
@@ -4898,7 +4898,7 @@ async function loadChannelKanbanBoard() {
 
 document.getElementById("btnOpenWorkHub")?.addEventListener("click", async () => {
   if (!activeChannelId || !currentUser) {
-    alert("채널을 먼저 선택하세요.");
+    await uiAlert("채널을 먼저 선택하세요.");
     return;
   }
   try {
@@ -4912,7 +4912,7 @@ document.getElementById("btnOpenWorkHub")?.addEventListener("click", async () =>
     ensureWorkHubWorkListDeleteBound();
     openModal("modalWorkHub");
   } catch (e) {
-    alert(e?.message || "업무/칸반 정보를 불러오지 못했습니다.");
+    await uiAlert(e?.message || "업무/칸반 정보를 불러오지 못했습니다.");
   }
 });
 
@@ -5049,7 +5049,7 @@ document.getElementById("btnCloseChannel")?.addEventListener("click", async () =
 
 document.getElementById("btnAddMembersLater").addEventListener("click", async () => {
   if (!activeChannelId) {
-    alert("채널을 먼저 선택하세요.");
+    await uiAlert("채널을 먼저 선택하세요.");
     return;
   }
   selectedAddMembers = [];
@@ -5085,7 +5085,7 @@ document.getElementById("btnOpenAddMemberPickerForCreateDm")?.addEventListener("
 document.getElementById("btnConfirmAddMembers").addEventListener("click", async () => {
   if (!activeChannelId) return;
   if (!selectedAddMembers.length) {
-    alert("추가할 사용자를 선택하세요.");
+    await uiAlert("추가할 사용자를 선택하세요.");
     return;
   }
   const failed = [];
@@ -5285,7 +5285,7 @@ async function loadSettings() {
           body: JSON.stringify({ value, updatedBy: currentUser?.employeeNo }),
         });
         const j = await r.json();
-        alert(r.ok ? `"${key}" 설정이 저장되었습니다.` : `저장 실패: ${j.error?.message || "오류"}`);
+        await uiAlert(r.ok ? `"${key}" 설정이 저장되었습니다.` : `저장 실패: ${j.error?.message || "오류"}`);
       });
     });
   } catch { listEl.innerHTML = '<p class="empty-notice">설정 로드 실패</p>'; }
@@ -5383,7 +5383,7 @@ async function handleSearchResultClick(item) {
   if (type === "KANBAN_CARD" && Number.isFinite(id)) {
     const chId = Number(item.relatedChannelId);
     if (!Number.isFinite(chId)) {
-      alert("채널에 연결된 칸반 카드만 업무·칸반 창에서 열 수 있습니다.");
+      await uiAlert("채널에 연결된 칸반 카드만 업무·칸반 창에서 열 수 있습니다.");
       return;
     }
     const meta = resolveChannelMetaForSelect(chId, item.contextName || "채널");
@@ -5418,7 +5418,7 @@ async function handleSearchResultClick(item) {
         const blobUrl = await getAuthedImageBlobUrl(contextId, id);
         openImageLightbox(blobUrl, id, filename, contextId);
       } catch {
-        alert("이미지를 불러올 수 없습니다.");
+        await uiAlert("이미지를 불러올 수 없습니다.");
       }
     } else {
       await downloadChannelFile(id, filename, contextId);
