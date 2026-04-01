@@ -22,8 +22,13 @@ import com.ech.backend.domain.kanban.KanbanCardEventRepository;
 import com.ech.backend.domain.kanban.KanbanCardEventType;
 import com.ech.backend.domain.kanban.KanbanCardRepository;
 import com.ech.backend.domain.audit.AuditEventType;
+import com.ech.backend.domain.channel.Channel;
+import com.ech.backend.domain.channel.ChannelMemberRepository;
+import com.ech.backend.domain.channel.ChannelRepository;
 import com.ech.backend.domain.kanban.KanbanColumn;
 import com.ech.backend.domain.kanban.KanbanColumnRepository;
+import com.ech.backend.common.exception.ForbiddenException;
+import com.ech.backend.common.rbac.AppRole;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
 import java.util.ArrayList;
@@ -48,6 +53,8 @@ public class KanbanService {
     private final KanbanCardEventRepository eventRepository;
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
+    private final ChannelRepository channelRepository;
+    private final ChannelMemberRepository channelMemberRepository;
 
     public KanbanService(
             KanbanBoardRepository boardRepository,
@@ -56,7 +63,9 @@ public class KanbanService {
             KanbanCardAssigneeRepository assigneeRepository,
             KanbanCardEventRepository eventRepository,
             UserRepository userRepository,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            ChannelRepository channelRepository,
+            ChannelMemberRepository channelMemberRepository
     ) {
         this.boardRepository = boardRepository;
         this.columnRepository = columnRepository;
@@ -65,6 +74,8 @@ public class KanbanService {
         this.eventRepository = eventRepository;
         this.userRepository = userRepository;
         this.auditLogService = auditLogService;
+        this.channelRepository = channelRepository;
+        this.channelMemberRepository = channelMemberRepository;
     }
 
     @Transactional
@@ -140,6 +151,48 @@ public class KanbanService {
     }
 
     @Transactional
+    public KanbanBoardDetailResponse getOrCreateChannelBoard(Long channelId, String employeeNo) {
+        String actorEmployeeNo = employeeNo == null ? "" : employeeNo.trim();
+        if (actorEmployeeNo.isBlank()) {
+            throw new IllegalArgumentException("employeeNo는 필수입니다.");
+        }
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new IllegalArgumentException("채널을 찾을 수 없습니다."));
+        if (!channelMemberRepository.existsByChannelIdAndUserEmployeeNo(channelId, actorEmployeeNo)) {
+            throw new IllegalArgumentException("채널 멤버만 칸반 보드를 조회할 수 있습니다.");
+        }
+        String workspaceKey = channel.getWorkspaceKey();
+        KanbanBoard board = boardRepository.findByWorkspaceKeyAndSourceChannel_Id(workspaceKey, channelId)
+                .orElseGet(() -> createDefaultChannelBoard(channel, actorEmployeeNo));
+        return getBoard(board.getId());
+    }
+
+    private KanbanBoard createDefaultChannelBoard(Channel channel, String actorEmployeeNo) {
+        User creator = userRepository.findByEmployeeNo(actorEmployeeNo)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        String boardName = (channel.getName() == null || channel.getName().isBlank())
+                ? "채널 " + channel.getId() + " 보드"
+                : channel.getName().trim() + " 보드";
+        if (boardName.length() > 200) {
+            boardName = boardName.substring(0, 200);
+        }
+        if (boardRepository.findByWorkspaceKeyAndName(channel.getWorkspaceKey(), boardName).isPresent()) {
+            boardName = "채널 " + channel.getId() + " 기본 보드";
+        }
+        KanbanBoard board = boardRepository.save(new KanbanBoard(
+                channel.getWorkspaceKey(),
+                boardName,
+                "채널 업무 진행 보드",
+                channel,
+                creator
+        ));
+        columnRepository.save(new KanbanColumn(board, "할 일", 0));
+        columnRepository.save(new KanbanColumn(board, "진행 중", 1));
+        columnRepository.save(new KanbanColumn(board, "완료", 2));
+        return board;
+    }
+
+    @Transactional
     public void deleteBoard(Long boardId) {
         KanbanBoard board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new IllegalArgumentException("보드를 찾을 수 없습니다."));
@@ -195,12 +248,34 @@ public class KanbanService {
         boardRepository.save(board);
     }
 
+    /**
+     * 채널 연동 보드: 해당 채널 멤버만 카드 변경 가능.
+     * 워크스페이스 전용 보드: 앱 역할 MANAGER 이상만 카드 변경 가능.
+     */
+    private void assertCanMutateCard(KanbanBoard board, String actorEmployeeNo, AppRole callerRole) {
+        String actor = actorEmployeeNo == null ? "" : actorEmployeeNo.trim();
+        if (actor.isBlank()) {
+            throw new IllegalArgumentException("actorEmployeeNo는 필수입니다.");
+        }
+        if (board.getSourceChannel() != null) {
+            Long channelId = board.getSourceChannel().getId();
+            if (!channelMemberRepository.existsByChannelIdAndUserEmployeeNo(channelId, actor)) {
+                throw new IllegalArgumentException("채널 멤버만 이 칸반 카드를 변경할 수 있습니다.");
+            }
+            return;
+        }
+        if (callerRole == null || !callerRole.atLeast(AppRole.MANAGER)) {
+            throw new ForbiddenException("워크스페이스 칸반 카드는 매니저 이상만 변경할 수 있습니다.");
+        }
+    }
+
     @Transactional
-    public KanbanCardResponse createCard(Long boardId, Long columnId, CreateKanbanCardRequest request) {
+    public KanbanCardResponse createCard(Long boardId, Long columnId, CreateKanbanCardRequest request, AppRole callerRole) {
         User actor = userRepository.findByEmployeeNo(request.actorEmployeeNo())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         KanbanColumn column = columnRepository.findByIdAndBoard_Id(columnId, boardId)
                 .orElseThrow(() -> new IllegalArgumentException("컬럼을 찾을 수 없습니다."));
+        assertCanMutateCard(column.getBoard(), request.actorEmployeeNo(), callerRole);
         int sort = request.sortOrder() != null
                 ? request.sortOrder()
                 : column.getCards().stream().mapToInt(KanbanCard::getSortOrder).max().orElse(-1) + 1;
@@ -235,12 +310,13 @@ public class KanbanService {
     }
 
     @Transactional
-    public KanbanCardResponse updateCard(Long cardId, UpdateKanbanCardRequest request) {
+    public KanbanCardResponse updateCard(Long cardId, UpdateKanbanCardRequest request, AppRole callerRole) {
         User actor = userRepository.findByEmployeeNo(request.actorEmployeeNo())
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         KanbanCard card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new IllegalArgumentException("카드를 찾을 수 없습니다."));
         KanbanBoard board = card.getColumn().getBoard();
+        assertCanMutateCard(board, request.actorEmployeeNo(), callerRole);
 
         if (request.columnId() != null && !request.columnId().equals(card.getColumn().getId())) {
             KanbanColumn newColumn = columnRepository.findByIdAndBoard_Id(request.columnId(), board.getId())

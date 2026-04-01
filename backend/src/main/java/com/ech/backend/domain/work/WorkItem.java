@@ -103,4 +103,17 @@ public class WorkItem {
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
     }
+
+    public void update(String title, String description, String status) {
+        if (title != null && !title.isBlank()) {
+            this.title = title.trim();
+        }
+        if (description != null) {
+            this.description = description.trim().isEmpty() ? null : description.trim();
+        }
+        if (status != null && !status.isBlank()) {
+            this.status = status.trim();
+        }
+        this.updatedAt = OffsetDateTime.now();
+    }
 }

@@ -138,8 +138,10 @@
   - `GET /api/users/{userId}/profile` (호환)
 - 칸반:
   - `POST/GET/GET{id}/DELETE /api/kanban/boards`, 컬럼·카드 CRUD, 담당자 추가/삭제, `GET /api/kanban/cards/{cardId}/history`
+  - `GET /api/kanban/channels/{channelId}/board?employeeNo=...` — 채널 기본 보드 조회(없으면 자동 생성)
 - 메시지→업무:
   - `POST /api/messages/{messageId}/work-items`, `GET /api/messages/{messageId}/work-items`, `GET /api/work-items/{workItemId}`
+  - `GET /api/channels/{channelId}/work-items?employeeNo=...&limit=...`, `POST /api/channels/{channelId}/work-items`, `PUT /api/work-items/{workItemId}`
 - 조직 동기화(관리):
   - `GET /api/admin/org-sync/users?source=TEST|GROUPWARE`, `POST /api/admin/org-sync/users/sync?source=...`
   - `PUT /api/admin/org-sync/users/{employeeNo}/status`
@@ -294,12 +296,15 @@
 ### 메시지→업무 인수인계 메모
 - 메시지 하나당 연결된 업무는 최대 1건(`work_items.source_message_id` 유니크).
 - 메시지가 삭제되어도 업무 행은 남고 `source_message_id`만 비워질 수 있음(`ON DELETE SET NULL`).
+- 채널 업무 허브는 `source_channel_id` 기준으로 목록을 조회하며, 채널 멤버만 생성/수정/조회 가능.
 
 ### 칸반 보드 인수인계 메모
 - 보드는 `(workspace_key, name)` 유니크입니다.
 - 카드 컬럼 이동은 동일 보드의 컬럼으로만 허용됩니다.
 - `kanban_card_events`에 생성·이동·상태·담당 변경이 기록됩니다(카드 삭제 시 이력도 CASCADE 삭제).
 - 보드 목록·카드 이력 API는 각각 100건 상한입니다.
+- 채널 연동 보드는 `kanban_boards.source_channel_id`로 연결되며, 첫 조회 시 `할 일/진행 중/완료` 기본 컬럼을 자동 생성합니다.
+- 카드 생성(`POST .../columns/.../cards`)·이동(`PUT /api/kanban/cards/{id}`)은 컨트롤러에서 `MEMBER` 이상이면 호출 가능하고, 서비스에서 채널 연동 보드는 **해당 채널 멤버**(`actorEmployeeNo`), 채널 미연동 보드는 **앱 역할 MANAGER 이상**으로 제한한다.
 
 ### 채널 파일 메타데이터 인수인계 메모
 - 바이너리는 외부 스토리지에 두고 `channel_files`에 메타만 저장합니다.

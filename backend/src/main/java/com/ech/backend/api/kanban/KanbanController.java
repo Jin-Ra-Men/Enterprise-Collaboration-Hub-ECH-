@@ -12,10 +12,13 @@ import com.ech.backend.api.kanban.dto.KanbanColumnResponse;
 import com.ech.backend.api.kanban.dto.UpdateKanbanCardRequest;
 import com.ech.backend.api.kanban.dto.UpdateKanbanColumnRequest;
 import com.ech.backend.common.api.ApiResponse;
+import com.ech.backend.common.exception.UnauthorizedException;
 import com.ech.backend.common.rbac.AppRole;
 import com.ech.backend.common.rbac.RequireRole;
+import com.ech.backend.common.security.UserPrincipal;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -54,6 +57,14 @@ public class KanbanController {
         return ApiResponse.success(kanbanService.getBoard(boardId));
     }
 
+    @GetMapping("/channels/{channelId}/board")
+    public ApiResponse<KanbanBoardDetailResponse> getOrCreateChannelBoard(
+            @PathVariable Long channelId,
+            @RequestParam String employeeNo
+    ) {
+        return ApiResponse.success(kanbanService.getOrCreateChannelBoard(channelId, employeeNo));
+    }
+
     @DeleteMapping("/boards/{boardId}")
     @RequireRole(AppRole.MANAGER)
     public ApiResponse<Void> deleteBoard(@PathVariable Long boardId) {
@@ -88,22 +99,30 @@ public class KanbanController {
     }
 
     @PostMapping("/boards/{boardId}/columns/{columnId}/cards")
-    @RequireRole(AppRole.MANAGER)
+    @RequireRole(AppRole.MEMBER)
     public ApiResponse<KanbanCardResponse> createCard(
             @PathVariable Long boardId,
             @PathVariable Long columnId,
-            @Valid @RequestBody CreateKanbanCardRequest request
+            @Valid @RequestBody CreateKanbanCardRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        return ApiResponse.success(kanbanService.createCard(boardId, columnId, request));
+        if (principal == null) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        return ApiResponse.success(kanbanService.createCard(boardId, columnId, request, principal.role()));
     }
 
     @PutMapping("/cards/{cardId}")
-    @RequireRole(AppRole.MANAGER)
+    @RequireRole(AppRole.MEMBER)
     public ApiResponse<KanbanCardResponse> updateCard(
             @PathVariable Long cardId,
-            @Valid @RequestBody UpdateKanbanCardRequest request
+            @Valid @RequestBody UpdateKanbanCardRequest request,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        return ApiResponse.success(kanbanService.updateCard(cardId, request));
+        if (principal == null) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        return ApiResponse.success(kanbanService.updateCard(cardId, request, principal.role()));
     }
 
     @DeleteMapping("/cards/{cardId}")

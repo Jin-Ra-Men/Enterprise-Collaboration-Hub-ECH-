@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 public interface WorkItemRepository extends JpaRepository<WorkItem, Long> {
 
     Optional<WorkItem> findBySourceMessage_Id(Long messageId);
+    List<WorkItem> findBySourceChannel_IdOrderByCreatedAtDesc(Long channelId, Pageable pageable);
 
     /**
      * 통합 검색: 업무 제목 또는 설명에서 키워드를 검색한다 (워크스페이스 전체 대상).

@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS kanban_boards (
     workspace_key VARCHAR(100) NOT NULL DEFAULT 'default',
     name VARCHAR(200) NOT NULL,
     description TEXT,
+    source_channel_id BIGINT REFERENCES channels(id) ON DELETE SET NULL,
     created_by VARCHAR(50) NOT NULL REFERENCES users(employee_no),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

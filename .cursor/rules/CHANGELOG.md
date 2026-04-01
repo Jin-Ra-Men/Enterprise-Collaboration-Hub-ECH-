@@ -2,10 +2,24 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-04-01
+
+### Fixed
+- 채널 연동 칸반: 카드 생성/이동 API가 `MANAGER` 전용이어서 일반 멤버(`MEMBER`)가 헤더 `📋` 흐름에서 403이 나던 문제 수정 — `MEMBER` 인증으로 완화하고, 채널 보드는 채널 멤버십·워크스페이스 전용 보드는 `MANAGER` 이상으로 서비스 레이어에서 구분
+
+### Changed
+- `docs/FEATURE_SPEC.md`: 채널 연동 업무/칸반 허브·RBAC 섹션 권한 설명을 위 동작에 맞게 갱신
+- `docs/HANDOVER.md`: 칸반 카드 생성/이동 권한(채널 보드 vs 워크스페이스 보드) 메모 추가
+
 ## 2026-03-31
 
 ### Changed
 - 에러 기록 정책 정리: `ERRORS.md`에서 JDK/JAVA_HOME 같은 환경성 단독 이슈를 제거하고, 소스 수정 후 테스트·빌드·런타임 검증 과정의 코드/서비스 오류 중심으로 기록 기준을 명확화
+
+### Added
+- 채널 연동 업무 허브 UI: 채널 헤더 `📋` 버튼으로 `업무 · 칸반` 모달을 열고, 같은 채널의 업무 목록/칸반 보드를 한 화면에서 조회·생성·상태 변경할 수 있도록 연동
+- 채널 업무 API 확장: `GET /api/channels/{channelId}/work-items`, `POST /api/channels/{channelId}/work-items`, `PUT /api/work-items/{workItemId}`로 채널 단위 업무 조회/생성/수정 흐름 추가
+- 채널 기본 칸반 보드 API: `GET /api/kanban/channels/{channelId}/board?employeeNo=...` 호출 시 채널 멤버 검증 후 보드를 조회하고, 없으면 `할 일/진행 중/완료` 기본 컬럼으로 자동 생성
 
 ### Fixed
 - 멘션 토스트 문구 단순화: `보낸 사람:`/`위치:` 라벨을 제거하고 발신자·위치 텍스트만 굵게 강조해 더 빠르게 읽히도록 정리

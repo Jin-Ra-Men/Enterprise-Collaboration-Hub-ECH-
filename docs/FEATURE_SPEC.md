@@ -465,6 +465,33 @@
 
 ---
 
+## 채널 연동 업무/칸반 허브 (사용자 활용 UI)
+- 목적: 채널 대화 맥락에서 바로 업무를 생성/관리하고, 같은 채널의 칸반 진행 상태를 한 화면에서 확인
+- 사용자: 채널 멤버
+- 관련 화면/경로: 채널 헤더 `📋` 버튼 → `업무 · 칸반` 모달
+- 관련 API:
+  - `GET /api/channels/{channelId}/work-items?employeeNo=&limit=` — 채널 업무 목록
+  - `POST /api/channels/{channelId}/work-items` — 채널 업무 생성(`createdByEmployeeNo`, `title`, 선택 `description`, `status`, `sourceMessageId`)
+  - `PUT /api/work-items/{workItemId}` — 채널 업무 수정(`actorEmployeeNo`, 부분 갱신)
+  - `GET /api/kanban/channels/{channelId}/board?employeeNo=` — 채널 기본 칸반 보드 조회/없으면 자동 생성
+- 입력/출력:
+  - 업무 상태는 `OPEN`/`IN_PROGRESS`/`DONE`
+  - 칸반 보드는 채널당 1개를 기본으로 사용하며, 최초 조회 시 `할 일/진행 중/완료` 컬럼을 자동 생성
+- 상태 전이/예외 케이스:
+  - 비멤버 조회/생성/수정 시 예외
+  - `sourceMessageId` 지정 시 다른 채널 메시지를 참조하면 생성 거부
+- 권한/보안:
+  - 채널 멤버십 기준으로 접근 제어
+  - 칸반 카드 생성/이동 API는 `MEMBER` 이상 인증이 필요하며, **채널 연동 보드**(`source_channel_id`가 있는 보드)는 해당 채널 멤버만 카드 변경 가능. **워크스페이스 전용 보드**(채널 미연동)는 앱 역할 `MANAGER` 이상만 카드 생성/이동 가능
+- 테스트 기준:
+  - 채널 업무 생성/조회/상태 변경이 동일 채널에서 반영되는지 검증
+  - 채널 칸반 첫 진입 시 기본 보드/컬럼 자동 생성 검증
+  - 카드 생성 후 컬럼 이동 시 보드 재조회 결과 일치 검증
+- 비고:
+  - 구현: `frontend/app.js`(모달 상호작용), `backend/.../api/work/*`, `backend/.../api/kanban/*`
+
+---
+
 ## 조직도/사내 계정 연동 인터페이스 (테스트 조직 우선)
 - 목적: 지금은 그룹웨어 미연동 상태에서 테스트 조직으로 기능 검증하고, 이후 실제 그룹웨어 제공자만 교체해서 동일 API를 재사용
 - 사용자: Admin
@@ -500,9 +527,10 @@
 - 목적: 인증이 완성되기 전에도 API 단 최소 권한 경계를 강제해 관리자/운영 기능 오남용을 방지
 - 사용자: Admin, Manager, Member
 - 관련 API:
-  - 공통: `X-User-Role` 헤더(`MEMBER|MANAGER|ADMIN`)
+  - 공통: `X-User-Role` 헤더(`MEMBER|MANAGER|ADMIN`) 또는 JWT `role` 클레임
   - `ADMIN`: `/api/admin/org-sync/**`
-  - `MANAGER+`: `GET /api/users/search`, 채널 생성/멤버 추가, 칸반 변경 API
+  - `MANAGER+`: `GET /api/users/search`, 채널 생성/멤버 추가, 칸반 보드·컬럼 구조 변경 및 워크스페이스 전용(채널 미연동) 보드의 카드 변경
+  - `MEMBER+`: 채널 연동 칸반 카드 생성/이동(`POST .../columns/.../cards`, `PUT /api/kanban/cards/{cardId}`) — 해당 채널 멤버만 허용(서비스에서 `source_channel_id` 기준 검증)
 - 설계:
   - `@RequireRole` 어노테이션으로 엔드포인트 최소 역할 선언
   - `RoleGuardInterceptor`가 요청 헤더를 해석하고 계층 비교(`ADMIN >= MANAGER >= MEMBER`)
@@ -516,7 +544,8 @@
 - 테스트 기준:
   - `ADMIN` 헤더로 관리자 API 접근 성공
   - `MANAGER`/`MEMBER` 헤더로 관리자 API 접근 실패
-  - `MANAGER` 헤더로 사용자 검색/채널 생성/칸반 변경 성공
+  - `MANAGER` 헤더로 사용자 검색/채널 생성/칸반 보드·컬럼 변경 성공
+  - `MEMBER` JWT로 채널 연동 칸반 카드 생성/이동 성공(채널 멤버인 경우)
 - 비고:
   - 매트릭스 문서: `docs/RBAC_MATRIX.md`
   - 구현: `backend/.../common/rbac/*`, `@RequireRole` 적용된 컨트롤러들

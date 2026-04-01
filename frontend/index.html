@@ -188,6 +188,7 @@
             </div>
             <div class="chat-header-right">
               <span class="chat-member-count" id="chatMemberCount"></span>
+              <button class="btn-header-icon" id="btnOpenWorkHub" title="업무/칸반">📋</button>
               <button class="btn-header-icon" id="btnOpenFileHub" title="첨부파일 모아보기">📎</button>
               <button class="btn-header-icon" id="btnAddMembersLater" title="구성원 추가">➕</button>
               <button class="btn-header-icon" id="btnShowMembers" title="멤버 보기">👥</button>
@@ -482,6 +483,42 @@
         </div>
         <div class="modal-footer">
           <button class="btn-cancel" data-modal="modalFileHub">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modalWorkHub" class="modal-overlay hidden">
+      <div class="modal modal-wide modal-work-hub">
+        <div class="modal-header">
+          <h3 id="workHubTitle">업무 · 칸반</h3>
+          <button class="modal-close" data-modal="modalWorkHub">✕</button>
+        </div>
+        <div class="modal-body work-hub-body">
+          <div class="work-hub-panel">
+            <h4>업무 항목</h4>
+            <form id="workItemCreateForm" class="work-item-create-form">
+              <input id="workItemTitleInput" type="text" maxlength="500" placeholder="업무 제목" required />
+              <textarea id="workItemDescInput" rows="3" maxlength="8000" placeholder="업무 설명(선택)"></textarea>
+              <div class="work-item-create-row">
+                <select id="workItemStatusSelect">
+                  <option value="OPEN">OPEN</option>
+                  <option value="IN_PROGRESS">IN_PROGRESS</option>
+                  <option value="DONE">DONE</option>
+                </select>
+                <button type="submit" class="btn-primary btn-sm">업무 추가</button>
+              </div>
+            </form>
+            <ul id="channelWorkItemsList" class="channel-work-item-list"></ul>
+          </div>
+          <div class="work-hub-panel">
+            <h4>칸반 보드</h4>
+            <form id="kanbanCardCreateForm" class="work-item-create-form">
+              <input id="kanbanCardTitleInput" type="text" maxlength="500" placeholder="새 카드 제목" required />
+              <textarea id="kanbanCardDescInput" rows="2" maxlength="8000" placeholder="카드 설명(선택)"></textarea>
+              <button type="submit" class="btn-primary btn-sm">카드 추가</button>
+            </form>
+            <div id="channelKanbanBoard" class="channel-kanban-board"></div>
+          </div>
         </div>
       </div>
     </div>

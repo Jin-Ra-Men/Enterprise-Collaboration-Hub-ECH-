@@ -1,5 +1,6 @@
 package com.ech.backend.domain.kanban;
 
+import com.ech.backend.domain.channel.Channel;
 import com.ech.backend.domain.user.User;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -39,6 +40,10 @@ public class KanbanBoard {
     private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "source_channel_id")
+    private Channel sourceChannel;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", referencedColumnName = "employee_no", nullable = false)
     private User createdBy;
 
@@ -56,9 +61,14 @@ public class KanbanBoard {
     }
 
     public KanbanBoard(String workspaceKey, String name, String description, User createdBy) {
+        this(workspaceKey, name, description, null, createdBy);
+    }
+
+    public KanbanBoard(String workspaceKey, String name, String description, Channel sourceChannel, User createdBy) {
         this.workspaceKey = workspaceKey;
         this.name = name;
         this.description = description;
+        this.sourceChannel = sourceChannel;
         this.createdBy = createdBy;
     }
 
@@ -80,6 +90,10 @@ public class KanbanBoard {
 
     public User getCreatedBy() {
         return createdBy;
+    }
+
+    public Channel getSourceChannel() {
+        return sourceChannel;
     }
 
     public OffsetDateTime getCreatedAt() {
