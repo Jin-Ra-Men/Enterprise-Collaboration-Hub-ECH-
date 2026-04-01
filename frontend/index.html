@@ -623,6 +623,14 @@
             <label for="kanbanCardDetailColumn">상태</label>
             <select id="kanbanCardDetailColumn"></select>
           </div>
+          <div class="form-group">
+            <label>담당자</label>
+            <div id="kanbanCardDetailAssigneeChips" class="kanban-assignee-chips" aria-live="polite"></div>
+            <div class="kanban-assignee-add">
+              <input id="kanbanCardDetailAssigneeSearch" type="search" maxlength="100" placeholder="채널 멤버 검색 (↑↓·Enter)" autocomplete="off" />
+              <ul id="kanbanCardDetailAssigneeSuggest" class="kanban-assignee-suggest hidden" role="listbox" aria-label="담당자 검색"></ul>
+            </div>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn-primary" id="btnSaveKanbanCardDetail">적용</button>

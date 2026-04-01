@@ -811,7 +811,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 ## 업무 허브 상세 편집/드래그 가시성 보강 (2026-04-01)
 - 상세 편집:
   - 업무 항목 클릭 시 `modalWorkItemDetail`에서 제목/설명/상태 편집
-  - 칸반 카드 클릭 시 `modalKanbanCardDetail`에서 제목/설명/컬럼 편집
+  - 칸반 카드 클릭 시 `modalKanbanCardDetail`에서 제목/설명/컬럼/담당자 편집
   - 저장 즉시 API 호출 대신 기존 임시 맵(`workHubPending*`)에 반영하고 하단 저장 버튼에서 일괄 반영
 - 드래그 가시성:
   - 칸반 카드 드래그 중 삽입 예상 지점 카드에 `kanban-drop-before` 스타일을 적용해 이동 위치 인지성 개선

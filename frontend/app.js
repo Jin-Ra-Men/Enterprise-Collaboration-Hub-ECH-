@@ -200,6 +200,8 @@ let workHubPendingCardAssigneeRemove = new Map();
 let workHubWorkListDeleteBound = false;
 let workHubSelectedWorkItemMeta = null;
 let workHubSelectedKanbanCardMeta = null;
+let workHubDetailKanbanAssignees = [];
+let workHubDetailKanbanAssigneesInitial = [];
 /** 다른 채널에 새 메시지 시 목록 갱신 디바운스 */
 let refreshChannelListTimer = null;
 let windowFocusChannelsTimer = null;
@@ -4614,6 +4616,8 @@ function openKanbanCardDetailModal(rawId, isDraft) {
     titleEl.value = String(card.title || "");
     descEl.value = String(card.description || "");
     colEl.value = String(Number(card.columnId || activeWorkHubFirstColumnId || 0));
+    workHubDetailKanbanAssignees = Array.isArray(card.assigneeEmployeeNos) ? [...new Set(card.assigneeEmployeeNos.map((x) => String(x).trim()).filter(Boolean))] : [];
+    workHubDetailKanbanAssigneesInitial = [...workHubDetailKanbanAssignees];
   } else {
     const id = Number(rawId);
     if (!id) return;
@@ -4624,8 +4628,77 @@ function openKanbanCardDetailModal(rawId, isDraft) {
     const pendingCol = workHubPendingCardColumn.get(id);
     const selVal = pendingCol != null ? pendingCol : Number(el?.querySelector(".kanban-card-column-select")?.value || 0);
     colEl.value = String(Number(selVal || activeWorkHubFirstColumnId || 0));
+    const curr = [...(el?.querySelectorAll(".kanban-assignee-remove[data-assignee-emp]") || [])]
+      .map((btn) => String(btn.dataset.assigneeEmp || "").trim())
+      .filter(Boolean);
+    workHubDetailKanbanAssignees = [...new Set(curr)];
+    workHubDetailKanbanAssigneesInitial = [...workHubDetailKanbanAssignees];
   }
+  renderKanbanCardDetailAssigneeChips();
+  void runKanbanCardDetailAssigneeSuggest();
   openModal("modalKanbanCardDetail");
+}
+
+function renderKanbanCardDetailAssigneeChips() {
+  const wrap = document.getElementById("kanbanCardDetailAssigneeChips");
+  if (!wrap) return;
+  if (!workHubDetailKanbanAssignees.length) {
+    wrap.innerHTML = `<span class="muted">담당 없음</span>`;
+    return;
+  }
+  wrap.innerHTML = workHubDetailKanbanAssignees
+    .map((emp) => `<span class="kanban-assignee-chip">
+      <span class="kanban-assignee-label">${escHtml(emp)}</span>
+      <button type="button" class="kanban-detail-assignee-remove" data-emp="${escHtml(emp)}" title="담당 해제">✕</button>
+    </span>`)
+    .join("");
+  wrap.querySelectorAll(".kanban-detail-assignee-remove").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const emp = String(btn.dataset.emp || "").trim();
+      workHubDetailKanbanAssignees = workHubDetailKanbanAssignees.filter((x) => x !== emp);
+      renderKanbanCardDetailAssigneeChips();
+      void runKanbanCardDetailAssigneeSuggest();
+    });
+  });
+}
+
+async function runKanbanCardDetailAssigneeSuggest() {
+  const input = document.getElementById("kanbanCardDetailAssigneeSearch");
+  const ul = document.getElementById("kanbanCardDetailAssigneeSuggest");
+  if (!input || !ul || !currentUser) return;
+  const q = String(input.value || "").trim();
+  const assigned = new Set(workHubDetailKanbanAssignees);
+  const mine = String(currentUser.employeeNo || "").trim();
+  const users = await fetchUsersForKanbanAssigneeSuggest(q);
+  const list = users
+    .filter((u) => {
+      const emp = String(u.employeeNo || "").trim();
+      return emp && emp !== mine && !assigned.has(emp);
+    })
+    .slice(0, 12);
+  if (!list.length) {
+    ul.innerHTML = `<li class="kanban-assignee-suggest-empty">${q ? "검색 결과가 없습니다" : "추가할 사용자가 없습니다"}</li>`;
+    ul.classList.remove("hidden");
+    return;
+  }
+  ul.innerHTML = list
+    .map((u) => `<li><button type="button" class="kanban-detail-assignee-pick" data-emp="${escHtml(String(u.employeeNo || "").trim())}">
+      ${escHtml(u.name || "")} <span class="muted">${escHtml([u.department || "", u.jobLevel || ""].filter(Boolean).join(" · ") || "소속 미지정")}</span>
+    </button></li>`)
+    .join("");
+  ul.classList.remove("hidden");
+  ul.querySelectorAll(".kanban-detail-assignee-pick").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const emp = String(btn.dataset.emp || "").trim();
+      if (!emp || workHubDetailKanbanAssignees.includes(emp)) return;
+      workHubDetailKanbanAssignees.push(emp);
+      input.value = "";
+      ul.classList.add("hidden");
+      ul.innerHTML = "";
+      renderKanbanCardDetailAssigneeChips();
+      void runKanbanCardDetailAssigneeSuggest();
+    });
+  });
 }
 
 async function runNewKanbanCardAssigneeSuggest(input, ul) {
@@ -5137,14 +5210,39 @@ document.getElementById("btnSaveKanbanCardDetail")?.addEventListener("click", as
     d.title = title;
     d.description = description || null;
     d.columnId = columnId || d.columnId;
+    d.assigneeEmployeeNos = [...new Set(workHubDetailKanbanAssignees)];
   } else {
     const id = Number(meta.id);
     workHubPendingCardTitle.set(id, title);
     workHubPendingCardDescription.set(id, description || null);
     if (columnId) workHubPendingCardColumn.set(id, columnId);
+    const next = new Set(workHubDetailKanbanAssignees);
+    const prev = new Set(workHubDetailKanbanAssigneesInitial);
+    for (const emp of prev.values()) {
+      if (!next.has(emp)) {
+        if (!workHubPendingCardAssigneeRemove.has(id)) workHubPendingCardAssigneeRemove.set(id, new Set());
+        workHubPendingCardAssigneeRemove.get(id).add(emp);
+        if (workHubPendingCardAssigneeAdd.has(id)) workHubPendingCardAssigneeAdd.get(id).delete(emp);
+      }
+    }
+    for (const emp of next.values()) {
+      if (!prev.has(emp)) {
+        if (!workHubPendingCardAssigneeAdd.has(id)) workHubPendingCardAssigneeAdd.set(id, new Set());
+        workHubPendingCardAssigneeAdd.get(id).add(emp);
+        if (workHubPendingCardAssigneeRemove.has(id)) workHubPendingCardAssigneeRemove.get(id).delete(emp);
+      }
+    }
   }
   closeModal("modalKanbanCardDetail");
   await loadChannelKanbanBoard();
+});
+
+document.getElementById("kanbanCardDetailAssigneeSearch")?.addEventListener("input", (e) => {
+  clearTimeout(e.target._detailAssignTimer);
+  e.target._detailAssignTimer = setTimeout(() => void runKanbanCardDetailAssigneeSuggest(), 140);
+});
+document.getElementById("kanbanCardDetailAssigneeSearch")?.addEventListener("focusin", () => {
+  void runKanbanCardDetailAssigneeSuggest();
 });
 
 async function clearActiveChannelAndReload() {
