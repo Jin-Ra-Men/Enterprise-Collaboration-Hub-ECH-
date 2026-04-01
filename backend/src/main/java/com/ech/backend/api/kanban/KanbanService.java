@@ -34,6 +34,7 @@ import com.ech.backend.domain.user.UserRepository;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import org.springframework.data.domain.PageRequest;
@@ -308,7 +309,44 @@ public class KanbanService {
                 "boardId=" + column.getBoard().getId() + " columnId=" + columnId,
                 null
         );
+        applyInitialAssignees(card, actor, request.assigneeEmployeeNos());
         return toCardResponse(cardRepository.findById(card.getId()).orElseThrow());
+    }
+
+    private void applyInitialAssignees(KanbanCard card, User actor, List<String> assigneeEmployeeNos) {
+        if (assigneeEmployeeNos == null || assigneeEmployeeNos.isEmpty()) {
+            return;
+        }
+        if (assigneeEmployeeNos.size() > 50) {
+            throw new IllegalArgumentException("담당자는 최대 50명까지 지정할 수 있습니다.");
+        }
+        LinkedHashSet<String> seen = new LinkedHashSet<>();
+        for (String raw : assigneeEmployeeNos) {
+            if (raw == null) {
+                continue;
+            }
+            String emp = raw.trim();
+            if (emp.isBlank() || !seen.add(emp)) {
+                continue;
+            }
+            User assignee = userRepository.findByEmployeeNo(emp)
+                    .orElseThrow(() -> new IllegalArgumentException("담당자 사용자를 찾을 수 없습니다: " + emp));
+            if (assigneeRepository.existsByCard_IdAndUser_EmployeeNo(card.getId(), emp)) {
+                continue;
+            }
+            assigneeRepository.save(new KanbanCardAssignee(card, assignee));
+            eventRepository.save(new KanbanCardEvent(
+                    card,
+                    actor,
+                    KanbanCardEventType.ASSIGNEE_ADDED,
+                    null,
+                    assignee.getEmployeeNo()
+            ));
+        }
+        card.touch();
+        card.getColumn().getBoard().touch();
+        cardRepository.save(card);
+        boardRepository.save(card.getColumn().getBoard());
     }
 
     @Transactional

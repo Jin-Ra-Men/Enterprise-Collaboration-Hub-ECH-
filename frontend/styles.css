@@ -2207,6 +2207,15 @@ html[data-theme="blue"] .theme-option-btn.active {
   color: var(--text-secondary);
   white-space: pre-wrap;
 }
+.kanban-new-card-assignee-wrap {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+.kanban-new-card-assignee-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
 .kanban-card-assignees {
   margin-top: 8px;
 }

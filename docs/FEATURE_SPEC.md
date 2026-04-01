@@ -409,7 +409,7 @@
   - `POST /api/kanban/boards/{boardId}/columns` — 컬럼 추가 (`name`, `sortOrder` 선택)
   - `PUT /api/kanban/boards/{boardId}/columns/{columnId}` — 이름·정렬 (`actorEmployeeNo`)
   - `DELETE /api/kanban/boards/{boardId}/columns/{columnId}` — 컬럼 및 소속 카드 연쇄 삭제
-  - `POST /api/kanban/boards/{boardId}/columns/{columnId}/cards` — 카드 생성 (`actorEmployeeNo`, `title`, `description`, `sortOrder`, `status`)
+  - `POST /api/kanban/boards/{boardId}/columns/{columnId}/cards` — 카드 생성 (`actorEmployeeNo`, `title`, `description`, `sortOrder`, `status`, 선택 `assigneeEmployeeNos` 사번 배열·최대 50명)
   - `PUT /api/kanban/cards/{cardId}` — 제목·설명·정렬·`status`·`columnId`(이동) 부분 갱신 (`actorEmployeeNo`)
   - `DELETE /api/kanban/cards/{cardId}`
   - `POST /api/kanban/cards/{cardId}/assignees` — 담당 추가 (body: `actorEmployeeNo`, `assigneeEmployeeNo`)
@@ -477,7 +477,7 @@
 - 입력/출력:
   - 업무 상태는 `OPEN`/`IN_PROGRESS`/`DONE`
   - 칸반 보드는 채널당 1개를 기본으로 사용하며, 최초 조회 시 `할 일/진행 중/완료` 컬럼을 자동 생성
-  - 칸반 카드: 응답 `assigneeEmployeeNos`, UI에서 `GET /api/users/search`로 검색 후 `POST /api/kanban/cards/{cardId}/assignees`(body: `actorEmployeeNo`, `assigneeEmployeeNo`)로 담당 추가, `DELETE /api/kanban/cards/{cardId}/assignees/{assigneeEmployeeNo}?actorEmployeeNo=` 로 해제
+  - 칸반 카드: 응답 `assigneeEmployeeNos`, UI에서 `GET /api/users/search`(빈 `q`면 목록 기반 자동완성) 후 생성 시 body `assigneeEmployeeNos` 또는 `POST /api/kanban/cards/{cardId}/assignees`로 담당 추가, `DELETE .../assignees/{assigneeEmployeeNo}` 로 해제
 - 상태 전이/예외 케이스:
   - 비멤버 조회/생성/수정 시 예외
   - `sourceMessageId` 지정 시 다른 채널 메시지를 참조하면 생성 거부

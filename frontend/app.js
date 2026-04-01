@@ -169,6 +169,9 @@ let activeWorkHubColumns = [];
 /** 칸반 카드 담당자 표시명 캐시(사번 → 이름) */
 const kanbanAssigneeNameCache = Object.create(null);
 let kanbanBoardAssigneeUiBound = false;
+/** 신규 카드 폼에 미리 넣을 담당자 `{ employeeNo, name }` */
+let pendingNewKanbanCardAssignees = [];
+let kanbanNewCardAssigneeUiBound = false;
 /** 다른 채널에 새 메시지 시 목록 갱신 디바운스 */
 let refreshChannelListTimer = null;
 let windowFocusChannelsTimer = null;
@@ -3891,28 +3894,38 @@ async function enrichKanbanAssigneeLabels(boardEl) {
   );
 }
 
+async function fetchUsersForKanbanAssigneeSuggest(keyword) {
+  const q = String(keyword || "").trim();
+  const path = q ? `/api/users/search?q=${encodeURIComponent(q)}` : `/api/users/search`;
+  const res = await apiFetch(path);
+  const json = await res.json().catch(() => ({}));
+  const users = Array.isArray(json.data) ? json.data : [];
+  return users.slice(0, 40);
+}
+
 async function runKanbanAssigneeSuggest(input, ul) {
   const q = String(input.value || "").trim();
   const cardId = Number(input.dataset.cardId);
   const assignedRaw = String(input.dataset.assignedEmp || "");
   const assigned = new Set(assignedRaw.split("|").map((s) => s.trim()).filter(Boolean));
-  if (!q || !currentUser || !cardId) {
+  if (!currentUser || !cardId) {
     ul.classList.add("hidden");
     ul.innerHTML = "";
     return;
   }
-  const res = await apiFetch(`/api/users/search?q=${encodeURIComponent(q)}`);
-  const json = await res.json().catch(() => ({}));
-  const users = Array.isArray(json.data) ? json.data : [];
+  const users = await fetchUsersForKanbanAssigneeSuggest(q);
   const mine = String(currentUser.employeeNo || "").trim();
   const list = users
     .filter((u) => {
       const emp = String(u.employeeNo || "").trim();
       return emp && emp !== mine && !assigned.has(emp);
     })
-    .slice(0, 8);
+    .slice(0, 12);
   if (list.length === 0) {
-    ul.innerHTML = '<li class="kanban-assignee-suggest-empty">추가할 사용자가 없습니다</li>';
+    ul.innerHTML =
+      '<li class="kanban-assignee-suggest-empty">' +
+      (q ? "검색 결과가 없습니다" : "추가할 사용자가 없습니다") +
+      "</li>";
     ul.classList.remove("hidden");
     return;
   }
@@ -3925,6 +3938,107 @@ async function runKanbanAssigneeSuggest(input, ul) {
     )
     .join("");
   ul.classList.remove("hidden");
+}
+
+function renderPendingNewKanbanAssigneeChips() {
+  const wrap = document.getElementById("kanbanNewCardAssigneeChips");
+  if (!wrap) return;
+  if (!pendingNewKanbanCardAssignees.length) {
+    wrap.innerHTML = "";
+    return;
+  }
+  wrap.innerHTML = pendingNewKanbanCardAssignees
+    .map(
+      (u) =>
+        `<span class="kanban-assignee-chip">
+      <span class="kanban-assignee-label">${escHtml(u.name || u.employeeNo)}</span>
+      <button type="button" class="kanban-new-card-assignee-remove" data-emp="${escHtml(u.employeeNo)}" title="선택 해제">✕</button>
+    </span>`
+    )
+    .join("");
+  wrap.querySelectorAll(".kanban-new-card-assignee-remove").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const emp = String(btn.dataset.emp || "").trim();
+      pendingNewKanbanCardAssignees = pendingNewKanbanCardAssignees.filter((x) => x.employeeNo !== emp);
+      renderPendingNewKanbanAssigneeChips();
+    });
+  });
+}
+
+function clearPendingNewKanbanAssignees() {
+  pendingNewKanbanCardAssignees = [];
+  const input = document.getElementById("kanbanNewCardAssigneeSearch");
+  if (input) input.value = "";
+  const ul = document.getElementById("kanbanNewCardAssigneeSuggest");
+  if (ul) {
+    ul.classList.add("hidden");
+    ul.innerHTML = "";
+  }
+  renderPendingNewKanbanAssigneeChips();
+}
+
+async function runNewKanbanCardAssigneeSuggest(input, ul) {
+  const q = String(input.value || "").trim();
+  if (!currentUser) {
+    ul.classList.add("hidden");
+    ul.innerHTML = "";
+    return;
+  }
+  const pendingEmp = new Set(pendingNewKanbanCardAssignees.map((x) => x.employeeNo));
+  const users = await fetchUsersForKanbanAssigneeSuggest(q);
+  const mine = String(currentUser.employeeNo || "").trim();
+  const list = users
+    .filter((u) => {
+      const emp = String(u.employeeNo || "").trim();
+      return emp && emp !== mine && !pendingEmp.has(emp);
+    })
+    .slice(0, 12);
+  if (list.length === 0) {
+    ul.innerHTML =
+      '<li class="kanban-assignee-suggest-empty">' +
+      (q ? "검색 결과가 없습니다" : "추가할 사용자가 없습니다") +
+      "</li>";
+    ul.classList.remove("hidden");
+    return;
+  }
+  ul.innerHTML = list
+    .map(
+      (u) =>
+        `<li><button type="button" class="kanban-assignee-pick-new" data-pick-emp="${escHtml(String(u.employeeNo || "").trim())}" data-pick-name="${escHtml(u.name || "")}">
+          ${escHtml(u.name || "")} <span class="muted">${escHtml(u.employeeNo || "")}</span>
+        </button></li>`
+    )
+    .join("");
+  ul.classList.remove("hidden");
+}
+
+function ensureKanbanNewCardAssigneeUiBound() {
+  if (kanbanNewCardAssigneeUiBound) return;
+  const input = document.getElementById("kanbanNewCardAssigneeSearch");
+  const ul = document.getElementById("kanbanNewCardAssigneeSuggest");
+  if (!input || !ul) return;
+  kanbanNewCardAssigneeUiBound = true;
+  input.addEventListener("input", () => {
+    clearTimeout(input._newCardSuggestT);
+    input._newCardSuggestT = setTimeout(() => void runNewKanbanCardAssigneeSuggest(input, ul), 140);
+  });
+  input.addEventListener("focusin", () => {
+    clearTimeout(input._newCardSuggestT);
+    input._newCardSuggestT = setTimeout(() => void runNewKanbanCardAssigneeSuggest(input, ul), 0);
+  });
+  ul.addEventListener("click", (e) => {
+    const pick = e.target.closest(".kanban-assignee-pick-new");
+    if (!pick) return;
+    e.preventDefault();
+    const emp = String(pick.dataset.pickEmp || "").trim();
+    const name = String(pick.dataset.pickName || "").trim() || emp;
+    if (!emp || pendingNewKanbanCardAssignees.some((x) => x.employeeNo === emp)) return;
+    pendingNewKanbanCardAssignees.push({ employeeNo: emp, name });
+    input.value = "";
+    ul.classList.add("hidden");
+    ul.innerHTML = "";
+    renderPendingNewKanbanAssigneeChips();
+  });
 }
 
 function ensureKanbanBoardAssigneeUiBound() {
@@ -3979,7 +4093,15 @@ function ensureKanbanBoardAssigneeUiBound() {
     const ul = input.closest(".kanban-assignee-add")?.querySelector(".kanban-assignee-suggest");
     if (!ul) return;
     clearTimeout(input._assignSuggestTimer);
-    input._assignSuggestTimer = setTimeout(() => void runKanbanAssigneeSuggest(input, ul), 280);
+    input._assignSuggestTimer = setTimeout(() => void runKanbanAssigneeSuggest(input, ul), 140);
+  });
+  root.addEventListener("focusin", (e) => {
+    const input = e.target.closest(".kanban-assignee-search");
+    if (!input) return;
+    const ul = input.closest(".kanban-assignee-add")?.querySelector(".kanban-assignee-suggest");
+    if (!ul) return;
+    clearTimeout(input._assignSuggestTimer);
+    input._assignSuggestTimer = setTimeout(() => void runKanbanAssigneeSuggest(input, ul), 0);
   });
   if (!window._echKanbanSuggestDocClick) {
     window._echKanbanSuggestDocClick = true;
@@ -3989,6 +4111,11 @@ function ensureKanbanBoardAssigneeUiBound() {
         u.classList.add("hidden");
         u.innerHTML = "";
       });
+      const ulNew = document.getElementById("kanbanNewCardAssigneeSuggest");
+      if (ulNew) {
+        ulNew.classList.add("hidden");
+        ulNew.innerHTML = "";
+      }
     });
   }
 }
@@ -4042,7 +4169,7 @@ function renderKanbanBoard(board) {
                 <div class="kanban-card-assignees">
                   ${assigneesHtml}
                   <div class="kanban-assignee-add">
-                    <input type="search" class="kanban-assignee-search" data-card-id="${Number(card.id)}" data-assigned-emp="${escHtml(assignedPipe)}" placeholder="이름·사번으로 담당 추가" autocomplete="off" />
+                    <input type="search" class="kanban-assignee-search" data-card-id="${Number(card.id)}" data-assigned-emp="${escHtml(assignedPipe)}" placeholder="이름·사번 검색 (포커스 시 자동완성)" autocomplete="off" />
                     <ul class="kanban-assignee-suggest hidden" role="listbox" aria-label="담당자 검색 결과"></ul>
                   </div>
                 </div>
@@ -4108,6 +4235,7 @@ document.getElementById("btnOpenWorkHub")?.addEventListener("click", async () =>
     return;
   }
   try {
+    clearPendingNewKanbanAssignees();
     await loadChannelWorkItems();
     await loadChannelKanbanBoard();
     openModal("modalWorkHub");
@@ -4166,6 +4294,7 @@ document.getElementById("kanbanCardCreateForm")?.addEventListener("submit", asyn
       title,
       description: String(descEl?.value || "").trim(),
       status: "OPEN",
+      assigneeEmployeeNos: pendingNewKanbanCardAssignees.map((x) => x.employeeNo),
     }),
   });
   const createJson = await res.json().catch(() => ({}));
@@ -4175,6 +4304,7 @@ document.getElementById("kanbanCardCreateForm")?.addEventListener("submit", asyn
   }
   if (titleEl) titleEl.value = "";
   if (descEl) descEl.value = "";
+  clearPendingNewKanbanAssignees();
   await loadChannelKanbanBoard();
 });
 
@@ -4670,6 +4800,8 @@ function initEvents() {
     e.preventDefault();
     openUserProfile(emp);
   });
+
+  ensureKanbanNewCardAssigneeUiBound();
 }
 
 /* ==========================================================================

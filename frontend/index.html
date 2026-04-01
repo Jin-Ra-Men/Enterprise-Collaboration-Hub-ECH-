@@ -515,6 +515,20 @@
             <form id="kanbanCardCreateForm" class="work-item-create-form">
               <input id="kanbanCardTitleInput" type="text" maxlength="500" placeholder="새 카드 제목" required />
               <textarea id="kanbanCardDescInput" rows="2" maxlength="8000" placeholder="카드 설명(선택)"></textarea>
+              <div id="kanbanNewCardAssigneeWrap" class="kanban-new-card-assignee-wrap">
+                <div class="kanban-new-card-assignee-label">담당자(선택)</div>
+                <div id="kanbanNewCardAssigneeChips" class="kanban-assignee-chips" aria-live="polite"></div>
+                <div class="kanban-assignee-add">
+                  <input
+                    id="kanbanNewCardAssigneeSearch"
+                    type="search"
+                    maxlength="100"
+                    placeholder="이름·사번 검색 후 선택 (자동완성)"
+                    autocomplete="off"
+                  />
+                  <ul id="kanbanNewCardAssigneeSuggest" class="kanban-assignee-suggest hidden" role="listbox" aria-label="담당자 검색"></ul>
+                </div>
+              </div>
               <button type="submit" class="btn-primary btn-sm">카드 추가</button>
             </form>
             <div id="channelKanbanBoard" class="channel-kanban-board"></div>

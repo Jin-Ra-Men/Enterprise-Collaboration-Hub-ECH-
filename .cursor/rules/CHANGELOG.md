@@ -5,6 +5,8 @@
 ## 2026-04-01
 
 ### Added
+- 칸반 담당 자동완성: 빈 검색·포커스 시 사용자 목록, 입력 시 `GET /api/users/search`로 후보 표시(디바운스), 기존 카드·신규 카드 폼 공통
+- 카드 생성 시 담당: `POST .../cards` body `assigneeEmployeeNos`로 생성과 동시에 담당 지정, 프론트는 신규 카드 폼에서 담당 칩·검색으로 선택
 - 채널 `업무 · 칸반` 모달: 칸반 카드별 담당자 표시·검색 추가(`GET /api/users/search`)·해제(✕), 백엔드 담당 API를 채널 보드에서 `MEMBER`가 쓰도록 `assertCanMutateCard`와 동일 정책으로 정렬
 
 ### Fixed
