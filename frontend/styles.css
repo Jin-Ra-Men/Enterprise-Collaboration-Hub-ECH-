@@ -2070,17 +2070,50 @@ html[data-theme="blue"] .theme-option-btn.active {
   display: grid;
   grid-template-columns: 360px 1fr;
   gap: 14px;
+  align-items: start;
 }
 .work-hub-panel {
   border: 1px solid var(--border-subtle);
   border-radius: 10px;
   background: var(--bg-input);
   padding: 10px;
-  min-height: 460px;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 .work-hub-panel h4 {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   color: var(--text-primary);
+}
+.work-hub-hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+.work-hub-footer {
+  justify-content: flex-end;
+}
+.btn-icon-delete {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-icon-delete:hover {
+  border-color: #b91c1c;
+  color: #fecaca;
+  background: rgba(185, 28, 28, 0.15);
 }
 .work-item-create-form {
   display: flex;
@@ -2135,11 +2168,10 @@ html[data-theme="blue"] .theme-option-btn.active {
   outline: 1px solid var(--border-subtle);
 }
 .channel-work-item-list {
-  max-height: 520px;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-height: 0;
 }
 .channel-work-item {
   border: 1px solid var(--border-subtle);
@@ -2149,9 +2181,21 @@ html[data-theme="blue"] .theme-option-btn.active {
 }
 .channel-work-item-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+}
+.channel-work-item-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.channel-work-item-head-actions .work-item-status-select {
+  min-width: 0;
+  max-width: 112px;
+  font-size: 12px;
+  padding: 4px 6px;
 }
 .channel-work-item-title {
   font-size: 14px;
@@ -2167,7 +2211,8 @@ html[data-theme="blue"] .theme-option-btn.active {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  min-height: 420px;
+  min-height: 0;
+  width: 100%;
 }
 .kanban-col {
   border: 1px solid var(--border-subtle);
@@ -2209,7 +2254,7 @@ html[data-theme="blue"] .theme-option-btn.active {
   border-radius: 8px;
   padding: 8px;
   background: var(--bg-elevated);
-  min-height: 200px;
+  min-height: 120px;
 }
 .kanban-column h5 {
   margin: 0 0 8px;
@@ -2227,7 +2272,15 @@ html[data-theme="blue"] .theme-option-btn.active {
   padding: 8px;
   background: var(--bg-chat);
 }
-.kanban-card-item strong {
+.kanban-card-item-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+}
+.kanban-card-item-header strong {
+  flex: 1;
+  min-width: 0;
   display: block;
   font-size: 13px;
   color: var(--text-primary);

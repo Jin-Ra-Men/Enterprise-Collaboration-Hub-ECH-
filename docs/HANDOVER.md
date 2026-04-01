@@ -309,6 +309,8 @@
 - 카드 생성(`POST .../columns/.../cards`)·이동(`PUT /api/kanban/cards/{id}`)은 컨트롤러에서 `MEMBER` 이상이면 호출 가능하고, 서비스에서 채널 연동 보드는 **해당 채널 멤버**(`actorEmployeeNo`), 채널 미연동 보드는 **앱 역할 MANAGER 이상**으로 제한한다.
 - 보드 상세 조회 시 카드 로드는 `findAllForBoardWithAssignees`에서 `assignees`를 **LEFT JOIN FETCH**한다. `JOIN FETCH`만 쓰면 담당자 0건 카드가 INNER JOIN처럼 빠져 UI에 안 보인다.
 - 채널 허브 칸반 카드 담당: `POST/DELETE /api/kanban/cards/{id}/assignees`는 `MEMBER`+`assertCanMutateCard`(채널 보드는 채널 멤버, 워크스페이스 보드는 `MANAGER` 이상). 서비스는 채널 연동 보드에서 `assertAssigneeIsChannelMemberIfApplicable`로 담당 사번이 채널 멤버인지 검증. **채널 허브 UI**에서는 `GET /api/channels/{id}` 멤버 목록으로 담당 자동완성(↑↓·Enter, 열린 상태에서 미선택 Enter는 폼 제출 방지).
+- 업무 삭제: `DELETE /api/work-items/{workItemId}?actorEmployeeNo=...`(채널 멤버). 칸반 카드 삭제: `DELETE /api/kanban/cards/{cardId}?actorEmployeeNo=...` — 컨트롤러는 `MEMBER`, 서비스 `deleteCard`에서 `assertCanMutateCard`로 채널/워크스페이스 보드 구분.
+- 업무 허브 모달: 하단 **저장**으로 신규 업무·신규 카드·업무 상태·카드 컬럼 이동을 일괄 반영. 담당 추가/해제는 즉시. 목록이 길어지면 모달 본문(`modal-body`) 스크롤.
 
 ### 채널 파일 메타데이터 인수인계 메모
 - 바이너리는 외부 스토리지에 두고 `channel_files`에 메타만 저장합니다.

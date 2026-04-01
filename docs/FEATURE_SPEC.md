@@ -475,11 +475,13 @@
   - `GET /api/channels/{channelId}/work-items?employeeNo=&limit=` — 채널 업무 목록
   - `POST /api/channels/{channelId}/work-items` — 채널 업무 생성(`createdByEmployeeNo`, `title`, 선택 `description`, `status`, `sourceMessageId`)
   - `PUT /api/work-items/{workItemId}` — 채널 업무 수정(`actorEmployeeNo`, 부분 갱신)
+  - `DELETE /api/work-items/{workItemId}?actorEmployeeNo=` — 채널 멤버만 삭제
   - `GET /api/kanban/channels/{channelId}/board?employeeNo=` — 채널 기본 칸반 보드 조회/없으면 자동 생성
 - 입력/출력:
   - 업무 상태는 API 값은 `OPEN`/`IN_PROGRESS`/`DONE`이며, UI 셀렉트·목록은 한글 라벨(예: 미착수·진행 중·완료)로 표시
   - 칸반 보드는 채널당 1개를 기본으로 사용하며, 최초 조회 시 `할 일/진행 중/완료` 컬럼을 자동 생성
   - 칸반 카드 담당: **채널 연동 보드**에서는 `GET /api/channels/{channelId}` 등으로 조회한 **채널 멤버**만 후보로 자동완성(전사 `GET /api/users/search` 사용 안 함). 생성 시 body `assigneeEmployeeNos` 또는 `POST /api/kanban/cards/{cardId}/assignees`로 추가, `DELETE .../assignees/{assigneeEmployeeNo}` 로 해제. 서버는 채널 연동 보드에서 담당 사번이 채널 멤버인지 검증
+  - UI: 신규 업무·신규 카드·목록에서 업무 상태·카드 컬럼 이동은 **저장** 버튼으로 일괄 반영. 담당 추가/해제는 즉시 API 호출. 업무·카드 각각 **✕**로 삭제(`DELETE` 업무 / `DELETE` 카드 `?actorEmployeeNo=`). 모달 본문 스크롤로 패널이 목록만큼 세로로 늘어남
 - 상태 전이/예외 케이스:
   - 비멤버 조회/생성/수정 시 예외
   - `sourceMessageId` 지정 시 다른 채널 메시지를 참조하면 생성 거부

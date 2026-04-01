@@ -416,10 +416,11 @@ public class KanbanService {
     }
 
     @Transactional
-    public void deleteCard(Long cardId) {
+    public void deleteCard(Long cardId, String actorEmployeeNo, AppRole callerRole) {
         KanbanCard card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new IllegalArgumentException("카드를 찾을 수 없습니다."));
         KanbanBoard board = card.getColumn().getBoard();
+        assertCanMutateCard(board, actorEmployeeNo, callerRole);
         card.getColumn().getCards().remove(card);
         board.touch();
         cardRepository.delete(card);

@@ -7,6 +7,7 @@ import com.ech.backend.api.work.dto.WorkItemResponse;
 import com.ech.backend.common.api.ApiResponse;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -65,5 +66,14 @@ public class WorkItemController {
             @Valid @RequestBody UpdateWorkItemRequest request
     ) {
         return ApiResponse.success(workItemService.updateWorkItem(workItemId, request));
+    }
+
+    @DeleteMapping("/api/work-items/{workItemId}")
+    public ApiResponse<Void> deleteWorkItem(
+            @PathVariable Long workItemId,
+            @RequestParam String actorEmployeeNo
+    ) {
+        workItemService.deleteWorkItem(workItemId, actorEmployeeNo);
+        return ApiResponse.success(null);
     }
 }

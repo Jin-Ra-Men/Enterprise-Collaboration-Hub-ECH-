@@ -496,24 +496,25 @@
         <div class="modal-body work-hub-body">
           <div class="work-hub-panel">
             <h4>업무 항목</h4>
-            <form id="workItemCreateForm" class="work-item-create-form">
-              <input id="workItemTitleInput" type="text" maxlength="500" placeholder="업무 제목" required />
+            <p class="work-hub-hint">신규 입력·목록에서 상태 변경 후 <strong>저장</strong>을 누르면 서버에 반영됩니다.</p>
+            <form id="workItemCreateForm" class="work-item-create-form" onsubmit="return false;">
+              <input id="workItemTitleInput" type="text" maxlength="500" placeholder="새 업무 제목" />
               <textarea id="workItemDescInput" rows="3" maxlength="8000" placeholder="업무 설명(선택)"></textarea>
               <div class="work-item-create-row">
-                <select id="workItemStatusSelect" aria-label="업무 상태">
+                <select id="workItemStatusSelect" aria-label="신규 업무 상태">
                   <option value="OPEN">대기</option>
                   <option value="IN_PROGRESS">진행 중</option>
                   <option value="DONE">완료</option>
                 </select>
-                <button type="submit" class="btn-primary btn-sm btn-work-add">업무 추가</button>
               </div>
             </form>
             <ul id="channelWorkItemsList" class="channel-work-item-list"></ul>
           </div>
           <div class="work-hub-panel">
             <h4>칸반 보드</h4>
-            <form id="kanbanCardCreateForm" class="work-item-create-form">
-              <input id="kanbanCardTitleInput" type="text" maxlength="500" placeholder="새 카드 제목" required />
+            <p class="work-hub-hint">새 카드·컬럼 이동은 편집 후 <strong>저장</strong> 시 반영됩니다. 담당 추가/해제는 즉시 적용됩니다.</p>
+            <form id="kanbanCardCreateForm" class="work-item-create-form" onsubmit="return false;">
+              <input id="kanbanCardTitleInput" type="text" maxlength="500" placeholder="새 카드 제목" />
               <textarea id="kanbanCardDescInput" rows="2" maxlength="8000" placeholder="카드 설명(선택)"></textarea>
               <div id="kanbanNewCardAssigneeWrap" class="kanban-new-card-assignee-wrap">
                 <div class="kanban-new-card-assignee-label">담당자(선택)</div>
@@ -529,10 +530,13 @@
                   <ul id="kanbanNewCardAssigneeSuggest" class="kanban-assignee-suggest hidden" role="listbox" aria-label="담당자 검색"></ul>
                 </div>
               </div>
-              <button type="submit" class="btn-primary btn-sm">카드 추가</button>
             </form>
             <div id="channelKanbanBoard" class="channel-kanban-board"></div>
           </div>
+        </div>
+        <div class="modal-footer work-hub-footer">
+          <button type="button" class="btn-primary" id="btnWorkHubSave">저장</button>
+          <button type="button" class="btn-cancel" data-modal="modalWorkHub">닫기</button>
         </div>
       </div>
     </div>

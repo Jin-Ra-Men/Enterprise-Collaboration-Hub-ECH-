@@ -4,7 +4,12 @@
 
 ## 2026-04-01
 
+### Added
+- 업무 허브: 업무 항목·칸반 카드 **삭제(✕)**, 신규·상태·컬럼 이동은 **저장** 버튼으로 일괄 반영, `work-hub-panel`이 목록 높이에 맞게 확장(모달 본문 스크롤)
+- API: `DELETE /api/work-items/{workItemId}?actorEmployeeNo=...` (채널 멤버)
+
 ### Changed
+- 칸반: `DELETE /api/kanban/cards/{cardId}`를 `MEMBER`+`actorEmployeeNo`로 호출하도록 정리(채널 보드는 멤버 삭제 가능, 서비스에서 `assertCanMutateCard`)
 - 칸반 담당: 전사 사용자 검색 대신 **해당 채널 멤버**만 후보로 표시·백엔드에서 채널 연동 보드는 담당 사번이 채널 멤버인지 검증
 - 통합 검색: `WORK_ITEM`/`KANBAN_CARD` 결과 클릭 시 해당 채널에서 `업무·칸반` 모달을 열고 항목 강조(`SearchResultItem.relatedChannelId` 추가)
 - 업무 허브: 업무 상태 라벨 한글화, 업무 추가 행 한 줄 레이아웃, 담당 자동완성 **↑↓·Enter** 키 지원(드롭다운 열린 채 미선택 Enter 시 폼 제출 방지)

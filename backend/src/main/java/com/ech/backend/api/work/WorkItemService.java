@@ -180,6 +180,20 @@ public class WorkItemService {
         return toResponse(saved);
     }
 
+    @Transactional
+    public void deleteWorkItem(Long workItemId, String actorEmployeeNo) {
+        String actor = actorEmployeeNo == null ? "" : actorEmployeeNo.trim();
+        if (actor.isBlank()) {
+            throw new IllegalArgumentException("actorEmployeeNo는 필수입니다.");
+        }
+        WorkItem item = workItemRepository.findById(workItemId)
+                .orElseThrow(() -> new IllegalArgumentException("업무 항목을 찾을 수 없습니다."));
+        if (!channelMemberRepository.existsByChannelIdAndUserEmployeeNo(item.getSourceChannel().getId(), actor)) {
+            throw new IllegalArgumentException("채널 멤버만 업무 항목을 삭제할 수 있습니다.");
+        }
+        workItemRepository.delete(item);
+    }
+
     private static String buildTitle(String requestedTitle, String messageBody) {
         if (requestedTitle != null && !requestedTitle.isBlank()) {
             String t = requestedTitle.trim();

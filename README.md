@@ -26,7 +26,7 @@
 - **첨부 UX:** 업로드 즉시 채팅 본문에 파일 카드 표시 + 채널 헤더의 첨부파일 모아보기 지원
 - **칸반 보드:** 워크스페이스별 보드·컬럼·카드 CRUD, 담당자 지정, 상태/컬럼 이동 이력 API
 - **채팅→업무:** 메시지 ID 기준 업무 항목 생성·조회(메시지와 1:1 링크)
-- **채널 업무 허브:** 채널 헤더 `📋`에서 채널 연동 업무 목록/생성/상태 변경과 칸반 카드 생성·이동·**채널 멤버만** 담당 지정(자동완성 키보드 선택 지원)을 한 화면에서 처리
+- **채널 업무 허브:** 채널 헤더 `📋`에서 업무·칸반을 한 모달에서 조회하고, 신규/상태/컬럼 이동은 **저장**으로 반영, 항목 **삭제(✕)**, 칸반 **채널 멤버만** 담당 지정(자동완성 키보드 선택 지원)
 - **통합 검색:** 대화 내역 및 공유 파일에 대한 고속 검색 지원
 - **조직도·사용자 검색:** 이름/이메일/사번/부서/사용자 ID 검색, **회사→본부→팀** 조직 트리에서 멤버 선택(채널·DM·구성원 추가는 검색+조직도 **통합 모달**), 동료 프로필 모달(이름·사원번호·이메일·부서·직위, 직책은 있을 때만 표시, **DM 보내기**로 즉시 DM 시작)
 - **멤버 관리:** 채널 생성 이후에도 구성원 추가 가능(검색 + 조직도 다중 선택)
@@ -115,10 +115,10 @@ graph LR
 - `GET /api/users/{userId}/profile` (경로형, 호환)
 - `POST /api/kanban/boards`, `GET /api/kanban/boards`, `GET /api/kanban/boards/{boardId}`, `DELETE /api/kanban/boards/{boardId}`
 - `POST /api/kanban/boards/{boardId}/columns`, `PUT /api/kanban/boards/{boardId}/columns/{columnId}`, `DELETE .../columns/{columnId}`
-- `POST /api/kanban/boards/{boardId}/columns/{columnId}/cards`, `PUT /api/kanban/cards/{cardId}`, `DELETE /api/kanban/cards/{cardId}`
+- `POST /api/kanban/boards/{boardId}/columns/{columnId}/cards`, `PUT /api/kanban/cards/{cardId}`, `DELETE /api/kanban/cards/{cardId}?actorEmployeeNo=...` (채널 연동 보드는 멤버, 워크스페이스 전용 보드는 매니저 이상 — 서비스에서 구분)
 - `POST /api/kanban/cards/{cardId}/assignees`, `DELETE /api/kanban/cards/{cardId}/assignees/{assigneeEmployeeNo}?actorEmployeeNo=...`
 - `GET /api/kanban/cards/{cardId}/history?limit=`
-- `POST /api/messages/{messageId}/work-items`, `GET /api/messages/{messageId}/work-items`, `GET /api/work-items/{workItemId}`
+- `POST /api/messages/{messageId}/work-items`, `GET /api/messages/{messageId}/work-items`, `GET /api/work-items/{workItemId}`, `DELETE /api/work-items/{workItemId}?actorEmployeeNo=...` (채널 멤버)
 - `GET /api/admin/org-sync/users?source=TEST|GROUPWARE` (현재 `TEST`만 지원)
 - `POST /api/admin/org-sync/users/sync?source=TEST|GROUPWARE`
 - `PUT /api/admin/org-sync/users/{employeeNo}/status`

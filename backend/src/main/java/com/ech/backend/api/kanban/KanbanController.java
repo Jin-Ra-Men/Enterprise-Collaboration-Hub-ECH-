@@ -126,9 +126,16 @@ public class KanbanController {
     }
 
     @DeleteMapping("/cards/{cardId}")
-    @RequireRole(AppRole.MANAGER)
-    public ApiResponse<Void> deleteCard(@PathVariable Long cardId) {
-        kanbanService.deleteCard(cardId);
+    @RequireRole(AppRole.MEMBER)
+    public ApiResponse<Void> deleteCard(
+            @PathVariable Long cardId,
+            @RequestParam String actorEmployeeNo,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        if (principal == null) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        kanbanService.deleteCard(cardId, actorEmployeeNo, principal.role());
         return ApiResponse.success(null);
     }
 
