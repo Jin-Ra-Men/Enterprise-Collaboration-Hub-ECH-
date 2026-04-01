@@ -510,8 +510,10 @@
                   <option value="IN_PROGRESS">진행 중</option>
                   <option value="DONE">완료</option>
                 </select>
+                <button type="button" class="btn-primary btn-sm btn-work-add" id="btnQueueWorkItem">업무 추가</button>
               </div>
             </form>
+            <ul id="workItemDraftList" class="work-hub-draft-list hidden"></ul>
             <ul id="channelWorkItemsList" class="channel-work-item-list"></ul>
           </div>
           <div class="work-hub-panel">
@@ -534,7 +536,11 @@
                   <ul id="kanbanNewCardAssigneeSuggest" class="kanban-assignee-suggest hidden" role="listbox" aria-label="담당자 검색"></ul>
                 </div>
               </div>
+              <div class="work-item-create-row">
+                <button type="button" class="btn-primary btn-sm btn-work-add" id="btnQueueKanbanCard">카드 추가</button>
+              </div>
             </form>
+            <ul id="kanbanCardDraftList" class="work-hub-draft-list hidden"></ul>
             <div id="channelKanbanBoard" class="channel-kanban-board"></div>
           </div>
         </div>
