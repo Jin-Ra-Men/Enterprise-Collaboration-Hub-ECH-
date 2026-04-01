@@ -4,6 +4,9 @@
 
 ## 2026-04-01
 
+### Fixed
+- 칸반 카드 담당: 검색 후보 클릭 핸들러보다 **담당 해제(✕)** 를 먼저 처리하고, `data-assignee-emp`·서버 사번 trim으로 해제 실패 완화
+
 ### Added
 - 업무 허브: 업무 항목·칸반 카드 **삭제(✕)**, 신규·상태·컬럼 이동은 **저장** 버튼으로 일괄 반영, `work-hub-panel`이 목록 높이에 맞게 확장(모달 본문 스크롤)
 - API: `DELETE /api/work-items/{workItemId}?actorEmployeeNo=...` (채널 멤버)

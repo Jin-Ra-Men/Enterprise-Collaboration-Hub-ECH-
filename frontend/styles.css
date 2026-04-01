@@ -2314,6 +2314,8 @@ html[data-theme="blue"] .theme-option-btn.active {
   margin-bottom: 4px;
 }
 .kanban-assignee-chip {
+  position: relative;
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -2323,8 +2325,20 @@ html[data-theme="blue"] .theme-option-btn.active {
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
   color: var(--text-primary);
+  max-width: 100%;
+}
+.kanban-assignee-chip .kanban-assignee-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .kanban-assignee-remove {
+  position: relative;
+  z-index: 3;
+  flex-shrink: 0;
   border: none;
   background: transparent;
   cursor: pointer;

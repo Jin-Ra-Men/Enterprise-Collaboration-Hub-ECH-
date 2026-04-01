@@ -4286,6 +4286,27 @@ function ensureKanbanBoardAssigneeUiBound() {
       await loadChannelKanbanBoard();
       return;
     }
+    const rem = e.target.closest(".kanban-assignee-remove");
+    if (rem) {
+      e.preventDefault();
+      e.stopPropagation();
+      const cardId = Number(rem.dataset.cardId);
+      const assigneeEmp = String(
+        rem.getAttribute("data-assignee-emp") || rem.dataset.assigneeEmp || ""
+      ).trim();
+      if (!cardId || !assigneeEmp || !currentUser) return;
+      const res = await apiFetch(
+        `/api/kanban/cards/${cardId}/assignees/${encodeURIComponent(assigneeEmp)}?actorEmployeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
+        { method: "DELETE" }
+      );
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(j.error?.message || "담당 해제에 실패했습니다.");
+        return;
+      }
+      await loadChannelKanbanBoard();
+      return;
+    }
     const pick = e.target.closest(".kanban-assignee-pick");
     if (pick) {
       e.preventDefault();
@@ -4308,23 +4329,6 @@ function ensureKanbanBoardAssigneeUiBound() {
       if (inp) inp.value = "";
       await loadChannelKanbanBoard();
       return;
-    }
-    const rem = e.target.closest(".kanban-assignee-remove");
-    if (rem) {
-      e.preventDefault();
-      const cardId = Number(rem.dataset.cardId);
-      const assigneeEmp = String(rem.dataset.assigneeEmp || "").trim();
-      if (!cardId || !assigneeEmp || !currentUser) return;
-      const res = await apiFetch(
-        `/api/kanban/cards/${cardId}/assignees/${encodeURIComponent(assigneeEmp)}?actorEmployeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
-        { method: "DELETE" }
-      );
-      const j = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(j.error?.message || "담당 해제에 실패했습니다.");
-        return;
-      }
-      await loadChannelKanbanBoard();
     }
   });
   root.addEventListener("input", (e) => {

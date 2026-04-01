@@ -457,19 +457,26 @@ public class KanbanService {
 
     @Transactional
     public KanbanCardResponse removeAssignee(Long cardId, String assigneeEmployeeNo, String actorEmployeeNo, AppRole callerRole) {
+        String targetEmp = assigneeEmployeeNo == null ? "" : assigneeEmployeeNo.trim();
+        if (targetEmp.isBlank()) {
+            throw new IllegalArgumentException("담당자 사번이 비어 있습니다.");
+        }
         KanbanCard card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new IllegalArgumentException("카드를 찾을 수 없습니다."));
         assertCanMutateCard(card.getColumn().getBoard(), actorEmployeeNo, callerRole);
         User actor = userRepository.findByEmployeeNo(actorEmployeeNo)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-        KanbanCardAssignee link = assigneeRepository.findByCard_IdAndUser_EmployeeNo(cardId, assigneeEmployeeNo)
+        KanbanCardAssignee link = assigneeRepository.findByCard_IdAndUser_EmployeeNo(cardId, targetEmp)
+                .or(() -> userRepository.findByEmployeeNo(targetEmp).flatMap(u ->
+                        assigneeRepository.findByCard_IdAndUser_EmployeeNo(cardId, u.getEmployeeNo())))
                 .orElseThrow(() -> new IllegalArgumentException("해당 담당자가 없습니다."));
+        String removedEmpNo = link.getUser().getEmployeeNo();
         assigneeRepository.delete(link);
         eventRepository.save(new KanbanCardEvent(
                 card,
                 actor,
                 KanbanCardEventType.ASSIGNEE_REMOVED,
-                assigneeEmployeeNo,
+                removedEmpNo,
                 null
         ));
         card.touch();
