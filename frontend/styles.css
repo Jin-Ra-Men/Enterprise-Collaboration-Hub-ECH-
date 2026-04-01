@@ -1782,8 +1782,21 @@ html[data-theme="light"] .reply-composer-banner {
   color: var(--text-primary);
   background: var(--bg-input);
 }
+.form-group textarea {
+  width: 100%;
+  min-height: 130px;
+  resize: vertical;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  line-height: 1.5;
+}
 .form-group input:focus,
-.form-group select:focus { border-color: var(--border-focus); box-shadow: 0 0 0 2px var(--focus-ring); }
+.form-group select:focus,
+.form-group textarea:focus { border-color: var(--border-focus); box-shadow: 0 0 0 2px var(--focus-ring); }
 
 .btn-primary {
   padding: 9px 20px;

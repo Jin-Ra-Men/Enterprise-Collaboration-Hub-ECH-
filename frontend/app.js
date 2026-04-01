@@ -4502,6 +4502,11 @@ function bindModalWorkHubKanbanSuggestKeyboard() {
 
 async function runKanbanAssigneeSuggest(input, ul) {
   const q = String(input.value || "").trim();
+  if (!q) {
+    ul.classList.add("hidden");
+    ul.innerHTML = "";
+    return;
+  }
   const cardIdRaw = String(input.dataset.cardId || "");
   const isDraft = input.dataset.isDraft === "1";
   const cardId = isDraft ? cardIdRaw : Number(cardIdRaw);
@@ -4635,7 +4640,6 @@ function openKanbanCardDetailModal(rawId, isDraft) {
     workHubDetailKanbanAssigneesInitial = [...workHubDetailKanbanAssignees];
   }
   renderKanbanCardDetailAssigneeChips();
-  void runKanbanCardDetailAssigneeSuggest();
   openModal("modalKanbanCardDetail");
 }
 
@@ -4667,6 +4671,11 @@ async function runKanbanCardDetailAssigneeSuggest() {
   const ul = document.getElementById("kanbanCardDetailAssigneeSuggest");
   if (!input || !ul || !currentUser) return;
   const q = String(input.value || "").trim();
+  if (!q) {
+    ul.classList.add("hidden");
+    ul.innerHTML = "";
+    return;
+  }
   const assigned = new Set(workHubDetailKanbanAssignees);
   const mine = String(currentUser.employeeNo || "").trim();
   const users = await fetchUsersForKanbanAssigneeSuggest(q);
@@ -4703,6 +4712,11 @@ async function runKanbanCardDetailAssigneeSuggest() {
 
 async function runNewKanbanCardAssigneeSuggest(input, ul) {
   const q = String(input.value || "").trim();
+  if (!q) {
+    ul.classList.add("hidden");
+    ul.innerHTML = "";
+    return;
+  }
   if (!currentUser) {
     ul.classList.add("hidden");
     ul.innerHTML = "";
@@ -4746,10 +4760,6 @@ function ensureKanbanNewCardAssigneeUiBound() {
   input.addEventListener("input", () => {
     clearTimeout(input._newCardSuggestT);
     input._newCardSuggestT = setTimeout(() => void runNewKanbanCardAssigneeSuggest(input, ul), 140);
-  });
-  input.addEventListener("focusin", () => {
-    clearTimeout(input._newCardSuggestT);
-    input._newCardSuggestT = setTimeout(() => void runNewKanbanCardAssigneeSuggest(input, ul), 0);
   });
   ul.addEventListener("click", (e) => {
     const pick = e.target.closest(".kanban-assignee-pick-new");
@@ -4870,14 +4880,6 @@ function ensureKanbanBoardAssigneeUiBound() {
     if (!ul) return;
     clearTimeout(input._assignSuggestTimer);
     input._assignSuggestTimer = setTimeout(() => void runKanbanAssigneeSuggest(input, ul), 140);
-  });
-  root.addEventListener("focusin", (e) => {
-    const input = e.target.closest(".kanban-assignee-search");
-    if (!input) return;
-    const ul = input.closest(".kanban-assignee-add")?.querySelector(".kanban-assignee-suggest");
-    if (!ul) return;
-    clearTimeout(input._assignSuggestTimer);
-    input._assignSuggestTimer = setTimeout(() => void runKanbanAssigneeSuggest(input, ul), 0);
   });
   if (!window._echKanbanSuggestDocClick) {
     window._echKanbanSuggestDocClick = true;
@@ -5240,9 +5242,6 @@ document.getElementById("btnSaveKanbanCardDetail")?.addEventListener("click", as
 document.getElementById("kanbanCardDetailAssigneeSearch")?.addEventListener("input", (e) => {
   clearTimeout(e.target._detailAssignTimer);
   e.target._detailAssignTimer = setTimeout(() => void runKanbanCardDetailAssigneeSuggest(), 140);
-});
-document.getElementById("kanbanCardDetailAssigneeSearch")?.addEventListener("focusin", () => {
-  void runKanbanCardDetailAssigneeSuggest();
 });
 
 async function clearActiveChannelAndReload() {
