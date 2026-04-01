@@ -114,6 +114,7 @@
 - 채널 도메인:
   - `GET /api/channels?employeeNo=...` — 내 채널/DM 목록. DM은 요약 `description`을 **조회자(employeeNo)를 제외한 멤버** 이름(없으면 사번)으로 계산; **`unreadCount`** 는 `channel_read_states` 읽음 포인터 이후 **루트 메시지** 수; **`lastMessageAt`** 는 채널별 루트 메시지 최신 시각(JSON ISO); **`dmPeerEmployeeNos`** 는 DM만 조회자 제외 멤버 **사번** 배열(사이드바 DM 프레즌스 점). 프론트는 채팅 열람·실시간 수신 시 `PUT .../read-state`로 포인터 갱신; **퀵 레일**은 ECH 헤더 아래·검색~목록과 같은 세로 구간(`#quickContainer`·`#quickRailScroll`); **미읽음 우선·최근 대화** 최대 15개·미읽음만 배지(`compareQuickRailChannel`); 좌측 패널 펼침 **324px**(64+260), 접힘 **64px**(퀵만); **접기**는 `#btnSidebarEdgeToggle`·`ech_sidebar_collapsed`
   - `POST /api/channels` — 생성자는 JWT에서 식별: **`uid` 클레임(= `users.id`) 우선**, 없으면 사원번호, 레거시 토큰은 숫자-only subject를 DB id로 폴백(숫자 사번과 충돌 시 재로그인 권장). body는 `workspaceKey`, `name`, `channelType` 등, 선택 `createdByEmployeeNo`(하위 호환), DM 시 `dmPeerEmployeeNos` (`CreateChannelRequest`)
+  - 동일 1:1 DM 조합은 기존 채널을 우선 재사용(레거시 내부명 편차가 있어도 멤버 조합 기준으로 재사용)
   - `GET /api/channels/{channelId}`
   - `POST /api/channels/{channelId}/members` — body: `employeeNo`, `memberRole` (`JoinChannelRequest`)
     - 권한: `PUBLIC/PRIVATE`는 채널 개설자(`created_by`)만 추가 가능, `DM`은 개설자가 아니어도 멤버 추가 가능
@@ -167,6 +168,11 @@
 - **DM** 생성 시 `dmPeerEmployeeNos`에 상대 사번 목록을 넣습니다(프론트 `startDmWithUser`).
 - **멤버 추가**는 `POST .../members` body의 `employeeNo` + `memberRole`입니다.
 - **멤버 추가 권한**: 일반 채널(PUBLIC/PRIVATE)은 개설자만, DM은 멤버면 추가 가능.
+- **채널 운영 API**:
+  - `PUT /api/channels/{channelId}/dm-name` — 다자간 DM(3인 이상) 이름 변경
+  - `POST /api/channels/{channelId}/delegate-manager` — 개설자가 관리자 위임
+  - `POST /api/channels/{channelId}/leave` — 나가기(개설자는 위임 대상 필요)
+  - `DELETE /api/channels/{channelId}` — 개설자 채널 폐쇄
 - 채널명은 워크스페이스 기준으로 유니크합니다. (`workspaceKey + name`)
 - 멤버 중복 참여는 서버에서 차단합니다.
 - DB 컬럼명 `channel_members.user_id` 등은 역사적 이름이며, **값은 `users.employee_no`** 와 FK로 연결됩니다(스키마 초안·마이그레이션 참고).

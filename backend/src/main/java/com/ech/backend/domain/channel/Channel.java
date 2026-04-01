@@ -13,6 +13,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 
 @Entity
 @Table(name = "channels")
@@ -82,5 +83,15 @@ public class Channel {
 
     public OffsetDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public void updateDescription(String description) {
+        this.description = description;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void transferManager(User nextManager) {
+        this.createdBy = Objects.requireNonNull(nextManager, "nextManager");
+        this.updatedAt = OffsetDateTime.now();
     }
 }

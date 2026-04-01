@@ -6,12 +6,19 @@
 
 ### Fixed
 - 칸반 카드 담당: 검색 후보 클릭 핸들러보다 **담당 해제(✕)** 를 먼저 처리하고, `data-assignee-emp`·서버 사번 trim으로 해제 실패 완화
+- 구성원 추가 팝업: 하단 선택 태그의 `✕`로 취소할 때 조직도 우측 목록 버튼이 `제외`에서 `추가`로 즉시 되돌아오지 않던 문제 수정
+- DM 1:1 중복 생성: 레거시/이름 편차가 있어도 동일 2인 조합이면 기존 DM 채널을 재사용하도록 보강
 
 ### Added
 - 업무 허브: 업무 항목·칸반 카드 **삭제(✕)**, 신규·상태·컬럼 이동은 **저장** 버튼으로 일괄 반영, `work-hub-panel`이 목록 높이에 맞게 확장(모달 본문 스크롤)
 - API: `DELETE /api/work-items/{workItemId}?actorEmployeeNo=...` (채널 멤버)
+- 채널 운영 API: 그룹 DM 이름 변경(`PUT /api/channels/{id}/dm-name`), 관리자 위임(`POST /api/channels/{id}/delegate-manager`), 채팅방 나가기(`POST /api/channels/{id}/leave`), 채널 폐쇄(`DELETE /api/channels/{id}`)
 
 ### Changed
+- 채널 헤더 액션: DM(3인 이상) 이름 변경, 채팅방 나가기, 관리자 전용 위임/채널 폐쇄 버튼 추가
+- 업무 허브: 좌/우 `work-hub-panel`을 동일 2열 비율과 stretch 레이아웃으로 통일해 높이가 함께 연동되도록 조정
+- 업무 허브: `.work-hub-body`에 `grid-auto-rows: 1fr`, 패널에 `height: 100%`를 적용해 좌/우 중 긴 쪽 높이에 맞춰 반대편도 동일 높이로 동기화
+- 업무 허브: 위 설정(`grid-auto-rows: 1fr`/`height: 100%`)이 콘텐츠 확장을 막아 패널 이탈이 생겨 제거하고, `align-items: stretch` + 패널 `align-self: stretch`로 자연 확장/동기화 방식으로 재조정
 - 칸반: `DELETE /api/kanban/cards/{cardId}`를 `MEMBER`+`actorEmployeeNo`로 호출하도록 정리(채널 보드는 멤버 삭제 가능, 서비스에서 `assertCanMutateCard`)
 - 칸반 담당: 전사 사용자 검색 대신 **해당 채널 멤버**만 후보로 표시·백엔드에서 채널 연동 보드는 담당 사번이 채널 멤버인지 검증
 - 통합 검색: `WORK_ITEM`/`KANBAN_CARD` 결과 클릭 시 해당 채널에서 `업무·칸반` 모달을 열고 항목 강조(`SearchResultItem.relatedChannelId` 추가)

@@ -136,6 +136,7 @@ let activeChannelId = null;
 let activeChannelType = null; // PUBLIC / PRIVATE / DM
 /** GET /api/channels/{id} 의 createdByEmployeeNo (멤버 내보내기 버튼 표시용) */
 let activeChannelCreatorEmployeeNo = null;
+let activeChannelMemberCount = 0;
 /** 현재 채널 멤버만 @자동완성 (전사 검색 대신). selectChannel 시 비움 → loadChannelMembers에서 채움 */
 let activeChannelMemberMentionList = [];
 /** 현재 채널 멤버의 조직/직급 캐시(employeeNo -> 조직표시문구) */
@@ -1514,6 +1515,7 @@ async function selectChannel(channelId, channelName, channelType, options = {}) 
   activeChannelId   = channelId;
   activeChannelType = channelType;
   activeChannelCreatorEmployeeNo = null;
+  activeChannelMemberCount = 0;
   activeChannelMemberMentionList = [];
 
   // 사이드바 active 표시
@@ -1529,6 +1531,10 @@ async function selectChannel(channelId, channelName, channelType, options = {}) 
   document.getElementById("memberPanel").classList.add("hidden");
   document.getElementById("memberList").innerHTML = "";
   document.getElementById("btnAddMembersLater")?.classList.add("hidden");
+  document.getElementById("btnRenameDm")?.classList.add("hidden");
+  document.getElementById("btnDelegateManager")?.classList.add("hidden");
+  document.getElementById("btnCloseChannel")?.classList.add("hidden");
+  document.getElementById("btnLeaveChannel")?.classList.remove("hidden");
 
   showView("viewChat");
   messagesEl.innerHTML = "";
@@ -1671,6 +1677,17 @@ async function loadMessages(channelId, { preserveScroll = false } = {}) {
   }
 }
 
+function syncChannelActionButtons() {
+  const myEmp = String(currentUser?.employeeNo || "").trim();
+  const creatorEmp = String(activeChannelCreatorEmployeeNo || "").trim();
+  const isCreator = myEmp !== "" && creatorEmp !== "" && myEmp === creatorEmp;
+  const isDm = String(activeChannelType || "").toUpperCase() === "DM";
+  document.getElementById("btnLeaveChannel")?.classList.toggle("hidden", !activeChannelId);
+  document.getElementById("btnRenameDm")?.classList.toggle("hidden", !(isDm && activeChannelMemberCount > 2));
+  document.getElementById("btnDelegateManager")?.classList.toggle("hidden", isDm || !isCreator);
+  document.getElementById("btnCloseChannel")?.classList.toggle("hidden", isDm || !isCreator);
+}
+
 async function loadChannelMembers(channelId) {
   try {
     const res  = await apiFetch(`/api/channels/${channelId}`);
@@ -1679,6 +1696,8 @@ async function loadChannelMembers(channelId) {
     const creatorEmp = String(json.data?.createdByEmployeeNo || "").trim();
     activeChannelCreatorEmployeeNo = creatorEmp || null;
     const members = json.data?.members || [];
+    activeChannelMemberCount = members.length;
+    syncChannelActionButtons();
     activeChannelMemberOrgLineByEmployeeNo.clear();
     document.getElementById("chatMemberCount").textContent = `멤버 ${members.length}명`;
 
@@ -3711,6 +3730,8 @@ function removeSelectedMember(employeeNo, context) {
   if (tag) tag.remove();
   syncOrgCheckbox(want, context, false);
   renderPickerSelectedMembers(context);
+  // 조직도 우측 목록의 "제외/추가" 버튼 상태를 즉시 동기화한다.
+  renderMemberListRight();
 }
 
 document.getElementById("btnConfirmCreateChannel").addEventListener("click", async () => {
@@ -4493,6 +4514,102 @@ document.getElementById("workItemCreateForm")?.addEventListener("submit", (e) =>
 document.getElementById("kanbanCardCreateForm")?.addEventListener("submit", (e) => e.preventDefault());
 
 document.getElementById("btnWorkHubSave")?.addEventListener("click", () => void flushWorkHubSave());
+
+async function clearActiveChannelAndReload() {
+  activeChannelId = null;
+  activeChannelType = null;
+  activeChannelCreatorEmployeeNo = null;
+  activeChannelMemberCount = 0;
+  activeChannelMemberMentionList = [];
+  showView("viewWelcome");
+  await loadMyChannels();
+}
+
+document.getElementById("btnRenameDm")?.addEventListener("click", async () => {
+  if (!activeChannelId || !currentUser) return;
+  const next = prompt("DM 이름을 입력하세요.");
+  const name = String(next || "").trim();
+  if (!name) return;
+  const res = await apiFetch(`/api/channels/${activeChannelId}/dm-name`, {
+    method: "PUT",
+    body: JSON.stringify({ name }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    alert(json.error?.message || "DM 이름 변경에 실패했습니다.");
+    return;
+  }
+  await loadMyChannels();
+  document.getElementById("chatChannelName").textContent = name;
+});
+
+document.getElementById("btnDelegateManager")?.addEventListener("click", async () => {
+  if (!activeChannelId || !currentUser) return;
+  const mine = String(currentUser.employeeNo || "").trim();
+  const candidates = activeChannelMemberMentionList.filter((m) => m.employeeNo && m.employeeNo !== mine);
+  if (!candidates.length) {
+    alert("위임 가능한 멤버가 없습니다.");
+    return;
+  }
+  const guide = candidates.map((m) => `${m.name}(${m.employeeNo})`).join(", ");
+  const target = prompt(`위임할 멤버 사번을 입력하세요.\n${guide}`) || "";
+  const targetEmp = String(target).trim();
+  if (!targetEmp) return;
+  const res = await apiFetch(`/api/channels/${activeChannelId}/delegate-manager`, {
+    method: "POST",
+    body: JSON.stringify({ targetEmployeeNo: targetEmp }),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    alert(json.error?.message || "관리자 위임에 실패했습니다.");
+    return;
+  }
+  await loadChannelMembers(activeChannelId);
+  await loadMyChannels();
+});
+
+document.getElementById("btnLeaveChannel")?.addEventListener("click", async () => {
+  if (!activeChannelId || !currentUser) return;
+  if (!confirm("현재 채팅방에서 나가시겠습니까?")) return;
+  const mine = String(currentUser.employeeNo || "").trim();
+  const creator = String(activeChannelCreatorEmployeeNo || "").trim();
+  const isCreator = mine !== "" && creator !== "" && mine === creator && String(activeChannelType || "").toUpperCase() !== "DM";
+  let payload = {};
+  if (isCreator) {
+    const candidates = activeChannelMemberMentionList.filter((m) => m.employeeNo && m.employeeNo !== mine);
+    if (!candidates.length) {
+      alert("관리자 위임 대상이 없어 나갈 수 없습니다.");
+      return;
+    }
+    const guide = candidates.map((m) => `${m.name}(${m.employeeNo})`).join(", ");
+    const target = prompt(`관리자 위임 대상 사번을 입력하세요.\n${guide}`) || "";
+    const targetEmp = String(target).trim();
+    if (!targetEmp) return;
+    payload = { delegateManagerEmployeeNo: targetEmp };
+  }
+  const res = await apiFetch(`/api/channels/${activeChannelId}/leave`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    alert(json.error?.message || "채팅방 나가기에 실패했습니다.");
+    return;
+  }
+  await clearActiveChannelAndReload();
+});
+
+document.getElementById("btnCloseChannel")?.addEventListener("click", async () => {
+  if (!activeChannelId || !currentUser) return;
+  if (!confirm("이 채널을 폐쇄할까요? (복구 불가)")) return;
+  const res = await apiFetch(`/api/channels/${activeChannelId}`, { method: "DELETE" });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    alert(json.error?.message || "채널 폐쇄에 실패했습니다.");
+    return;
+  }
+  await clearActiveChannelAndReload();
+});
 
 document.getElementById("btnAddMembersLater").addEventListener("click", async () => {
   if (!activeChannelId) {

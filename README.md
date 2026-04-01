@@ -21,6 +21,7 @@
 
 ### 🤝 협업 및 데이터 관리
 - **채널 운영:** 개설자는 멤버 패널에서 구성원 **내보내기**(REST `DELETE .../members`); 내보내기 시 **시스템 메시지**가 DB·채팅에 남고, 실시간 서버가 구독 중인 클라이언트에 `channel:system`로도 전달(내부 HTTP, `REALTIME_INTERNAL_TOKEN` 선택)
+- **채널 운영 확장:** 채팅방 **나가기**, 관리자 **위임** 후 나가기, 관리자 **채널 폐쇄**, 다자간 DM(3인 이상) **이름 변경** 지원
 - **파일 공유:** 채널별 업로드(multipart)·목록·다운로드(JWT), 디스크 경로에 워크스페이스·채널 식별 세그먼트 포함
 - **이미지 첨부:** 채팅에 인라인 미리보기, 클릭 시 확대(라이트박스), 확대 화면에서 다운로드; 채팅 화면에서 클립보드 이미지 **붙여넣기(Ctrl+V)** 로 전송 대기(기존 파일 첨부·전송 흐름과 동일)
 - **첨부 UX:** 업로드 즉시 채팅 본문에 파일 카드 표시 + 채널 헤더의 첨부파일 모아보기 지원
@@ -96,6 +97,7 @@ graph LR
 - `POST /api/channels`
 - `GET /api/channels/{channelId}`
 - `POST /api/channels/{channelId}/members`
+- `PUT /api/channels/{channelId}/dm-name`, `POST /api/channels/{channelId}/delegate-manager`, `POST /api/channels/{channelId}/leave`, `DELETE /api/channels/{channelId}`
 - `GET /api/channels/{channelId}/read-state?userId=...`
 - `PUT /api/channels/{channelId}/read-state`
 - `GET /api/channels/{channelId}/files?userId=...`

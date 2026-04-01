@@ -109,6 +109,10 @@
   - `GET /api/channels/{channelId}` (채널 상세 조회)
   - `POST /api/channels/{channelId}/members` (구성원 추가 — **PUBLIC/PRIVATE는 채널 개설자만**, **DM은 멤버면 누구나** 가능)
   - `DELETE /api/channels/{channelId}/members?targetEmployeeNo=...` (멤버 내보내기 — **JWT 사원번호가 채널 `created_by`인 개설자만**; 대상이 개설자이면 400; 비개설자면 403; 해당 멤버가 아니면 400)
+  - `PUT /api/channels/{channelId}/dm-name` (다자간 DM 이름 변경, 1:1 DM 불가)
+  - `POST /api/channels/{channelId}/delegate-manager` (채널 관리자 위임)
+  - `POST /api/channels/{channelId}/leave` (채팅방 나가기 — 관리자는 위임 대상 필요)
+  - `DELETE /api/channels/{channelId}` (채널 폐쇄 — 관리자만)
 - 관련 Socket 이벤트: 추후 `channel:join`과 연계 예정
 - 입력/출력:
   - 생성 입력: `workspaceKey`, `name`, `description`, `channelType`(`PUBLIC`|`PRIVATE`|`DM`), 선택 `createdByEmployeeNo`(구 클라이언트용·**실제 생성자는 Bearer JWT의 사원번호**), 선택 `dmPeerEmployeeNos`(DM일 때 상대 **사원번호** 목록 — 서버가 내부 고유 `name`(`__dm__…`)과 표시용 `description`을 구성하고, 동일 참가자 조합이면 기존 채널 반환 후 누락 멤버만 추가)
@@ -116,6 +120,7 @@
   - 출력: 채널 기본 정보 + 멤버 목록(`members`: `employeeNo`, `name`, `department`, `jobLevel`, `jobPosition`, `jobTitle`, `memberRole`, `joinedAt` — `ChannelMemberResponse`)
 - 상태 전이/예외 케이스:
   - 중복 채널명(`workspaceKey + name`) 생성 시 예외
+  - DM 1:1은 동일 2인 조합이면 기존 채널 재사용(내부명 편차/레거시 데이터 보정 포함)
   - 없는 사용자/채널 조회 시 예외
   - 이미 참여한 사용자 재참여 시 예외
   - 생성 시 생성자는 자동으로 `MANAGER` 멤버십 부여

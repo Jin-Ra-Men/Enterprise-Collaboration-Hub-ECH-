@@ -2068,9 +2068,9 @@ html[data-theme="blue"] .theme-option-btn.active {
 }
 .work-hub-body {
   display: grid;
-  grid-template-columns: 360px 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
 }
 .work-hub-panel {
   border: 1px solid var(--border-subtle);
@@ -2080,6 +2080,9 @@ html[data-theme="blue"] .theme-option-btn.active {
   min-height: 0;
   width: 100%;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
 }
 .work-hub-panel h4 {
   margin-bottom: 8px;

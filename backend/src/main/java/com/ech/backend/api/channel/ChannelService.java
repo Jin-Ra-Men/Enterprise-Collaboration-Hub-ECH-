@@ -34,10 +34,12 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HexFormat;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -116,6 +118,15 @@ public class ChannelService {
             }
 
             String internalName = buildDmCanonicalName(distinctSorted);
+            if (distinctSorted.size() == 2) {
+                Optional<Channel> existingOneToOne = findExistingOneToOneDm(request.workspaceKey(), distinctSorted);
+                if (existingOneToOne.isPresent()) {
+                    Channel ch = existingOneToOne.get();
+                    ensureDmParticipantsMembers(ch, distinctSorted);
+                    List<ChannelMember> members = channelMemberRepository.findByChannelId(ch.getId());
+                    return toResponse(ch, members);
+                }
+            }
             String displayLabel = (request.name() != null && !request.name().isBlank())
                     ? request.name().trim()
                     : distinctSorted.stream()
@@ -231,6 +242,33 @@ public class ChannelService {
         }
     }
 
+    private Optional<Channel> findExistingOneToOneDm(String workspaceKey, List<String> participantIds) {
+        if (participantIds == null || participantIds.size() != 2) {
+            return Optional.empty();
+        }
+        String a = participantIds.get(0);
+        String b = participantIds.get(1);
+        Set<String> expected = Set.of(a, b);
+        List<Channel> mine = channelRepository.findByMemberEmployeeNo(a);
+        for (Channel ch : mine) {
+            if (ch.getChannelType() != ChannelType.DM) {
+                continue;
+            }
+            if (!Objects.equals(ch.getWorkspaceKey(), workspaceKey)) {
+                continue;
+            }
+            List<ChannelMember> members = channelMemberRepository.findByChannelId(ch.getId());
+            Set<String> actual = members.stream()
+                    .map(cm -> cm.getUser().getEmployeeNo() == null ? "" : cm.getUser().getEmployeeNo().trim())
+                    .filter(s -> !s.isBlank())
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+            if (actual.size() == 2 && actual.equals(expected)) {
+                return Optional.of(ch);
+            }
+        }
+        return Optional.empty();
+    }
+
     public ChannelResponse getChannel(Long channelId) {
         Channel channel = channelRepository.findByIdWithCreatedBy(channelId)
                 .orElseThrow(() -> new NotFoundException("채널을 찾을 수 없습니다. id=" + channelId));
@@ -344,6 +382,127 @@ public class ChannelService {
 
         List<ChannelMember> members = channelMemberRepository.findByChannelId(channelId);
         return toResponse(channel, members);
+    }
+
+    @Transactional
+    public ChannelResponse renameGroupDm(Long channelId, UserPrincipal principal, String nameRaw) {
+        if (principal == null || principal.employeeNo() == null || principal.employeeNo().isBlank()) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        String actorEmp = principal.employeeNo().trim();
+        String name = nameRaw == null ? "" : nameRaw.trim();
+        if (name.isBlank()) {
+            throw new IllegalArgumentException("DM 이름을 입력하세요.");
+        }
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new NotFoundException("채널을 찾을 수 없습니다. id=" + channelId));
+        if (channel.getChannelType() != ChannelType.DM) {
+            throw new IllegalArgumentException("DM 채널에서만 이름 변경이 가능합니다.");
+        }
+        if (!channelMemberRepository.existsByChannelIdAndUserEmployeeNo(channelId, actorEmp)) {
+            throw new ForbiddenException("DM 멤버만 이름을 변경할 수 있습니다.");
+        }
+        List<ChannelMember> members = channelMemberRepository.findByChannelId(channelId);
+        if (members.size() <= 2) {
+            throw new IllegalArgumentException("1:1 DM은 이름을 변경할 수 없습니다.");
+        }
+        channel.updateDescription(name);
+        channelRepository.save(channel);
+        return toResponse(channel, members);
+    }
+
+    @Transactional
+    public ChannelResponse delegateManager(Long channelId, UserPrincipal principal, String targetEmployeeNoRaw) {
+        if (principal == null || principal.employeeNo() == null || principal.employeeNo().isBlank()) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        String actorEmp = principal.employeeNo().trim();
+        String targetEmp = targetEmployeeNoRaw == null ? "" : targetEmployeeNoRaw.trim();
+        if (targetEmp.isBlank()) {
+            throw new IllegalArgumentException("위임 대상 사번이 필요합니다.");
+        }
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new NotFoundException("채널을 찾을 수 없습니다. id=" + channelId));
+        User creator = channel.getCreatedBy();
+        String creatorEmp = creator == null || creator.getEmployeeNo() == null ? "" : creator.getEmployeeNo().trim();
+        if (!creatorEmp.equals(actorEmp)) {
+            throw new ForbiddenException("채널 관리자만 관리자 위임을 할 수 있습니다.");
+        }
+        if (targetEmp.equals(actorEmp)) {
+            throw new IllegalArgumentException("본인에게는 위임할 수 없습니다.");
+        }
+        ChannelMember targetMember = channelMemberRepository.findByChannel_IdAndUser_EmployeeNo(channelId, targetEmp)
+                .orElseThrow(() -> new IllegalArgumentException("해당 사용자는 채널 멤버가 아닙니다."));
+        channel.transferManager(targetMember.getUser());
+        channelRepository.save(channel);
+        channelMemberRepository.delete(targetMember);
+        channelMemberRepository.save(new ChannelMember(channel, targetMember.getUser(), ChannelMemberRole.MANAGER));
+        List<ChannelMember> members = channelMemberRepository.findByChannelId(channelId);
+        return toResponse(channel, members);
+    }
+
+    @Transactional
+    public void leaveChannel(Long channelId, UserPrincipal principal, String delegateManagerEmployeeNoRaw) {
+        if (principal == null || principal.employeeNo() == null || principal.employeeNo().isBlank()) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        String actorEmp = principal.employeeNo().trim();
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new NotFoundException("채널을 찾을 수 없습니다. id=" + channelId));
+        ChannelMember me = channelMemberRepository.findByChannel_IdAndUser_EmployeeNo(channelId, actorEmp)
+                .orElseThrow(() -> new ForbiddenException("채널 멤버만 나갈 수 있습니다."));
+
+        String creatorEmp = channel.getCreatedBy() != null && channel.getCreatedBy().getEmployeeNo() != null
+                ? channel.getCreatedBy().getEmployeeNo().trim()
+                : "";
+        boolean isCreator = !creatorEmp.isBlank() && creatorEmp.equals(actorEmp);
+        if (isCreator && channel.getChannelType() != ChannelType.DM) {
+            String delegateEmp = delegateManagerEmployeeNoRaw == null ? "" : delegateManagerEmployeeNoRaw.trim();
+            if (delegateEmp.isBlank()) {
+                throw new IllegalArgumentException("채널 관리자가 나가려면 관리자 위임 대상이 필요합니다.");
+            }
+            if (delegateEmp.equals(actorEmp)) {
+                throw new IllegalArgumentException("본인에게는 위임할 수 없습니다.");
+            }
+            ChannelMember delegateMember = channelMemberRepository
+                    .findByChannel_IdAndUser_EmployeeNo(channelId, delegateEmp)
+                    .orElseThrow(() -> new IllegalArgumentException("위임 대상이 채널 멤버가 아닙니다."));
+            channel.transferManager(delegateMember.getUser());
+            channelRepository.save(channel);
+            channelMemberRepository.delete(delegateMember);
+            channelMemberRepository.save(new ChannelMember(channel, delegateMember.getUser(), ChannelMemberRole.MANAGER));
+        }
+
+        channelReadStateRepository.deleteByChannel_IdAndUser_EmployeeNo(channelId, actorEmp);
+        channelMemberRepository.delete(me);
+
+        List<ChannelMember> leftMembers = channelMemberRepository.findByChannelId(channelId);
+        if (leftMembers.isEmpty()) {
+            channelRepository.delete(channel);
+            return;
+        }
+        User actorUser = userRepository.findByEmployeeNo(actorEmp).orElse(channel.getCreatedBy());
+        String actorLabel = actorUser != null && actorUser.getName() != null && !actorUser.getName().isBlank()
+                ? actorUser.getName().trim()
+                : actorEmp;
+        saveAndBroadcastChannelSystemLine(channel, actorUser, "「" + actorLabel + "」님이 채널을 나갔습니다.");
+    }
+
+    @Transactional
+    public void closeChannel(Long channelId, UserPrincipal principal) {
+        if (principal == null || principal.employeeNo() == null || principal.employeeNo().isBlank()) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        String actorEmp = principal.employeeNo().trim();
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new NotFoundException("채널을 찾을 수 없습니다. id=" + channelId));
+        String creatorEmp = channel.getCreatedBy() != null && channel.getCreatedBy().getEmployeeNo() != null
+                ? channel.getCreatedBy().getEmployeeNo().trim()
+                : "";
+        if (!creatorEmp.equals(actorEmp)) {
+            throw new ForbiddenException("채널 관리자만 채널 폐쇄를 할 수 있습니다.");
+        }
+        channelRepository.delete(channel);
     }
 
     public List<ChannelSummaryResponse> getMyChannels(String employeeNo) {
@@ -473,6 +632,11 @@ public class ChannelService {
     private String resolveChannelSummaryDescription(Channel channel, String viewerEmployeeNo) {
         if (channel.getChannelType() != ChannelType.DM) {
             return channel.getDescription();
+        }
+        int dmMemberCount = channelMemberRepository.findByChannelId(channel.getId()).size();
+        String custom = channel.getDescription() == null ? "" : channel.getDescription().trim();
+        if (dmMemberCount > 2 && !custom.isBlank()) {
+            return custom;
         }
         return buildDmPeerDisplayLabel(channel.getId(), viewerEmployeeNo);
     }
