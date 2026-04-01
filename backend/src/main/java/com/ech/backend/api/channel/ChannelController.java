@@ -6,6 +6,7 @@ import com.ech.backend.api.channel.dto.CreateChannelRequest;
 import com.ech.backend.api.channel.dto.DelegateChannelManagerRequest;
 import com.ech.backend.api.channel.dto.JoinChannelRequest;
 import com.ech.backend.api.channel.dto.LeaveChannelRequest;
+import com.ech.backend.api.channel.dto.RenameChannelRequest;
 import com.ech.backend.api.channel.dto.RenameGroupDmRequest;
 import com.ech.backend.common.api.ApiResponse;
 import com.ech.backend.common.exception.UnauthorizedException;
@@ -97,6 +98,19 @@ public class ChannelController {
             throw new UnauthorizedException("인증이 필요합니다.");
         }
         return ApiResponse.success(channelService.renameGroupDm(channelId, principal, request.name()));
+    }
+
+    @PutMapping("/{channelId}/name")
+    @RequireRole(AppRole.MEMBER)
+    public ApiResponse<ChannelResponse> renameChannel(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long channelId,
+            @Valid @RequestBody RenameChannelRequest request
+    ) {
+        if (principal == null) {
+            throw new UnauthorizedException("인증이 필요합니다.");
+        }
+        return ApiResponse.success(channelService.renameChannel(channelId, principal, request.name()));
     }
 
     @PostMapping("/{channelId}/delegate-manager")

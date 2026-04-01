@@ -69,6 +69,11 @@ public class Channel {
         return name;
     }
 
+    public void updateName(String name) {
+        this.name = name;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
     public String getDescription() {
         return description;
     }

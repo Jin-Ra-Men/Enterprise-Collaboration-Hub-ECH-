@@ -157,6 +157,7 @@ let replyComposerOriginalPlaceholder = "";
 let contextMenuSelectedMessageId = null;
 let contextMenuSelectedRootMessageId = null;
 let contextMenuSelectedIsReply = false;
+let memberContextSelectedEmployeeNo = "";
 // 타임라인에서 로드된 ROOT 메시지 캐시(스레드 모달 렌더용)
 let timelineRootMessageById = new Map();
 // loadMessages(preserveScroll=true)일 때만 렌더 함수의 자동 스크롤을 억제/복원하기 위한 비율
@@ -226,6 +227,8 @@ const dmListEl       = document.getElementById("dmList");
 const messagesEl     = document.getElementById("messages");
 const messageInputEl = document.getElementById("messageInput");
 const messageContextMenuEl = document.getElementById("messageContextMenu");
+const memberContextMenuEl = document.getElementById("memberContextMenu");
+const btnMemberCtxDelegateEl = document.getElementById("btnMemberCtxDelegate");
 const threadRootContainerEl = document.getElementById("threadRootContainer");
 const threadCommentsContainerEl = document.getElementById("threadCommentsContainer");
 const threadFileInputEl = document.getElementById("threadFileInput");
@@ -402,6 +405,91 @@ function escHtml(s) {
   return String(s)
     .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
     .replace(/"/g,"&quot;");
+}
+
+function appDialogElements() {
+  return {
+    modal: document.getElementById("modalAppDialog"),
+    title: document.getElementById("appDialogTitle"),
+    message: document.getElementById("appDialogMessage"),
+    input: document.getElementById("appDialogInput"),
+    ok: document.getElementById("btnAppDialogOk"),
+    cancel: document.getElementById("btnAppDialogCancel"),
+    close: document.getElementById("btnCloseAppDialog"),
+  };
+}
+
+function openAppDialog({ title = "알림", message = "", mode = "alert", defaultValue = "" }) {
+  const els = appDialogElements();
+  if (!els.modal || !els.title || !els.message || !els.ok || !els.cancel || !els.close || !els.input) {
+    if (mode === "confirm") return Promise.resolve(window.confirm(message));
+    if (mode === "prompt") return Promise.resolve(window.prompt(message, defaultValue || ""));
+    window.alert(message);
+    return Promise.resolve(true);
+  }
+  return new Promise((resolve) => {
+    const cleanup = () => {
+      els.ok.removeEventListener("click", onOk);
+      els.cancel.removeEventListener("click", onCancel);
+      els.close.removeEventListener("click", onCancel);
+      els.modal.removeEventListener("click", onOverlay);
+      document.removeEventListener("keydown", onEsc);
+      els.modal.classList.add("hidden");
+      els.input.classList.add("hidden");
+    };
+    const finish = (v) => {
+      cleanup();
+      resolve(v);
+    };
+    const onOk = () => {
+      if (mode === "prompt") {
+        finish(String(els.input.value || "").trim());
+        return;
+      }
+      finish(true);
+    };
+    const onCancel = () => finish(mode === "prompt" ? null : false);
+    const onOverlay = (e) => {
+      if (e.target === els.modal) onCancel();
+    };
+    const onEsc = (e) => {
+      if (e.key === "Escape") onCancel();
+    };
+    els.title.textContent = title;
+    els.message.textContent = String(message || "");
+    els.cancel.classList.toggle("hidden", mode === "alert");
+    if (mode === "prompt") {
+      els.input.classList.remove("hidden");
+      els.input.value = String(defaultValue || "");
+      setTimeout(() => els.input.focus(), 0);
+      els.input.onkeydown = (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          onOk();
+        }
+      };
+    } else {
+      els.input.classList.add("hidden");
+      els.input.onkeydown = null;
+      setTimeout(() => els.ok.focus(), 0);
+    }
+    els.ok.addEventListener("click", onOk);
+    els.cancel.addEventListener("click", onCancel);
+    els.close.addEventListener("click", onCancel);
+    els.modal.addEventListener("click", onOverlay);
+    document.addEventListener("keydown", onEsc);
+    els.modal.classList.remove("hidden");
+  });
+}
+
+function uiAlert(message, title = "알림") {
+  return openAppDialog({ title, message, mode: "alert" });
+}
+function uiConfirm(message, title = "확인") {
+  return openAppDialog({ title, message, mode: "confirm" });
+}
+function uiPrompt(message, defaultValue = "", title = "입력") {
+  return openAppDialog({ title, message, mode: "prompt", defaultValue });
 }
 
 /** 멘션 토큰 `@{사번|표시명}` → 이스케이프된 @표시명 span (XSS 방지) */
@@ -1252,8 +1340,8 @@ loginForm.addEventListener("submit", async (e) => {
   }
 });
 
-logoutBtn.addEventListener("click", () => {
-  if (!confirm("로그아웃 하시겠습니까?")) return;
+logoutBtn.addEventListener("click", async () => {
+  if (!(await uiConfirm("로그아웃 하시겠습니까?"))) return;
   if (socket) { socket.disconnect(); socket = null; }
   closeSidebarPresenceMenu();
   revokeImageAttachmentBlobUrls();
@@ -1316,11 +1404,41 @@ async function loadMyChannels() {
     const res  = await apiFetch(`/api/channels?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`);
     const json = await res.json();
     if (!res.ok) return;
-    const channels = json.data || [];
+    const channels = normalizeSidebarChannels(Array.isArray(json.data) ? json.data : []);
     renderChannelList(channels);
   } catch (err) {
     console.error("채널 목록 로드 실패", err);
   }
+}
+
+function normalizeSidebarChannels(channels) {
+  const byKey = new Map();
+  const others = [];
+  for (const ch of channels) {
+    if (String(ch.channelType || "").toUpperCase() !== "DM") {
+      others.push(ch);
+      continue;
+    }
+    const label = String(ch.description || ch.name || "").trim().toLowerCase();
+    const key = `${label}::${String(ch.workspaceKey || "")}`;
+    if (!label) {
+      others.push(ch);
+      continue;
+    }
+    const prev = byKey.get(key);
+    if (!prev) {
+      byKey.set(key, ch);
+      continue;
+    }
+    const prevScore = (Array.isArray(prev.dmPeerEmployeeNos) && prev.dmPeerEmployeeNos.length ? 10 : 0)
+      + (Number(prev.memberCount || 0) > 1 ? 5 : 0)
+      + (prev.lastMessageAt ? 1 : 0);
+    const nextScore = (Array.isArray(ch.dmPeerEmployeeNos) && ch.dmPeerEmployeeNos.length ? 10 : 0)
+      + (Number(ch.memberCount || 0) > 1 ? 5 : 0)
+      + (ch.lastMessageAt ? 1 : 0);
+    if (nextScore > prevScore) byKey.set(key, ch);
+  }
+  return [...others, ...Array.from(byKey.values())];
 }
 
 function scheduleRefreshMyChannels() {
@@ -1544,8 +1662,8 @@ async function selectChannel(channelId, channelName, channelType, options = {}) 
   document.getElementById("memberPanel").classList.add("hidden");
   document.getElementById("memberList").innerHTML = "";
   document.getElementById("btnAddMembersLater")?.classList.add("hidden");
+  document.getElementById("btnRenameChannel")?.classList.add("hidden");
   document.getElementById("btnRenameDm")?.classList.add("hidden");
-  document.getElementById("btnDelegateManager")?.classList.add("hidden");
   document.getElementById("btnCloseChannel")?.classList.add("hidden");
   document.getElementById("btnLeaveChannel")?.classList.remove("hidden");
 
@@ -1697,7 +1815,7 @@ function syncChannelActionButtons() {
   const isDm = String(activeChannelType || "").toUpperCase() === "DM";
   document.getElementById("btnLeaveChannel")?.classList.toggle("hidden", !activeChannelId);
   document.getElementById("btnRenameDm")?.classList.toggle("hidden", !(isDm && activeChannelMemberCount > 2));
-  document.getElementById("btnDelegateManager")?.classList.toggle("hidden", isDm || !isCreator);
+  document.getElementById("btnRenameChannel")?.classList.toggle("hidden", isDm || !isCreator);
   document.getElementById("btnCloseChannel")?.classList.toggle("hidden", isDm || !isCreator);
 }
 
@@ -1764,7 +1882,7 @@ async function loadChannelMembers(channelId) {
           : "";
       const showKick = canKickOthers && emp !== "" && emp !== creatorEmp;
       const ownerBadgeHtml = emp !== "" && emp === creatorEmp
-        ? `<span class="member-role-badge owner">개설자</span>`
+        ? `<span class="member-role-badge owner">관리자</span>`
         : "";
       const kickBtnHtml = showKick
         ? `<button type="button" class="btn-member-kick" data-kick-emp="${escHtml(emp)}" data-kick-name="${escHtml(m.name || emp)}" title="채널에서 내보내기">내보내기</button>`
@@ -1796,6 +1914,16 @@ async function loadChannelMembers(channelId) {
           removeChannelMemberFromPanel(kickBtn.dataset.kickEmp, kickBtn.dataset.kickName || emp);
         });
       }
+      li.addEventListener("contextmenu", (ev) => {
+        const isDm = String(activeChannelType || "").toUpperCase() === "DM";
+        if (isDm || !canKickOthers || !emp || emp === creatorEmp || emp === myEmp) return;
+        ev.preventDefault();
+        memberContextSelectedEmployeeNo = emp;
+        if (!memberContextMenuEl) return;
+        memberContextMenuEl.style.left = `${ev.clientX}px`;
+        memberContextMenuEl.style.top = `${ev.clientY}px`;
+        memberContextMenuEl.classList.remove("hidden");
+      });
       listEl.appendChild(li);
     });
     // 메시지를 먼저 렌더한 경우에도 발신자 조직/직급 라벨을 즉시 동기화한다.
@@ -1809,7 +1937,7 @@ async function loadChannelMembers(channelId) {
 async function removeChannelMemberFromPanel(targetEmp, displayName) {
   if (!activeChannelId || !targetEmp) return;
   const label = displayName && String(displayName).trim() ? String(displayName).trim() : targetEmp;
-  if (!confirm(`「${label}」님을 이 채널에서 내보낼까요?`)) return;
+  if (!(await uiConfirm(`「${label}」님을 이 채널에서 내보낼까요?`))) return;
   try {
     const res = await apiFetch(
       `/api/channels/${activeChannelId}/members?targetEmployeeNo=${encodeURIComponent(targetEmp)}`,
@@ -2461,6 +2589,11 @@ function hideMessageContextMenu() {
   if (!messageContextMenuEl) return;
   messageContextMenuEl.classList.add("hidden");
 }
+function hideMemberContextMenu() {
+  if (!memberContextMenuEl) return;
+  memberContextMenuEl.classList.add("hidden");
+  memberContextSelectedEmployeeNo = "";
+}
 
 function setReplyComposerTarget(messageId) {
   if (!messageId || !Number.isFinite(Number(messageId))) return;
@@ -2785,9 +2918,14 @@ messagesEl?.addEventListener("contextmenu", (e) => {
 });
 
 document.addEventListener("click", (e) => {
-  if (!messageContextMenuEl || messageContextMenuEl.classList.contains("hidden")) return;
-  const inMenu = e.target && messageContextMenuEl.contains(e.target);
-  if (!inMenu) hideMessageContextMenu();
+  if (messageContextMenuEl && !messageContextMenuEl.classList.contains("hidden")) {
+    const inMessageMenu = e.target && messageContextMenuEl.contains(e.target);
+    if (!inMessageMenu) hideMessageContextMenu();
+  }
+  if (memberContextMenuEl && !memberContextMenuEl.classList.contains("hidden")) {
+    const inMemberMenu = e.target && memberContextMenuEl.contains(e.target);
+    if (!inMemberMenu) hideMemberContextMenu();
+  }
 });
 
 if (messageContextMenuEl) {
@@ -2812,6 +2950,25 @@ if (messageContextMenuEl) {
       closeMentionSuggest();
       return;
     }
+  });
+}
+
+if (btnMemberCtxDelegateEl) {
+  btnMemberCtxDelegateEl.addEventListener("click", async () => {
+    const targetEmp = String(memberContextSelectedEmployeeNo || "").trim();
+    hideMemberContextMenu();
+    if (!activeChannelId || !targetEmp) return;
+    const res = await apiFetch(`/api/channels/${activeChannelId}/delegate-manager`, {
+      method: "POST",
+      body: JSON.stringify({ targetEmployeeNo: targetEmp }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      await uiAlert(json.error?.message || "관리자 위임에 실패했습니다.");
+      return;
+    }
+    await loadChannelMembers(activeChannelId);
+    await loadMyChannels();
   });
 }
 
@@ -3830,7 +3987,7 @@ document.getElementById("btnConfirmCreateDm").addEventListener("click", async ()
 /* ==========================================================================
  * 멤버 패널 토글
  * ========================================================================== */
-document.getElementById("btnShowMembers").addEventListener("click", () => {
+document.getElementById("btnHeaderMenu").addEventListener("click", () => {
   document.getElementById("memberPanel").classList.toggle("hidden");
 });
 document.getElementById("btnCloseMemberPanel").addEventListener("click", () => {
@@ -3927,7 +4084,7 @@ function ensureWorkHubWorkListDeleteBound() {
     const raw = String(del.dataset.workItemId || "");
     const id = isDraft ? raw : Number(raw);
     if (!id) return;
-    if (!confirm("이 업무 항목을 삭제할까요?")) return;
+    if (!(await uiConfirm("이 업무 항목을 삭제할까요?"))) return;
     if (isDraft) {
       const idx = Number(raw.replace("draft-", ""));
       if (!Number.isFinite(idx) || !workHubPendingNewWorkItems[idx]) return;
@@ -4007,7 +4164,7 @@ async function flushWorkHubSave() {
       workHubPendingNewWorkItems.length > 0 ||
       workHubPendingNewKanbanCards.length > 0;
     if (!hasPending) {
-      alert("저장할 변경 사항이 없습니다.");
+      await uiAlert("저장할 변경 사항이 없습니다.");
       return false;
     }
 
@@ -4151,7 +4308,7 @@ async function flushWorkHubSave() {
     await Promise.all([loadChannelWorkItems(), loadChannelKanbanBoard()]);
     return true;
   } catch (e) {
-    alert(e?.message || "저장에 실패했습니다.");
+    await uiAlert(e?.message || "저장에 실패했습니다.");
     await Promise.all([loadChannelWorkItems(), loadChannelKanbanBoard()]).catch(() => {});
     return false;
   }
@@ -4440,7 +4597,7 @@ function ensureKanbanBoardAssigneeUiBound() {
       const isDraft = delCard.dataset.isDraft === "1";
       const cardId = isDraft ? cardIdRaw : Number(cardIdRaw);
       if (!cardId || !currentUser) return;
-      if (!confirm("이 칸반 카드를 삭제할까요?")) return;
+      if (!(await uiConfirm("이 칸반 카드를 삭제할까요?"))) return;
       if (isDraft) {
         const idx = Number(cardIdRaw.replace("draft-card-", ""));
         if (!Number.isFinite(idx) || !workHubPendingNewKanbanCards[idx]) return;
@@ -4768,7 +4925,7 @@ document.getElementById("btnQueueWorkItem")?.addEventListener("click", () => {
   const statusEl = document.getElementById("workItemStatusSelect");
   const title = String(titleEl?.value || "").trim();
   if (!title) {
-    alert("업무 제목을 입력하세요.");
+    void uiAlert("업무 제목을 입력하세요.");
     return;
   }
   workHubPendingNewWorkItems.push({
@@ -4787,7 +4944,7 @@ document.getElementById("btnQueueKanbanCard")?.addEventListener("click", () => {
   const descEl = document.getElementById("kanbanCardDescInput");
   const title = String(titleEl?.value || "").trim();
   if (!title) {
-    alert("카드 제목을 입력하세요.");
+    void uiAlert("카드 제목을 입력하세요.");
     return;
   }
   workHubPendingNewKanbanCards.push({
@@ -4803,7 +4960,7 @@ document.getElementById("btnQueueKanbanCard")?.addEventListener("click", () => {
 });
 
 document.getElementById("btnWorkHubSave")?.addEventListener("click", async () => {
-  if (!confirm("저장하시겠습니까?")) return;
+  if (!(await uiConfirm("저장하시겠습니까?"))) return;
   const ok = await flushWorkHubSave();
   if (!ok) return;
   document.getElementById("workHubModal")?.classList.add("hidden");
@@ -4821,8 +4978,7 @@ async function clearActiveChannelAndReload() {
 
 document.getElementById("btnRenameDm")?.addEventListener("click", async () => {
   if (!activeChannelId || !currentUser) return;
-  const next = prompt("DM 이름을 입력하세요.");
-  const name = String(next || "").trim();
+  const name = String(await uiPrompt("DM 이름을 입력하세요.", document.getElementById("chatChannelName")?.textContent || "", "DM 이름 변경") || "").trim();
   if (!name) return;
   const res = await apiFetch(`/api/channels/${activeChannelId}/dm-name`, {
     method: "PUT",
@@ -4830,56 +4986,42 @@ document.getElementById("btnRenameDm")?.addEventListener("click", async () => {
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    alert(json.error?.message || "DM 이름 변경에 실패했습니다.");
+    await uiAlert(json.error?.message || "DM 이름 변경에 실패했습니다.");
     return;
   }
   await loadMyChannels();
   document.getElementById("chatChannelName").textContent = name;
 });
 
-document.getElementById("btnDelegateManager")?.addEventListener("click", async () => {
+document.getElementById("btnRenameChannel")?.addEventListener("click", async () => {
   if (!activeChannelId || !currentUser) return;
-  const mine = String(currentUser.employeeNo || "").trim();
-  const candidates = activeChannelMemberMentionList.filter((m) => m.employeeNo && m.employeeNo !== mine);
-  if (!candidates.length) {
-    alert("위임 가능한 멤버가 없습니다.");
-    return;
-  }
-  const guide = candidates.map((m) => `${m.name}(${m.employeeNo})`).join(", ");
-  const target = prompt(`위임할 멤버 사번을 입력하세요.\n${guide}`) || "";
-  const targetEmp = String(target).trim();
-  if (!targetEmp) return;
-  const res = await apiFetch(`/api/channels/${activeChannelId}/delegate-manager`, {
-    method: "POST",
-    body: JSON.stringify({ targetEmployeeNo: targetEmp }),
+  const currentName = document.getElementById("chatChannelName")?.textContent || "";
+  const nextName = String(await uiPrompt("새 채널명을 입력하세요.", currentName, "채널 이름 변경") || "").trim();
+  if (!nextName) return;
+  const res = await apiFetch(`/api/channels/${activeChannelId}/name`, {
+    method: "PUT",
+    body: JSON.stringify({ name: nextName }),
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    alert(json.error?.message || "관리자 위임에 실패했습니다.");
+    await uiAlert(json.error?.message || "채널 이름 변경에 실패했습니다.");
     return;
   }
+  document.getElementById("chatChannelName").textContent = nextName;
   await loadChannelMembers(activeChannelId);
   await loadMyChannels();
 });
 
 document.getElementById("btnLeaveChannel")?.addEventListener("click", async () => {
   if (!activeChannelId || !currentUser) return;
-  if (!confirm("현재 채팅방에서 나가시겠습니까?")) return;
+  if (!(await uiConfirm("현재 채팅방에서 나가시겠습니까?"))) return;
   const mine = String(currentUser.employeeNo || "").trim();
   const creator = String(activeChannelCreatorEmployeeNo || "").trim();
   const isCreator = mine !== "" && creator !== "" && mine === creator && String(activeChannelType || "").toUpperCase() !== "DM";
   let payload = {};
   if (isCreator) {
-    const candidates = activeChannelMemberMentionList.filter((m) => m.employeeNo && m.employeeNo !== mine);
-    if (!candidates.length) {
-      alert("관리자 위임 대상이 없어 나갈 수 없습니다.");
-      return;
-    }
-    const guide = candidates.map((m) => `${m.name}(${m.employeeNo})`).join(", ");
-    const target = prompt(`관리자 위임 대상 사번을 입력하세요.\n${guide}`) || "";
-    const targetEmp = String(target).trim();
-    if (!targetEmp) return;
-    payload = { delegateManagerEmployeeNo: targetEmp };
+    await uiAlert("관리자는 멤버를 우클릭해 먼저 관리자 위임을 완료한 뒤 나갈 수 있습니다.");
+    return;
   }
   const res = await apiFetch(`/api/channels/${activeChannelId}/leave`, {
     method: "POST",
@@ -4887,7 +5029,7 @@ document.getElementById("btnLeaveChannel")?.addEventListener("click", async () =
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    alert(json.error?.message || "채팅방 나가기에 실패했습니다.");
+    await uiAlert(json.error?.message || "채팅방 나가기에 실패했습니다.");
     return;
   }
   await clearActiveChannelAndReload();
@@ -4895,11 +5037,11 @@ document.getElementById("btnLeaveChannel")?.addEventListener("click", async () =
 
 document.getElementById("btnCloseChannel")?.addEventListener("click", async () => {
   if (!activeChannelId || !currentUser) return;
-  if (!confirm("이 채널을 폐쇄할까요? (복구 불가)")) return;
+  if (!(await uiConfirm("이 채널을 폐쇄할까요? (복구 불가)"))) return;
   const res = await apiFetch(`/api/channels/${activeChannelId}`, { method: "DELETE" });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
-    alert(json.error?.message || "채널 폐쇄에 실패했습니다.");
+    await uiAlert(json.error?.message || "채널 폐쇄에 실패했습니다.");
     return;
   }
   await clearActiveChannelAndReload();
@@ -5045,22 +5187,22 @@ async function loadReleases() {
     });
     tbody.querySelectorAll(".btn-activate").forEach(btn => {
       btn.addEventListener("click", async () => {
-        if (!confirm(`v${btn.dataset.ver}을 운영 버전으로 활성화하시겠습니까?`)) return;
+        if (!(await uiConfirm(`v${btn.dataset.ver}을 운영 버전으로 활성화하시겠습니까?`))) return;
         const r = await apiFetch(`/api/admin/releases/${btn.dataset.id}/activate`, {
           method: "POST",
           body: JSON.stringify({ actorEmployeeNo: currentUser?.employeeNo, note: "수동 활성화" }),
         });
-        alert(r.ok ? "활성화 완료" : "활성화 실패");
+        await uiAlert(r.ok ? "활성화 완료" : "활성화 실패");
         loadReleases();
       });
     });
     tbody.querySelectorAll(".btn-delete").forEach(btn => {
       btn.addEventListener("click", async () => {
-        if (!confirm("이 릴리즈 파일을 삭제하시겠습니까?")) return;
+        if (!(await uiConfirm("이 릴리즈 파일을 삭제하시겠습니까?"))) return;
         const r = await apiFetch(`/api/admin/releases/${btn.dataset.id}?actorEmployeeNo=${encodeURIComponent(currentUser?.employeeNo || "")}`, {
           method: "DELETE",
         });
-        alert(r.ok ? "삭제 완료" : "삭제 실패");
+        await uiAlert(r.ok ? "삭제 완료" : "삭제 실패");
         loadReleases();
       });
     });

@@ -188,23 +188,26 @@
             </div>
             <div class="chat-header-right">
               <span class="chat-member-count" id="chatMemberCount"></span>
-              <button class="btn-header-icon" id="btnOpenWorkHub" title="업무/칸반">📋</button>
-              <button class="btn-header-icon" id="btnOpenFileHub" title="첨부파일 모아보기">📎</button>
-              <button class="btn-header-icon hidden" id="btnRenameDm" title="DM 이름 변경">✏️</button>
-              <button class="btn-header-icon" id="btnAddMembersLater" title="구성원 추가">➕</button>
-              <button class="btn-header-icon hidden" id="btnDelegateManager" title="관리자 위임">🪪</button>
-              <button class="btn-header-icon" id="btnLeaveChannel" title="채팅방 나가기">🚪</button>
-              <button class="btn-header-icon hidden" id="btnCloseChannel" title="채널 폐쇄">🗑️</button>
-              <button class="btn-header-icon" id="btnShowMembers" title="멤버 보기">👥</button>
+              <button class="btn-header-icon" id="btnHeaderMenu" title="채널 메뉴">☰</button>
             </div>
           </header>
 
           <!-- 멤버 패널 (토글) -->
           <div id="memberPanel" class="member-panel hidden">
             <div class="member-panel-header">
-              <h3>멤버</h3>
+              <h3>채널 메뉴</h3>
               <button id="btnCloseMemberPanel" class="btn-panel-close">✕</button>
             </div>
+            <div class="member-panel-actions">
+              <button class="btn-member-panel-action" id="btnOpenWorkHub" title="업무/칸반">📋 업무/칸반</button>
+              <button class="btn-member-panel-action" id="btnOpenFileHub" title="첨부파일 모아보기">📎 첨부파일</button>
+              <button class="btn-member-panel-action hidden" id="btnRenameChannel" title="채널 이름 변경">✏️ 채널 이름 변경</button>
+              <button class="btn-member-panel-action hidden" id="btnRenameDm" title="DM 이름 변경">✏️ DM 이름 변경</button>
+              <button class="btn-member-panel-action" id="btnAddMembersLater" title="구성원 추가">➕ 구성원 추가</button>
+              <button class="btn-member-panel-action" id="btnLeaveChannel" title="채팅방 나가기">🚪 채팅방 나가기</button>
+              <button class="btn-member-panel-action hidden" id="btnCloseChannel" title="채널 폐쇄">🗑️ 채널 폐쇄</button>
+            </div>
+            <div class="member-panel-list-title">멤버</div>
             <ul id="memberList" class="member-list"></ul>
           </div>
 
@@ -293,6 +296,26 @@
     <div id="messageContextMenu" class="context-menu hidden" role="menu" aria-label="메시지 메뉴">
       <button type="button" class="context-menu-item" data-action="comment" role="menuitem">댓글</button>
       <button type="button" class="context-menu-item" data-action="reply" role="menuitem">답글</button>
+    </div>
+    <div id="memberContextMenu" class="context-menu hidden" role="menu" aria-label="멤버 메뉴">
+      <button type="button" class="context-menu-item" id="btnMemberCtxDelegate" role="menuitem">관리자 위임</button>
+    </div>
+
+    <div id="modalAppDialog" class="modal-overlay hidden modal-stacked">
+      <div class="modal modal-narrow app-dialog-modal">
+        <div class="modal-header">
+          <h3 id="appDialogTitle">알림</h3>
+          <button class="modal-close" id="btnCloseAppDialog">✕</button>
+        </div>
+        <div class="modal-body">
+          <p id="appDialogMessage" class="app-dialog-message"></p>
+          <input id="appDialogInput" class="hidden" type="text" />
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary hidden" id="btnAppDialogCancel">취소</button>
+          <button class="btn-primary" id="btnAppDialogOk">확인</button>
+        </div>
+      </div>
     </div>
 
     <!-- 스레드 모달(원글 + 댓글) -->

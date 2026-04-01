@@ -737,13 +737,40 @@ span.section-toggle-static { cursor: default; }
 .member-panel {
   position: absolute;
   top: var(--layout-header-height); right: 0;
-  width: 240px;
+  width: 300px;
   background: var(--bg-elevated);
   border-left: 1px solid var(--border-subtle);
   height: calc(100% - var(--layout-header-height));
   z-index: 100;
   display: flex;
   flex-direction: column;
+}
+.member-panel-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.btn-member-panel-action {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-chat);
+  cursor: pointer;
+}
+.btn-member-panel-action:hover {
+  border-color: var(--border-focus);
+  background: var(--bg-sidebar-hover);
+}
+.member-panel-list-title {
+  padding: 10px 14px 6px;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 .member-panel-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -2066,6 +2093,10 @@ html[data-theme="blue"] .theme-option-btn.active {
 .modal-work-hub {
   max-width: 1020px;
 }
+.modal-work-hub .modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
 .work-hub-body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2442,11 +2473,11 @@ html[data-theme="blue"] .theme-option-btn.active {
   cursor: grabbing;
 }
 .kanban-column {
-  overflow: hidden;
+  overflow: visible;
 }
 .kanban-card-list {
-  max-height: 52vh;
-  overflow-y: auto;
+  max-height: none;
+  overflow: visible;
 }
 .work-item-status-select {
   min-width: 132px;
@@ -2938,6 +2969,24 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
 
 .member-picker-member-btn:hover {
   background: rgba(167, 139, 250, 0.3);
+}
+.app-dialog-modal {
+  max-width: 420px;
+}
+.app-dialog-message {
+  margin: 4px 0 2px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+#appDialogInput {
+  width: 100%;
+  margin-top: 12px;
+  padding: 9px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-primary);
 }
 
 /* 조직도 팝업: 회사 셀렉트 + AXTree 유사 계층 */
