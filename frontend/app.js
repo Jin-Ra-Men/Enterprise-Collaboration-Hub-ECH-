@@ -411,6 +411,7 @@ function appDialogElements() {
   return {
     modal: document.getElementById("modalAppDialog"),
     title: document.getElementById("appDialogTitle"),
+    badge: document.getElementById("appDialogBadge"),
     message: document.getElementById("appDialogMessage"),
     input: document.getElementById("appDialogInput"),
     ok: document.getElementById("btnAppDialogOk"),
@@ -421,7 +422,7 @@ function appDialogElements() {
 
 function openAppDialog({ title = "알림", message = "", mode = "alert", defaultValue = "" }) {
   const els = appDialogElements();
-  if (!els.modal || !els.title || !els.message || !els.ok || !els.cancel || !els.close || !els.input) {
+  if (!els.modal || !els.title || !els.message || !els.ok || !els.cancel || !els.close || !els.input || !els.badge) {
     if (mode === "confirm") return Promise.resolve(window.confirm(message));
     if (mode === "prompt") return Promise.resolve(window.prompt(message, defaultValue || ""));
     window.alert(message);
@@ -435,6 +436,8 @@ function openAppDialog({ title = "알림", message = "", mode = "alert", default
       els.modal.removeEventListener("click", onOverlay);
       document.removeEventListener("keydown", onEsc);
       els.modal.classList.add("hidden");
+      els.modal.removeAttribute("data-dialog-mode");
+      els.modal.removeAttribute("data-dialog-tone");
       els.input.classList.add("hidden");
     };
     const finish = (v) => {
@@ -455,9 +458,15 @@ function openAppDialog({ title = "알림", message = "", mode = "alert", default
     const onEsc = (e) => {
       if (e.key === "Escape") onCancel();
     };
+    const txt = String(message || "");
+    const isDanger = mode === "confirm" && /(삭제|폐쇄|나가기|내보내기|활성화)/.test(txt);
+    els.modal.dataset.dialogMode = mode;
+    els.modal.dataset.dialogTone = isDanger ? "danger" : "normal";
     els.title.textContent = title;
-    els.message.textContent = String(message || "");
+    els.message.textContent = txt;
+    els.badge.textContent = mode === "prompt" ? "✎" : mode === "confirm" ? "?" : "i";
     els.cancel.classList.toggle("hidden", mode === "alert");
+    els.ok.textContent = mode === "confirm" ? "확인" : "확인";
     if (mode === "prompt") {
       els.input.classList.remove("hidden");
       els.input.value = String(defaultValue || "");
