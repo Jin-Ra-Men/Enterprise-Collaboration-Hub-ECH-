@@ -2395,6 +2395,8 @@ html[data-theme="blue"] .theme-option-btn.active {
 }
 .kanban-assignee-suggest li {
   margin: 0;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 .kanban-assignee-suggest li + li {
   border-top: 1px solid var(--border-subtle);
@@ -2432,18 +2434,12 @@ html[data-theme="blue"] .theme-option-btn.active {
   color: var(--text-primary);
   background: var(--bg-elevated);
 }
-.btn-card-order {
-  flex: 0 0 auto;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-  cursor: pointer;
+.kanban-card-item[draggable="true"] {
+  cursor: grab;
 }
-.btn-card-order:hover {
-  border-color: var(--border-focus);
+.kanban-card-item.kanban-card-dragging {
+  opacity: 0.65;
+  cursor: grabbing;
 }
 .kanban-column {
   overflow: hidden;

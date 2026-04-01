@@ -773,3 +773,16 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - `backend/src/main/java/com/ech/backend/api/channel/dto/ChannelMemberResponse.java`
   - `backend/src/main/java/com/ech/backend/api/channel/ChannelService.java`
   - `backend/src/main/java/com/ech/backend/domain/channel/ChannelType.java` (`DM` 포함)
+
+---
+
+## 채널 업무 허브 UX 보강 (2026-04-01)
+- 자동완성 목록 가독성:
+  - 칸반 담당자 자동완성 목록 항목에 좌우 패딩을 추가해 텍스트가 경계선에 붙지 않도록 조정
+- 카드 순서 변경:
+  - 카드별 `↑/↓` 버튼 방식은 제거
+  - 칸반 컬럼 내 카드 세로 드래그앤드롭으로 임시 순서를 변경하고, 저장 시 `sortOrder`로 반영
+- 저장 동작:
+  - 하단 저장 버튼 클릭 시 확인창(`저장하시겠습니까?`)을 표시
+  - 저장 성공 시 `업무 · 칸반` 모달을 닫아 저장 완료 흐름을 명확화
+  - 칸반 담당자 저장 순서를 `삭제 -> 추가`로 처리해 삭제 후 재바인딩되는 케이스를 완화
