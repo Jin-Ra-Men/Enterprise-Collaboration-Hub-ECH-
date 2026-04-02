@@ -217,10 +217,10 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   overflow: hidden;
 }
 
-/* ── 사이드바 본문: 퀵 레일 + 검색·목록 (워크스페이스·프로필 바깥 동일 세로 구간) ── */
+/* ── 사이드바 본문: 퀵 레일 + 검색·목록 (프로필은 하단 고정, 본문만 스크롤) ── */
 .sidebar-body {
   display: flex;
-  flex: 1;
+  flex: 1 1 0%;
   min-height: 0;
   flex-direction: row;
   overflow: hidden;
@@ -357,12 +357,18 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 }
 .sidebar-slip {
   height: 100%;
+  max-height: 100%;
+  min-height: 0;
   width: 100%;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .sidebar-slip .sidebar {
   width: 324px;
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
 }
 /* 접힘: 목록·ECH 헤더·프로필은 숨기고 퀵 레일(64px)만 유지 */
 .app-layout.sidebar-collapsed .sidebar-column {
@@ -421,6 +427,9 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
 }
 /* 워크스페이스 헤더 */
 .sidebar-workspace {
@@ -617,9 +626,9 @@ span.section-toggle-static { cursor: default; }
   100% { background: transparent; }
 }
 
-/* 사용자 프로필 (하단) */
+/* 사용자 프로필 (하단, 항상 표시 — 본문은 위 영역만 스크롤) */
 .sidebar-user {
-  flex-shrink: 0;
+  flex: 0 0 auto;
   margin-top: auto;
   display: flex;
   align-items: center;
@@ -803,7 +812,7 @@ span.section-toggle-static { cursor: default; }
 .btn-header-icon { font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background .1s; color: var(--text-secondary); }
 .btn-header-icon:hover { background: var(--bg-sidebar-hover); color: var(--text-primary); }
 
-/* 멤버 패널: 상단·하단 버튼 고정, 멤버 목록만 중간 스크롤 */
+/* 멤버 패널: 헤더 고정, 나머지(알림~멤버~하단 액션)는 한 덩어리로 세로 스크롤 */
 .member-panel {
   position: absolute;
   top: var(--layout-header-height);
@@ -819,6 +828,13 @@ span.section-toggle-static { cursor: default; }
   min-height: 0;
   overflow: hidden;
 }
+.member-panel-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 .member-panel-actions {
   display: flex;
   flex-direction: column;
@@ -831,6 +847,7 @@ span.section-toggle-static { cursor: default; }
 .member-panel-actions-bottom {
   flex-shrink: 0;
   border-top: 1px solid var(--border-subtle);
+  padding-top: 12px;
 }
 .member-panel-member-heading {
   flex-shrink: 0;
@@ -890,11 +907,8 @@ span.section-toggle-static { cursor: default; }
 .btn-panel-close { cursor: pointer; font-size: 16px; color: var(--text-muted); }
 .btn-panel-close:hover { color: var(--text-primary); }
 .member-list {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  display: block;
+  overflow: visible;
   padding: 8px 0;
 }
 .member-list-item {
@@ -2223,55 +2237,46 @@ html[data-theme="blue"] .theme-option-btn.active {
 .channel-files-empty { padding: 0 20px 12px; font-size: 13px; color: var(--text-muted); }
 
 .modal-work-hub {
-  max-width: 1020px;
-  width: min(1020px, calc(100vw - 24px));
+  max-width: 720px;
+  width: min(720px, calc(100vw - 24px));
   max-height: min(90vh, 100dvh - 24px);
   min-height: 0;
 }
 .modal-work-hub .modal-body {
   flex: 1 1 auto;
   min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: block;
   padding: 12px 16px 16px;
 }
+/* 업무 항목 → 칸반 보드 순, 한 열 세로 배치(좌우 2열 아님) */
 .work-hub-body {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 14px;
   align-items: stretch;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
+  width: 100%;
+  min-width: 0;
 }
 .work-hub-panel {
   border: 1px solid var(--border-subtle);
   border-radius: 10px;
   background: var(--bg-input);
   padding: 10px;
-  min-height: 0;
   width: 100%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  align-self: stretch;
-  overflow: hidden;
+  flex: 0 0 auto;
+  overflow: visible;
 }
-/* 제목·힌트는 고정, 폼·목록·칸반만 이 영역 안에서 스크롤 */
 .work-hub-panel-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-.work-hub-panel-body > .channel-kanban-board {
-  flex: 1 1 auto;
-  min-height: 120px;
+  overflow: visible;
 }
 .work-hub-panel > h4 {
   margin-bottom: 8px;
@@ -2435,10 +2440,6 @@ html[data-theme="blue"] .theme-option-btn.active {
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: 4px;
-}
-.work-hub-panel-body .channel-kanban-board {
-  overflow-y: auto;
-  max-width: 100%;
 }
 .kanban-col {
   border: 1px solid var(--border-subtle);
@@ -2764,12 +2765,6 @@ html[data-theme="blue"] .theme-option-btn.active {
   overflow: hidden;
 }
 
-@media (max-width: 1080px) {
-  .work-hub-body {
-    grid-template-columns: 1fr;
-    min-height: 0;
-  }
-}
 @media (max-width: 640px) {
   .channel-kanban-board .kanban-column {
     min-width: 240px;
