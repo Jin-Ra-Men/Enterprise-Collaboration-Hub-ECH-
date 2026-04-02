@@ -316,7 +316,7 @@
 - 보드 상세 조회 시 카드 로드는 `findAllForBoardWithAssignees`에서 `assignees`를 **LEFT JOIN FETCH**한다. `JOIN FETCH`만 쓰면 담당자 0건 카드가 INNER JOIN처럼 빠져 UI에 안 보인다.
 - 채널 허브 칸반 카드 담당: `POST/DELETE /api/kanban/cards/{id}/assignees`는 `MEMBER`+`assertCanMutateCard`(채널 보드는 채널 멤버, 워크스페이스 보드는 `MANAGER` 이상). 서비스는 채널 연동 보드에서 `assertAssigneeIsChannelMemberIfApplicable`로 담당 사번이 채널 멤버인지 검증. **채널 허브 UI**에서는 `GET /api/channels/{id}` 멤버 목록으로 담당 자동완성(↑↓·Enter, 열린 상태에서 미선택 Enter는 폼 제출 방지).
 - 업무 삭제: `DELETE /api/work-items/{workItemId}?actorEmployeeNo=...`(채널 멤버). 칸반 카드 삭제: `DELETE /api/kanban/cards/{cardId}?actorEmployeeNo=...` — 컨트롤러는 `MEMBER`, 서비스 `deleteCard`에서 `assertCanMutateCard`로 채널/워크스페이스 보드 구분.
-- 업무 허브 모달: 하단 **저장**으로 신규 업무·신규 카드·업무 상태·카드 컬럼 이동을 일괄 반영. 담당 추가/해제는 즉시. 목록이 길어지면 모달 본문(`modal-body`) 스크롤.
+- 업무 허브 모달: 하단 **저장**으로 신규 업무·신규 카드·업무 상태·카드 컬럼·담당 추가/해제(임시 맵)를 일괄 반영. 보드에서 ✕/검색 추가는 UI만 즉시 갱신하고 API는 저장 시 `POST/DELETE .../assignees` 순서로 호출. 목록이 길어지면 모달 본문(`modal-body`) 스크롤.
 
 ### 채널 파일 메타데이터 인수인계 메모
 - 바이너리는 외부 스토리지에 두고 `channel_files`에 메타만 저장합니다.
@@ -424,6 +424,12 @@ Stop-Process -Id <PID> -Force
   - `내 담당 칸반` 섹션(`myKanbanList`)을 추가해 담당 카드 목록을 채널/DM 목록과 같은 영역에서 제공
   - 데이터 소스: `GET /api/kanban/cards/assigned?employeeNo=...&limit=...`
   - 클릭 동작: 채널 진입 -> 업무·칸반 모달 오픈 -> 대상 카드 스크롤/강조
+
+---
+
+## 업무 허브 담당 DELETE 누락 보정 (2026-04-02)
+- `normalizePendingCardAssigneeOps`는 저장 직전 `loadChannelKanbanBoard()` 이후 `activeWorkHubColumns`에서 카드의 현재 `assigneeEmployeeNos`를 읽어 해제 diff를 만든다. 이전에는 카드 탐색 실패 시 기준 목록이 빈 배열로 간주되어 `removeFinal`이 비고 `DELETE /api/kanban/cards/{id}/assignees/{emp}`가 호출되지 않을 수 있었다.
+- 보정: `findWorkHubKanbanCardById`( `c.id` / `c.cardId` ), `kanbanPendingAssigneeMapGet`(맵 키 숫자·문자 혼용), 카드가 여전히 트리에서 안 잡힐 때만 스냅샷 `workHubPendingCardAssigneeRemove` 값으로 해제 집합 폴백 — `frontend/app.js`.
 
 ---
 

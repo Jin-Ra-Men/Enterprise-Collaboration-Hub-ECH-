@@ -4473,6 +4473,32 @@ function kanbanDeleteFromEmpSet(set, emp) {
   }
 }
 
+/** Pending assignee map may use numeric or string keys; normalize lookup by card id. */
+function kanbanPendingAssigneeMapGet(map, cardId) {
+  const n = Number(cardId);
+  if (!Number.isFinite(n)) return undefined;
+  if (map.has(n)) return map.get(n);
+  for (const k of map.keys()) {
+    if (Number(k) === n) return map.get(k);
+  }
+  return undefined;
+}
+
+function findWorkHubKanbanCardById(cardId) {
+  const id = Number(cardId);
+  if (!Number.isFinite(id)) return null;
+  for (const col of activeWorkHubColumns) {
+    const cards = Array.isArray(col?.cards) ? col.cards : [];
+    const found = cards.find((c) => {
+      const cid = c?.id ?? c?.cardId;
+      if (cid == null) return false;
+      return Number(cid) === id;
+    });
+    if (found) return found;
+  }
+  return null;
+}
+
 function normalizePendingCardAssigneeOps() {
   const addByCard = new Map();
   const removeByCard = new Map();
@@ -4488,25 +4514,18 @@ function normalizePendingCardAssigneeOps() {
   ]);
   for (const cardId of cardIds.values()) {
     if (!Number.isFinite(cardId) || workHubPendingCardDeleteIds.has(cardId)) continue;
-    let base = [];
-    for (const col of activeWorkHubColumns) {
-      const cards = Array.isArray(col.cards) ? col.cards : [];
-      const found = cards.find((c) => Number(c.id) === Number(cardId));
-      if (found) {
-        base = Array.isArray(found.assigneeEmployeeNos) ? found.assigneeEmployeeNos : [];
-        break;
-      }
-    }
+    const cardObj = findWorkHubKanbanCardById(cardId);
+    const base = cardObj && Array.isArray(cardObj.assigneeEmployeeNos) ? cardObj.assigneeEmployeeNos : [];
     const baseMap = kanbanAssigneeCanonMapFromList(base);
     const nextMap = new Map(baseMap);
-    const remPending = snapRem.get(cardId);
+    const remPending = kanbanPendingAssigneeMapGet(snapRem, cardId);
     if (remPending) {
       for (const r of remPending) {
         const k = kanbanEmpMatchKey(r);
         if (k) nextMap.delete(k);
       }
     }
-    const addPending = snapAdd.get(cardId);
+    const addPending = kanbanPendingAssigneeMapGet(snapAdd, cardId);
     if (addPending) {
       for (const a of addPending) {
         const canon = normKanbanEmpNo(a);
@@ -4517,6 +4536,12 @@ function normalizePendingCardAssigneeOps() {
     const removeFinal = new Set();
     for (const [k, canonB] of baseMap) {
       if (!nextMap.has(k)) removeFinal.add(canonB);
+    }
+    if (!removeFinal.size && remPending?.size && !cardObj) {
+      for (const r of remPending) {
+        const c = normKanbanEmpNo(r);
+        if (c) removeFinal.add(c);
+      }
     }
     const addFinal = new Set();
     for (const [k, canonN] of nextMap) {

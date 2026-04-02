@@ -2,6 +2,11 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-04-02
+
+### Fixed
+- 칸반 담당 해제 저장: 보드 재조회 후 카드 탐색 실패·pending 맵 키 불일치로 `removeFinal`이 비어 `DELETE /api/kanban/cards/{id}/assignees/...`가 호출되지 않던 문제를 보정(`findWorkHubKanbanCardById`, `kanbanPendingAssigneeMapGet`, 카드 미탐색 시 스냅샷 해제 폴백)
+
 ## 2026-04-01
 
 ### Fixed
