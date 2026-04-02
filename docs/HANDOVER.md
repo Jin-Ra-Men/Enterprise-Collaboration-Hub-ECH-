@@ -326,7 +326,7 @@
 - `download-info`는 멤버 검증 후 `storageKey`와 안내 문구를 돌려주며, 실제 사전 서명 URL은 스토리지 연동 단계에서 확장합니다.
 
 ### 프론트엔드 데모 UI 메모
-- **스크롤·좌측 열**: `sidebar-main`(검색~관리자)만 세로 스크롤, 하단 **프로필**(`sidebar-user`)은 고정. `sidebar-slip`/`aside.sidebar` flex·`min-height:0`로 작은 창에서도 프로필이 잘리지 않게 함. 퀵 레일은 `quick-rail-scroll`만 스크롤. **햄버거 채널 메뉴**는 `member-panel-scroll` 한 영역 스크롤(멤버 수가 많아도 아래로 스크롤하면 구성원 추가·나가기까지 도달).
+- **스크롤·좌측 열**: `sidebar-column`은 `align-self:stretch`+내부 `flex:1 1 0%` 체인으로 메인 채팅 열과 **동일 높이**를 채움(`height:100%`만으로는 깨질 수 있음). `sidebar-main`(검색~관리자)만 세로 스크롤, 하단 **프로필** 고정. 퀵 레일은 `quick-rail-scroll`만 스크롤. **햄버거 채널 메뉴**는 `member-panel-scroll` 단일 스크롤.
 - 동료 **프로필 모달**(`modalUserProfile`): `GET /api/users/profile?employeeNo=`로 로드. 역할·계정 상태는 표시하지 않음. **직급**(`jobLevel`)은 항상 행(없으면 `-`), **직위**(`jobPosition`)·**직책**(`jobTitle`)은 값이 있을 때만 해당 행 표시. **DM 보내기**(`btnProfileDm`)는 `startDmWithUser`로 `POST /api/channels`에 `channelType: DM`, `dmPeerEmployeeNos: [상대 사번]`, 호환용 `createdByEmployeeNo` 등을 요청 본문에 포함해 호출하며 **실제 생성자는 JWT 사원번호**로 결정된다. 서버가 내부 이름·멤버십을 처리한 뒤 `selectChannel`로 전환(자기 자신이면 버튼 비활성). DB `channels.channel_type`은 `DM` 문자열로 저장됩니다.
 - **프레즌스**: `presence:set`/`presence:update`/스냅샷 키는 **사번 문자열**. 채팅·멤버 패널에서 `[data-presence-user]`에 사번을 두고 `refreshPresenceDots`가 갱신합니다. 로컬 UX: 좌측 하단 본인 상태 버튼(`#sidebarUserStatus`)으로 **온라인·자리비움** 전환(`AWAY`는 노란 점).
 - **이미지 첨부**: `contentType`이 이미지이거나 확장자가 이미지인 FILE 메시지는 채팅에 썸네일 표시, 클릭 시 `modalImagePreview`로 확대, **다운로드** 버튼은 기존 파일 다운로드 API 재사용(JWT `fetch` → `blob:` URL).

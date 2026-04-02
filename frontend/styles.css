@@ -345,19 +345,22 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 }
 
 /* ── 사이드바 컬럼 + 우측 돌출 접기 탭 (64px 퀵 + 260px 목록 = 324px) ── */
+/* app-layout(row) 안에서 높이는 align-items:stretch — height:100% 체인 대신 flex로 끝까지 채움 */
 .sidebar-column {
   position: relative;
   flex-shrink: 0;
   width: 324px;
-  height: 100%;
+  align-self: stretch;
+  min-height: 0;
   max-height: 100dvh;
   transition: width 0.22s ease;
-  overflow: visible;
-  min-height: 0;
+  overflow: visible; /* 돌출 접기 탭이 우측으로 삐져나감 */
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-sidebar);
 }
 .sidebar-slip {
-  height: 100%;
-  max-height: 100%;
+  flex: 1 1 0%;
   min-height: 0;
   width: 100%;
   overflow: hidden;
@@ -365,10 +368,11 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   flex-direction: column;
 }
 .sidebar-slip .sidebar {
-  width: 324px;
-  flex: 1 1 auto;
+  flex: 1 1 0%;
   min-height: 0;
-  max-height: 100%;
+  width: 100%;
+  max-width: 324px;
+  box-sizing: border-box;
 }
 /* 접힘: 목록·ECH 헤더·프로필은 숨기고 퀵 레일(64px)만 유지 */
 .app-layout.sidebar-collapsed .sidebar-column {
@@ -427,8 +431,6 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  height: 100%;
-  max-height: 100%;
   min-height: 0;
 }
 /* 워크스페이스 헤더 */
@@ -2255,7 +2257,7 @@ html[data-theme="blue"] .theme-option-btn.active {
 .work-hub-body {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 28px;
   align-items: stretch;
   width: 100%;
   min-width: 0;

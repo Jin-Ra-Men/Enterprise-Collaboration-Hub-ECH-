@@ -5,7 +5,8 @@
 ## 2026-04-02
 
 ### Changed
-- **좌측 사이드바 프로필**: `sidebar-slip`·`aside.sidebar`에 `flex`/`min-height:0`/`max-height`로 높이 체인 보강, 하단 **프로필**이 뷰포트 밖으로 밀리지 않도록 조정
+- **좌측 사이드바 레이아웃**: `sidebar-column`을 `align-self:stretch`+`flex` 열로 두고 `sidebar-slip`·`aside.sidebar`에 `flex:1 1 0%`·`min-height:0`로 **컬럼 전체 높이를 채움**(프로필 하단 빈 영역·작은 창에서 프로필 유실 완화). 컬럼 배경 `var(--bg-sidebar)`로 틈 색상 통일
+- **업무·칸반 모달**: 두 패널 사이 `gap` 28px로 여백 확대
 - **햄버거(채널 메뉴)**: `member-panel-scroll`로 알림~멤버~하단 액션을 **한 스크롤**로 통합(멤버 `ul` 단독 스크롤 제거)
 - **업무·칸반 모달**: 좌우 2열 그리드 제거 → **세로 한 열**(업무 항목 위, 칸반 아래), 모달 본문 전체 스크롤, `max-width` 720px
 - **스크롤·반응형(설치형/Electron 대비)**: `html`/`body` flex 체인, `#mainApp` `max-height: 100dvh`. 좌측 **사이드바 본문**(`sidebar-main`)에 세로 스크롤 — 채널·DM·관리자까지 한 열에서 스크롤로 도달. **퀵 레일**(`quick-rail-scroll`) 스크롤 보강. **업무·칸반 모달**: `work-hub-panel-body`로 폼·목록·보드 구조 유지
