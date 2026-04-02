@@ -25,6 +25,7 @@
 - **일반 신규 메시지 토스트**: Realtime `message:new`가 채널 룸(`channel:join`) 구독자에게만 오는데, 프론트가 **현재 보는 채널 하나만** join 해 다른 채널/DM 메시지를 못 받던 문제 → `loadMyChannels`·소켓 `connect`/`reconnect` 시 참여 채널 전체에 `joinAllChannelSocketRooms`. `message:new`에서 현재 채널 판별은 `Number`로 통일
 - `GET /api/channels?employeeNo=...`: 읽음 포인터 없을 때 `countRootMessagesNewerThanCursor`에 `NULL` 바인딩되며 PostgreSQL이 **매개변수 자료형을 알 수 없음**(`$2`)으로 500 나던 문제 → 포인터 없으면 `countRootMessagesInChannel`, 있을 때만 커서 쿼리로 분기
 - 메시지 API: `GET .../messages/threads`가 `/{messageId}`에 걸려 `MethodArgumentTypeMismatchException("threads")` 나던 문제를 `\\d+` 경로 제한으로 방지(단건·replies·comments POST 동일)
+- Windows/PowerShell에서 한글 커밋 메시지가 깨지던 문제를 `git rebase -i --reword`로 UTF-8 정상 한글 메시지로 재작성
 
 ### Changed
 - **좌측 사이드바 레이아웃**: `sidebar-column`을 `align-self:stretch`+`flex` 열로 두고 `sidebar-slip`·`aside.sidebar`에 `flex:1 1 0%`·`min-height:0`로 **컬럼 전체 높이를 채움**(프로필 하단 빈 영역·작은 창에서 프로필 유실 완화). 컬럼 배경 `var(--bg-sidebar)`로 틈 색상 통일
