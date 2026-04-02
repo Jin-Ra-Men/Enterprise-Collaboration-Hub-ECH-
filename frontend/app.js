@@ -63,7 +63,11 @@ const SOCKET_URL = resolveSocketUrl();
 const TOKEN_KEY  = "ech_token";
 const USER_KEY   = "ech_user";
 const WS_KEY     = "ECH"; // 기본 워크스페이스 키
-const MAX_MSGS   = 300;
+/** 타임라인 API 한 번에 요청하는 최대 행 수(서버 상한 200) */
+const TIMELINE_PAGE_LIMIT = 100;
+/** 하단 근처에 있을 때만 오래된 DOM 노드를 정리(위로 히스토리 탐색 중에는 유지) */
+const MAX_CHAT_DOM_NODES = 4000;
+const HARD_MAX_CHAT_DOM_NODES = 10000;
 const THEME_KEY  = "ech_theme";
 const VALID_THEMES = ["dark", "light", "blue"];
 const SIDEBAR_COLLAPSED_KEY = "ech_sidebar_collapsed";
@@ -166,6 +170,10 @@ let contextMenuSelectedIsReply = false;
 let memberContextSelectedEmployeeNo = "";
 // 타임라인에서 로드된 ROOT 메시지 캐시(스레드 모달 렌더용)
 let timelineRootMessageById = new Map();
+/** 타임라인 `hasMoreOlder`(서버 페이지네이션) */
+let chatTimelineHasMoreOlder = false;
+let chatTimelineLoadingOlder = false;
+let messageListScrollHandlerBound = false;
 // loadMessages(preserveScroll=true)일 때만 렌더 함수의 자동 스크롤을 억제/복원하기 위한 비율
 let pendingScrollRestoreRatio = null;
 let selectedMembers = [];     // 채널/DM 생성 시 선택된 사용자
@@ -1637,6 +1645,18 @@ function maxRootMessageIdFromList(msgs) {
   return max;
 }
 
+/** 타임라인(루트+답글) 목록에서 읽음 포인터용 최대 messageId */
+function maxTimelineMessageIdFromList(msgs) {
+  if (!msgs || !msgs.length) return null;
+  let max = null;
+  for (const m of msgs) {
+    const id = Number(m.messageId ?? m.message_id);
+    if (!Number.isFinite(id)) continue;
+    if (max === null || id > max) max = id;
+  }
+  return max;
+}
+
 function formatUnreadBadgeCount(n) {
   const v = Number(n);
   if (!Number.isFinite(v) || v <= 0) return "";
@@ -1935,6 +1955,8 @@ function syncSenderOrgLabelsInMessageList() {
 async function loadMessages(channelId, { preserveScroll = false } = {}) {
   if (!currentUser) return;
   revokeImageAttachmentBlobUrls();
+  chatTimelineHasMoreOlder = false;
+  chatTimelineLoadingOlder = false;
   try {
     if (preserveScroll && messagesEl) {
       const prevH = messagesEl.scrollHeight || 1;
@@ -1945,7 +1967,7 @@ async function loadMessages(channelId, { preserveScroll = false } = {}) {
     }
 
     const empQ = encodeURIComponent(currentUser.employeeNo);
-    const timelineUrl = `/api/channels/${channelId}/messages/timeline?employeeNo=${empQ}&limit=50`;
+    const timelineUrl = `/api/channels/${channelId}/messages/timeline?employeeNo=${empQ}&limit=${TIMELINE_PAGE_LIMIT}`;
     const legacyUrl = `/api/channels/${channelId}/messages?employeeNo=${empQ}&limit=50`;
 
     let res = await apiFetch(timelineUrl);
@@ -1965,7 +1987,14 @@ async function loadMessages(channelId, { preserveScroll = false } = {}) {
       return;
     }
 
-    const msgs = json.data || [];
+    let msgs = [];
+    if (usedTimeline) {
+      const page = parseTimelinePagePayload(json);
+      msgs = page.items;
+      chatTimelineHasMoreOlder = page.hasMoreOlder;
+    } else {
+      msgs = json.data || [];
+    }
     timelineRootMessageById.clear();
 
     if (usedTimeline) {
@@ -1979,6 +2008,7 @@ async function loadMessages(channelId, { preserveScroll = false } = {}) {
       } else {
         renderTimelineMessages(msgs);
       }
+      ensureMessagesScrollLoadOlder();
     } else {
       msgs.forEach((m) => {
         if (!m) return;
@@ -2002,7 +2032,7 @@ async function loadMessages(channelId, { preserveScroll = false } = {}) {
       pendingScrollRestoreRatio = null;
     }
 
-    const maxId = maxRootMessageIdFromList(msgs);
+    const maxId = usedTimeline ? maxTimelineMessageIdFromList(msgs) : maxRootMessageIdFromList(msgs);
     if (maxId != null) {
       await markChannelReadUpTo(channelId, maxId);
     }
@@ -3262,9 +3292,147 @@ function appendSystemMsg(text, options = {}) {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
+function isMessagesElNearBottom(thresholdPx = 140) {
+  if (!messagesEl) return true;
+  const rest = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight;
+  return rest <= thresholdPx;
+}
+
 function trimMessages() {
-  while (messagesEl.children.length > MAX_MSGS) {
+  if (!messagesEl) return;
+  while (messagesEl.children.length > HARD_MAX_CHAT_DOM_NODES) {
     messagesEl.removeChild(messagesEl.firstChild);
+  }
+  while (messagesEl.children.length > MAX_CHAT_DOM_NODES && isMessagesElNearBottom()) {
+    messagesEl.removeChild(messagesEl.firstChild);
+  }
+}
+
+function parseTimelinePagePayload(json) {
+  const d = json?.data;
+  if (Array.isArray(d)) {
+    return { items: d, hasMoreOlder: false };
+  }
+  return {
+    items: Array.isArray(d?.items) ? d.items : [],
+    hasMoreOlder: !!d?.hasMoreOlder,
+  };
+}
+
+function mergeAdjacentDuplicateDateDividers(container) {
+  if (!container) return;
+  let changed = true;
+  while (changed) {
+    changed = false;
+    let el = container.firstElementChild;
+    while (el && el.nextElementSibling) {
+      const next = el.nextElementSibling;
+      if (
+        el.classList.contains("msg-date-divider") &&
+        next.classList.contains("msg-date-divider") &&
+        el.dataset.dateKey &&
+        el.dataset.dateKey === next.dataset.dateKey
+      ) {
+        next.remove();
+        changed = true;
+        continue;
+      }
+      el = next;
+    }
+  }
+}
+
+function getOldestVisibleTimelineMessageId() {
+  if (!messagesEl) return null;
+  const row = messagesEl.querySelector('.msg-row[id^="msg-"]');
+  if (!row?.id?.startsWith("msg-")) return null;
+  const n = Number(row.id.slice(4));
+  return Number.isFinite(n) ? n : null;
+}
+
+function mergeTimelineRootsIntoCache(items) {
+  if (!Array.isArray(items)) return;
+  items.forEach((m) => {
+    if (!m || m.isReply) return;
+    const mid = m.messageId ?? m.message_id;
+    if (mid != null) timelineRootMessageById.set(Number(mid), m);
+  });
+}
+
+function prependTimelineMessages(items) {
+  if (!messagesEl || !items || !items.length) return;
+  const prevH = messagesEl.scrollHeight;
+  const prevTop = messagesEl.scrollTop;
+  const frag = document.createDocumentFragment();
+  let prevDk = null;
+  items.forEach((m, i) => {
+    const dk = dateKeyLocal(m.createdAt);
+    if (prevDk !== dk) {
+      frag.appendChild(createDateDividerElement(m.createdAt));
+      prevDk = dk;
+    }
+    const showAvatar = shouldShowAvatarForMessage(items, i);
+    const showTime = shouldShowMessageTime(items, i);
+    const mt = String(m.messageType || m.message_type || "").toUpperCase();
+    const isReplyRow = !!m.isReply || mt.startsWith("REPLY");
+    const row = isReplyRow
+      ? createReplyTimelineRowElement(m, { showAvatar, showTime })
+      : createMessageRowElement(m, { showAvatar, showTime });
+    const mid = m.messageId ?? m.message_id;
+    if (mid != null) row.id = `msg-${mid}`;
+    frag.appendChild(row);
+  });
+  messagesEl.insertBefore(frag, messagesEl.firstChild);
+  mergeAdjacentDuplicateDateDividers(messagesEl);
+  messagesEl.scrollTop = prevTop + (messagesEl.scrollHeight - prevH);
+  refreshPresenceDots();
+}
+
+function ensureMessagesScrollLoadOlder() {
+  if (!messagesEl || messageListScrollHandlerBound) return;
+  messageListScrollHandlerBound = true;
+  let debounceT = null;
+  messagesEl.addEventListener(
+    "scroll",
+    () => {
+      if (debounceT) clearTimeout(debounceT);
+      debounceT = setTimeout(() => {
+        if (!messagesEl || messagesEl.scrollTop > 100) return;
+        loadOlderTimelinePage();
+      }, 120);
+    },
+    { passive: true }
+  );
+}
+
+async function loadOlderTimelinePage() {
+  if (!activeChannelId || !currentUser || chatTimelineLoadingOlder || !chatTimelineHasMoreOlder) return;
+  const beforeId = getOldestVisibleTimelineMessageId();
+  if (beforeId == null) return;
+  const channelIdForRequest = activeChannelId;
+  chatTimelineLoadingOlder = true;
+  const loadingEl = document.getElementById("msgHistoryLoading");
+  if (loadingEl) loadingEl.classList.remove("hidden");
+  try {
+    const empQ = encodeURIComponent(currentUser.employeeNo);
+    const url = `/api/channels/${channelIdForRequest}/messages/timeline?employeeNo=${empQ}&limit=${TIMELINE_PAGE_LIMIT}&beforeMessageId=${beforeId}`;
+    const res = await apiFetch(url);
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) return;
+    if (Number(channelIdForRequest) !== Number(activeChannelId)) return;
+    const { items, hasMoreOlder } = parseTimelinePagePayload(json);
+    chatTimelineHasMoreOlder = hasMoreOlder;
+    if (!items.length) {
+      chatTimelineHasMoreOlder = false;
+      return;
+    }
+    mergeTimelineRootsIntoCache(items);
+    prependTimelineMessages(items);
+  } catch (e) {
+    console.error("이전 메시지 로드 실패", e);
+  } finally {
+    chatTimelineLoadingOlder = false;
+    if (loadingEl) loadingEl.classList.add("hidden");
   }
 }
 

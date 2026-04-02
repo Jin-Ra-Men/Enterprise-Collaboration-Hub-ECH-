@@ -53,6 +53,20 @@ class MessageThreadApiTest extends BaseIntegrationTest {
                         .content(joinBody))
                 .andExpect(status().isOk());
 
+        // 1b) 타임라인 페이징 검증용 — 메인 root보다 먼저 보내는 ROOT
+        String olderRootBody = """
+                { "senderId": "%s", "text": "older-root" }
+                """.formatted(adminEmployeeNo);
+        String olderRootResp = mockMvc.perform(post("/api/channels/" + channelId + "/messages")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(olderRootBody))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        long olderRootMessageId = objectMapper.readTree(olderRootResp).path("data").path("messageId").asLong();
+
         // 2) ROOT 메시지 생성
         String rootBody = """
                 { "senderId": "%s", "text": "root message" }
@@ -213,7 +227,7 @@ class MessageThreadApiTest extends BaseIntegrationTest {
                 .andReturn();
 
         JsonNode timelineJson = objectMapper.readTree(timelineRes.getResponse().getContentAsString());
-        JsonNode timelineData = timelineJson.path("data");
+        JsonNode timelineData = timelineJson.path("data").path("items");
 
         long rootCount = 0;
         long replyCount = 0;
@@ -248,6 +262,28 @@ class MessageThreadApiTest extends BaseIntegrationTest {
         org.junit.jupiter.api.Assertions.assertTrue(rootCount >= 1, "ROOT 메시지가 타임라인에 없어야 함");
         org.junit.jupiter.api.Assertions.assertTrue(replyCount >= 2, "REPLY 메시지가 2개 이상이어야 함(텍스트+파일)");
         org.junit.jupiter.api.Assertions.assertTrue(foundRootMessage, "타임라인에 rootMessageId가 존재해야 합니다.");
+        assertThat(timelineJson.path("data").path("hasMoreOlder").asBoolean(), is(false));
+
+        // 9b) 타임라인 이전 페이지: main root 이전에는 older-root 한 건
+        MvcResult olderRes = mockMvc.perform(get("/api/channels/" + channelId + "/messages/timeline")
+                        .param("employeeNo", normalEmployeeNo)
+                        .param("limit", "20")
+                        .param("beforeMessageId", String.valueOf(rootMessageId))
+                        .header("Authorization", "Bearer " + normalUserToken()))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode olderJson = objectMapper.readTree(olderRes.getResponse().getContentAsString());
+        JsonNode olderItems = olderJson.path("data").path("items");
+        assertThat(olderItems.isArray(), is(true));
+        boolean foundOlderRoot = false;
+        for (JsonNode item : olderItems) {
+            if (item.path("messageId").asLong() == olderRootMessageId) {
+                foundOlderRoot = true;
+                assertThat(item.path("text").asText(), is("older-root"));
+            }
+        }
+        org.junit.jupiter.api.Assertions.assertTrue(foundOlderRoot, "beforeMessageId=root 이전 구간에 older-root가 포함되어야 함");
+        assertThat(olderJson.path("data").path("hasMoreOlder").asBoolean(), is(false));
 
         // 10) 단건 메시지 조회(원글): 멤버 + employeeNo로 ROOT 본문 확인
         mockMvc.perform(get("/api/channels/" + channelId + "/messages/" + rootMessageId)

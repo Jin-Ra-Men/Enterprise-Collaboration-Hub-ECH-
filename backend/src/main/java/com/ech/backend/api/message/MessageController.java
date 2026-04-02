@@ -3,6 +3,7 @@ package com.ech.backend.api.message;
 import com.ech.backend.api.message.dto.CreateMessageRequest;
 import com.ech.backend.api.message.dto.MessageResponse;
 import com.ech.backend.api.message.dto.MessageTimelineItemResponse;
+import com.ech.backend.api.message.dto.MessageTimelinePageResponse;
 import com.ech.backend.common.api.ApiResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -64,12 +65,14 @@ public class MessageController {
      * 일부 환경에서 {@code /messages/timeline}이 핸들러 미매칭(404)으로 떨어지는 것을 방지한다.
      */
     @GetMapping("/timeline")
-    public ApiResponse<List<MessageTimelineItemResponse>> getTimelineMessages(
+    public ApiResponse<MessageTimelinePageResponse> getTimelineMessages(
             @PathVariable Long channelId,
             @RequestParam String employeeNo,
-            @RequestParam(defaultValue = "50") int limit
+            @RequestParam(defaultValue = "100") int limit,
+            @RequestParam(required = false) Long beforeMessageId
     ) {
-        return ApiResponse.success(messageService.getChannelTimelineMessages(channelId, employeeNo, limit));
+        return ApiResponse.success(
+                messageService.getChannelTimelinePage(channelId, employeeNo, limit, beforeMessageId));
     }
 
     /**

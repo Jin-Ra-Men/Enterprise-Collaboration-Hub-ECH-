@@ -4,8 +4,11 @@
 
 ## 2026-04-02
 
+### Added
+- 채팅 **타임라인 페이지네이션**: `GET .../messages/timeline` 응답 `{ items, hasMoreOlder }`, `beforeMessageId` 커서·`findTimelineOlderThan`, 프론트 상단 스크롤 시 이전 페이지 prepend·`#msgHistoryLoading`, DOM `MAX_CHAT_DOM_NODES`/`HARD_MAX` 트림. 대량 테스트 SQL `tools/sql/seed_mass_channel_messages.sql`
+
 ### Changed
-- 문서: 채팅 메시지 상한 설명을 코드에 맞춤 — DOM `MAX_MSGS` 300, 최초 타임라인 `limit=50`, 서버 타임라인 캡 200(구 문서·README의 200 DOM은 오래된 기술)
+- 문서: 채팅 DOM·타임라인 설명을 페이지네이션·상수(`MAX_CHAT_DOM_NODES` 등) 기준으로 정리(이전 200/300 문구는 구버전)
 - **햄버거 메뉴 액션 버튼**: 이모지·본문을 `btn-member-panel-action-icon` / `label`로 분리하고 아이콘 슬롯 너비 고정으로 줄 정렬 통일
 - **첨부 모달** `전체 파일` 탭: 이미지 첨부는 목록에서 제외(이미지는 **이미지** 탭만). 이미지만 있는 경우 전체 탭에 안내 문구 표시
 

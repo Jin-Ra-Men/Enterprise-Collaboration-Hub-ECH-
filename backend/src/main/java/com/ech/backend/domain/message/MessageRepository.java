@@ -49,9 +49,30 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
               AND m.isDeleted = false
               AND m.archivedAt IS NULL
               AND (m.parentMessage IS NULL OR m.messageType LIKE 'REPLY%')
-            ORDER BY m.createdAt DESC
+            ORDER BY m.createdAt DESC, m.id DESC
             """)
     List<Message> findTimelineByChannelId(@Param("channelId") Long channelId, Pageable pageable);
+
+    /**
+     * 타임라인 이전 페이지: (createdAt, id) 커서보다 이전(더 오래된) 항목만, 최신순(DESC)으로 {@code Pageable} 만큼.
+     */
+    @Query("""
+            SELECT m FROM Message m
+            JOIN FETCH m.sender s
+            LEFT JOIN FETCH m.parentMessage pm
+            LEFT JOIN FETCH pm.sender pms
+            WHERE m.channel.id = :channelId
+              AND m.isDeleted = false
+              AND m.archivedAt IS NULL
+              AND (m.parentMessage IS NULL OR m.messageType LIKE 'REPLY%')
+              AND (m.createdAt < :beforeAt OR (m.createdAt = :beforeAt AND m.id < :beforeId))
+            ORDER BY m.createdAt DESC, m.id DESC
+            """)
+    List<Message> findTimelineOlderThan(
+            @Param("channelId") Long channelId,
+            @Param("beforeAt") OffsetDateTime beforeAt,
+            @Param("beforeId") Long beforeId,
+            Pageable pageable);
 
     /**
      * 통합 검색: 사용자가 속한 채널의 메시지 본문을 키워드로 검색.

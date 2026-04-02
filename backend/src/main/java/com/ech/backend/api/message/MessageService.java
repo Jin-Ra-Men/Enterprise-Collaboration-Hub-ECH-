@@ -2,8 +2,9 @@ package com.ech.backend.api.message;
 
 import com.ech.backend.api.auditlog.AuditLogService;
 import com.ech.backend.api.message.dto.CreateMessageRequest;
-import com.ech.backend.api.message.dto.MessageTimelineItemResponse;
 import com.ech.backend.api.message.dto.MessageResponse;
+import com.ech.backend.api.message.dto.MessageTimelineItemResponse;
+import com.ech.backend.api.message.dto.MessageTimelinePageResponse;
 import com.ech.backend.common.mention.MentionParser;
 import com.ech.backend.common.exception.ForbiddenException;
 import com.ech.backend.common.exception.NotFoundException;
@@ -402,14 +403,117 @@ public class MessageService {
         return messages.stream().map(this::toResponse).toList();
     }
 
-    public List<MessageTimelineItemResponse> getChannelTimelineMessages(Long channelId, String employeeNo, int limit) {
+    /**
+     * 타임라인 페이지. {@code beforeMessageId}가 있으면 해당 메시지보다 오래된 항목만(커서는 채널 내 타임라인 행이어야 함).
+     * {@code hasMoreOlder}는 {@code limit+1}건 조회로 판별한다.
+     */
+    public MessageTimelinePageResponse getChannelTimelinePage(
+            Long channelId, String employeeNo, int limit, Long beforeMessageId) {
         if (!isUserMemberOfChannel(channelId, employeeNo)) {
             throw new ForbiddenException("채널에 참여한 사용자가 아닙니다.");
         }
 
-        int cap = Math.min(limit, 200);
+        int cap = Math.min(Math.max(limit, 1), 200);
+        int fetchSize = cap + 1;
+
         if (legacyUserFkInspector.isLegacyMessageSenderReferencesUserPrimaryKey()) {
-            List<MessageTimelineItemResponse> rows = jdbcTemplate.query(
+            return getChannelTimelinePageLegacy(channelId, cap, fetchSize, beforeMessageId);
+        }
+
+        List<Message> batch;
+        if (beforeMessageId == null) {
+            batch = messageRepository.findTimelineByChannelId(channelId, PageRequest.of(0, fetchSize));
+        } else {
+            Message cursor = messageRepository
+                    .findByIdAndChannel_Id(beforeMessageId, channelId)
+                    .orElseThrow(() -> new NotFoundException("메시지를 찾을 수 없습니다."));
+            if (cursor.isDeleted() || cursor.isArchived()) {
+                throw new NotFoundException("메시지를 찾을 수 없습니다.");
+            }
+            assertTimelineCursorMessage(cursor);
+            batch = messageRepository.findTimelineOlderThan(
+                    channelId, cursor.getCreatedAt(), cursor.getId(), PageRequest.of(0, fetchSize));
+        }
+
+        boolean hasMoreOlder = batch.size() > cap;
+        List<Message> slice = hasMoreOlder ? batch.subList(0, cap) : batch;
+        Collections.reverse(slice);
+        List<MessageTimelineItemResponse> mapped = slice.stream().map(this::messageToTimelineItem).toList();
+        return new MessageTimelinePageResponse(attachThreadCommentSummaries(mapped), hasMoreOlder);
+    }
+
+    private void assertTimelineCursorMessage(Message cursor) {
+        if (cursor.getParentMessage() == null) {
+            return;
+        }
+        String mt = cursor.getMessageType() == null ? "" : cursor.getMessageType().toUpperCase();
+        if (mt.startsWith("COMMENT")) {
+            throw new IllegalArgumentException("타임라인 페이지 커서로 댓글 메시지는 사용할 수 없습니다.");
+        }
+        if (!mt.startsWith("REPLY")) {
+            throw new IllegalArgumentException("타임라인에 표시되지 않는 메시지는 커서로 사용할 수 없습니다.");
+        }
+    }
+
+    private MessageTimelineItemResponse messageToTimelineItem(Message m) {
+        Long parentMessageId = m.getParentMessage() == null ? null : m.getParentMessage().getId();
+        boolean isReply =
+                parentMessageId != null
+                        && m.getMessageType() != null
+                        && m.getMessageType().toUpperCase().startsWith("REPLY");
+
+        if (!isReply) {
+            return new MessageTimelineItemResponse(
+                    m.getId(),
+                    m.getChannel().getId(),
+                    m.getSender().getEmployeeNo(),
+                    m.getSender().getName(),
+                    null,
+                    m.getBody(),
+                    m.getCreatedAt(),
+                    m.getMessageType(),
+                    false,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    0,
+                    null,
+                    null);
+        }
+
+        Message replyTo = m.getParentMessage();
+        Message replyToParent = replyTo.getParentMessage();
+        Long replyToRootMessageId = replyToParent == null ? replyTo.getId() : replyToParent.getId();
+        String replyToKind = replyToParent == null ? "ROOT" : "COMMENT";
+        String replyTargetAuthor = replyTo.getSender() != null ? replyTo.getSender().getName() : null;
+
+        return new MessageTimelineItemResponse(
+                m.getId(),
+                m.getChannel().getId(),
+                m.getSender().getEmployeeNo(),
+                m.getSender().getName(),
+                replyTo.getId(),
+                m.getBody(),
+                m.getCreatedAt(),
+                m.getMessageType(),
+                true,
+                replyTo.getId(),
+                replyToKind,
+                replyToRootMessageId,
+                previewForReplyTargetBody(replyTo.getBody()),
+                replyTargetAuthor,
+                null,
+                null,
+                null);
+    }
+
+    private MessageTimelinePageResponse getChannelTimelinePageLegacy(
+            long channelId, int cap, int fetchSize, Long beforeMessageId) {
+        List<MessageTimelineItemResponse> rows;
+        if (beforeMessageId == null) {
+            rows = jdbcTemplate.query(
                     """
                             SELECT m.id AS message_id,
                                    m.channel_id,
@@ -431,75 +535,60 @@ public class MessageService {
                               AND m.archived_at IS NULL
                               AND m.is_deleted = false
                               AND (m.parent_message_id IS NULL OR m.message_type LIKE 'REPLY%')
-                            ORDER BY m.created_at DESC
+                            ORDER BY m.created_at DESC, m.id DESC
                             LIMIT ?
                             """,
                     LEGACY_TIMELINE_ROW_MAPPER,
                     channelId,
-                    cap
-            );
-            Collections.reverse(rows);
-            return attachThreadCommentSummaries(rows);
-        }
-
-        List<Message> messages = messageRepository.findTimelineByChannelId(
-                channelId,
-                PageRequest.of(0, cap)
-        );
-        Collections.reverse(messages);
-        List<MessageTimelineItemResponse> mapped = messages.stream().map(m -> {
-            Long parentMessageId = m.getParentMessage() == null ? null : m.getParentMessage().getId();
-            boolean isReply = parentMessageId != null && m.getMessageType() != null && m.getMessageType().toUpperCase().startsWith("REPLY");
-
-            if (!isReply) {
-                return new MessageTimelineItemResponse(
-                        m.getId(),
-                        m.getChannel().getId(),
-                        m.getSender().getEmployeeNo(),
-                        m.getSender().getName(),
-                        null,
-                        m.getBody(),
-                        m.getCreatedAt(),
-                        m.getMessageType(),
-                        false,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        0,
-                        null,
-                        null
-                );
+                    fetchSize);
+        } else {
+            Message cursor = messageRepository
+                    .findByIdAndChannel_Id(beforeMessageId, channelId)
+                    .orElseThrow(() -> new NotFoundException("메시지를 찾을 수 없습니다."));
+            if (cursor.isDeleted() || cursor.isArchived()) {
+                throw new NotFoundException("메시지를 찾을 수 없습니다.");
             }
-
-            Message replyTo = m.getParentMessage();
-            Message replyToParent = replyTo.getParentMessage(); // null이면 ROOT
-            Long replyToRootMessageId = replyToParent == null ? replyTo.getId() : replyToParent.getId();
-            String replyToKind = replyToParent == null ? "ROOT" : "COMMENT";
-            String replyTargetAuthor = replyTo.getSender() != null ? replyTo.getSender().getName() : null;
-
-            return new MessageTimelineItemResponse(
-                    m.getId(),
-                    m.getChannel().getId(),
-                    m.getSender().getEmployeeNo(),
-                    m.getSender().getName(),
-                    replyTo.getId(),
-                    m.getBody(),
-                    m.getCreatedAt(),
-                    m.getMessageType(),
-                    true,
-                    replyTo.getId(),
-                    replyToKind,
-                    replyToRootMessageId,
-                    previewForReplyTargetBody(replyTo.getBody()),
-                    replyTargetAuthor,
-                    null,
-                    null,
-                    null
-            );
-        }).toList();
-        return attachThreadCommentSummaries(mapped);
+            assertTimelineCursorMessage(cursor);
+            java.sql.Timestamp ts = java.sql.Timestamp.from(cursor.getCreatedAt().toInstant());
+            rows = jdbcTemplate.query(
+                    """
+                            SELECT m.id AS message_id,
+                                   m.channel_id,
+                                   u.employee_no AS sender_id,
+                                   u.name AS sender_name,
+                                   m.parent_message_id,
+                                   m.body,
+                                   m.created_at,
+                                   m.message_type,
+                                   pm.id AS reply_to_message_id,
+                                   pm.parent_message_id AS reply_to_parent_message_id,
+                                   pm.body AS reply_to_body,
+                                   pu.name AS reply_to_sender_name
+                            FROM messages m
+                            INNER JOIN users u ON u.id = m.sender_id
+                            LEFT JOIN messages pm ON pm.id = m.parent_message_id
+                            LEFT JOIN users pu ON pu.id = pm.sender_id
+                            WHERE m.channel_id = ?
+                              AND m.archived_at IS NULL
+                              AND m.is_deleted = false
+                              AND (m.parent_message_id IS NULL OR m.message_type LIKE 'REPLY%')
+                              AND (m.created_at < ? OR (m.created_at = ? AND m.id < ?))
+                            ORDER BY m.created_at DESC, m.id DESC
+                            LIMIT ?
+                            """,
+                    LEGACY_TIMELINE_ROW_MAPPER,
+                    channelId,
+                    ts,
+                    ts,
+                    cursor.getId(),
+                    fetchSize);
+        }
+        boolean hasMoreOlder = rows.size() > cap;
+        if (hasMoreOlder) {
+            rows = new ArrayList<>(rows.subList(0, cap));
+        }
+        Collections.reverse(rows);
+        return new MessageTimelinePageResponse(attachThreadCommentSummaries(rows), hasMoreOlder);
     }
 
     /**

@@ -110,6 +110,7 @@ graph LR
 - `GET /api/channels/{channelId}/files/{fileId}/download-info?userId=...`
 - `POST /api/channels/{channelId}/messages`
 - `POST /api/channels/{channelId}/messages/{parentMessageId}/replies`
+- `GET /api/channels/{channelId}/messages/timeline?employeeNo=&limit=&beforeMessageId=` — 응답 `{ items, hasMoreOlder }`(이전 메시지 스크롤 로드)
 - `GET /api/channels/{channelId}/messages/threads?employeeNo=&limit=` (댓글·답글 활동이 있는 원글만, 최근 활동 순)
 - `GET /api/channels/{channelId}/messages/{messageId}?employeeNo=...`
 - `GET /api/channels/{channelId}/messages/{parentMessageId}/replies`
@@ -181,7 +182,7 @@ graph LR
 ### 운영·성능 메모 (요약)
 - Realtime: Presence는 소켓 단위 추적·전원 종료 시 맵에서 제거, 메시지 본문 길이·소켓 버퍼 상한, `pg` 커넥션 풀 타임아웃 설정 가능
 - Backend: Hikari 최대 풀 크기·커넥션 타임아웃 환경변수 연동
-- Frontend 데모: 채팅 메시지 DOM 상한 `MAX_MSGS`(현재 300건), 타임라인 최초 로드 `limit=50`(서버 상한 200)
+- Frontend 데모: 타임라인 페이지 `beforeMessageId`로 과거 구간 로드, DOM 상한·하단 근처 시 앞줄 정리(`MAX_CHAT_DOM_NODES`/`HARD_MAX`), 대량 시드 `tools/sql/seed_mass_channel_messages.sql`
 
 ## 🚀 빠른 시작 (Docker 미사용)
 

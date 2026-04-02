@@ -349,7 +349,7 @@
 - 관련 API:
   - `GET /api/channels/{channelId}/messages?employeeNo=...&limit=` (채널 **루트** 메시지 목록)
   - `GET /api/channels/{channelId}/messages/threads?employeeNo=...&limit=` (스레드 활동이 있는 **원글**만, 최근 스레드 활동 시각 내림차순, 상한 100; 응답 항목은 타임라인 ROOT와 동일하게 `threadCommentCount`·`lastCommentAt`·`lastCommentSenderName` 포함)
-  - `GET /api/channels/{channelId}/messages/timeline?employeeNo=...&limit=` (메인 타임라인: 루트 + `REPLY_*` 답글, `isReply`·`replyTo*`·**`replyToSenderName`**(답장 대상 작성자 표시명)·`replyToPreview` 메타 포함)
+  - `GET /api/channels/{channelId}/messages/timeline?employeeNo=...&limit=&beforeMessageId=` — 응답 `data`는 **`{ items, hasMoreOlder }`** (`MessageTimelinePageResponse`). 최신 페이지는 `beforeMessageId` 생략; **이전 구간**은 화면에 보이는 **가장 오래된 타임라인 행**의 `messageId`를 `beforeMessageId`로 넘긴다(서버는 `(createdAt,id)` 커서로 `limit+1`건 조회 후 `hasMoreOlder` 판별, 한 요청 최대 200행). 댓글(`COMMENT_*`)은 타임라인에 없으므로 커서로 사용 불가(400).
   - `POST /api/channels/{channelId}/messages` (부모 메시지 생성)
   - `POST /api/channels/{channelId}/messages/{parentMessageId}/replies` (답글 생성)
   - `POST /api/channels/{channelId}/messages/{parentMessageId}/comments` (댓글 생성, `COMMENT_*`)
@@ -375,7 +375,7 @@
   - 타임라인 **ROOT** 항목은 `threadCommentCount`, `lastCommentAt`, `lastCommentSenderName`(댓글 1개 이상일 때)로 메인 목록에 **댓글 요약**을 그릴 수 있다.
   - 프론트: 원글·첨부 행 하단 **「N개의 댓글」+ 마지막 댓글 시각** 클릭 시 스레드 모달(건수는 루트 직계 댓글·답글 + 댓글에 달린 답글까지 합산에 가깝게 집계); **답글** 선택 시 입력창 위 **답장 미리보기 바**(이름·본문 스니펫·취소). **스레드 모아보기**는 `refreshThreadHubData`·행 클릭 시 `openThreadModal`·`timelineRootMessageById` 캐시 주입.
   - 프론트 `loadMessages`: **timeline 요청이 HTTP 404**이면(구버전 백엔드 등) 위 루트 목록 API로 **자동 폴백**해 채팅 읽기는 가능(이 경우 타임라인 전용 답글 UI는 제한될 수 있음).
-  - 프론트 채팅 `#messages` DOM: `trimMessages()`로 자식 노드 상한 **`MAX_MSGS`(현재 300)** 유지(코드 `frontend/app.js`). 최초 로드는 타임라인 **`limit=50`** 요청이며, 서버 `MessageService`는 `min(limit, 200)`으로 한 번에 내려주는 타임라인 행 수를 캡한다 — **「항상 최근 200개만 보인다」는 아님**(초기는 최대 50행·DOM은 실시간 누적으로 최대 300 노드까지).
+  - 프론트 채팅: 최초 `loadMessages`는 타임라인 **`TIMELINE_PAGE_LIMIT`(100)**·응답 `hasMoreOlder` 저장. 상단 스크롤 시 `beforeMessageId`로 **이전 페이지** `prepend`(`prependTimelineMessages`·스크롤 위치 보정). DOM은 `trimMessages()`: 하단 근처일 때만 앞에서 제거해 **`MAX_CHAT_DOM_NODES`(4000)** 근처까지, **강제 상한 `HARD_MAX`(10000)**. DB 전체 이력은 페이지 단위로만 메모리에 올림(10만 건 채널도 요청당 최대 200행). 대량 테스트용 `tools/sql/seed_mass_channel_messages.sql` 참고.
   - 경로 매칭: 단건 조회·`.../replies`·`.../comments`는 `{id:\\d+}`로 **숫자만** 매칭해 `GET .../messages/threads`·`/timeline`과 `/{messageId}` 오매칭을 방지한다.
   - 구현 파일:
     - `backend/src/main/java/com/ech/backend/api/message/MessageController.java`

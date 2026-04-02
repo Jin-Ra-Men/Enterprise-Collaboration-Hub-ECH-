@@ -332,7 +332,7 @@
 - **이미지 첨부**: `contentType`이 이미지이거나 확장자가 이미지인 FILE 메시지는 채팅에 썸네일 표시, 클릭 시 `modalImagePreview`로 확대, **다운로드** 버튼은 기존 파일 다운로드 API 재사용(JWT `fetch` → `blob:` URL).
 - **첨부·이미지 모아보기**: `GET /api/channels/{channelId}/files` 한 번 호출 후 `refreshChannelFileHubData`가 갱신. **전체 파일** 탭은 `filterNonImageFilesForHub`로 이미지 제외; **이미지** 탭만 `filterImageFilesForHub`·그리드. `btnOpenImageHub`는 이미지 탭으로 모달 오픈.
 - **스레드 모아보기**: `GET /api/channels/{channelId}/messages/threads?employeeNo=&limit=`(기본 50, 서버 상한 100). 댓글·답글 활동이 있는 원글만 최근 활동 순. `btnOpenThreadHub` → `modalThreadHub`, 행 클릭 시 `cacheRootMessageForThreadModal` 후 `openThreadModal`. 백엔드는 `MessageController`에서 `/{messageId:\\d+}` 등으로 리터럴 `threads`·`timeline`과 경로 충돌을 막는다.
-- `frontend/app.js`는 채팅 영역 DOM 자식 노드를 `MAX_MSGS`(현재 **300**)까지 유지하고, 초과 시 `trimMessages()`가 앞에서부터 제거해 브라우저 메모리·렌더 비용이 무한 증가하지 않도록 합니다. **최초 로드**는 `loadMessages`에서 타임라인 API `limit=50`(서버는 요청값을 최대 **200**으로 캡).
+- **채팅 타임라인 페이지네이션**: `GET .../messages/timeline` 응답 `{ items, hasMoreOlder }`. `loadOlderTimelinePage`·`beforeMessageId`·`prependTimelineMessages`. DOM `trimMessages`는 하단 근처일 때만 앞줄 제거(`MAX_CHAT_DOM_NODES` 4000·`HARD_MAX` 10000). 로딩 줄 `#msgHistoryLoading`. 레포 `MessageRepository.findTimelineOlderThan`, `MessageTimelinePageResponse`.
 - 채팅 시각 표시: **동일 발신자·동일 분(로컬 캘린더 분)** 묶음에서는 **그 분의 마지막 메시지 줄에만** 시각을 붙이고, **분이 바뀌면** 각 메시지 줄에 시각을 붙인다(`minuteKey` / `renderMessages` / `appendMessageRealtime`). 시각은 **24시간제 `HH:mm`**이며 본문 바로 뒤에 약간 띄워 인라인으로 붙인다(`fmtTime`, `.msg-content-row`).
 
 ### Backend 커넥션 풀 메모
