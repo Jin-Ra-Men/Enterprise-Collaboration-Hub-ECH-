@@ -3426,7 +3426,9 @@ function syncHeaderNotifyButton() {
   btn.classList.remove("hidden");
   const muted = isChannelNotifyMuted(activeChannelId);
   btn.textContent = muted ? "🔔 알림 켜기" : "🔕 알림 끄기";
-  btn.title = muted ? "이 채팅방에서 알림 받기" : "이 채팅방 알림 끄기";
+  btn.title = muted
+    ? "일반 메시지 토스트 다시 받기(멘션·미읽음 배지는 항상 동작)"
+    : "다른 채에서 온 일반 메시지 토스트만 끔 · 멘션 토스트·미읽음 배지는 유지";
 }
 
 function closeChannelSidebarContextMenu() {
@@ -3478,7 +3480,7 @@ function pushActivityToast({ title, locationLine, preview, onClick }) {
   }, 12_000);
 }
 
-/** 다른 채널/DM의 신규 메시지(멘션 아님). 알림 끄기 시 미표시. */
+/** 다른 채널/DM의 신규 일반 메시지 토스트. 알림 끄기 시에만 억제(미읽음 배지·멘션 토스트와 무관). */
 function pushNewMessageToast(msg) {
   if (!msg || !currentUser) return;
   const cid = Number(msg.channelId);
@@ -3680,7 +3682,6 @@ function pushMentionToast(p) {
   if (!stack || !p) return;
   const cid = Number(p.channelId);
   if (!Number.isFinite(cid)) return;
-  if (isChannelNotifyMuted(cid)) return;
   if (p.messageId != null) {
     const mid = String(p.messageId);
     if (shownMentionToastMessageIds.has(mid)) return;

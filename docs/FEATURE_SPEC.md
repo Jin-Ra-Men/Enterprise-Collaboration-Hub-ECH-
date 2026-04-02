@@ -196,9 +196,10 @@
 - 비고: 구현 `MentionParser`, `MentionNotificationService`, `RealtimeBroadcastClient.notifyMentions`, `realtime/src/db.js` 멘션 헬퍼, `POST /internal/notify-mentions`. 멘션 토스트 DOM은 **`#mainApp` 밖(body 직계)** 에 두어 `.app-layout { overflow:hidden }` 에 잘리지 않게 함. 프론트 Socket.io URL은 기본 `{페이지와 동일 hostname}:3001`로 자동(REST는 `window.location.origin`), `meta ech-realtime-url` / `localStorage ech_realtime_url`로 덮어쓰기 가능 — `localhost` 고정과 `127.0.0.1` 접속 불일치 시 멘션·프레즌스가 동시에 안 되는 전형 원인
 
 ### 채팅방별 알림 끄기·신규 메시지 토스트
-- 목적: 참여 중인 다른 채널/DM에 신규 메시지가 오면 우하단 토스트(`pushNewMessageToast`)로 안내하되, 사용자가 방마다 알림을 끌 수 있게 함(서버 저장 없음, 브라우저 `localStorage`).
+- 목적: 참여 중인 다른 채널/DM에 신규 메시지가 오면 우하단 토스트(`pushNewMessageToast`)로 안내하되, 사용자가 방마다 **일반 메시지 토스트만** 끌 수 있게 함(서버 저장 없음, 브라우저 `localStorage`).
 - 저장 키: `ech_notify_muted_channels_{employeeNo}` — JSON 숫자 배열(채널 ID). `isChannelNotifyMuted` / `setChannelNotifyMuted`.
-- 효과: 음소거된 채널에서는 **일반 신규 메시지 토스트**와 **멘션 토스트**(`pushMentionToast`)를 표시하지 않음. 현재 보고 있는 채널은 신규 메시지 토스트 대상에서 제외(기존과 동일).
+- 효과: 음소거된 채널에서는 **`pushNewMessageToast`만** 억제. **멘션 토스트**(`pushMentionToast`, `mention:notify` 및 현재 채널 `message:new` 폴백)는 음소거와 **무관하게 항상** 표시. **미읽음 배지**(`unreadCount` 기반 사이드바·퀵 레일)는 서버/읽음 상태 그대로이며 음소거와 **무관**.
+- 현재 보고 있는 채널은 신규 일반 메시지 토스트 대상에서 제외(기존과 동일).
 - UI: `#channelList` / `#dmList` / `#quickRailScroll`의 `.channel-item` **우클릭** → `#channelSidebarContextMenu`(`알림 끄기`↔`알림 켜기`, `채팅방 나가기`). 채널·DM 상단 햄버거(멤버 패널) `#btnHeaderNotifyToggle`에서 동일 토글.
 - 비고: 업무 사이드바 변경 등 `pushActivityToast`는 별도 정책(채널 음소거와 무관할 수 있음).
 
