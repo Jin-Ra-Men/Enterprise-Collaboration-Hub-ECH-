@@ -14,6 +14,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.ColumnDefault;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,7 +56,9 @@ public class WorkItem {
 
     /**
      * {@code false} when soft-deleted (hidden / grey in UI); restore sets back to {@code true}.
+     * {@link ColumnDefault} so ddl-auto can add NOT NULL to existing rows (PostgreSQL needs DEFAULT on add).
      */
+    @ColumnDefault("true")
     @Column(name = "in_use", nullable = false)
     private boolean inUse = true;
 
