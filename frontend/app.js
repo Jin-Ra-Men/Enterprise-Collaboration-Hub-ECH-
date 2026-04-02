@@ -5401,6 +5401,14 @@ function resetKanbanSuggestActive(ul) {
   ul._kanbanActiveIdx = -1;
 }
 
+/** 디바운스된 suggest가 ⌄ 키 직후 실행되며 목록을 다시 그려 하이라이트가 지워지는 것을 막음 */
+function clearKanbanAssigneeSuggestDebounceTimers(input) {
+  if (!input) return;
+  clearTimeout(input._assignSuggestTimer);
+  clearTimeout(input._newCardSuggestT);
+  clearTimeout(input._detailAssignTimer);
+}
+
 function bindKanbanAssigneeSuggestKeyboard(modal) {
   if (!modal || modal.dataset.kanbanSuggestKb) return;
   modal.dataset.kanbanSuggestKb = "1";
@@ -5418,6 +5426,7 @@ function bindKanbanAssigneeSuggestKeyboard(modal) {
     let idx = typeof ul._kanbanActiveIdx === "number" ? ul._kanbanActiveIdx : -1;
     if (e.key === "ArrowDown") {
       e.preventDefault();
+      clearKanbanAssigneeSuggestDebounceTimers(input);
       if (idx >= 0) buttons[idx].classList.remove("kanban-suggest-active");
       idx = idx < buttons.length - 1 ? idx + 1 : 0;
       ul._kanbanActiveIdx = idx;
@@ -5427,6 +5436,7 @@ function bindKanbanAssigneeSuggestKeyboard(modal) {
     }
     if (e.key === "ArrowUp") {
       e.preventDefault();
+      clearKanbanAssigneeSuggestDebounceTimers(input);
       if (idx >= 0) buttons[idx].classList.remove("kanban-suggest-active");
       idx = idx > 0 ? idx - 1 : buttons.length - 1;
       ul._kanbanActiveIdx = idx;
@@ -5436,6 +5446,7 @@ function bindKanbanAssigneeSuggestKeyboard(modal) {
     }
     if (e.key === "Enter" && idx >= 0) {
       e.preventDefault();
+      clearKanbanAssigneeSuggestDebounceTimers(input);
       buttons[idx].click();
       return;
     }
@@ -5474,7 +5485,8 @@ async function runKanbanAssigneeSuggest(input, ul) {
     return;
   }
   const users = await fetchUsersForKanbanAssigneeSuggest(q);
-  resetKanbanSuggestActive(ul);
+  if (String(input.value || "").trim() !== q) return;
+  const keepIdx = typeof ul._kanbanActiveIdx === "number" ? ul._kanbanActiveIdx : -1;
   const list = users
     .filter((u) => {
       const emp = String(u.employeeNo || "").trim();
@@ -5487,6 +5499,7 @@ async function runKanbanAssigneeSuggest(input, ul) {
       (q ? "검색 결과가 없습니다" : "추가할 사용자가 없습니다") +
       "</li>";
     ul.classList.remove("hidden");
+    ul._kanbanActiveIdx = -1;
     return;
   }
   ul.innerHTML = list
@@ -5498,6 +5511,13 @@ async function runKanbanAssigneeSuggest(input, ul) {
     )
     .join("");
   ul.classList.remove("hidden");
+  const picks = ul.querySelectorAll("button.kanban-assignee-pick");
+  ul._kanbanActiveIdx = -1;
+  if (keepIdx >= 0 && keepIdx < picks.length) {
+    ul._kanbanActiveIdx = keepIdx;
+    picks[keepIdx].classList.add("kanban-suggest-active");
+    picks[keepIdx].scrollIntoView({ block: "nearest" });
+  }
 }
 
 function renderPendingNewKanbanAssigneeChips() {
@@ -5687,7 +5707,8 @@ async function runKanbanCardDetailAssigneeSuggest() {
   }
   const assigned = new Set(workHubDetailKanbanAssignees);
   const users = await fetchUsersForKanbanAssigneeSuggest(q);
-  resetKanbanSuggestActive(ul);
+  if (String(input.value || "").trim() !== q) return;
+  const keepIdx = typeof ul._kanbanActiveIdx === "number" ? ul._kanbanActiveIdx : -1;
   const list = users
     .filter((u) => {
       const emp = String(u.employeeNo || "").trim();
@@ -5697,6 +5718,7 @@ async function runKanbanCardDetailAssigneeSuggest() {
   if (!list.length) {
     ul.innerHTML = `<li class="kanban-assignee-suggest-empty">${q ? "검색 결과가 없습니다" : "추가할 사용자가 없습니다"}</li>`;
     ul.classList.remove("hidden");
+    ul._kanbanActiveIdx = -1;
     return;
   }
   ul.innerHTML = list
@@ -5708,6 +5730,13 @@ async function runKanbanCardDetailAssigneeSuggest() {
     )
     .join("");
   ul.classList.remove("hidden");
+  const detailPicks = ul.querySelectorAll("button.kanban-detail-assignee-pick");
+  ul._kanbanActiveIdx = -1;
+  if (keepIdx >= 0 && keepIdx < detailPicks.length) {
+    ul._kanbanActiveIdx = keepIdx;
+    detailPicks[keepIdx].classList.add("kanban-suggest-active");
+    detailPicks[keepIdx].scrollIntoView({ block: "nearest" });
+  }
   ul.querySelectorAll(".kanban-detail-assignee-pick").forEach((btn) => {
     btn.addEventListener("click", () => {
       const emp = String(btn.dataset.emp || "").trim();
@@ -5736,7 +5765,8 @@ async function runNewKanbanCardAssigneeSuggest(input, ul) {
   }
   const pendingEmp = new Set(pendingNewKanbanCardAssignees.map((x) => x.employeeNo));
   const users = await fetchUsersForKanbanAssigneeSuggest(q);
-  resetKanbanSuggestActive(ul);
+  if (String(input.value || "").trim() !== q) return;
+  const keepIdx = typeof ul._kanbanActiveIdx === "number" ? ul._kanbanActiveIdx : -1;
   const list = users
     .filter((u) => {
       const emp = String(u.employeeNo || "").trim();
@@ -5749,6 +5779,7 @@ async function runNewKanbanCardAssigneeSuggest(input, ul) {
       (q ? "검색 결과가 없습니다" : "추가할 사용자가 없습니다") +
       "</li>";
     ul.classList.remove("hidden");
+    ul._kanbanActiveIdx = -1;
     return;
   }
   ul.innerHTML = list
@@ -5760,6 +5791,13 @@ async function runNewKanbanCardAssigneeSuggest(input, ul) {
     )
     .join("");
   ul.classList.remove("hidden");
+  const newPicks = ul.querySelectorAll("button.kanban-assignee-pick-new");
+  ul._kanbanActiveIdx = -1;
+  if (keepIdx >= 0 && keepIdx < newPicks.length) {
+    ul._kanbanActiveIdx = keepIdx;
+    newPicks[keepIdx].classList.add("kanban-suggest-active");
+    newPicks[keepIdx].scrollIntoView({ block: "nearest" });
+  }
 }
 
 function ensureKanbanNewCardAssigneeUiBound() {
