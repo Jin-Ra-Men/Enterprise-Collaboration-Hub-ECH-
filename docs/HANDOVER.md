@@ -434,6 +434,15 @@ Stop-Process -Id <PID> -Force
 
 ---
 
+## 업무 허브·사이드바 UI 가독성 (2026-04-02)
+- **담당 자동완성 후보**: `filterChannelMembersForAssigneeKeyword`에서 본인 사번을 제외하지 않음. 보드 인라인·신규 카드·카드 상세 제안 목록에서는 **이미 해당 카드에 배정된 사번**만 제외(`assigned` / `pendingEmp` / 상세 칩 집합).
+- **제안 행 표시**: `.kanban-assignee-suggest-name`(이름 강조)와 `.kanban-assignee-suggest-meta`(조직·직급, 작은 글자·보조색). 버튼 클래스는 `.kanban-assignee-pick` / `.kanban-assignee-pick-new` / `.kanban-detail-assignee-pick` 공통 스타일.
+- **키보드**: `bindKanbanAssigneeSuggestKeyboard`를 `modalWorkHub`와 `modalKanbanCardDetail` 모두에 붙여, 담당 검색 입력에서 ↑↓·Enter·Escape 동작을 동일하게 유지.
+- **사이드바 빈 문구**: `내 업무 항목`·`멘션` 섹션의 빈 상태는 `sidebar-item sidebar-item-empty`(작은 글자·`--text-muted` 계열).
+- **다크 기본 테마**: `:root`의 `--text-secondary` / `--text-muted`를 약간 밝게 조정해 보조 텍스트 대비를 올림. 범용 보조 문구는 `.muted`.
+
+---
+
 ## 채널 헤더/운영 UX 최신 반영 메모 (2026-04-01)
 - 상단 메뉴:
   - 채널/DM 헤더 우측 액션 버튼을 햄버거 버튼(`btnHeaderMenu`)으로 통합

@@ -325,7 +325,7 @@ function renderMentionInboxList() {
   badgeEl.classList.toggle("hidden", count === 0);
   if (count === 0) {
     const li = document.createElement("li");
-    li.className = "sidebar-item";
+    li.className = "sidebar-item sidebar-item-empty";
     li.textContent = "미확인 멘션 없음";
     listEl.appendChild(li);
     return;
@@ -4638,10 +4638,9 @@ async function loadWorkHubChannelMembersForAssignee() {
 
 function filterChannelMembersForAssigneeKeyword(keyword) {
   const q = String(keyword || "").trim().toLowerCase();
-  const mine = String(currentUser?.employeeNo || "").trim();
   let list = workHubChannelMembersForAssignee.filter((m) => {
     const emp = String(m.employeeNo || "").trim();
-    return emp && emp !== mine;
+    return !!emp;
   });
   if (q) {
     list = list.filter((m) => {
@@ -4667,16 +4666,19 @@ function resetKanbanSuggestActive(ul) {
   ul._kanbanActiveIdx = -1;
 }
 
-function bindModalWorkHubKanbanSuggestKeyboard() {
-  const modal = document.getElementById("modalWorkHub");
+function bindKanbanAssigneeSuggestKeyboard(modal) {
   if (!modal || modal.dataset.kanbanSuggestKb) return;
   modal.dataset.kanbanSuggestKb = "1";
   modal.addEventListener("keydown", (e) => {
-    const input = e.target.closest(".kanban-assignee-search, #kanbanNewCardAssigneeSearch");
+    const input = e.target.closest(".kanban-assignee-search, #kanbanNewCardAssigneeSearch, #kanbanCardDetailAssigneeSearch");
     if (!input) return;
     const ul = input.closest(".kanban-assignee-add")?.querySelector(".kanban-assignee-suggest");
     if (!ul || ul.classList.contains("hidden")) return;
-    const buttons = [...ul.querySelectorAll("button.kanban-assignee-pick, button.kanban-assignee-pick-new")];
+    const buttons = [
+      ...ul.querySelectorAll(
+        "button.kanban-assignee-pick, button.kanban-assignee-pick-new, button.kanban-detail-assignee-pick"
+      ),
+    ];
     if (buttons.length === 0) return;
     let idx = typeof ul._kanbanActiveIdx === "number" ? ul._kanbanActiveIdx : -1;
     if (e.key === "ArrowDown") {
@@ -4714,6 +4716,11 @@ function bindModalWorkHubKanbanSuggestKeyboard() {
   });
 }
 
+function bindModalWorkHubKanbanSuggestKeyboard() {
+  bindKanbanAssigneeSuggestKeyboard(document.getElementById("modalWorkHub"));
+  bindKanbanAssigneeSuggestKeyboard(document.getElementById("modalKanbanCardDetail"));
+}
+
 async function runKanbanAssigneeSuggest(input, ul) {
   const q = String(input.value || "").trim();
   if (!q) {
@@ -4733,11 +4740,10 @@ async function runKanbanAssigneeSuggest(input, ul) {
   }
   const users = await fetchUsersForKanbanAssigneeSuggest(q);
   resetKanbanSuggestActive(ul);
-  const mine = String(currentUser.employeeNo || "").trim();
   const list = users
     .filter((u) => {
       const emp = String(u.employeeNo || "").trim();
-      return emp && emp !== mine && !assigned.has(emp);
+      return emp && !assigned.has(emp);
     })
     .slice(0, 12);
   if (list.length === 0) {
@@ -4752,7 +4758,7 @@ async function runKanbanAssigneeSuggest(input, ul) {
     .map(
       (u) =>
         `<li><button type="button" class="kanban-assignee-pick" data-card-id="${escHtml(cardIdRaw)}" data-is-draft="${isDraft ? "1" : "0"}" data-pick-emp="${escHtml(String(u.employeeNo || "").trim())}">
-          ${escHtml(u.name || "")} <span class="muted">${escHtml([u.department || "", u.jobLevel || ""].filter(Boolean).join(" · ") || "소속 미지정")}</span>
+          <span class="kanban-assignee-suggest-name">${escHtml(u.name || "")}</span><span class="kanban-assignee-suggest-meta">${escHtml([u.department || "", u.jobLevel || ""].filter(Boolean).join(" · ") || "소속 미지정")}</span>
         </button></li>`
     )
     .join("");
@@ -4945,12 +4951,12 @@ async function runKanbanCardDetailAssigneeSuggest() {
     return;
   }
   const assigned = new Set(workHubDetailKanbanAssignees);
-  const mine = String(currentUser.employeeNo || "").trim();
   const users = await fetchUsersForKanbanAssigneeSuggest(q);
+  resetKanbanSuggestActive(ul);
   const list = users
     .filter((u) => {
       const emp = String(u.employeeNo || "").trim();
-      return emp && emp !== mine && !assigned.has(emp);
+      return emp && !assigned.has(emp);
     })
     .slice(0, 12);
   if (!list.length) {
@@ -4959,9 +4965,12 @@ async function runKanbanCardDetailAssigneeSuggest() {
     return;
   }
   ul.innerHTML = list
-    .map((u) => `<li><button type="button" class="kanban-detail-assignee-pick" data-emp="${escHtml(String(u.employeeNo || "").trim())}">
-      ${escHtml(u.name || "")} <span class="muted">${escHtml([u.department || "", u.jobLevel || ""].filter(Boolean).join(" · ") || "소속 미지정")}</span>
-    </button></li>`)
+    .map(
+      (u) =>
+        `<li><button type="button" class="kanban-detail-assignee-pick" data-emp="${escHtml(String(u.employeeNo || "").trim())}">
+      <span class="kanban-assignee-suggest-name">${escHtml(u.name || "")}</span><span class="kanban-assignee-suggest-meta">${escHtml([u.department || "", u.jobLevel || ""].filter(Boolean).join(" · ") || "소속 미지정")}</span>
+    </button></li>`
+    )
     .join("");
   ul.classList.remove("hidden");
   ul.querySelectorAll(".kanban-detail-assignee-pick").forEach((btn) => {
@@ -4993,11 +5002,10 @@ async function runNewKanbanCardAssigneeSuggest(input, ul) {
   const pendingEmp = new Set(pendingNewKanbanCardAssignees.map((x) => x.employeeNo));
   const users = await fetchUsersForKanbanAssigneeSuggest(q);
   resetKanbanSuggestActive(ul);
-  const mine = String(currentUser.employeeNo || "").trim();
   const list = users
     .filter((u) => {
       const emp = String(u.employeeNo || "").trim();
-      return emp && emp !== mine && !pendingEmp.has(emp);
+      return emp && !pendingEmp.has(emp);
     })
     .slice(0, 12);
   if (list.length === 0) {
@@ -5012,7 +5020,7 @@ async function runNewKanbanCardAssigneeSuggest(input, ul) {
     .map(
       (u) =>
         `<li><button type="button" class="kanban-assignee-pick-new" data-pick-emp="${escHtml(String(u.employeeNo || "").trim())}" data-pick-name="${escHtml(u.name || "")}">
-          ${escHtml(u.name || "")} <span class="muted">${escHtml([u.department || "", u.jobLevel || ""].filter(Boolean).join(" · ") || "소속 미지정")}</span>
+          <span class="kanban-assignee-suggest-name">${escHtml(u.name || "")}</span><span class="kanban-assignee-suggest-meta">${escHtml([u.department || "", u.jobLevel || ""].filter(Boolean).join(" · ") || "소속 미지정")}</span>
         </button></li>`
     )
     .join("");

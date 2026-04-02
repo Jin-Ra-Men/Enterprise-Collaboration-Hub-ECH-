@@ -12,6 +12,9 @@
 ### Changed
 - `DELETE /api/work-items/{id}` 기본 동작을 소프트 삭제(`in_use=false`)로 변경.
 - 칸반 카드·상세 모달의 `담당 없음` 안내 글자 크기를 담당 칩(11px)보다 한 단계 작게 맞춤(10px, 보조색)
+- 칸반 담당 자동완성: 채널 멤버 후보에 **본인 포함**(이미 배정된 사번만 제외), 제안 행에서 이름과 조직·직급을 폰트 크기·색으로 구분
+- 사이드바 빈 상태 문구(내 업무 항목·미확인 멘션) 폰트를 헤더 대비 작게 조정, 다크 기본 테마의 보조 텍스트(`--text-secondary`/`--text-muted`) 대비 보강, `.muted` 보조 텍스트 클래스 정의
+- 칸반 카드 상세 모달에서 담당 자동완성 **↑↓·Enter** 키보드 탐색이 동작하도록 Work Hub와 동일 로직 연동
 
 ### Fixed
 - `work_items.in_use` 컬럼: 기존 행이 있는 DB에서 ddl-auto가 `NOT NULL`만 추가하며 실패하던 문제를 `@ColumnDefault("true")`로 완화(PostgreSQL 기본값 포함 ADD COLUMN)
