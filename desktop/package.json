@@ -4,11 +4,31 @@
   "private": true,
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "build:win": "electron-builder --win nsis"
   },
   "dependencies": {},
   "devDependencies": {
-    "electron": ">=20.0.0"
+    "electron": ">=20.0.0",
+    "electron-builder": "latest"
+  },
+  "build": {
+    "appId": "com.ech.desktop",
+    "productName": "ECH",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "../frontend/index.html",
+      "../frontend/styles.css",
+      "../frontend/app.js"
+    ],
+    "asar": true,
+    "win": {
+      "target": "nsis"
+    }
   }
 }
 

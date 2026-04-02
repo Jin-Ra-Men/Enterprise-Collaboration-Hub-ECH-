@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-04-02 — electron-builder NSIS 빌드 실패 (`main.js` 엔트리 누락)
+
+- **에러 요약**: `Application entry file "main.js" ... is corrupted: "main.js" was not found in this archive`
+- **발생 위치(파일/명령/기능)**: `desktop` 패키징 단계 — `npx electron-builder --win nsis`
+- **원인**: `electron-builder.build.files` 화이트리스트에서 `desktop/main.js` 경로를 사용했는데, 설정 기준 경로가 `desktop/`이어서 패키지에 엔트리 파일이 포함되지 않음
+- **해결/현재 상태**: `build.files`를 `main.js`, `preload.js`로 수정 후 재빌드 성공
+
+---
+
 ## 2026-04-02 — `GET /api/channels` 500 · PostgreSQL `매개변수의 자료형을 알수가 없습니다` (`$2`)
 
 - **에러 요약**: `InvalidDataAccessResourceUsageException` / `오류: $2 매개변수의 자료형을 알수가 없습니다`
