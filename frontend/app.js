@@ -5541,7 +5541,6 @@ document.getElementById("btnWorkHubSave")?.addEventListener("click", async () =>
   if (!(await uiConfirm("저장하시겠습니까?"))) return;
   const ok = await flushWorkHubSave();
   if (!ok) return;
-  closeModal("modalWorkHub");
 });
 
 document.getElementById("btnSaveWorkItemDetail")?.addEventListener("click", async () => {

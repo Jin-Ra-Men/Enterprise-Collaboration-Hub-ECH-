@@ -10,6 +10,7 @@
 - 프론트: 신규 카드에 연결 업무 선택, 업무 비활성 시 회색/취소선, 상세에서 복원·완전 삭제. 사이드바 `내 업무 항목`으로 전환.
 
 ### Changed
+- 업무·칸반 하단 **저장** 성공 시 `modalWorkHub`를 자동으로 닫지 않음(닫기 버튼·오버레이로 닫음)
 - 칸반 카드 드래그앤드롭: 같은 컬럼뿐 아니라 **컬럼 간(좌우) 이동** 가능. 드래그 소스는 보드 전역 `.kanban-card-dragging` 및 `data-drag-source-column-id`로 식별
 - 칸반 카드가 이동한 컬럼에 맞춰 `status`를 동기화(기본 3컬럼: 1번째 `OPEN`, 2번째 `IN_PROGRESS`, 3번째 `DONE`, 그 외 컬럼명 휴리스틱). 저장 시 `PUT /api/kanban/cards/{id}`에 `columnId`와 함께 `status` 전달, 신규 카드 `POST`에도 대상 컬럼 기준 `status` 반영
 - 업무·칸반 모달 저장 성공 시 사이드바 **내 업무 항목**(`GET .../work-items/sidebar/by-assigned-cards`)을 즉시 다시 불러 담당 칸반 반영(새로고침 불필요)
