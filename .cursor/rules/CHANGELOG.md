@@ -5,6 +5,7 @@
 ## 2026-04-02
 
 ### Changed
+- **스크롤·반응형(설치형/Electron 대비)**: `html`/`body` flex 체인, `#mainApp` `max-height: 100dvh`. 좌측 **사이드바 본문**(`sidebar-main`)에 세로 스크롤 — 채널·DM·관리자까지 한 열에서 스크롤로 도달. **퀵 레일**(`quick-rail-scroll`) 스크롤 보강. **햄버거 멤버 패널**은 `top`+`bottom:0` 고정, **멤버 목록**만 중간 스크롤. **업무·칸반 모달**: `work-hub-panel-body`로 폼·목록·보드를 감싸 패널 내부 스크롤, 모달 본문은 `overflow:hidden`+flex로 푸터 고정
 - 우측 **햄버거(멤버) 패널** 메뉴 순서: 알림 끄기/켜기 → 첨부파일 → 업무/칸반 → 채널(DM) 이름 변경 → **멤버 목록** 구역 제목 → 멤버 리스트 → 구성원 추가 → 채팅방 나가기 → 채널 폐쇄
 - 일반 알림을 끈 채널/DM: 사이드바·퀵 레일 항목에 **벨+슬래시** 아이콘 표시(`notifyMutedBellSvg`). 음소거 토글 시 `lastSidebarChannelsSnapshot`으로 목록만 재렌더
 - 채팅방 **알림 끄기**: **`pushNewMessageToast`(일반 신규 메시지 토스트)만** 억제. **멘션 토스트**(`pushMentionToast`)는 음소거와 무관하게 항상 표시. **미읽음 배지**(`unreadCount`)는 기존과 동일하게 유지(음소거와 무관). 햄버거 버튼 `title` 문구 보강

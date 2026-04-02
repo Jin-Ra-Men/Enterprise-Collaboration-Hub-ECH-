@@ -544,47 +544,51 @@
           <div class="work-hub-panel">
             <h4>업무 항목</h4>
             <p class="work-hub-hint">신규 입력·목록에서 상태 변경 후 <strong>저장</strong>을 누르면 서버에 반영됩니다.</p>
-            <form id="workItemCreateForm" class="work-item-create-form" onsubmit="return false;">
-              <input id="workItemTitleInput" type="text" maxlength="500" placeholder="새 업무 제목" />
-              <textarea id="workItemDescInput" rows="3" maxlength="8000" placeholder="업무 설명(선택)"></textarea>
-              <div class="work-item-create-row">
-                <select id="workItemStatusSelect" aria-label="신규 업무 상태">
-                  <option value="OPEN">대기</option>
-                  <option value="IN_PROGRESS">진행 중</option>
-                  <option value="DONE">완료</option>
-                </select>
-                <button type="button" class="btn-primary btn-sm btn-work-add" id="btnQueueWorkItem">업무 추가</button>
-              </div>
-            </form>
-            <ul id="channelWorkItemsList" class="channel-work-item-list"></ul>
+            <div class="work-hub-panel-body">
+              <form id="workItemCreateForm" class="work-item-create-form" onsubmit="return false;">
+                <input id="workItemTitleInput" type="text" maxlength="500" placeholder="새 업무 제목" />
+                <textarea id="workItemDescInput" rows="3" maxlength="8000" placeholder="업무 설명(선택)"></textarea>
+                <div class="work-item-create-row">
+                  <select id="workItemStatusSelect" aria-label="신규 업무 상태">
+                    <option value="OPEN">대기</option>
+                    <option value="IN_PROGRESS">진행 중</option>
+                    <option value="DONE">완료</option>
+                  </select>
+                  <button type="button" class="btn-primary btn-sm btn-work-add" id="btnQueueWorkItem">업무 추가</button>
+                </div>
+              </form>
+              <ul id="channelWorkItemsList" class="channel-work-item-list"></ul>
+            </div>
           </div>
           <div class="work-hub-panel">
             <h4>칸반 보드</h4>
             <p class="work-hub-hint">카드는 <strong>저장된 업무 항목</strong>에만 연결됩니다. 새 업무는 먼저 저장한 뒤 카드를 추가하세요. 컬럼 이동은 편집 후 <strong>저장</strong> 시 반영됩니다.</p>
-            <form id="kanbanCardCreateForm" class="work-item-create-form" onsubmit="return false;">
-              <label class="kanban-new-card-work-item-label" for="kanbanNewCardWorkItemSelect">연결 업무</label>
-              <select id="kanbanNewCardWorkItemSelect" aria-label="신규 카드에 연결할 업무 항목">
-                <option value="">업무 항목 선택(필수)</option>
-              </select>
-              <input id="kanbanCardTitleInput" type="text" maxlength="500" placeholder="새 카드 제목" />
-              <textarea id="kanbanCardDescInput" rows="2" maxlength="8000" placeholder="카드 설명(선택)"></textarea>
-              <div id="kanbanNewCardAssigneeWrap" class="kanban-new-card-assignee-wrap">
-                <div class="kanban-new-card-assignee-label">담당자(선택)</div>
-                <div id="kanbanNewCardAssigneeChips" class="kanban-assignee-chips" aria-live="polite"></div>
-                <div class="kanban-assignee-add">
-                  <input
-                    id="kanbanNewCardAssigneeSearch"
-                    type="search"
-                    maxlength="100"
-                    placeholder="채널 멤버 검색 (↑↓·Enter)"
-                    autocomplete="off"
-                  />
-                  <button type="button" class="btn-primary btn-sm btn-work-add" id="btnQueueKanbanCard">카드 추가</button>
-                  <ul id="kanbanNewCardAssigneeSuggest" class="kanban-assignee-suggest hidden" role="listbox" aria-label="담당자 검색"></ul>
+            <div class="work-hub-panel-body">
+              <form id="kanbanCardCreateForm" class="work-item-create-form" onsubmit="return false;">
+                <label class="kanban-new-card-work-item-label" for="kanbanNewCardWorkItemSelect">연결 업무</label>
+                <select id="kanbanNewCardWorkItemSelect" aria-label="신규 카드에 연결할 업무 항목">
+                  <option value="">업무 항목 선택(필수)</option>
+                </select>
+                <input id="kanbanCardTitleInput" type="text" maxlength="500" placeholder="새 카드 제목" />
+                <textarea id="kanbanCardDescInput" rows="2" maxlength="8000" placeholder="카드 설명(선택)"></textarea>
+                <div id="kanbanNewCardAssigneeWrap" class="kanban-new-card-assignee-wrap">
+                  <div class="kanban-new-card-assignee-label">담당자(선택)</div>
+                  <div id="kanbanNewCardAssigneeChips" class="kanban-assignee-chips" aria-live="polite"></div>
+                  <div class="kanban-assignee-add">
+                    <input
+                      id="kanbanNewCardAssigneeSearch"
+                      type="search"
+                      maxlength="100"
+                      placeholder="채널 멤버 검색 (↑↓·Enter)"
+                      autocomplete="off"
+                    />
+                    <button type="button" class="btn-primary btn-sm btn-work-add" id="btnQueueKanbanCard">카드 추가</button>
+                    <ul id="kanbanNewCardAssigneeSuggest" class="kanban-assignee-suggest hidden" role="listbox" aria-label="담당자 검색"></ul>
+                  </div>
                 </div>
-              </div>
-            </form>
-            <div id="channelKanbanBoard" class="channel-kanban-board"></div>
+              </form>
+              <div id="channelKanbanBoard" class="channel-kanban-board"></div>
+            </div>
           </div>
         </div>
         <div class="modal-footer work-hub-footer">

@@ -125,7 +125,25 @@ html[data-theme="blue"] {
 
 /* ── 리셋 / 기본 ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; font-size: 15px; line-height: 1.5; background: var(--bg-app); color: var(--text-primary); }
+/* 설치형·창 크기 조절 시 뷰포트 높이 기준(100dvh)으로 레이아웃이 잘리지 않도록 */
+html {
+  height: 100%;
+}
+body {
+  font-family: 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  min-height: 100%;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+#loginPage.login-page {
+  flex: 1 1 auto;
+  min-height: 0;
+}
 a { color: inherit; text-decoration: none; }
 ul { list-style: none; }
 input, button, select, textarea { font: inherit; border: none; outline: none; background: none; }
@@ -135,7 +153,6 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
  * 로그인
  * ============================================================ */
 .login-page {
-  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -194,7 +211,9 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
  * ============================================================ */
 .app-layout {
   display: flex;
-  height: 100vh;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100dvh;
   overflow: hidden;
 }
 
@@ -212,7 +231,9 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ── 퀵 레일 (Covi형 세로 아이콘 + 배지, 검색~채널/DM 구간에만 높이 맞춤) ── */
@@ -230,7 +251,9 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 .quick-rail-scroll {
   flex: 1;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 10px 0 12px;
 }
 .quick-rail-link {
@@ -326,9 +349,11 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   position: relative;
   flex-shrink: 0;
   width: 324px;
-  height: 100vh;
+  height: 100%;
+  max-height: 100dvh;
   transition: width 0.22s ease;
   overflow: visible;
+  min-height: 0;
 }
 .sidebar-slip {
   height: 100%;
@@ -477,8 +502,8 @@ span.section-toggle-static { cursor: default; }
 }
 .btn-add-item:hover { background: var(--sidebar-item-hover-bg); color: var(--sidebar-item-fg-strong); }
 
-/* 목록 */
-.sidebar-list { padding: 2px 0; overflow-y: auto; max-height: 220px; }
+/* 목록: 세로는 `.sidebar-main`이 스크롤 — 항목별 max-height 제거로 관리자 등 하단까지 도달 가능 */
+.sidebar-list { padding: 2px 0; overflow: visible; max-height: none; }
 
 .sidebar-item {
   display: flex;
@@ -778,17 +803,21 @@ span.section-toggle-static { cursor: default; }
 .btn-header-icon { font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: background .1s; color: var(--text-secondary); }
 .btn-header-icon:hover { background: var(--bg-sidebar-hover); color: var(--text-primary); }
 
-/* 멤버 패널 */
+/* 멤버 패널: 상단·하단 버튼 고정, 멤버 목록만 중간 스크롤 */
 .member-panel {
   position: absolute;
-  top: var(--layout-header-height); right: 0;
+  top: var(--layout-header-height);
+  right: 0;
+  bottom: 0;
   width: 300px;
+  max-width: min(300px, 100vw);
   background: var(--bg-elevated);
   border-left: 1px solid var(--border-subtle);
-  height: calc(100% - var(--layout-header-height));
   z-index: 100;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 .member-panel-actions {
   display: flex;
@@ -856,10 +885,18 @@ span.section-toggle-static { cursor: default; }
   border-bottom: 1px solid var(--border-subtle);
   font-weight: 700;
   color: var(--text-primary);
+  flex-shrink: 0;
 }
 .btn-panel-close { cursor: pointer; font-size: 16px; color: var(--text-muted); }
 .btn-panel-close:hover { color: var(--text-primary); }
-.member-list { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 0; }
+.member-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 0;
+}
 .member-list-item {
   display: flex;
   align-items: flex-start;
@@ -1758,7 +1795,8 @@ html[data-theme="light"] .reply-composer-banner {
   border-radius: 14px;
   width: 100%;
   max-width: 480px;
-  max-height: 90vh;
+  max-height: min(90vh, 100dvh - 24px);
+  min-height: 0;
   display: flex;
   flex-direction: column;
   box-shadow: 0 24px 64px rgba(0,0,0,.55);
@@ -1771,6 +1809,7 @@ html[data-theme="light"] .reply-composer-banner {
   padding: 18px 20px;
   border-bottom: 1px solid var(--border-subtle);
   gap: 12px;
+  flex-shrink: 0;
 }
 .modal-header h3 { flex: 1; font-size: 18px; font-weight: 700; color: var(--text-primary); }
 .modal-close {
@@ -1783,7 +1822,8 @@ html[data-theme="light"] .reply-composer-banner {
 }
 .modal-close:hover { background: var(--bg-sidebar-hover); color: var(--text-primary); }
 .modal-body {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   padding: 20px;
 }
@@ -1793,6 +1833,7 @@ html[data-theme="light"] .reply-composer-banner {
   gap: 10px;
   padding: 14px 20px;
   border-top: 1px solid var(--border-subtle);
+  flex-shrink: 0;
 }
 
 /* ── 메시지 컨텍스트 메뉴(댓글/답글) ── */
@@ -2184,16 +2225,25 @@ html[data-theme="blue"] .theme-option-btn.active {
 .modal-work-hub {
   max-width: 1020px;
   width: min(1020px, calc(100vw - 24px));
+  max-height: min(90vh, 100dvh - 24px);
+  min-height: 0;
 }
 .modal-work-hub .modal-body {
-  max-height: 70vh;
-  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px 16px;
 }
 .work-hub-body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
   align-items: stretch;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 .work-hub-panel {
   border: 1px solid var(--border-subtle);
@@ -2208,15 +2258,32 @@ html[data-theme="blue"] .theme-option-btn.active {
   align-self: stretch;
   overflow: hidden;
 }
-.work-hub-panel h4 {
+/* 제목·힌트는 고정, 폼·목록·칸반만 이 영역 안에서 스크롤 */
+.work-hub-panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.work-hub-panel-body > .channel-kanban-board {
+  flex: 1 1 auto;
+  min-height: 120px;
+}
+.work-hub-panel > h4 {
   margin-bottom: 8px;
   color: var(--text-primary);
+  flex-shrink: 0;
 }
 .work-hub-hint {
   margin: 0 0 10px;
   font-size: 12px;
   line-height: 1.45;
   color: var(--text-muted);
+  flex-shrink: 0;
 }
 .work-hub-footer {
   justify-content: flex-end;
@@ -2368,6 +2435,10 @@ html[data-theme="blue"] .theme-option-btn.active {
   overflow-x: auto;
   overflow-y: hidden;
   padding-bottom: 4px;
+}
+.work-hub-panel-body .channel-kanban-board {
+  overflow-y: auto;
+  max-width: 100%;
 }
 .kanban-col {
   border: 1px solid var(--border-subtle);
@@ -2696,6 +2767,7 @@ html[data-theme="blue"] .theme-option-btn.active {
 @media (max-width: 1080px) {
   .work-hub-body {
     grid-template-columns: 1fr;
+    min-height: 0;
   }
 }
 @media (max-width: 640px) {

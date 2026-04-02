@@ -318,7 +318,7 @@
 - 채널 허브 칸반 카드 담당: `POST/DELETE /api/kanban/cards/{id}/assignees`는 `MEMBER`+`assertCanMutateCard`(채널 보드는 채널 멤버, 워크스페이스 보드는 `MANAGER` 이상). 서비스는 채널 연동 보드에서 `assertAssigneeIsChannelMemberIfApplicable`로 담당 사번이 채널 멤버인지 검증. **채널 허브 UI**에서는 `GET /api/channels/{id}` 멤버 목록으로 담당 자동완성(↑↓·Enter, 열린 상태에서 미선택 Enter는 폼 제출 방지).
 - 담당 제거(`removeAssignee`): `KanbanCard`의 `@OneToMany assignees`와 DB를 맞추기 위해, 자식 행만 `delete` 하면 영속 컨텍스트의 카드 컬렉션이 오래된 채로 남을 수 있음. `KanbanService`에서는 컬렉션에서 해당 `KanbanCardAssignee`를 제거(orphanRemoval)하거나, 컬렉션에 없을 때만 저장소 `delete`로 폴백한 뒤 `toCardResponse(card)`로 응답을 만든다.
 - 업무 삭제: `DELETE /api/work-items/{workItemId}?actorEmployeeNo=...`(채널 멤버). 칸반 카드 삭제: `DELETE /api/kanban/cards/{cardId}?actorEmployeeNo=...` — 컨트롤러는 `MEMBER`, 서비스 `deleteCard`에서 `assertCanMutateCard`로 채널/워크스페이스 보드 구분.
-- 업무 허브 모달: 하단 **저장**으로 신규 업무·신규 카드·업무 상태·카드 컬럼·담당 추가/해제(임시 맵)를 일괄 반영. **칸반 카드는 `work_item_id`로 업무에 종속**되며 신규 카드 생성 body에 `workItemId`가 필수다. 업무 삭제 API는 기본 **소프트 삭제**(`work_items.in_use`), `hard=true` 시 연결 카드 삭제 후 업무 행 삭제. 보드에서 ✕/검색 추가는 UI만 즉시 갱신하고 담당 API는 저장 시 `POST/DELETE .../assignees` 순서. 목록이 길어지면 모달 본문(`modal-body`) 스크롤.
+- 업무 허브 모달: 하단 **저장**으로 신규 업무·신규 카드·업무 상태·카드 컬럼·담당 추가/해제(임시 맵)를 일괄 반영. **칸반 카드는 `work_item_id`로 업무에 종속**되며 신규 카드 생성 body에 `workItemId`가 필수다. 업무 삭제 API는 기본 **소프트 삭제**(`work_items.in_use`), `hard=true` 시 연결 카드 삭제 후 업무 행 삭제. 보드에서 ✕/검색 추가는 UI만 즉시 갱신하고 담당 API는 저장 시 `POST/DELETE .../assignees` 순서. **레이아웃**: `modal-work-hub`는 `max-height: min(90vh,100dvh-24px)`·헤더/푸터 고정, `work-hub-panel-body` 안에서만 세로 스크롤(설치형 창 축소 대응).
 
 ### 채널 파일 메타데이터 인수인계 메모
 - 바이너리는 외부 스토리지에 두고 `channel_files`에 메타만 저장합니다.
@@ -326,6 +326,7 @@
 - `download-info`는 멤버 검증 후 `storageKey`와 안내 문구를 돌려주며, 실제 사전 서명 URL은 스토리지 연동 단계에서 확장합니다.
 
 ### 프론트엔드 데모 UI 메모
+- **스크롤·좌측 열**: `sidebar-main`(검색~관리자) 전체가 세로 스크롤 — 채널별 `max-height` 제한 없음. 퀵 레일은 `quick-rail-scroll`만 스크롤. 햄버거 멤버 패널은 `bottom:0` 고정·`#memberList`만 스크롤.
 - 동료 **프로필 모달**(`modalUserProfile`): `GET /api/users/profile?employeeNo=`로 로드. 역할·계정 상태는 표시하지 않음. **직급**(`jobLevel`)은 항상 행(없으면 `-`), **직위**(`jobPosition`)·**직책**(`jobTitle`)은 값이 있을 때만 해당 행 표시. **DM 보내기**(`btnProfileDm`)는 `startDmWithUser`로 `POST /api/channels`에 `channelType: DM`, `dmPeerEmployeeNos: [상대 사번]`, 호환용 `createdByEmployeeNo` 등을 요청 본문에 포함해 호출하며 **실제 생성자는 JWT 사원번호**로 결정된다. 서버가 내부 이름·멤버십을 처리한 뒤 `selectChannel`로 전환(자기 자신이면 버튼 비활성). DB `channels.channel_type`은 `DM` 문자열로 저장됩니다.
 - **프레즌스**: `presence:set`/`presence:update`/스냅샷 키는 **사번 문자열**. 채팅·멤버 패널에서 `[data-presence-user]`에 사번을 두고 `refreshPresenceDots`가 갱신합니다. 로컬 UX: 좌측 하단 본인 상태 버튼(`#sidebarUserStatus`)으로 **온라인·자리비움** 전환(`AWAY`는 노란 점).
 - **이미지 첨부**: `contentType`이 이미지이거나 확장자가 이미지인 FILE 메시지는 채팅에 썸네일 표시, 클릭 시 `modalImagePreview`로 확대, **다운로드** 버튼은 기존 파일 다운로드 API 재사용(JWT `fetch` → `blob:` URL).
