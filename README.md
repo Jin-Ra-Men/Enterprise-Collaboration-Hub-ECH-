@@ -181,7 +181,7 @@ graph LR
 ### 운영·성능 메모 (요약)
 - Realtime: Presence는 소켓 단위 추적·전원 종료 시 맵에서 제거, 메시지 본문 길이·소켓 버퍼 상한, `pg` 커넥션 풀 타임아웃 설정 가능
 - Backend: Hikari 최대 풀 크기·커넥션 타임아웃 환경변수 연동
-- Frontend 데모: 메시지 DOM 최대 200건으로 유지
+- Frontend 데모: 채팅 메시지 DOM 상한 `MAX_MSGS`(현재 300건), 타임라인 최초 로드 `limit=50`(서버 상한 200)
 
 ## 🚀 빠른 시작 (Docker 미사용)
 

@@ -5,6 +5,7 @@
 ## 2026-04-02
 
 ### Changed
+- 문서: 채팅 메시지 상한 설명을 코드에 맞춤 — DOM `MAX_MSGS` 300, 최초 타임라인 `limit=50`, 서버 타임라인 캡 200(구 문서·README의 200 DOM은 오래된 기술)
 - **햄버거 메뉴 액션 버튼**: 이모지·본문을 `btn-member-panel-action-icon` / `label`로 분리하고 아이콘 슬롯 너비 고정으로 줄 정렬 통일
 - **첨부 모달** `전체 파일` 탭: 이미지 첨부는 목록에서 제외(이미지는 **이미지** 탭만). 이미지만 있는 경우 전체 탭에 안내 문구 표시
 
@@ -569,7 +570,7 @@
 - 채널별 읽음 포인터 API (`GET/PUT /api/channels/{channelId}/read-state`) 및 `channel_read_states` 도메인/스키마 초안
 - 채널 파일 메타데이터 API(`channel_files`, 목록/등록/download-info) 및 스키마 초안
 - Realtime Presence 소켓 단위 추적·전원 연결 종료 시 OFFLINE 정리, 메시지 본문 길이 상한·Socket 버퍼 상한, `pg` Pool 타임아웃 옵션
-- Frontend 데모 메시지 DOM 상한(200건), Backend Hikari 풀 환경변수 연동
+- Frontend 데모 메시지 DOM 상한(당시 200건·현재 `MAX_MSGS` 300), Backend Hikari 풀 환경변수 연동
 - 칸반 보드 도메인(`kanban_*` 테이블, `/api/kanban/*` CRUD·담당·이력 API)
 - 메시지 기반 업무 항목(`work_items`, `POST/GET /api/messages/{id}/work-items`, `GET /api/work-items/{id}`)
 - 로컬 테스트용 사용자·부서 시드 SQL(`docs/sql/seed_test_users.sql`, 관리자·다양한 부서/역할/INACTIVE·부서NULL 포함) 및 `ENVIRONMENT_SETUP` 안내
