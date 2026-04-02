@@ -8,6 +8,9 @@
 - **마지막 읽은 위치 앵커 UI**: 채널 재진입 시 이전에 보던 메시지 위치로 자동 스크롤하고 "마지막 읽은 위치" 구분선을 메시지 목록에 삽입. `chatReadAnchorStorageKey`, `persistChatReadAnchor`, `readChatReadAnchor`, `insertChatReadAnchorDivider`, `restoreChatReadAnchor` 구현. `styles.css`에 `.msg-read-anchor-divider`, `.msg-read-anchor-highlight` 스타일 추가. 앵커 복원 중 scroll 이벤트로 덮어쓰기 방지(`suppressPersistChatReadAnchorOnce` + RAF 이중 보호).
 - **백엔드 read-state 기반 "새 메시지" 구분선**: `fetchLastReadMessageId` — 채널 진입 시 `GET /api/channels/{id}/read-state` 조회(메시지 API와 병렬). `showNewMsgsDivider` — `lastReadMessageId` 이후 첫 번째 미읽음 메시지 앞에 "새 메시지" 구분선 삽입 및 스크롤. localStorage 앵커가 없는 첫 방문 DM/채널에서도 동작.
 
+### Changed
+- **"마지막 읽은 위치" localStorage 앵커 제거**: `chatReadAnchorStorageKey`, `getTopVisibleTimelineMessageId`, `persistChatReadAnchor`, `readChatReadAnchor`, `insertChatReadAnchorDivider`, `restoreChatReadAnchor`, scroll 이벤트 리스너, `chatScrollPersistBound`, `suppressPersistChatReadAnchorOnce` 모두 삭제. 백엔드 read-state 기반 "새 메시지" 구분선만 유지.
+
 - 채팅 **타임라인 페이지네이션**: `GET .../messages/timeline` 응답 `{ items, hasMoreOlder }`, `beforeMessageId` 커서·`findTimelineOlderThan`, 프론트 상단 스크롤 시 이전 페이지 prepend·`#msgHistoryLoading`, DOM `MAX_CHAT_DOM_NODES`/`HARD_MAX` 트림. 대량 테스트 SQL `tools/sql/seed_mass_channel_messages.sql`
 - **미읽음·읽음 포인터 보강**: 루트 미읽음 건수를 메시지 `id`만이 아니라 **타임라인 순서(`created_at`, `id`)** 기준으로 계산(`MessageRepository.countRootMessagesNewerThanCursor`). `POST /api/channels/{channelId}/read-state/mark-latest-root`(body: `employeeNo`)로 **채널 최신 루트까지 읽음**(대량 히스토리에서도 첫 진입만으로 배지 해제). 프론트: 채널 전환 시 `localStorage` `ech_chat_scroll_v1_{employeeNo}`에 **스크롤 비율** 저장·복원, `loadMessages` 후 `markChannelReadCaughtUp`, 실시간 수신은 디바운스 `scheduleMarkChannelReadCaughtUp`
 
