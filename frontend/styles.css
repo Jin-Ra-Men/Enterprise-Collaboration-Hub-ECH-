@@ -1333,6 +1333,37 @@ html[data-theme="light"] .msg-reply-to-card:hover {
   margin: 4px 0;
 }
 
+/* 마지막 읽은 위치 구분선 */
+.msg-read-anchor-divider {
+  position: relative;
+  color: var(--accent, #6366f1);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 16px;
+  margin: 6px 0 2px;
+  text-align: center;
+  pointer-events: none;
+}
+.msg-read-anchor-divider::before,
+.msg-read-anchor-divider::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: calc(50% - 90px);
+  height: 1px;
+  background: var(--accent, #6366f1);
+  opacity: 0.45;
+}
+.msg-read-anchor-divider::before { left: 16px; }
+.msg-read-anchor-divider::after  { right: 16px; }
+
+/* 마지막 읽은 위치 첫 메시지 배경 강조 */
+.msg-read-anchor-highlight {
+  background: color-mix(in srgb, var(--accent, #6366f1) 8%, transparent) !important;
+  border-radius: 6px;
+  transition: background 1.5s ease;
+}
+
 /* 메시지 입력 (composer) */
 .composer {
   position: relative;

@@ -174,14 +174,16 @@ let timelineRootMessageById = new Map();
 let chatTimelineHasMoreOlder = false;
 let chatTimelineLoadingOlder = false;
 let messageListScrollHandlerBound = false;
-/** 메시지 목록 스크롤 위치 localStorage 저장(디바운스) 바인딩 여부 */
+/** 마지막 읽은 위치 앵커 저장(디바운스) 바인딩 여부 */
 let chatScrollPersistBound = false;
 // loadMessages(preserveScroll=true)일 때만 렌더 함수의 자동 스크롤을 억제/복원하기 위한 비율
 let pendingScrollRestoreRatio = null;
-/** 채널별 저장된 스크롤 비율 복원 시 render 단계 하단 고정 1회 생략 */
+/** 채널별 저장된 마지막 읽은 위치 앵커 복원 시 render 단계 하단 고정 1회 생략 */
 let skipAutoScrollToBottomOnce = false;
 /** 열람 중 채널 실시간 읽음 처리 디바운스 */
 let markChannelCaughtUpTimer = null;
+/** 복원 중에는 앵커 저장이 덮어써지지 않도록 1회 스로틀 */
+let suppressPersistChatReadAnchorOnce = false;
 let selectedMembers = [];     // 채널/DM 생성 시 선택된 사용자
 let selectedDmMembers = [];
 let selectedAddMembers = [];  // 기존 채널에 추가할 사용자
@@ -1647,48 +1649,167 @@ function scheduleMarkChannelReadCaughtUp(channelId) {
   }, 320);
 }
 
-function chatScrollStorageKey() {
+function chatReadAnchorStorageKey() {
   const emp = String(currentUser?.employeeNo || "").trim();
-  return emp ? `ech_chat_scroll_v1_${emp}` : null;
+  return emp ? `ech_chat_read_anchor_v1_${emp}` : null;
 }
 
-function persistChatScrollMemory(channelId) {
-  const key = chatScrollStorageKey();
-  if (!key || !messagesEl || channelId == null) return;
-  const h = messagesEl.scrollHeight || 1;
-  const ratio = Math.max(0, Math.min(1, (messagesEl.scrollTop || 0) / h));
+function getTopVisibleTimelineMessageId() {
+  if (!messagesEl) return null;
+  const top = messagesEl.scrollTop || 0;
+  const rows = messagesEl.querySelectorAll('.msg-row[id^="msg-"]');
+  if (!rows || !rows.length) return null;
+  let candidate = null;
+  for (const row of rows) {
+    const off = row.offsetTop || 0;
+    if (off + 5 >= top) {
+      candidate = row;
+      break;
+    }
+  }
+  if (!candidate) candidate = rows[0];
+  const idRaw = String(candidate?.id || "");
+  const n = Number(idRaw.startsWith("msg-") ? idRaw.slice(4) : NaN);
+  return Number.isFinite(n) ? n : null;
+}
+
+function persistChatReadAnchor(channelId) {
+  if (!currentUser || channelId == null || !messagesEl) return;
+  if (suppressPersistChatReadAnchorOnce) return;
+  const key = chatReadAnchorStorageKey();
+  if (!key) return;
+
+  const messageId = getTopVisibleTimelineMessageId();
+  if (messageId == null) return;
+
+  const rootMsg = timelineRootMessageById.get(Number(messageId));
+  const createdAtIso = rootMsg?.createdAt ? String(rootMsg.createdAt) : null;
+
   try {
     const raw = localStorage.getItem(key);
     const map = raw ? JSON.parse(raw) : {};
     if (typeof map !== "object" || map === null) return;
-    map[String(channelId)] = { ratio, ts: Date.now() };
+    map[String(channelId)] = {
+      messageId: Number(messageId),
+      createdAt: createdAtIso,
+      ts: Date.now(),
+    };
     localStorage.setItem(key, JSON.stringify(map));
   } catch {
     /* ignore */
   }
 }
 
-function readChatScrollRatio(channelId) {
-  const key = chatScrollStorageKey();
-  if (!key || channelId == null) return null;
+function readChatReadAnchor(channelId) {
+  if (!currentUser || channelId == null) return null;
+  const key = chatReadAnchorStorageKey();
+  if (!key) return null;
   try {
     const raw = localStorage.getItem(key);
     const map = raw ? JSON.parse(raw) : {};
-    const entry = map[String(channelId)];
-    const r = entry?.ratio;
-    if (typeof r !== "number" || !Number.isFinite(r)) return null;
-    return Math.max(0, Math.min(1, r));
+    const entry = map?.[String(channelId)];
+    const mid = Number(entry?.messageId);
+    if (!Number.isFinite(mid)) return null;
+    return { messageId: mid, createdAt: entry?.createdAt ?? null, ts: entry?.ts ?? null };
   } catch {
     return null;
   }
 }
 
-function applyChatScrollRatio(channelId) {
+function clearChatReadAnchorUi() {
   if (!messagesEl) return;
-  const ratio = readChatScrollRatio(channelId);
-  if (ratio == null) return;
-  const h = messagesEl.scrollHeight || 1;
-  messagesEl.scrollTop = Math.max(0, Math.min(h, ratio * h));
+  messagesEl.querySelectorAll(".msg-read-anchor-divider").forEach((el) => el.remove());
+  messagesEl.querySelectorAll(".msg-read-anchor-highlight").forEach((el) => el.classList.remove("msg-read-anchor-highlight"));
+}
+
+function insertChatReadAnchorDivider(targetEl, anchor) {
+  if (!targetEl || !anchor || !messagesEl) return;
+  const mid = Number(anchor.messageId);
+  if (!Number.isFinite(mid)) return;
+
+  targetEl.classList.add("msg-read-anchor-highlight");
+
+  const existing = messagesEl.querySelector(`.msg-read-anchor-divider[data-anchor-message-id="${mid}"]`);
+  if (existing) existing.remove();
+
+  const div = document.createElement("div");
+  div.className = "msg-system msg-read-anchor-divider";
+  div.dataset.anchorMessageId = String(mid);
+  const timeText = anchor.createdAt ? ` · ${fmtTime(anchor.createdAt)}` : "";
+  div.textContent = `마지막 읽은 위치${timeText}`;
+  messagesEl.insertBefore(div, targetEl);
+}
+
+async function restoreChatReadAnchor(channelId, usedTimeline) {
+  if (!currentUser || channelId == null || !messagesEl) return;
+
+  const anchor = readChatReadAnchor(channelId);
+  if (!anchor) return;
+  clearChatReadAnchorUi();
+
+  const targetMid = Number(anchor.messageId);
+  if (!Number.isFinite(targetMid)) return;
+
+  // 복원 중 scroll 이벤트로 앵커가 덮어써지지 않게 보호한다.
+  // scrollIntoView는 비동기 RAF 이후에 실행되므로 RAF 완료 후 해제해야 한다.
+  suppressPersistChatReadAnchorOnce = true;
+  let releasedByRaf = false;
+
+  function releaseAfterScroll(el) {
+    releasedByRaf = true;
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: "auto", block: "start" });
+      requestAnimationFrame(() => {
+        suppressPersistChatReadAnchorOnce = false;
+      });
+    });
+  }
+
+  try {
+    let targetEl = document.getElementById(`msg-${targetMid}`);
+    if (targetEl) {
+      insertChatReadAnchorDivider(targetEl, anchor);
+      releaseAfterScroll(targetEl);
+      return;
+    }
+
+    if (!usedTimeline) return;
+
+    // 커서 메시지가 현재 DOM에 없으면(페이지네이션) 오래된 페이지를 추가로 로드해 DOM에 포함될 때까지 탐색
+    let tries = 0;
+    const maxTries = 20;
+    const empQ = encodeURIComponent(currentUser.employeeNo);
+    while (tries < maxTries && chatTimelineHasMoreOlder) {
+      tries += 1;
+      const beforeId = getOldestVisibleTimelineMessageId();
+      if (beforeId == null) break;
+
+      chatTimelineLoadingOlder = true;
+      const url = `/api/channels/${channelId}/messages/timeline?employeeNo=${empQ}&limit=${TIMELINE_PAGE_LIMIT}&beforeMessageId=${beforeId}`;
+      const res = await apiFetch(url);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) break;
+      const page = parseTimelinePagePayload(json);
+      chatTimelineHasMoreOlder = page.hasMoreOlder;
+      if (!page.items?.length) {
+        chatTimelineHasMoreOlder = false;
+        break;
+      }
+      mergeTimelineRootsIntoCache(page.items);
+      prependTimelineMessages(page.items);
+
+      targetEl = document.getElementById(`msg-${targetMid}`);
+      if (targetEl) {
+        insertChatReadAnchorDivider(targetEl, anchor);
+        releaseAfterScroll(targetEl);
+        return;
+      }
+    }
+  } finally {
+    // RAF에서 해제하도록 예약된 경우에는 여기서 즉시 해제하지 않는다.
+    if (!releasedByRaf) suppressPersistChatReadAnchorOnce = false;
+    chatTimelineLoadingOlder = false;
+  }
 }
 
 function formatUnreadBadgeCount(n) {
@@ -1905,7 +2026,7 @@ async function selectChannel(channelId, channelName, channelType, options = {}) 
   closeModal("modalImagePreview");
   const prevChannelId = activeChannelId;
   if (prevChannelId != null && Number(prevChannelId) !== Number(channelId)) {
-    persistChatScrollMemory(prevChannelId);
+    persistChatReadAnchor(prevChannelId);
   }
   activeChannelId   = channelId;
   activeChannelType = channelType;
@@ -2026,7 +2147,7 @@ async function loadMessages(channelId, { preserveScroll = false } = {}) {
       return;
     }
 
-    skipAutoScrollToBottomOnce = !preserveScroll && readChatScrollRatio(channelId) != null;
+    skipAutoScrollToBottomOnce = !preserveScroll && readChatReadAnchor(channelId) != null;
 
     let msgs = [];
     if (usedTimeline) {
@@ -2073,13 +2194,13 @@ async function loadMessages(channelId, { preserveScroll = false } = {}) {
       const nextTop = Math.max(0, Math.min(newH, newH * pendingScrollRestoreRatio));
       messagesEl.scrollTop = nextTop;
       pendingScrollRestoreRatio = null;
-    } else if (!preserveScroll && msgs.length > 0 && readChatScrollRatio(channelId) != null) {
-      requestAnimationFrame(() => {
-        applyChatScrollRatio(channelId);
-        requestAnimationFrame(() => applyChatScrollRatio(channelId));
-      });
     }
 
+    if (!preserveScroll && msgs.length > 0) {
+      await restoreChatReadAnchor(channelId, usedTimeline);
+    }
+
+    // 앵커 복원이 끝난 뒤 읽음 처리 — 복원 전에 처리하면 앵커 저장값이 지워질 수 있다.
     await markChannelReadCaughtUp(channelId);
     await loadMyChannels();
   } catch (err) {
@@ -7060,7 +7181,7 @@ function initEvents() {
       () => {
         if (!activeChannelId || !messagesEl) return;
         if (scrollPersistT) clearTimeout(scrollPersistT);
-        scrollPersistT = setTimeout(() => persistChatScrollMemory(activeChannelId), 450);
+        scrollPersistT = setTimeout(() => persistChatReadAnchor(activeChannelId), 450);
       },
       { passive: true }
     );
