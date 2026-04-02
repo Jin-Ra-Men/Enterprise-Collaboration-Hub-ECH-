@@ -2656,6 +2656,7 @@ html[data-theme="blue"] .theme-option-btn.active {
 }
 .kanban-card-list {
   max-height: none;
+  min-height: 44px;
   overflow: hidden;
 }
 

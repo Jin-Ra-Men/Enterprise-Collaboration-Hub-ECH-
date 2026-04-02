@@ -175,6 +175,8 @@ let activeWorkHubColumns = [];
 /** 칸반 카드 담당자 표시명 캐시(사번 → 이름) */
 const kanbanAssigneeNameCache = Object.create(null);
 let kanbanBoardAssigneeUiBound = false;
+/** Source column id at kanban card drag start (cross-column DnD sync). */
+let kanbanDnDSourceColumnId = null;
 /** 신규 카드 폼에 미리 넣을 담당자 `{ employeeNo, name }` */
 let pendingNewKanbanCardAssignees = [];
 let kanbanNewCardAssigneeUiBound = false;
@@ -4232,32 +4234,74 @@ function getEffectiveSavedCardsByColumn(cols) {
   });
 }
 
-function applyKanbanDnDOrder(columnId, orderedCardMeta) {
-  if (!Array.isArray(orderedCardMeta) || !orderedCardMeta.length) return;
-  const colId = Number(columnId);
-  if (!colId) return;
-  const draftIds = orderedCardMeta
-    .filter((x) => x.isDraft)
-    .map((x) => String(x.cardId));
-  if (draftIds.length) {
-    const draftItems = draftIds
-      .map((raw) => {
-        const idx = Number(raw.replace("draft-card-", ""));
-        return Number.isFinite(idx) ? workHubPendingNewKanbanCards[idx] : null;
-      })
-      .filter(Boolean);
-    if (draftItems.length) {
-      const keep = workHubPendingNewKanbanCards.filter((d) => Number(d.columnId || activeWorkHubFirstColumnId) !== colId);
-      workHubPendingNewKanbanCards = [...keep, ...draftItems];
-    }
-  }
-  const savedIds = orderedCardMeta
-    .filter((x) => !x.isDraft)
-    .map((x) => Number(x.cardId))
-    .filter((x) => Number.isFinite(x));
-  savedIds.forEach((id, i) => {
-    workHubPendingCardSortOrder.set(Number(id), i);
+/** Map kanban column → card `status` (API). Default boards: sortOrder 0/1/2 → OPEN / IN_PROGRESS / DONE. */
+function statusForKanbanColumnId(columnId) {
+  if (!columnId || !Array.isArray(activeWorkHubColumns) || !activeWorkHubColumns.length) return "OPEN";
+  const sorted = [...activeWorkHubColumns].sort(
+    (a, b) => Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0)
+  );
+  const idx = sorted.findIndex((c) => Number(c.id) === Number(columnId));
+  if (idx === 0) return "OPEN";
+  if (idx === 1) return "IN_PROGRESS";
+  if (idx === 2) return "DONE";
+  const col = sorted[idx];
+  if (!col) return "OPEN";
+  const name = String(col.name || "").toLowerCase();
+  if (name.includes("완료") || name.includes("done")) return "DONE";
+  if (name.includes("진행") || name.includes("progress") || name.includes("in_progress")) return "IN_PROGRESS";
+  return "OPEN";
+}
+
+/** Persist saved-card column + order for the affected columns only (reduces pending scope). */
+function syncKanbanBoardPartial(boardEl, columnIds) {
+  const idSet = new Set(columnIds.map(Number).filter((x) => x > 0));
+  if (!boardEl || !idSet.size) return;
+  const columns = [...boardEl.querySelectorAll(".kanban-column")].filter((colEl) =>
+    idSet.has(Number(colEl.dataset.columnId || 0))
+  );
+  columns.forEach((colEl) => {
+    const colId = Number(colEl.dataset.columnId || 0);
+    if (!colId) return;
+    const listEl = colEl.querySelector(".kanban-card-list");
+    if (!listEl) return;
+    [...listEl.querySelectorAll(".kanban-card-item")].forEach((cardEl, i) => {
+      const del = cardEl.querySelector(".kanban-card-delete-btn");
+      if (!del || del.dataset.isDraft === "1") return;
+      const cid = Number(del.dataset.cardId || "");
+      if (Number.isFinite(cid)) {
+        workHubPendingCardColumn.set(cid, colId);
+        workHubPendingCardSortOrder.set(cid, i);
+      }
+    });
   });
+}
+
+/** Rebuild draft queue order and column ids from full board DOM (draft-card-* indices). */
+function syncKanbanDraftsOrderFromDom(boardEl) {
+  if (!boardEl || !workHubPendingNewKanbanCards.length) return;
+  const draftEntries = [];
+  boardEl.querySelectorAll(".kanban-column").forEach((colEl) => {
+    const colId = Number(colEl.dataset.columnId || 0);
+    if (!colId) return;
+    const listEl = colEl.querySelector(".kanban-card-list");
+    if (!listEl) return;
+    [...listEl.querySelectorAll(".kanban-card-item")].forEach((cardEl) => {
+      const del = cardEl.querySelector(".kanban-card-delete-btn");
+      if (del?.dataset.isDraft === "1") {
+        const idx = Number(String(del.dataset.cardId || "").replace("draft-card-", ""));
+        if (Number.isFinite(idx) && workHubPendingNewKanbanCards[idx]) {
+          draftEntries.push({ idx, colId });
+        }
+      }
+    });
+  });
+  if (!draftEntries.length) return;
+  workHubPendingNewKanbanCards = draftEntries
+    .map(({ idx, colId }) => {
+      const d = workHubPendingNewKanbanCards[idx];
+      return d ? { ...d, columnId: colId } : null;
+    })
+    .filter(Boolean);
 }
 
 async function flushWorkHubSave() {
@@ -4350,7 +4394,7 @@ async function flushWorkHubSave() {
             workItemId: Number(draft.workItemId),
             title: draft.title,
             description: draft.description,
-            status: "OPEN",
+            status: statusForKanbanColumnId(targetColumnId),
             assigneeEmployeeNos: Array.isArray(draft.assigneeEmployeeNos) ? draft.assigneeEmployeeNos : [],
           }),
         }
@@ -4380,7 +4424,9 @@ async function flushWorkHubSave() {
         method: "PUT",
         body: JSON.stringify({
           actorEmployeeNo: currentUser.employeeNo,
-          ...(pendingColumnId != null ? { columnId: Number(pendingColumnId) } : {}),
+          ...(pendingColumnId != null
+            ? { columnId: Number(pendingColumnId), status: statusForKanbanColumnId(Number(pendingColumnId)) }
+            : {}),
           ...(pendingSortOrder != null ? { sortOrder: Number(pendingSortOrder) } : {}),
           ...(pendingTitle != null ? { title: pendingTitle } : {}),
           ...(pendingDescription != null ? { description: pendingDescription } : {}),
@@ -5357,16 +5403,22 @@ function renderKanbanBoard(board) {
     cardEl.addEventListener("dragstart", (ev) => {
       ev.dataTransfer?.setData("text/plain", "kanban-card");
       cardEl.classList.add("kanban-card-dragging");
+      const srcCol = Number(cardEl.closest(".kanban-column")?.dataset.columnId || 0) || null;
+      kanbanDnDSourceColumnId = srcCol;
+      cardEl.dataset.dragSourceColumnId = srcCol != null ? String(srcCol) : "";
     });
     cardEl.addEventListener("dragend", () => {
       cardEl.classList.remove("kanban-card-dragging");
+      delete cardEl.dataset.dragSourceColumnId;
+      kanbanDnDSourceColumnId = null;
     });
   });
   boardEl.querySelectorAll(".kanban-card-list").forEach((listEl) => {
     listEl.addEventListener("dragover", (ev) => {
       ev.preventDefault();
-      const dragging = listEl.querySelector(".kanban-card-dragging");
+      const dragging = boardEl.querySelector(".kanban-card-dragging");
       if (!dragging) return;
+      listEl.querySelector(".empty-notice")?.remove();
       const cards = [...listEl.querySelectorAll(".kanban-card-item:not(.kanban-card-dragging)")];
       cards.forEach((c) => c.classList.remove("kanban-drop-before"));
       const next = cards.find((c) => ev.clientY <= c.getBoundingClientRect().top + c.offsetHeight / 2);
@@ -5382,15 +5434,16 @@ function renderKanbanBoard(board) {
     });
     listEl.addEventListener("drop", async (ev) => {
       ev.preventDefault();
-      [...listEl.querySelectorAll(".kanban-card-item")].forEach((c) => c.classList.remove("kanban-drop-before"));
-      const colEl = listEl.closest(".kanban-column");
-      const colId = Number(colEl?.dataset.columnId || 0);
-      if (!colId) return;
-      const orderMeta = [...listEl.querySelectorAll(".kanban-card-item")].map((el) => ({
-        cardId: String(el.querySelector(".kanban-card-delete-btn")?.dataset.cardId || ""),
-        isDraft: el.querySelector(".kanban-card-delete-btn")?.dataset.isDraft === "1",
-      }));
-      applyKanbanDnDOrder(colId, orderMeta);
+      boardEl.querySelectorAll(".kanban-drop-before").forEach((c) => c.classList.remove("kanban-drop-before"));
+      const targetColId = Number(listEl.closest(".kanban-column")?.dataset.columnId || 0);
+      const dragging = boardEl.querySelector(".kanban-card-dragging");
+      const fromDrag = dragging && dragging.dataset.dragSourceColumnId
+        ? Number(dragging.dataset.dragSourceColumnId)
+        : NaN;
+      const sourceColId = Number.isFinite(fromDrag) && fromDrag > 0 ? fromDrag : Number(kanbanDnDSourceColumnId || 0);
+      const cols = [...new Set([targetColId, sourceColId].filter((x) => x > 0))];
+      syncKanbanBoardPartial(boardEl, cols);
+      syncKanbanDraftsOrderFromDom(boardEl);
       await loadChannelKanbanBoard();
     });
   });

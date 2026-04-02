@@ -442,6 +442,7 @@ Stop-Process -Id <PID> -Force
 - **다크 기본 테마**: `:root`의 `--text-secondary` / `--text-muted`를 약간 밝게 조정해 보조 텍스트 대비를 올림. 범용 보조 문구는 `.muted`.
 - **내 업무 항목 동기화**: `flushWorkHubSave()` 성공 시 `scheduleRefreshMyChannels()`로 사이드바 담당 업무 목록을 갱신한다.
 - **채널 전환 없이 모달만**: 사이드바 행 클릭 시 `selectChannel`을 호출하지 않고 `workHubScopedChannelId`만 설정한 뒤 `loadWorkHubChannelMembersForAssignee` / `loadChannelWorkItems` / `loadChannelKanbanBoard`가 `getWorkHubChannelId()`로 해당 채널 API를 호출한다. 채팅 패널의 `activeChannelId`는 그대로. `closeModal("modalWorkHub")` 시 `clearWorkHubScopedChannel()`. 헤더 `📋`로 열 때는 `workHubScopedChannelId = null`로 현재 채널 기준.
+- **칸반 DnD·status**: 카드를 다른 컬럼으로 끌어 놓을 수 있으며(`boardEl.querySelector(".kanban-card-dragging")`), 드롭 시 출발·도착 컬럼에 대해 `syncKanbanBoardPartial`로 임시 `columnId`/`sortOrder`를 갱신하고, 미저장 신규 카드는 `syncKanbanDraftsOrderFromDom`. 저장 시 `statusForKanbanColumnId(targetColumnId)`로 `PUT`/`POST`에 `status`를 포함한다.
 
 ---
 
