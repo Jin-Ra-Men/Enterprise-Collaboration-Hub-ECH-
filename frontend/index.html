@@ -214,6 +214,7 @@
               <button class="btn-member-panel-action hidden" id="btnRenameChannel" title="채널 이름 변경">✏️ 채널 이름 변경</button>
               <button class="btn-member-panel-action hidden" id="btnRenameDm" title="DM 이름 변경">✏️ DM 이름 변경</button>
               <button class="btn-member-panel-action" id="btnAddMembersLater" title="구성원 추가">➕ 구성원 추가</button>
+              <button class="btn-member-panel-action hidden" id="btnHeaderNotifyToggle" type="button" title="이 채팅방 알림 끄기">🔕 알림 끄기</button>
               <button class="btn-member-panel-action" id="btnLeaveChannel" title="채팅방 나가기">🚪 채팅방 나가기</button>
               <button class="btn-member-panel-action hidden" id="btnCloseChannel" title="채널 폐쇄">🗑️ 채널 폐쇄</button>
             </div>
@@ -309,6 +310,10 @@
     </div>
     <div id="memberContextMenu" class="context-menu hidden" role="menu" aria-label="멤버 메뉴">
       <button type="button" class="context-menu-item" id="btnMemberCtxDelegate" role="menuitem">관리자 위임</button>
+    </div>
+    <div id="channelSidebarContextMenu" class="context-menu hidden" role="menu" aria-label="대화 목록 메뉴">
+      <button type="button" class="context-menu-item" id="btnSidebarCtxToggleNotify" role="menuitem">알림 끄기</button>
+      <button type="button" class="context-menu-item" id="btnSidebarCtxLeave" role="menuitem">채팅방 나가기</button>
     </div>
 
     <div id="modalAppDialog" class="modal-overlay hidden modal-stacked">

@@ -145,6 +145,8 @@ const activeChannelMemberOrgLineByEmployeeNo = new Map();
 let mentionInboxItems = [];
 /** Sidebar: work items where user is assignee on ≥1 kanban card (`GET .../sidebar/by-assigned-cards`). */
 let mySidebarWorkItems = [];
+/** `loadMyChannels` 간 내 업무 사이드바 스냅샷 비교용(변경 시 토스트). */
+let lastWorkSidebarSig = null;
 /** Last loaded channel work items for work hub (new card parent select + labels). */
 let lastChannelWorkItemsForHub = [];
 let pendingFile    = null;
@@ -177,6 +179,10 @@ const kanbanAssigneeNameCache = Object.create(null);
 let kanbanBoardAssigneeUiBound = false;
 /** Source column id at kanban card drag start (cross-column DnD sync). */
 let kanbanDnDSourceColumnId = null;
+/** Sidebar / quick rail: context menu target channel */
+let sidebarCtxChannelId = null;
+let sidebarCtxChannelName = "";
+let sidebarCtxChannelType = "PUBLIC";
 /** 신규 카드 폼에 미리 넣을 담당자 `{ employeeNo, name }` */
 let pendingNewKanbanCardAssignees = [];
 let kanbanNewCardAssigneeUiBound = false;
@@ -255,6 +261,7 @@ const messagesEl     = document.getElementById("messages");
 const messageInputEl = document.getElementById("messageInput");
 const messageContextMenuEl = document.getElementById("messageContextMenu");
 const memberContextMenuEl = document.getElementById("memberContextMenu");
+const channelSidebarContextMenuEl = document.getElementById("channelSidebarContextMenu");
 const btnMemberCtxDelegateEl = document.getElementById("btnMemberCtxDelegate");
 const threadRootContainerEl = document.getElementById("threadRootContainer");
 const threadCommentsContainerEl = document.getElementById("threadCommentsContainer");
@@ -1306,6 +1313,7 @@ function showLogin() {
 
 function showMain(user) {
   currentUser = user;
+  lastWorkSidebarSig = null;
   loginPage.classList.add("hidden");
   mainApp.classList.remove("hidden");
   const preferredTheme = VALID_THEMES.includes(user?.themePreference)
@@ -1448,6 +1456,20 @@ async function loadMyChannels() {
     if (!channelRes.ok) return;
     const channels = normalizeSidebarChannels(Array.isArray(channelJson.data) ? channelJson.data : []);
     mySidebarWorkItems = workSidebarRes.ok && Array.isArray(workSidebarJson.data) ? workSidebarJson.data : [];
+    const nextWorkSig = JSON.stringify(
+      (mySidebarWorkItems || []).map((r) => ({
+        id: Number(r.workItemId ?? 0),
+        iu: r.inUse !== false,
+      }))
+    );
+    if (lastWorkSidebarSig !== null && lastWorkSidebarSig !== nextWorkSig) {
+      pushActivityToast({
+        title: "업무 항목 변경",
+        locationLine: "내 업무 항목",
+        preview: "담당 업무·칸반 목록이 갱신되었습니다.",
+      });
+    }
+    lastWorkSidebarSig = nextWorkSig;
     renderChannelList(channels);
   } catch (err) {
     console.error("채널 목록 로드 실패", err);
@@ -1783,6 +1805,7 @@ async function selectChannel(channelId, channelName, channelType, options = {}) 
   loadChannelFiles(channelId);
 
   messageInputEl.focus();
+  syncHeaderNotifyButton();
 }
 
 function focusMessageByIdInCurrentTimeline(messageId) {
@@ -3018,7 +3041,28 @@ document.addEventListener("click", (e) => {
     const inMemberMenu = e.target && memberContextMenuEl.contains(e.target);
     if (!inMemberMenu) hideMemberContextMenu();
   }
+  if (channelSidebarContextMenuEl && !channelSidebarContextMenuEl.classList.contains("hidden")) {
+    const inCh = e.target && channelSidebarContextMenuEl.contains(e.target);
+    if (!inCh) closeChannelSidebarContextMenu();
+  }
 });
+
+document.addEventListener(
+  "contextmenu",
+  (ev) => {
+    const item = ev.target.closest(
+      "#channelList .channel-item, #dmList .channel-item, #quickRailScroll .channel-item"
+    );
+    if (!item || !mainApp || mainApp.classList.contains("hidden")) return;
+    ev.preventDefault();
+    const cid = Number(item.dataset.channelId);
+    if (!Number.isFinite(cid)) return;
+    const name = String(item.dataset.channelName || "").trim() || "채널";
+    const ctype = String(item.dataset.channelType || "PUBLIC");
+    openChannelSidebarContextMenu(ev.clientX, ev.clientY, cid, name, ctype);
+  },
+  true
+);
 
 if (messageContextMenuEl) {
   messageContextMenuEl.addEventListener("click", async (e) => {
@@ -3226,6 +3270,7 @@ function initSocket() {
         markChannelReadUpTo(activeChannelId, msg.messageId).then(() => loadMyChannels());
       }
     } else {
+      pushNewMessageToast(msg);
       scheduleRefreshMyChannels();
     }
   });
@@ -3327,6 +3372,149 @@ let mentionSuggestResults = [];
 let mentionSelectedIndex = 0;
 // 동일 메시지에 대해 토스트가 중복 표시되지 않도록(mention:notify + 폴백 경로) 제어한다.
 const shownMentionToastMessageIds = new Set();
+const shownNewMessageToastIds = new Set();
+
+function notifyMutedStorageKey() {
+  const emp = String(currentUser?.employeeNo || "").trim();
+  return emp ? `ech_notify_muted_channels_${emp}` : null;
+}
+
+function getMutedChannelIdsSet() {
+  const key = notifyMutedStorageKey();
+  if (!key) return new Set();
+  try {
+    const raw = localStorage.getItem(key);
+    const arr = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(arr) ? arr.map((x) => Number(x)).filter((x) => Number.isFinite(x)) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveMutedChannelIds(set) {
+  const key = notifyMutedStorageKey();
+  if (!key) return;
+  try {
+    localStorage.setItem(key, JSON.stringify([...set].sort((a, b) => a - b)));
+  } catch {
+    /* ignore */
+  }
+}
+
+function isChannelNotifyMuted(channelId) {
+  const id = Number(channelId);
+  if (!Number.isFinite(id)) return false;
+  return getMutedChannelIdsSet().has(id);
+}
+
+function setChannelNotifyMuted(channelId, muted) {
+  const id = Number(channelId);
+  if (!Number.isFinite(id)) return;
+  const s = getMutedChannelIdsSet();
+  if (muted) s.add(id);
+  else s.delete(id);
+  saveMutedChannelIds(s);
+}
+
+function syncHeaderNotifyButton() {
+  const btn = document.getElementById("btnHeaderNotifyToggle");
+  if (!btn) return;
+  if (!activeChannelId) {
+    btn.classList.add("hidden");
+    return;
+  }
+  btn.classList.remove("hidden");
+  const muted = isChannelNotifyMuted(activeChannelId);
+  btn.textContent = muted ? "🔔 알림 켜기" : "🔕 알림 끄기";
+  btn.title = muted ? "이 채팅방에서 알림 받기" : "이 채팅방 알림 끄기";
+}
+
+function closeChannelSidebarContextMenu() {
+  channelSidebarContextMenuEl?.classList.add("hidden");
+}
+
+function syncSidebarCtxNotifyButtonLabel() {
+  const btn = document.getElementById("btnSidebarCtxToggleNotify");
+  if (!btn || sidebarCtxChannelId == null) return;
+  const muted = isChannelNotifyMuted(sidebarCtxChannelId);
+  btn.textContent = muted ? "알림 켜기" : "알림 끄기";
+}
+
+function openChannelSidebarContextMenu(clientX, clientY, channelId, channelName, channelType) {
+  if (!channelSidebarContextMenuEl) return;
+  sidebarCtxChannelId = channelId;
+  sidebarCtxChannelName = String(channelName || "");
+  sidebarCtxChannelType = String(channelType || "PUBLIC");
+  syncSidebarCtxNotifyButtonLabel();
+  hideMemberContextMenu();
+  hideMessageContextMenu();
+  const menuW = 220;
+  const x = Math.min(clientX, window.innerWidth - menuW - 8);
+  const y = Math.min(clientY, window.innerHeight - 88);
+  channelSidebarContextMenuEl.style.left = `${x}px`;
+  channelSidebarContextMenuEl.style.top = `${y}px`;
+  channelSidebarContextMenuEl.classList.remove("hidden");
+}
+
+/** 일반 활동 알림(업무 사이드바 변경 등). */
+function pushActivityToast({ title, locationLine, preview, onClick }) {
+  const stack = document.getElementById("mentionToastStack");
+  if (!stack) return;
+  const toast = document.createElement("button");
+  toast.type = "button";
+  toast.className = "mention-toast mention-toast-activity";
+  toast.innerHTML = `<span class="mention-toast-title">${escHtml(String(title || "알림"))}</span><span class="mention-toast-loc">${escHtml(String(locationLine || ""))}</span><span class="mention-toast-preview">${escHtml(String(preview || ""))}</span>`;
+  if (typeof onClick === "function") {
+    toast.addEventListener("click", () => {
+      toast.remove();
+      onClick();
+    });
+  } else {
+    toast.addEventListener("click", () => toast.remove());
+  }
+  stack.appendChild(toast);
+  setTimeout(() => {
+    if (toast.parentNode) toast.remove();
+  }, 12_000);
+}
+
+/** 다른 채널/DM의 신규 메시지(멘션 아님). 알림 끄기 시 미표시. */
+function pushNewMessageToast(msg) {
+  if (!msg || !currentUser) return;
+  const cid = Number(msg.channelId);
+  if (!Number.isFinite(cid)) return;
+  if (isChannelNotifyMuted(cid)) return;
+  const myEmp = String(currentUser.employeeNo || "").trim();
+  const sender = String(msg.senderId ?? msg.sender_id ?? "").trim();
+  if (sender && myEmp && sender === myEmp) return;
+  if (activeChannelId != null && Number(activeChannelId) === cid) return;
+  if (msg.messageId != null) {
+    const mid = String(msg.messageId);
+    if (shownNewMessageToastIds.has(mid)) return;
+    shownNewMessageToastIds.add(mid);
+  }
+  const row = document.querySelector(`.channel-item[data-channel-id="${cid}"]`);
+  const displayName = String(row?.dataset.channelName || "").trim() || "채팅";
+  const channelType = String(row?.dataset.channelType || "PUBLIC");
+  const isDm = channelType === "DM";
+  const locationText = isDm ? `DM · ${displayName}` : `채널 · #${displayName}`;
+  const senderName = String(msg.senderName || msg.sender_name || "").trim() || "알 수 없음";
+  const preview = String(msg.text || "").replace(/\s+/g, " ").trim().slice(0, 160);
+  const stack = document.getElementById("mentionToastStack");
+  if (!stack) return;
+  const toast = document.createElement("button");
+  toast.type = "button";
+  toast.className = "mention-toast mention-toast-msg";
+  toast.innerHTML = `<span class="mention-toast-title">새 메시지</span><span class="mention-toast-sub">${escHtml(senderName)}</span><span class="mention-toast-loc">${escHtml(locationText)}</span><span class="mention-toast-preview">${escHtml(preview || "(내용 없음)")}</span>`;
+  toast.addEventListener("click", () => {
+    toast.remove();
+    selectChannel(cid, displayName, channelType);
+  });
+  stack.appendChild(toast);
+  setTimeout(() => {
+    if (toast.parentNode) toast.remove();
+  }, 18_000);
+}
 
 // socket으로 전송 시도 중이면, server가 내려주는 `message:error` 시스템 문구가
 // (API 폴백 성공 케이스에서도) 중복으로 남을 수 있다. 이 플래그로 억제한다.
@@ -3490,13 +3678,14 @@ function scheduleMentionSuggestUpdate() {
 function pushMentionToast(p) {
   const stack = document.getElementById("mentionToastStack");
   if (!stack || !p) return;
+  const cid = Number(p.channelId);
+  if (!Number.isFinite(cid)) return;
+  if (isChannelNotifyMuted(cid)) return;
   if (p.messageId != null) {
     const mid = String(p.messageId);
     if (shownMentionToastMessageIds.has(mid)) return;
     shownMentionToastMessageIds.add(mid);
   }
-  const cid = Number(p.channelId);
-  if (!Number.isFinite(cid)) return;
   const channelName = String(p.channelName || "채널");
   const channelType = String(p.channelType || "PUBLIC");
   const senderName = String(p.senderName || "");
@@ -5671,6 +5860,7 @@ async function clearActiveChannelAndReload() {
   activeChannelMemberCount = 0;
   activeChannelMemberMentionList = [];
   showView("viewWelcome");
+  syncHeaderNotifyButton();
   await loadMyChannels();
 }
 
@@ -5710,27 +5900,76 @@ document.getElementById("btnRenameChannel")?.addEventListener("click", async () 
   await loadMyChannels();
 });
 
-document.getElementById("btnLeaveChannel")?.addEventListener("click", async () => {
-  if (!activeChannelId || !currentUser) return;
-  if (!(await uiConfirm("현재 채팅방에서 나가시겠습니까?"))) return;
+async function leaveChannelAsMember(channelId, channelDisplayName, channelType) {
+  if (!channelId || !currentUser) return;
+  const label = String(channelDisplayName || "").trim() || "채팅방";
+  if (!(await uiConfirm(`「${label}」에서 나가시겠습니까?`))) return;
   const mine = String(currentUser.employeeNo || "").trim();
-  const creator = String(activeChannelCreatorEmployeeNo || "").trim();
-  const isCreator = mine !== "" && creator !== "" && mine === creator && String(activeChannelType || "").toUpperCase() !== "DM";
-  let payload = {};
+  const isDm = String(channelType || "").toUpperCase() === "DM";
+  let creatorEmp = "";
+  if (Number(channelId) === Number(activeChannelId) && activeChannelCreatorEmployeeNo) {
+    creatorEmp = String(activeChannelCreatorEmployeeNo || "").trim();
+  } else {
+    try {
+      const res = await apiFetch(`/api/channels/${channelId}`);
+      const j = await res.json().catch(() => ({}));
+      if (res.ok && j.data) creatorEmp = String(j.data.createdByEmployeeNo || "").trim();
+    } catch {
+      /* ignore */
+    }
+  }
+  const isCreator = mine !== "" && creatorEmp !== "" && mine === creatorEmp && !isDm;
   if (isCreator) {
     await uiAlert("관리자는 멤버를 우클릭해 먼저 관리자 위임을 완료한 뒤 나갈 수 있습니다.");
     return;
   }
-  const res = await apiFetch(`/api/channels/${activeChannelId}/leave`, {
+  const res = await apiFetch(`/api/channels/${channelId}/leave`, {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify({}),
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
     await uiAlert(json.error?.message || "채팅방 나가기에 실패했습니다.");
     return;
   }
-  await clearActiveChannelAndReload();
+  if (Number(channelId) === Number(activeChannelId)) {
+    await clearActiveChannelAndReload();
+  } else {
+    await loadMyChannels();
+  }
+}
+
+document.getElementById("btnLeaveChannel")?.addEventListener("click", async () => {
+  if (!activeChannelId || !currentUser) return;
+  const name = document.getElementById("chatChannelName")?.textContent || "";
+  await leaveChannelAsMember(activeChannelId, name, activeChannelType);
+});
+
+document.getElementById("btnHeaderNotifyToggle")?.addEventListener("click", () => {
+  if (!activeChannelId || !currentUser) return;
+  const muted = isChannelNotifyMuted(activeChannelId);
+  setChannelNotifyMuted(activeChannelId, !muted);
+  syncHeaderNotifyButton();
+});
+
+document.getElementById("btnSidebarCtxToggleNotify")?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (sidebarCtxChannelId == null || !currentUser) return;
+  const muted = isChannelNotifyMuted(sidebarCtxChannelId);
+  setChannelNotifyMuted(sidebarCtxChannelId, !muted);
+  syncSidebarCtxNotifyButtonLabel();
+  syncHeaderNotifyButton();
+  closeChannelSidebarContextMenu();
+});
+
+document.getElementById("btnSidebarCtxLeave")?.addEventListener("click", async (e) => {
+  e.stopPropagation();
+  const id = sidebarCtxChannelId;
+  const name = sidebarCtxChannelName;
+  const ctype = sidebarCtxChannelType;
+  closeChannelSidebarContextMenu();
+  if (id == null) return;
+  await leaveChannelAsMember(id, name, ctype);
 });
 
 document.getElementById("btnCloseChannel")?.addEventListener("click", async () => {

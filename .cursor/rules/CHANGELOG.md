@@ -5,6 +5,7 @@
 ## 2026-04-02
 
 ### Added
+- 채팅방별 **알림 끄기/켜기**(로컬만): 사용자별 `localStorage` 키 `ech_notify_muted_channels_{employeeNo}`에 채널 ID 배열 저장. 음소거된 채널/DM에서는 **신규 메시지 토스트**·**멘션 토스트** 미표시. 채널·DM·퀵 레일 항목 **우클릭** 메뉴(알림 끄기/켜기, 채팅방 나가기), 상단 햄버거(멤버 패널) **알림 끄기/켜기** 버튼
 - 업무–칸반 연결: `kanban_cards.work_item_id`, `work_items.in_use`(소프트 삭제). 카드 생성 시 `workItemId` 필수(채널 일치 검증).
 - 업무 API: `GET /api/work-items/sidebar/by-assigned-cards`(내가 카드 담당인 업무 목록), `POST /api/work-items/{id}/restore`, `DELETE /api/work-items/{id}?hard=true`(완전 삭제·연결 카드 제거).
 - 프론트: 신규 카드에 연결 업무 선택, 업무 비활성 시 회색/취소선, 상세에서 복원·완전 삭제. 사이드바 `내 업무 항목`으로 전환.
