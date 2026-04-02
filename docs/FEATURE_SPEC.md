@@ -643,7 +643,7 @@
 ## 채널 파일 메타데이터 (업로드 기록·다운로드 안내)
 - 목적: 실제 파일은 NAS/S3 등 외부 스토리지에 두고, 채널 단위로 메타데이터만 DB에 기록·조회
 - 사용자: 채널 멤버
-- 관련 화면/경로: 채널 채팅 상단 **첨부 파일** 목록(프론트), 멀티파트 업로드, 다운로드
+- 관련 화면/경로: 햄버거 메뉴 **첨부파일** / **이미지 모아보기** → `modalFileHub`(탭: 전체 파일·이미지). DM 포함 동일 `channelId` 기준. 이미지 탭은 `contentType`·확장자로 필터 후 썸네일 그리드, 클릭 시 기존 이미지 라이트박스(`modalImagePreview`)
 - 관련 API:
   - `POST /api/channels/{channelId}/files` (메타데이터만 등록, 하위 호환)
   - `POST /api/channels/{channelId}/files/upload?employeeNo=...` (multipart `file` — 디스크 저장 + DB 메타)

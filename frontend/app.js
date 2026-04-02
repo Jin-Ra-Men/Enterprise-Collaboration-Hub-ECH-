@@ -810,27 +810,96 @@ async function startDmWithUser(peerEmployeeNo, displayName) {
   }
 }
 
-async function loadChannelFiles(channelId) {
+function filterImageFilesForHub(files) {
+  if (!Array.isArray(files)) return [];
+  return files.filter((f) => isImageContentType(f.contentType, f.originalFilename));
+}
+
+function setFileHubTab(tab) {
+  const allPane = document.getElementById("fileHubPaneAll");
+  const imgPane = document.getElementById("fileHubPaneImages");
+  document.querySelectorAll(".file-hub-tab[data-file-hub-tab]").forEach((b) => {
+    const on = b.dataset.fileHubTab === tab;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  if (allPane) allPane.classList.toggle("hidden", tab !== "all");
+  if (imgPane) imgPane.classList.toggle("hidden", tab !== "images");
+}
+
+function renderFileHubImageGrid(channelId, files) {
+  const grid = document.getElementById("channelImageGrid");
+  const emptyImg = document.getElementById("channelImagesEmpty");
+  if (!grid) return;
+  grid.innerHTML = "";
+  const imgs = filterImageFilesForHub(files);
+  if (imgs.length === 0) {
+    emptyImg?.classList.remove("hidden");
+    return;
+  }
+  emptyImg?.classList.add("hidden");
+  const cid = Number(channelId);
+  imgs.forEach((f) => {
+    const cell = document.createElement("div");
+    cell.className = "channel-image-grid-item";
+    const safeName = escHtml(f.originalFilename || "이미지");
+    cell.innerHTML = `
+      <button type="button" class="channel-image-thumb-btn" title="크게 보기" aria-label="${safeName}">
+        <div class="channel-image-thumb-placeholder">불러오는 중…</div>
+      </button>
+      <div class="channel-image-thumb-meta">${escHtml(f.uploaderName || f.uploadedByEmployeeNo || "")} · ${escHtml(fmtDate(f.createdAt))}</div>`;
+    const btn = cell.querySelector(".channel-image-thumb-btn");
+    const ph = cell.querySelector(".channel-image-thumb-placeholder");
+    getAuthedImageBlobUrl(cid, f.id)
+      .then((url) => {
+        const im = document.createElement("img");
+        im.className = "channel-image-thumb-img";
+        im.alt = f.originalFilename || "첨부 이미지";
+        im.src = url;
+        im.loading = "lazy";
+        ph.replaceWith(im);
+        btn.addEventListener("click", () => {
+          openImageLightbox(url, f.id, f.originalFilename, cid);
+        });
+      })
+      .catch(() => {
+        ph.textContent = "로드 실패";
+      });
+    grid.appendChild(cell);
+  });
+}
+
+/** 채널/DM 공통: 첨부 목록 API로 전체 파일 + 이미지 그리드 갱신 */
+async function refreshChannelFileHubData(channelId) {
   const listEl = document.getElementById("channelFilesList");
   const emptyEl = document.getElementById("channelFilesEmpty");
+  const emptyImg = document.getElementById("channelImagesEmpty");
+  const grid = document.getElementById("channelImageGrid");
   if (!currentUser || !listEl) return;
   listEl.innerHTML = "";
+  if (grid) grid.innerHTML = "";
   if (emptyEl) emptyEl.classList.add("hidden");
+  if (emptyImg) emptyImg.classList.add("hidden");
   try {
-    const res  = await apiFetch(`/api/channels/${channelId}/files?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`);
+    const res = await apiFetch(
+      `/api/channels/${channelId}/files?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`
+    );
     const json = await res.json();
     if (!res.ok) return;
+    if (Number(channelId) !== Number(activeChannelId)) return;
     const files = json.data || [];
     if (files.length === 0) {
-      if (emptyEl) emptyEl.classList.remove("hidden");
+      emptyEl?.classList.remove("hidden");
+      emptyImg?.classList.remove("hidden");
       return;
     }
     files.forEach((f) => {
       const li = document.createElement("li");
       li.className = "channel-file-item";
       const who = f.uploaderName ? escHtml(f.uploaderName) : `emp#${f.uploadedByEmployeeNo}`;
+      const icon = isImageContentType(f.contentType, f.originalFilename) ? "🖼" : "📎";
       li.innerHTML = `
-        <span class="channel-file-icon">📎</span>
+        <span class="channel-file-icon">${icon}</span>
         <span class="channel-file-meta">
           <span class="channel-file-name">${escHtml(f.originalFilename || "")}</span>
           <span class="channel-file-sub">${who} · ${fmtSize(f.sizeBytes)} · ${fmtDate(f.createdAt)}</span>
@@ -841,6 +910,7 @@ async function loadChannelFiles(channelId) {
       });
       listEl.appendChild(li);
     });
+    renderFileHubImageGrid(channelId, files);
   } catch (e) {
     console.error("첨부 목록 로드 실패", e);
   }
@@ -1808,7 +1878,7 @@ async function selectChannel(channelId, channelName, channelType, options = {}) 
     focusMessageByIdInCurrentTimeline(Number(targetMid));
   }
 
-  loadChannelFiles(channelId);
+  refreshChannelFileHubData(channelId);
 
   messageInputEl.focus();
   syncHeaderNotifyButton();
@@ -4096,7 +4166,7 @@ async function uploadFile(
 
     // 기본: 메인 타임라인 + 파일 허브 갱신
     await loadMessages(activeChannelId);
-    loadChannelFiles(activeChannelId);
+    refreshChannelFileHubData(activeChannelId);
   } catch {
     appendSystemMsg("파일 업로드 중 서버 오류");
   }
@@ -4305,10 +4375,22 @@ document.getElementById("btnHeaderMenu").addEventListener("click", () => {
 document.getElementById("btnCloseMemberPanel").addEventListener("click", () => {
   document.getElementById("memberPanel").classList.add("hidden");
 });
-document.getElementById("btnOpenFileHub").addEventListener("click", async () => {
+document.getElementById("btnOpenFileHub")?.addEventListener("click", async () => {
   if (!activeChannelId) return;
-  await loadChannelFiles(activeChannelId);
+  await refreshChannelFileHubData(activeChannelId);
+  setFileHubTab("all");
   openModal("modalFileHub");
+});
+
+document.getElementById("btnOpenImageHub")?.addEventListener("click", async () => {
+  if (!activeChannelId) return;
+  await refreshChannelFileHubData(activeChannelId);
+  setFileHubTab("images");
+  openModal("modalFileHub");
+});
+
+document.querySelectorAll(".file-hub-tab[data-file-hub-tab]").forEach((btn) => {
+  btn.addEventListener("click", () => setFileHubTab(btn.dataset.fileHubTab));
 });
 
 const WORK_ITEM_STATUS_LABEL = { OPEN: "대기", IN_PROGRESS: "진행 중", DONE: "완료" };

@@ -212,6 +212,7 @@
               <div class="member-panel-actions member-panel-actions-top">
                 <button class="btn-member-panel-action hidden" id="btnHeaderNotifyToggle" type="button" title="다른 채에서 온 일반 메시지 토스트만 끔 · 멘션·미읽음 배지는 유지">🔕 알림 끄기</button>
                 <button class="btn-member-panel-action" id="btnOpenFileHub" title="첨부파일 모아보기">📎 첨부파일</button>
+                <button class="btn-member-panel-action" id="btnOpenImageHub" title="이미지 첨부만 모아보기">🖼 이미지 모아보기</button>
                 <button class="btn-member-panel-action" id="btnOpenWorkHub" title="업무/칸반">📋 업무/칸반</button>
                 <button class="btn-member-panel-action hidden" id="btnRenameChannel" title="채널 이름 변경">✏️ 채널 이름 변경</button>
                 <button class="btn-member-panel-action hidden" id="btnRenameDm" title="DM 이름 변경">✏️ DM 이름 변경</button>
@@ -519,16 +520,26 @@
       </div>
     </div>
 
-    <!-- ===================== 첨부파일 모아보기 ===================== -->
+    <!-- ===================== 첨부파일 · 이미지 모아보기 ===================== -->
     <div id="modalFileHub" class="modal-overlay hidden">
-      <div class="modal modal-wide">
+      <div class="modal modal-wide modal-file-hub">
         <div class="modal-header">
-          <h3>첨부파일 모아보기</h3>
+          <h3>첨부 · 이미지</h3>
           <button class="modal-close" data-modal="modalFileHub">✕</button>
         </div>
-        <div class="modal-body">
-          <ul id="channelFilesList" class="channel-files-list"></ul>
-          <p id="channelFilesEmpty" class="channel-files-empty hidden">첨부 파일이 없습니다.</p>
+        <div class="modal-body file-hub-modal-body">
+          <div class="file-hub-tabs" role="tablist" aria-label="첨부 보기 방식">
+            <button type="button" class="file-hub-tab active" data-file-hub-tab="all" id="fileHubTabAll" role="tab" aria-selected="true">전체 파일</button>
+            <button type="button" class="file-hub-tab" data-file-hub-tab="images" id="fileHubTabImages" role="tab" aria-selected="false">이미지</button>
+          </div>
+          <div id="fileHubPaneAll" class="file-hub-pane" role="tabpanel" aria-labelledby="fileHubTabAll">
+            <ul id="channelFilesList" class="channel-files-list channel-files-list-modal"></ul>
+            <p id="channelFilesEmpty" class="channel-files-empty hidden">첨부 파일이 없습니다.</p>
+          </div>
+          <div id="fileHubPaneImages" class="file-hub-pane hidden" role="tabpanel" aria-labelledby="fileHubTabImages">
+            <div id="channelImageGrid" class="channel-image-grid"></div>
+            <p id="channelImagesEmpty" class="channel-files-empty hidden">이미지 첨부가 없습니다.</p>
+          </div>
         </div>
         <div class="modal-footer">
           <button class="btn-cancel" data-modal="modalFileHub">닫기</button>
