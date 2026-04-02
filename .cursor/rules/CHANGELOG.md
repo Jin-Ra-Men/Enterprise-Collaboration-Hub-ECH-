@@ -14,6 +14,7 @@
 - **첨부 모달** `전체 파일` 탭: 이미지 첨부는 목록에서 제외(이미지는 **이미지** 탭만). 이미지만 있는 경우 전체 탭에 안내 문구 표시
 
 ### Fixed
+- **일반 신규 메시지 토스트**: Realtime `message:new`가 채널 룸(`channel:join`) 구독자에게만 오는데, 프론트가 **현재 보는 채널 하나만** join 해 다른 채널/DM 메시지를 못 받던 문제 → `loadMyChannels`·소켓 `connect`/`reconnect` 시 참여 채널 전체에 `joinAllChannelSocketRooms`. `message:new`에서 현재 채널 판별은 `Number`로 통일
 - `GET /api/channels?employeeNo=...`: 읽음 포인터 없을 때 `countRootMessagesNewerThanCursor`에 `NULL` 바인딩되며 PostgreSQL이 **매개변수 자료형을 알 수 없음**(`$2`)으로 500 나던 문제 → 포인터 없으면 `countRootMessagesInChannel`, 있을 때만 커서 쿼리로 분기
 - 메시지 API: `GET .../messages/threads`가 `/{messageId}`에 걸려 `MethodArgumentTypeMismatchException("threads")` 나던 문제를 `\\d+` 경로 제한으로 방지(단건·replies·comments POST 동일)
 

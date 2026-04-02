@@ -1557,7 +1557,9 @@ async function loadMyChannels() {
     const channelJson = await channelRes.json().catch(() => ({}));
     const workSidebarJson = await workSidebarRes.json().catch(() => ({}));
     if (!channelRes.ok) return;
-    const channels = normalizeSidebarChannels(Array.isArray(channelJson.data) ? channelJson.data : []);
+    const rawChannelRows = Array.isArray(channelJson.data) ? channelJson.data : [];
+    const channels = normalizeSidebarChannels(rawChannelRows);
+    joinAllChannelSocketRooms(rawChannelRows);
     mySidebarWorkItems = workSidebarRes.ok && Array.isArray(workSidebarJson.data) ? workSidebarJson.data : [];
     const nextWorkSig = JSON.stringify(
       (mySidebarWorkItems || []).map((r) => ({
@@ -3524,7 +3526,11 @@ function initSocket() {
     if (currentUser?.employeeNo) {
       socket.emit("presence:set", { employeeNo: currentUser.employeeNo, status: "ONLINE" });
     }
-    if (activeChannelId) socket.emit("channel:join", activeChannelId);
+    if (lastSidebarChannelsSnapshot?.length) {
+      joinAllChannelSocketRooms(lastSidebarChannelsSnapshot);
+    } else if (activeChannelId) {
+      socket.emit("channel:join", activeChannelId);
+    }
     await fetchPresenceSnapshot();
     refreshPresenceDots();
     if (activeChannelId) loadChannelMembers(activeChannelId);
@@ -3534,7 +3540,11 @@ function initSocket() {
     if (currentUser?.employeeNo) {
       socket.emit("presence:set", { employeeNo: currentUser.employeeNo, status: "ONLINE" });
     }
-    if (activeChannelId) socket.emit("channel:join", activeChannelId);
+    if (lastSidebarChannelsSnapshot?.length) {
+      joinAllChannelSocketRooms(lastSidebarChannelsSnapshot);
+    } else if (activeChannelId) {
+      socket.emit("channel:join", activeChannelId);
+    }
     await fetchPresenceSnapshot();
     refreshPresenceDots();
     if (activeChannelId) loadChannelMembers(activeChannelId);
@@ -3565,7 +3575,8 @@ function initSocket() {
 
   socket.on("message:new", (msg) => {
     const cid = Number(msg.channelId);
-    if (cid === activeChannelId) {
+    const active = activeChannelId != null ? Number(activeChannelId) : NaN;
+    if (Number.isFinite(cid) && Number.isFinite(active) && cid === active) {
       appendMessageRealtime(msg);
       // `mention:notify` 경로가 누락/지연되는 경우 대비:
       // 현재 채널에서 내 멘션이 포함된 메시지를 받으면 클라이언트가 폴백 토스트를 띄운다.
@@ -3602,6 +3613,22 @@ function initSocket() {
   socket.on("mention:notify", (p) => {
     pushMentionToast(p);
   });
+}
+
+/**
+ * 참여 중인 모든 채널/DM 룸에 join — `message:new`는 룸 단위 브로드캐스트이므로,
+ * 현재 탭 채널만 join하면 다른 대화 토스트를 받지 못한다.
+ */
+function joinAllChannelSocketRooms(channelRows) {
+  if (!socket?.connected || !channelRows?.length) return;
+  const seen = new Set();
+  for (const ch of channelRows) {
+    const id = Number(ch.channelId ?? ch.channel_id);
+    if (!Number.isFinite(id) || id <= 0) continue;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    socket.emit("channel:join", id);
+  }
 }
 
 function joinSocketChannel(channelId) {
@@ -3824,7 +3851,7 @@ function pushNewMessageToast(msg) {
   const myEmp = String(currentUser.employeeNo || "").trim();
   const sender = String(msg.senderId ?? msg.sender_id ?? "").trim();
   if (sender && myEmp && sender === myEmp) return;
-  if (activeChannelId != null && Number(activeChannelId) === cid) return;
+  if (activeChannelId != null && Number(activeChannelId) === cid) return; // 현재 채널은 목록에 안 띄움(이미 보는 중)
   if (msg.messageId != null) {
     const mid = String(msg.messageId);
     if (shownNewMessageToastIds.has(mid)) return;
