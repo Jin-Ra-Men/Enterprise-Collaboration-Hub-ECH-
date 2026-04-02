@@ -331,7 +331,7 @@
 - **프레즌스**: `presence:set`/`presence:update`/스냅샷 키는 **사번 문자열**. 채팅·멤버 패널에서 `[data-presence-user]`에 사번을 두고 `refreshPresenceDots`가 갱신합니다. 로컬 UX: 좌측 하단 본인 상태 버튼(`#sidebarUserStatus`)으로 **온라인·자리비움** 전환(`AWAY`는 노란 점).
 - **이미지 첨부**: `contentType`이 이미지이거나 확장자가 이미지인 FILE 메시지는 채팅에 썸네일 표시, 클릭 시 `modalImagePreview`로 확대, **다운로드** 버튼은 기존 파일 다운로드 API 재사용(JWT `fetch` → `blob:` URL).
 - **첨부·이미지 모아보기**: `GET /api/channels/{channelId}/files` 응답의 `contentType`·파일명으로 이미지 필터. `refreshChannelFileHubData`가 목록·그리드를 갱신, `btnOpenImageHub`는 이미지 탭으로 모달 오픈.
-- **스레드 모아보기**: `GET /api/channels/{channelId}/messages/threads?employeeNo=&limit=`(기본 50, 서버 상한 100). 댓글·답글 활동이 있는 원글만 최근 활동 순. `btnOpenThreadHub` → `modalThreadHub`, 행 클릭 시 `cacheRootMessageForThreadModal` 후 `openThreadModal`.
+- **스레드 모아보기**: `GET /api/channels/{channelId}/messages/threads?employeeNo=&limit=`(기본 50, 서버 상한 100). 댓글·답글 활동이 있는 원글만 최근 활동 순. `btnOpenThreadHub` → `modalThreadHub`, 행 클릭 시 `cacheRootMessageForThreadModal` 후 `openThreadModal`. 백엔드는 `MessageController`에서 `/{messageId:\\d+}` 등으로 리터럴 `threads`·`timeline`과 경로 충돌을 막는다.
 - `frontend/app.js`는 수신 메시지 DOM을 최대 200개로 유지해 브라우저 메모리·렌더 비용이 무한 증가하지 않도록 합니다.
 - 채팅 시각 표시: **동일 발신자·동일 분(로컬 캘린더 분)** 묶음에서는 **그 분의 마지막 메시지 줄에만** 시각을 붙이고, **분이 바뀌면** 각 메시지 줄에 시각을 붙인다(`minuteKey` / `renderMessages` / `appendMessageRealtime`). 시각은 **24시간제 `HH:mm`**이며 본문 바로 뒤에 약간 띄워 인라인으로 붙인다(`fmtTime`, `.msg-content-row`).
 

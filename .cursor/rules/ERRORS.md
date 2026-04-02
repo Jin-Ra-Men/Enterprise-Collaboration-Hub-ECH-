@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-04-02 — `GET .../messages/threads` → `MethodArgumentTypeMismatchException: For input string: "threads"`
+
+- **에러 요약**: `서버 내부 오류` / `MethodArgumentTypeMismatchException: For input string: "threads"`
+- **발생 위치(파일/명령/기능)**: `GET /api/channels/{channelId}/messages/threads` (스레드 모아보기), `MessageController.getChannelMessage`의 `/{messageId}`와 경로 충돌·오매칭
+- **원인**: 가변 경로 `/{messageId}`가 리터럴 `threads`를 메시지 ID로 받아 Long 변환에 실패. **구버전 배포**( `/threads` 핸들러 없음)이거나, 일부 환경에서 리터럴보다 패턴 매칭 순서가 불리한 경우 동일 증상 가능
+- **해결/현재 상태**: `MessageController`에서 단건·replies·comments 경로를 `/{messageId:\\d+}` 등 **숫자만** 매칭하도록 제한해 `threads`·`timeline`과 분리. 스레드 허브 API가 포함된 **최신 백엔드 빌드 재배포** 필요
+
+---
+
 ## 2026-04-01 — 칸반에 카드 추가 후 목록에 안 보임 (JOIN FETCH assignees가 INNER JOIN)
 
 - **에러 요약**: 카드 추가 API는 성공하는데 보드 새로고침 후에도 칸반에 카드가 비어 있음

@@ -41,7 +41,7 @@ public class MessageController {
         return ApiResponse.success(messageService.createMessage(channelId, request));
     }
 
-    @PostMapping("/{parentMessageId}/replies")
+    @PostMapping("/{parentMessageId:\\d+}/replies")
     public ApiResponse<MessageResponse> createReply(
             @PathVariable Long channelId,
             @PathVariable Long parentMessageId,
@@ -50,7 +50,7 @@ public class MessageController {
         return ApiResponse.success(messageService.createReply(channelId, parentMessageId, request));
     }
 
-    @PostMapping("/{parentMessageId}/comments")
+    @PostMapping("/{parentMessageId:\\d+}/comments")
     public ApiResponse<MessageResponse> createComment(
             @PathVariable Long channelId,
             @PathVariable Long parentMessageId,
@@ -88,7 +88,8 @@ public class MessageController {
      * 채널 내 메시지 단건(타임라인 범위 밖 원글 로드 등). 경로는 리터럴 {@code /timeline} 다음,
      * {@code /{id}/replies}보다 짧은 한 세그먼트만 매칭된다.
      */
-    @GetMapping("/{messageId}")
+    /** 숫자만 매칭 — {@code /threads}·{@code /timeline} 등 리터럴 경로와 충돌·오매칭 방지 */
+    @GetMapping("/{messageId:\\d+}")
     public ApiResponse<MessageResponse> getChannelMessage(
             @PathVariable Long channelId,
             @PathVariable Long messageId,
@@ -97,7 +98,7 @@ public class MessageController {
         return ApiResponse.success(messageService.getChannelMessage(channelId, messageId, employeeNo));
     }
 
-    @GetMapping("/{parentMessageId}/replies")
+    @GetMapping("/{parentMessageId:\\d+}/replies")
     public ApiResponse<List<MessageResponse>> getThreadReplies(
             @PathVariable Long channelId,
             @PathVariable Long parentMessageId

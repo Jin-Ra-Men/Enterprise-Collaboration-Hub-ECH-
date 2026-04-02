@@ -4,6 +4,9 @@
 
 ## 2026-04-02
 
+### Fixed
+- 메시지 API: `GET .../messages/threads`가 `/{messageId}`에 걸려 `MethodArgumentTypeMismatchException("threads")` 나던 문제를 `\\d+` 경로 제한으로 방지(단건·replies·comments POST 동일)
+
 ### Changed
 - **좌측 사이드바 레이아웃**: `sidebar-column`을 `align-self:stretch`+`flex` 열로 두고 `sidebar-slip`·`aside.sidebar`에 `flex:1 1 0%`·`min-height:0`로 **컬럼 전체 높이를 채움**(프로필 하단 빈 영역·작은 창에서 프로필 유실 완화). 컬럼 배경 `var(--bg-sidebar)`로 틈 색상 통일
 - **업무·칸반 모달**: 두 패널 사이 `gap` 28px로 여백 확대
