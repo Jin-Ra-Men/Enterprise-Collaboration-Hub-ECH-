@@ -4,7 +4,13 @@
 
 ## 2026-04-02
 
+### Added
+- 업무–칸반 연결: `kanban_cards.work_item_id`, `work_items.in_use`(소프트 삭제). 카드 생성 시 `workItemId` 필수(채널 일치 검증).
+- 업무 API: `GET /api/work-items/sidebar/by-assigned-cards`(내가 카드 담당인 업무 목록), `POST /api/work-items/{id}/restore`, `DELETE /api/work-items/{id}?hard=true`(완전 삭제·연결 카드 제거).
+- 프론트: 신규 카드에 연결 업무 선택, 업무 비활성 시 회색/취소선, 상세에서 복원·완전 삭제. 사이드바 `내 업무 항목`으로 전환.
+
 ### Changed
+- `DELETE /api/work-items/{id}` 기본 동작을 소프트 삭제(`in_use=false`)로 변경.
 - 칸반 카드·상세 모달의 `담당 없음` 안내 글자 크기를 담당 칩(11px)보다 한 단계 작게 맞춤(10px, 보조색)
 
 ### Fixed

@@ -120,10 +120,10 @@ graph LR
 - `GET /api/users/{userId}/profile` (경로형, 호환)
 - `POST /api/kanban/boards`, `GET /api/kanban/boards`, `GET /api/kanban/boards/{boardId}`, `DELETE /api/kanban/boards/{boardId}`
 - `POST /api/kanban/boards/{boardId}/columns`, `PUT /api/kanban/boards/{boardId}/columns/{columnId}`, `DELETE .../columns/{columnId}`
-- `POST /api/kanban/boards/{boardId}/columns/{columnId}/cards`, `PUT /api/kanban/cards/{cardId}`, `DELETE /api/kanban/cards/{cardId}?actorEmployeeNo=...` (채널 연동 보드는 멤버, 워크스페이스 전용 보드는 매니저 이상 — 서비스에서 구분)
+- `POST /api/kanban/boards/{boardId}/columns/{columnId}/cards` — body에 `workItemId` 필수(채널 연동 보드·동일 채널 업무), `PUT /api/kanban/cards/{cardId}`, `DELETE /api/kanban/cards/{cardId}?actorEmployeeNo=...` (채널 연동 보드는 멤버, 워크스페이스 전용 보드는 매니저 이상 — 서비스에서 구분)
 - `POST /api/kanban/cards/{cardId}/assignees`, `DELETE /api/kanban/cards/{cardId}/assignees/{assigneeEmployeeNo}?actorEmployeeNo=...`
 - `GET /api/kanban/cards/{cardId}/history?limit=`
-- `POST /api/messages/{messageId}/work-items`, `GET /api/messages/{messageId}/work-items`, `GET /api/work-items/{workItemId}`, `DELETE /api/work-items/{workItemId}?actorEmployeeNo=...` (채널 멤버)
+- `POST /api/messages/{messageId}/work-items`, `GET /api/messages/{messageId}/work-items`, `GET /api/work-items/{workItemId}`, `GET /api/work-items/sidebar/by-assigned-cards?employeeNo=&limit=`, `POST /api/work-items/{workItemId}/restore?actorEmployeeNo=...`, `DELETE /api/work-items/{workItemId}?actorEmployeeNo=...` (기본 소프트 삭제), `DELETE ...?hard=true` (완전 삭제·연결 칸반 카드 제거) (채널 멤버)
 - `GET /api/admin/org-sync/users?source=TEST|GROUPWARE` (현재 `TEST`만 지원)
 - `POST /api/admin/org-sync/users/sync?source=TEST|GROUPWARE`
 - `PUT /api/admin/org-sync/users/{employeeNo}/status`

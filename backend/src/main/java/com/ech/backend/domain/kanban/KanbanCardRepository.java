@@ -10,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 public interface KanbanCardRepository extends JpaRepository<KanbanCard, Long> {
     Optional<KanbanCard> findByIdAndColumn_Board_Id(Long cardId, Long boardId);
 
+    List<KanbanCard> findByWorkItem_Id(Long workItemId);
+
     /**
      * 보드 소속 카드와 담당자를 한 번에 로드한다.
      * 담당자가 없는 카드도 포함해야 하므로 {@code assignees}/{@code user}는 {@code LEFT JOIN FETCH}로 연결한다
@@ -20,6 +22,7 @@ public interface KanbanCardRepository extends JpaRepository<KanbanCard, Long> {
     @Query(
             "select distinct c from KanbanCard c "
                     + "join fetch c.column col "
+                    + "left join fetch c.workItem wi "
                     + "left join fetch c.assignees asn "
                     + "left join fetch asn.user "
                     + "where col.board.id = :boardId"

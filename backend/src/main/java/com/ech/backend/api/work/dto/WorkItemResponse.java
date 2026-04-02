@@ -7,6 +7,7 @@ public record WorkItemResponse(
         String title,
         String description,
         String status,
+        boolean inUse,
         Long sourceMessageId,
         Long sourceChannelId,
         String createdByEmployeeNo,

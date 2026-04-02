@@ -2432,6 +2432,57 @@ html[data-theme="blue"] .theme-option-btn.active {
   align-items: center;
   margin-bottom: 6px;
 }
+.kanban-new-card-work-item-label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+#kanbanNewCardWorkItemSelect {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  font-size: 12px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+.kanban-card-work-ref {
+  font-size: 10px;
+  margin: 2px 0 4px;
+  line-height: 1.2;
+}
+.kanban-card-item-inactive {
+  opacity: 0.55;
+}
+.kanban-card-item-inactive .kanban-card-item-header strong {
+  text-decoration: line-through;
+}
+.channel-work-item-inactive {
+  opacity: 0.6;
+}
+.channel-work-item-inactive .channel-work-item-title {
+  text-decoration: line-through;
+}
+.sidebar-work-item-inactive .item-label {
+  text-decoration: line-through;
+  opacity: 0.85;
+}
+.work-item-row-highlight {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: 8px;
+}
+.work-item-inactive-actions {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+.work-item-inactive-hint {
+  font-size: 12px;
+  margin-bottom: 8px;
+}
 .kanban-assignee-chips-empty {
   margin-bottom: 4px;
   font-size: 10px;

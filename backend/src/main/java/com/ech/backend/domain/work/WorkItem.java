@@ -1,6 +1,7 @@
 package com.ech.backend.domain.work;
 
 import com.ech.backend.domain.channel.Channel;
+import com.ech.backend.domain.kanban.KanbanCard;
 import com.ech.backend.domain.message.Message;
 import com.ech.backend.domain.user.User;
 import jakarta.persistence.Column;
@@ -11,8 +12,11 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "work_items")
@@ -49,6 +53,15 @@ public class WorkItem {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt = OffsetDateTime.now();
 
+    /**
+     * {@code false} when soft-deleted (hidden / grey in UI); restore sets back to {@code true}.
+     */
+    @Column(name = "in_use", nullable = false)
+    private boolean inUse = true;
+
+    @OneToMany(mappedBy = "workItem")
+    private List<KanbanCard> kanbanCards = new ArrayList<>();
+
     protected WorkItem() {
     }
 
@@ -66,6 +79,7 @@ public class WorkItem {
         this.sourceMessage = sourceMessage;
         this.sourceChannel = sourceChannel;
         this.createdBy = createdBy;
+        this.inUse = true;
     }
 
     public Long getId() {
@@ -115,5 +129,18 @@ public class WorkItem {
             this.status = status.trim();
         }
         this.updatedAt = OffsetDateTime.now();
+    }
+
+    public boolean isInUse() {
+        return inUse;
+    }
+
+    public void setInUse(boolean inUse) {
+        this.inUse = inUse;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public List<KanbanCard> getKanbanCards() {
+        return kanbanCards;
     }
 }

@@ -32,6 +32,8 @@ import com.ech.backend.common.exception.ForbiddenException;
 import com.ech.backend.common.rbac.AppRole;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
+import com.ech.backend.domain.work.WorkItem;
+import com.ech.backend.domain.work.WorkItemRepository;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -59,6 +61,7 @@ public class KanbanService {
     private final AuditLogService auditLogService;
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
+    private final WorkItemRepository workItemRepository;
 
     public KanbanService(
             KanbanBoardRepository boardRepository,
@@ -69,7 +72,8 @@ public class KanbanService {
             UserRepository userRepository,
             AuditLogService auditLogService,
             ChannelRepository channelRepository,
-            ChannelMemberRepository channelMemberRepository
+            ChannelMemberRepository channelMemberRepository,
+            WorkItemRepository workItemRepository
     ) {
         this.boardRepository = boardRepository;
         this.columnRepository = columnRepository;
@@ -80,6 +84,7 @@ public class KanbanService {
         this.auditLogService = auditLogService;
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
+        this.workItemRepository = workItemRepository;
     }
 
     @Transactional
@@ -323,11 +328,25 @@ public class KanbanService {
         KanbanColumn column = columnRepository.findByIdAndBoard_Id(columnId, boardId)
                 .orElseThrow(() -> new IllegalArgumentException("컬럼을 찾을 수 없습니다."));
         assertCanMutateCard(column.getBoard(), request.actorEmployeeNo(), callerRole);
+        KanbanBoard board = column.getBoard();
+        if (board.getSourceChannel() == null) {
+            throw new IllegalArgumentException("채널 연동 보드에서만 업무에 연결된 칸반 카드를 만들 수 있습니다.");
+        }
+        WorkItem workItem = workItemRepository
+                .findById(request.workItemId())
+                .orElseThrow(() -> new IllegalArgumentException("업무 항목을 찾을 수 없습니다."));
+        if (!workItem.isInUse()) {
+            throw new IllegalArgumentException("비활성 처리된 업무에는 카드를 추가할 수 없습니다.");
+        }
+        if (!workItem.getSourceChannel().getId().equals(board.getSourceChannel().getId())) {
+            throw new IllegalArgumentException("업무 항목과 칸반 보드의 채널이 일치하지 않습니다.");
+        }
         int sort = request.sortOrder() != null
                 ? request.sortOrder()
                 : column.getCards().stream().mapToInt(KanbanCard::getSortOrder).max().orElse(-1) + 1;
         KanbanCard card = new KanbanCard(
                 column,
+                workItem,
                 request.title().trim(),
                 request.description() == null ? null : request.description(),
                 sort,
@@ -554,9 +573,13 @@ public class KanbanService {
                 .map(a -> a.getUser().getEmployeeNo())
                 .sorted()
                 .toList();
+        Long workItemId = card.getWorkItem() == null ? null : card.getWorkItem().getId();
+        boolean workItemInUse = card.getWorkItem() == null || card.getWorkItem().isInUse();
         return new KanbanCardResponse(
                 card.getId(),
                 card.getColumn().getId(),
+                workItemId,
+                workItemInUse,
                 card.getTitle(),
                 card.getDescription(),
                 card.getSortOrder(),

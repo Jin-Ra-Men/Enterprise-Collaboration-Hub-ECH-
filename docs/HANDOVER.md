@@ -317,7 +317,7 @@
 - 채널 허브 칸반 카드 담당: `POST/DELETE /api/kanban/cards/{id}/assignees`는 `MEMBER`+`assertCanMutateCard`(채널 보드는 채널 멤버, 워크스페이스 보드는 `MANAGER` 이상). 서비스는 채널 연동 보드에서 `assertAssigneeIsChannelMemberIfApplicable`로 담당 사번이 채널 멤버인지 검증. **채널 허브 UI**에서는 `GET /api/channels/{id}` 멤버 목록으로 담당 자동완성(↑↓·Enter, 열린 상태에서 미선택 Enter는 폼 제출 방지).
 - 담당 제거(`removeAssignee`): `KanbanCard`의 `@OneToMany assignees`와 DB를 맞추기 위해, 자식 행만 `delete` 하면 영속 컨텍스트의 카드 컬렉션이 오래된 채로 남을 수 있음. `KanbanService`에서는 컬렉션에서 해당 `KanbanCardAssignee`를 제거(orphanRemoval)하거나, 컬렉션에 없을 때만 저장소 `delete`로 폴백한 뒤 `toCardResponse(card)`로 응답을 만든다.
 - 업무 삭제: `DELETE /api/work-items/{workItemId}?actorEmployeeNo=...`(채널 멤버). 칸반 카드 삭제: `DELETE /api/kanban/cards/{cardId}?actorEmployeeNo=...` — 컨트롤러는 `MEMBER`, 서비스 `deleteCard`에서 `assertCanMutateCard`로 채널/워크스페이스 보드 구분.
-- 업무 허브 모달: 하단 **저장**으로 신규 업무·신규 카드·업무 상태·카드 컬럼·담당 추가/해제(임시 맵)를 일괄 반영. 보드에서 ✕/검색 추가는 UI만 즉시 갱신하고 API는 저장 시 `POST/DELETE .../assignees` 순서로 호출. 목록이 길어지면 모달 본문(`modal-body`) 스크롤.
+- 업무 허브 모달: 하단 **저장**으로 신규 업무·신규 카드·업무 상태·카드 컬럼·담당 추가/해제(임시 맵)를 일괄 반영. **칸반 카드는 `work_item_id`로 업무에 종속**되며 신규 카드 생성 body에 `workItemId`가 필수다. 업무 삭제 API는 기본 **소프트 삭제**(`work_items.in_use`), `hard=true` 시 연결 카드 삭제 후 업무 행 삭제. 보드에서 ✕/검색 추가는 UI만 즉시 갱신하고 담당 API는 저장 시 `POST/DELETE .../assignees` 순서. 목록이 길어지면 모달 본문(`modal-body`) 스크롤.
 
 ### 채널 파일 메타데이터 인수인계 메모
 - 바이너리는 외부 스토리지에 두고 `channel_files`에 메타만 저장합니다.
@@ -423,7 +423,7 @@ Stop-Process -Id <PID> -Force
   - 저장 직전 카드별 담당 추가/해제 맵을 정규화해 상충 상태를 제거하고, 담당 해제 후 저장 시 재바인딩되는 케이스를 보정
 - 좌측 사이드바:
   - `내 담당 칸반` 섹션(`myKanbanList`)을 추가해 담당 카드 목록을 채널/DM 목록과 같은 영역에서 제공
-  - 데이터 소스: `GET /api/kanban/cards/assigned?employeeNo=...&limit=...`
+  - 데이터 소스: `GET /api/work-items/sidebar/by-assigned-cards?employeeNo=...&limit=...`(내가 담당인 칸반 카드가 하나라도 있는 업무 항목)
   - 클릭 동작: 채널 진입 -> 업무·칸반 모달 오픈 -> 대상 카드 스크롤/강조
 
 ---

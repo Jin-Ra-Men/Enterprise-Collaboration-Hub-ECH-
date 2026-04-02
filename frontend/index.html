@@ -96,7 +96,7 @@
           <div class="sidebar-section-header">
             <button type="button" class="section-toggle" data-target="myKanbanList">
               <span class="section-toggle-chevron" aria-hidden="true">▾</span>
-              <span class="section-toggle-label">내 담당 칸반</span>
+              <span class="section-toggle-label">내 업무 항목</span>
             </button>
           </div>
           <ul class="sidebar-list" id="myKanbanList"></ul>
@@ -553,8 +553,12 @@
           </div>
           <div class="work-hub-panel">
             <h4>칸반 보드</h4>
-            <p class="work-hub-hint">새 카드·컬럼 이동은 편집 후 <strong>저장</strong> 시 반영됩니다. 담당 추가/해제는 즉시 적용됩니다.</p>
+            <p class="work-hub-hint">카드는 <strong>저장된 업무 항목</strong>에만 연결됩니다. 새 업무는 먼저 저장한 뒤 카드를 추가하세요. 컬럼 이동은 편집 후 <strong>저장</strong> 시 반영됩니다.</p>
             <form id="kanbanCardCreateForm" class="work-item-create-form" onsubmit="return false;">
+              <label class="kanban-new-card-work-item-label" for="kanbanNewCardWorkItemSelect">연결 업무</label>
+              <select id="kanbanNewCardWorkItemSelect" aria-label="신규 카드에 연결할 업무 항목">
+                <option value="">업무 항목 선택(필수)</option>
+              </select>
               <input id="kanbanCardTitleInput" type="text" maxlength="500" placeholder="새 카드 제목" />
               <textarea id="kanbanCardDescInput" rows="2" maxlength="8000" placeholder="카드 설명(선택)"></textarea>
               <div id="kanbanNewCardAssigneeWrap" class="kanban-new-card-assignee-wrap">
@@ -605,6 +609,11 @@
               <option value="IN_PROGRESS">진행 중</option>
               <option value="DONE">완료</option>
             </select>
+          </div>
+          <div id="workItemDetailInactiveActions" class="work-item-inactive-actions hidden">
+            <p class="muted work-item-inactive-hint">비활성 처리된 업무입니다. 복원하거나 DB에서 완전히 삭제할 수 있습니다.</p>
+            <button type="button" class="btn-secondary btn-sm" id="btnWorkItemRestore">복원</button>
+            <button type="button" class="btn-danger btn-sm" id="btnWorkItemPurge">완전 삭제</button>
           </div>
         </div>
         <div class="modal-footer">

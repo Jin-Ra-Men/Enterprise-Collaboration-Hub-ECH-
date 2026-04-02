@@ -111,6 +111,7 @@ CREATE INDEX IF NOT EXISTS idx_kanban_columns_board_id ON kanban_columns(board_i
 CREATE TABLE IF NOT EXISTS kanban_cards (
     id BIGSERIAL PRIMARY KEY,
     column_id BIGINT NOT NULL REFERENCES kanban_columns(id) ON DELETE CASCADE,
+    work_item_id BIGINT,
     title VARCHAR(500) NOT NULL,
     description TEXT,
     sort_order INT NOT NULL DEFAULT 0,
@@ -120,6 +121,7 @@ CREATE TABLE IF NOT EXISTS kanban_cards (
 );
 
 CREATE INDEX IF NOT EXISTS idx_kanban_cards_column_id_sort ON kanban_cards(column_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_kanban_cards_work_item_id ON kanban_cards(work_item_id);
 
 CREATE TABLE IF NOT EXISTS kanban_card_assignees (
     id BIGSERIAL PRIMARY KEY,
@@ -148,6 +150,7 @@ CREATE TABLE IF NOT EXISTS work_items (
     title VARCHAR(500) NOT NULL,
     description TEXT,
     status VARCHAR(50) NOT NULL DEFAULT 'OPEN',
+    in_use BOOLEAN NOT NULL DEFAULT TRUE,
     source_message_id BIGINT UNIQUE REFERENCES messages(id) ON DELETE SET NULL,
     source_channel_id BIGINT NOT NULL REFERENCES channels(id),
     created_by VARCHAR(50) NOT NULL REFERENCES users(employee_no),

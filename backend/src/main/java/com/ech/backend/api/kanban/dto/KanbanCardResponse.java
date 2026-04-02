@@ -6,6 +6,8 @@ import java.util.List;
 public record KanbanCardResponse(
         Long id,
         Long columnId,
+        Long workItemId,
+        boolean workItemInUse,
         String title,
         String description,
         int sortOrder,

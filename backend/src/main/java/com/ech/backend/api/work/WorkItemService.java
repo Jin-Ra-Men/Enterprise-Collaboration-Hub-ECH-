@@ -5,6 +5,7 @@ import com.ech.backend.api.work.dto.CreateWorkItemFromMessageRequest;
 import com.ech.backend.api.work.dto.CreateWorkItemRequest;
 import com.ech.backend.api.work.dto.UpdateWorkItemRequest;
 import com.ech.backend.api.work.dto.WorkItemResponse;
+import com.ech.backend.api.work.dto.WorkItemSidebarResponse;
 import com.ech.backend.domain.channel.Channel;
 import com.ech.backend.domain.channel.ChannelRepository;
 import com.ech.backend.domain.audit.AuditEventType;
@@ -13,8 +14,11 @@ import com.ech.backend.domain.message.Message;
 import com.ech.backend.domain.message.MessageRepository;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
+import com.ech.backend.domain.kanban.KanbanCard;
+import com.ech.backend.domain.kanban.KanbanCardRepository;
 import com.ech.backend.domain.work.WorkItem;
 import com.ech.backend.domain.work.WorkItemRepository;
+import java.util.Comparator;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +35,7 @@ public class WorkItemService {
     private final ChannelMemberRepository channelMemberRepository;
     private final ChannelRepository channelRepository;
     private final WorkItemRepository workItemRepository;
+    private final KanbanCardRepository kanbanCardRepository;
     private final AuditLogService auditLogService;
 
     public WorkItemService(
@@ -39,6 +44,7 @@ public class WorkItemService {
             ChannelMemberRepository channelMemberRepository,
             ChannelRepository channelRepository,
             WorkItemRepository workItemRepository,
+            KanbanCardRepository kanbanCardRepository,
             AuditLogService auditLogService
     ) {
         this.messageRepository = messageRepository;
@@ -46,6 +52,7 @@ public class WorkItemService {
         this.channelMemberRepository = channelMemberRepository;
         this.channelRepository = channelRepository;
         this.workItemRepository = workItemRepository;
+        this.kanbanCardRepository = kanbanCardRepository;
         this.auditLogService = auditLogService;
     }
 
@@ -180,6 +187,9 @@ public class WorkItemService {
         return toResponse(saved);
     }
 
+    /**
+     * Soft-delete: hides the work item in UI; linked kanban cards remain until purge.
+     */
     @Transactional
     public void deleteWorkItem(Long workItemId, String actorEmployeeNo) {
         String actor = actorEmployeeNo == null ? "" : actorEmployeeNo.trim();
@@ -191,7 +201,8 @@ public class WorkItemService {
         if (!channelMemberRepository.existsByChannelIdAndUserEmployeeNo(item.getSourceChannel().getId(), actor)) {
             throw new IllegalArgumentException("채널 멤버만 업무 항목을 삭제할 수 있습니다.");
         }
-        workItemRepository.delete(item);
+        item.setInUse(false);
+        workItemRepository.save(item);
     }
 
     private static String buildTitle(String requestedTitle, String messageBody) {
@@ -221,6 +232,63 @@ public class WorkItemService {
         return s.length() > max ? s.substring(0, max) : s;
     }
 
+    public List<WorkItemSidebarResponse> listWorkItemsWithMyCardAssignment(String employeeNo, int limit) {
+        String emp = employeeNo == null ? "" : employeeNo.trim();
+        if (emp.isBlank()) {
+            throw new IllegalArgumentException("employeeNo는 필수입니다.");
+        }
+        List<WorkItem> raw = workItemRepository.findDistinctWithMyCardAssignment(emp);
+        int size = Math.min(Math.max(limit, 1), 100);
+        return raw.stream()
+                .sorted(Comparator.comparing(WorkItem::getUpdatedAt).reversed())
+                .limit(size)
+                .map(w -> new WorkItemSidebarResponse(
+                        w.getId(),
+                        w.getTitle(),
+                        w.getSourceChannel().getId(),
+                        w.getSourceChannel().getName() == null ? "" : w.getSourceChannel().getName(),
+                        w.isInUse(),
+                        w.getUpdatedAt()))
+                .toList();
+    }
+
+    @Transactional
+    public WorkItemResponse restoreWorkItem(Long workItemId, String actorEmployeeNo) {
+        String actor = actorEmployeeNo == null ? "" : actorEmployeeNo.trim();
+        if (actor.isBlank()) {
+            throw new IllegalArgumentException("actorEmployeeNo는 필수입니다.");
+        }
+        WorkItem item = workItemRepository.findById(workItemId)
+                .orElseThrow(() -> new IllegalArgumentException("업무 항목을 찾을 수 없습니다."));
+        if (!channelMemberRepository.existsByChannelIdAndUserEmployeeNo(item.getSourceChannel().getId(), actor)) {
+            throw new IllegalArgumentException("채널 멤버만 업무 항목을 복원할 수 있습니다.");
+        }
+        item.setInUse(true);
+        return toResponse(workItemRepository.save(item));
+    }
+
+    /**
+     * Removes all linked kanban cards and the work item row.
+     */
+    @Transactional
+    public void purgeWorkItem(Long workItemId, String actorEmployeeNo) {
+        String actor = actorEmployeeNo == null ? "" : actorEmployeeNo.trim();
+        if (actor.isBlank()) {
+            throw new IllegalArgumentException("actorEmployeeNo는 필수입니다.");
+        }
+        WorkItem item = workItemRepository.findById(workItemId)
+                .orElseThrow(() -> new IllegalArgumentException("업무 항목을 찾을 수 없습니다."));
+        if (!channelMemberRepository.existsByChannelIdAndUserEmployeeNo(item.getSourceChannel().getId(), actor)) {
+            throw new IllegalArgumentException("채널 멤버만 업무 항목을 완전 삭제할 수 있습니다.");
+        }
+        List<KanbanCard> cards = kanbanCardRepository.findByWorkItem_Id(workItemId);
+        for (KanbanCard card : cards) {
+            card.getColumn().getCards().remove(card);
+            kanbanCardRepository.delete(card);
+        }
+        workItemRepository.delete(item);
+    }
+
     private WorkItemResponse toResponse(WorkItem item) {
         Long messageId = item.getSourceMessage() == null ? null : item.getSourceMessage().getId();
         return new WorkItemResponse(
@@ -228,6 +296,7 @@ public class WorkItemService {
                 item.getTitle(),
                 item.getDescription(),
                 item.getStatus(),
+                item.isInUse(),
                 messageId,
                 item.getSourceChannel().getId(),
                 item.getCreatedBy().getEmployeeNo(),

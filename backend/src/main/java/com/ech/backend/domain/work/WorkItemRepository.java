@@ -13,6 +13,18 @@ public interface WorkItemRepository extends JpaRepository<WorkItem, Long> {
     List<WorkItem> findBySourceChannel_IdOrderByCreatedAtDesc(Long channelId, Pageable pageable);
 
     /**
+     * 사이드바: 내가 칸반 카드 담당으로 지정된 업무 항목(중복 제거).
+     */
+    @Query(
+            "select distinct w from WorkItem w "
+                    + "join fetch w.sourceChannel ch "
+                    + "join w.kanbanCards c "
+                    + "join c.assignees a "
+                    + "where a.user.employeeNo = :emp"
+    )
+    List<WorkItem> findDistinctWithMyCardAssignment(@Param("emp") String employeeNo);
+
+    /**
      * 통합 검색: 업무 제목 또는 설명에서 키워드를 검색한다 (워크스페이스 전체 대상).
      */
     @Query("""

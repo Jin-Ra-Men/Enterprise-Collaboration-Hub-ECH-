@@ -480,13 +480,15 @@
   - `GET /api/channels/{channelId}/work-items?employeeNo=&limit=` — 채널 업무 목록
   - `POST /api/channels/{channelId}/work-items` — 채널 업무 생성(`createdByEmployeeNo`, `title`, 선택 `description`, `status`, `sourceMessageId`)
   - `PUT /api/work-items/{workItemId}` — 채널 업무 수정(`actorEmployeeNo`, 부분 갱신)
-  - `DELETE /api/work-items/{workItemId}?actorEmployeeNo=` — 채널 멤버만 삭제
+  - `DELETE /api/work-items/{workItemId}?actorEmployeeNo=` — 채널 멤버, **기본 소프트 삭제**(`in_use=false`). `hard=true` 시 연결 칸반 카드 삭제 후 업무 행 완전 삭제
+  - `POST /api/work-items/{workItemId}/restore?actorEmployeeNo=` — 소프트 삭제된 업무 복원(`in_use=true`)
+  - `GET /api/work-items/sidebar/by-assigned-cards?employeeNo=&limit=` — 내가 **칸반 카드 담당**인 업무 목록(사이드바)
   - `GET /api/kanban/channels/{channelId}/board?employeeNo=` — 채널 기본 칸반 보드 조회/없으면 자동 생성
 - 입력/출력:
   - 업무 상태는 API 값은 `OPEN`/`IN_PROGRESS`/`DONE`이며, UI 셀렉트·목록은 한글 라벨(예: 미착수·진행 중·완료)로 표시
   - 칸반 보드는 채널당 1개를 기본으로 사용하며, 최초 조회 시 `할 일/진행 중/완료` 컬럼을 자동 생성
-  - 칸반 카드 담당: **채널 연동 보드**에서는 `GET /api/channels/{channelId}` 등으로 조회한 **채널 멤버**만 후보로 자동완성(전사 `GET /api/users/search` 사용 안 함). 생성 시 body `assigneeEmployeeNos` 또는 `POST /api/kanban/cards/{cardId}/assignees`로 추가, `DELETE .../assignees/{assigneeEmployeeNo}` 로 해제. 서버는 채널 연동 보드에서 담당 사번이 채널 멤버인지 검증
-  - UI: 신규 업무·신규 카드·목록에서 업무 상태·카드 컬럼 이동은 **저장** 버튼으로 일괄 반영. 담당 추가/해제는 즉시 API 호출. 업무·카드 각각 **✕**로 삭제(`DELETE` 업무 / `DELETE` 카드 `?actorEmployeeNo=`). 모달 본문 스크롤로 패널이 목록만큼 세로로 늘어남
+  - 칸반 카드는 **반드시 동일 채널의 업무 항목(`work_item_id`)에 연결**된다(미연결 카드 없음). `POST .../columns/.../cards` body에 `workItemId` 필수. 카드 담당: 채널 멤버만 자동완성·`POST/DELETE .../assignees`
+  - UI: 신규 카드는 **저장된 업무**를 선택한 뒤 큐에 넣고, 저장 시 생성. 업무 **✕**는 소프트 삭제(목록 회색·취소선), 상세에서 복원·완전 삭제. 모달 본문 스크롤
 - 상태 전이/예외 케이스:
   - 비멤버 조회/생성/수정 시 예외
   - `sourceMessageId` 지정 시 다른 채널 메시지를 참조하면 생성 거부
@@ -790,7 +792,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - 정규화 단계에서 로컬 보드 트리에서 카드를 찾지 못하면 서버 기준 assignee diff가 비어 담당 `DELETE`가 생략될 수 있어, `id`/`cardId` 복합 탐색·pending 맵 키 정규화·카드 미탐색 시 스냅샷 해제 목록 폴백으로 보정
 - 좌측 사이드바:
   - `내 담당 칸반` 섹션 추가
-  - `GET /api/kanban/cards/assigned?employeeNo=...&limit=...`로 내 담당 카드(채널 연동 보드) 요약을 조회해 렌더
+  - `GET /api/work-items/sidebar/by-assigned-cards?employeeNo=...&limit=...`로 **내가 칸반 카드 담당으로 지정된 업무 항목** 목록을 조회해 사이드바에 렌더(채널 연동 보드·`kanban_card_assignees` 기준)
   - 항목 클릭 시 대상 채널 진입 후 `업무 · 칸반` 모달을 열고 해당 카드를 스크롤·강조
 
 ---

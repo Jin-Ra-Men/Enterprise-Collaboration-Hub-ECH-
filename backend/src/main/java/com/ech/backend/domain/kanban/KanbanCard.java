@@ -12,6 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import com.ech.backend.domain.work.WorkItem;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +28,13 @@ public class KanbanCard {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "column_id", nullable = false)
     private KanbanColumn column;
+
+    /**
+     * Parent work item (sub-task). Legacy rows may be null until backfilled; new cards must set this.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "work_item_id")
+    private WorkItem workItem;
 
     @Column(nullable = false, length = 500)
     private String title;
@@ -56,8 +64,9 @@ public class KanbanCard {
     protected KanbanCard() {
     }
 
-    public KanbanCard(KanbanColumn column, String title, String description, int sortOrder, String status) {
+    public KanbanCard(KanbanColumn column, WorkItem workItem, String title, String description, int sortOrder, String status) {
         this.column = column;
+        this.workItem = workItem;
         this.title = title;
         this.description = description;
         this.sortOrder = sortOrder;
@@ -74,6 +83,14 @@ public class KanbanCard {
 
     public void setColumn(KanbanColumn column) {
         this.column = column;
+    }
+
+    public WorkItem getWorkItem() {
+        return workItem;
+    }
+
+    public void setWorkItem(WorkItem workItem) {
+        this.workItem = workItem;
     }
 
     public String getTitle() {

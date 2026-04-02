@@ -4,6 +4,7 @@ import com.ech.backend.api.work.dto.CreateWorkItemFromMessageRequest;
 import com.ech.backend.api.work.dto.CreateWorkItemRequest;
 import com.ech.backend.api.work.dto.UpdateWorkItemRequest;
 import com.ech.backend.api.work.dto.WorkItemResponse;
+import com.ech.backend.api.work.dto.WorkItemSidebarResponse;
 import com.ech.backend.common.api.ApiResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -43,6 +44,19 @@ public class WorkItemController {
         return ApiResponse.success(workItemService.getById(workItemId));
     }
 
+    /**
+     * Sidebar: work items where the user is assignee on at least one kanban card (sub-task).
+     * Path avoids collision with {@code GET /api/work-items/{workItemId}}.
+     */
+    @GetMapping("/api/work-items/sidebar/by-assigned-cards")
+    public ApiResponse<List<WorkItemSidebarResponse>> listWorkItemsWithMyCardAssignment(
+            @RequestParam String employeeNo,
+            @RequestParam(required = false, defaultValue = "30") Integer limit
+    ) {
+        return ApiResponse.success(
+                workItemService.listWorkItemsWithMyCardAssignment(employeeNo, limit == null ? 30 : limit));
+    }
+
     @GetMapping("/api/channels/{channelId}/work-items")
     public ApiResponse<List<WorkItemResponse>> listByChannel(
             @PathVariable Long channelId,
@@ -68,12 +82,28 @@ public class WorkItemController {
         return ApiResponse.success(workItemService.updateWorkItem(workItemId, request));
     }
 
-    @DeleteMapping("/api/work-items/{workItemId}")
-    public ApiResponse<Void> deleteWorkItem(
+    @PostMapping("/api/work-items/{workItemId}/restore")
+    public ApiResponse<WorkItemResponse> restoreWorkItem(
             @PathVariable Long workItemId,
             @RequestParam String actorEmployeeNo
     ) {
-        workItemService.deleteWorkItem(workItemId, actorEmployeeNo);
+        return ApiResponse.success(workItemService.restoreWorkItem(workItemId, actorEmployeeNo));
+    }
+
+    /**
+     * Default: soft-delete ({@code in_use = false}). {@code hard=true}: delete all linked cards and the work item row.
+     */
+    @DeleteMapping("/api/work-items/{workItemId}")
+    public ApiResponse<Void> deleteWorkItem(
+            @PathVariable Long workItemId,
+            @RequestParam String actorEmployeeNo,
+            @RequestParam(required = false, defaultValue = "false") boolean hard
+    ) {
+        if (hard) {
+            workItemService.purgeWorkItem(workItemId, actorEmployeeNo);
+        } else {
+            workItemService.deleteWorkItem(workItemId, actorEmployeeNo);
+        }
         return ApiResponse.success(null);
     }
 }
