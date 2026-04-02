@@ -31,7 +31,7 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
               AND m.parentMessage IS NULL
               AND m.archivedAt IS NULL
               AND m.isDeleted = false
-            ORDER BY m.createdAt DESC
+            ORDER BY m.createdAt DESC, m.id DESC
             """)
     List<Message> findRecentByChannelId(@Param("channelId") Long channelId, Pageable pageable);
 
@@ -137,7 +137,9 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     int archiveOlderThan(@Param("cutoff") OffsetDateTime cutoff, @Param("now") OffsetDateTime now);
 
     /**
-     * 메인 타임라인(루트) 메시지 중 읽음 포인터 이후 건수. {@code afterId}가 {@code null}이면 전체 루트 메시지 수.
+     * 메인 타임라인(루트) 중 읽음 커서보다 <strong>타임라인상 더 최신</strong>인 건수.
+     * 타임라인 정렬과 동일하게 {@code createdAt DESC, id DESC} 기준으로 “더 최신”을 판별한다.
+     * {@code cursorTime}이 {@code null}이면 읽음 포인터 없음 → 전체 루트 메시지 수.
      */
     @Query("""
             SELECT COUNT(m) FROM Message m
@@ -145,9 +147,16 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
               AND m.parentMessage IS NULL
               AND m.archivedAt IS NULL
               AND m.isDeleted = false
-              AND (:afterId IS NULL OR m.id > :afterId)
+              AND (
+                :cursorTime IS NULL
+                OR m.createdAt > :cursorTime
+                OR (m.createdAt = :cursorTime AND m.id > :cursorId)
+              )
             """)
-    long countRootMessagesAfter(@Param("channelId") long channelId, @Param("afterId") Long afterId);
+    long countRootMessagesNewerThanCursor(
+            @Param("channelId") long channelId,
+            @Param("cursorTime") OffsetDateTime cursorTime,
+            @Param("cursorId") Long cursorId);
 
     /**
      * 채널별 메인 타임라인(루트) 최신 메시지 시각. 미읽음 퀵 메뉴 정렬용.

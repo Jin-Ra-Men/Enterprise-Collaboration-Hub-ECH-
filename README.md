@@ -101,8 +101,9 @@ graph LR
 - `GET /api/channels/{channelId}`
 - `POST /api/channels/{channelId}/members`
 - `PUT /api/channels/{channelId}/dm-name`, `POST /api/channels/{channelId}/delegate-manager`, `POST /api/channels/{channelId}/leave`, `DELETE /api/channels/{channelId}`
-- `GET /api/channels/{channelId}/read-state?userId=...`
-- `PUT /api/channels/{channelId}/read-state`
+- `GET /api/channels/{channelId}/read-state?employeeNo=...`
+- `PUT /api/channels/{channelId}/read-state` — body: `employeeNo`, `lastReadMessageId`
+- `POST /api/channels/{channelId}/read-state/mark-latest-root` — body: `employeeNo`(미읽음 배지·대량 히스토리용)
 - `GET /api/channels/{channelId}/files?userId=...`
 - `POST /api/channels/{channelId}/files/upload?userId=...` (multipart)
 - `POST /api/channels/{channelId}/files`

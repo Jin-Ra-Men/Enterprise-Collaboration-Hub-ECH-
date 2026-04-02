@@ -6,6 +6,7 @@
 
 ### Added
 - 채팅 **타임라인 페이지네이션**: `GET .../messages/timeline` 응답 `{ items, hasMoreOlder }`, `beforeMessageId` 커서·`findTimelineOlderThan`, 프론트 상단 스크롤 시 이전 페이지 prepend·`#msgHistoryLoading`, DOM `MAX_CHAT_DOM_NODES`/`HARD_MAX` 트림. 대량 테스트 SQL `tools/sql/seed_mass_channel_messages.sql`
+- **미읽음·읽음 포인터 보강**: 루트 미읽음 건수를 메시지 `id`만이 아니라 **타임라인 순서(`created_at`, `id`)** 기준으로 계산(`MessageRepository.countRootMessagesNewerThanCursor`). `POST /api/channels/{channelId}/read-state/mark-latest-root`(body: `employeeNo`)로 **채널 최신 루트까지 읽음**(대량 히스토리에서도 첫 진입만으로 배지 해제). 프론트: 채널 전환 시 `localStorage` `ech_chat_scroll_v1_{employeeNo}`에 **스크롤 비율** 저장·복원, `loadMessages` 후 `markChannelReadCaughtUp`, 실시간 수신은 디바운스 `scheduleMarkChannelReadCaughtUp`
 
 ### Changed
 - 문서: 채팅 DOM·타임라인 설명을 페이지네이션·상수(`MAX_CHAT_DOM_NODES` 등) 기준으로 정리(이전 200/300 문구는 구버전)

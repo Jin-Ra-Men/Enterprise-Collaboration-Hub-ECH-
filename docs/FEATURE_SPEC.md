@@ -391,6 +391,7 @@
 - 관련 API:
   - `GET /api/channels/{channelId}/read-state?employeeNo=...` (조회, 미설정 시 `lastReadMessageId=null`)
   - `PUT /api/channels/{channelId}/read-state` (갱신, body: `employeeNo`, `lastReadMessageId`)
+  - `POST /api/channels/{channelId}/read-state/mark-latest-root` (body: `employeeNo`) — 채널에 루트 메시지가 있으면 **가장 최신 루트**( `created_at DESC`, `id DESC` )를 읽음 포인터로 설정. 대량 히스토리에서도 **첫 화면만 로드해도** 미읽음 배지를 없앨 수 있게 함
 - 관련 Socket 이벤트: 해당 없음 (추후 `read:update` 브로드캐스트 검토)
 - 입력/출력:
   - 갱신 입력: `employeeNo`, `lastReadMessageId`(해당 채널 소속 메시지 ID)
@@ -407,9 +408,12 @@
   - 멤버 사용자 읽음 갱신 후 조회 값 일치
   - 비멤버/타 채널 메시지 ID 요청 실패
 - 비고:
+  - **미읽음 루트 건수**(`unreadCount`): 읽음 포인터 메시지보다 타임라인상 **더 최신**인 루트만 센다. 조건은 `(created_at > 커서.created_at) OR (created_at = 커서.created_at AND id > 커서.id)` (`MessageRepository.countRootMessagesNewerThanCursor`). DB에 `id`와 작성 시각이 어긋나는 시드/마이그레이션 데이터가 있어도 배지가 틀어지지 않게 하기 위함.
+  - 프론트 **스크롤 기억**: 사용자·채널별로 메시지 목록 `scrollTop/scrollHeight` 비율을 `localStorage`에 저장(`ech_chat_scroll_v1_{employeeNo}`), 다른 채널로 전환 직전·스크롤 시(디바운스) 저장, `loadMessages` 후 복원(이미지 로드 보정용 이중 `requestAnimationFrame`).
   - 스키마: `docs/sql/postgresql_schema_draft.sql` (`channel_read_states`)
   - 구현 파일:
     - `backend/src/main/java/com/ech/backend/api/channel/ChannelReadStateController.java`
+    - `backend/src/main/java/com/ech/backend/api/channel/dto/MarkChannelReadCaughtUpRequest.java`
     - `backend/src/main/java/com/ech/backend/api/channel/ChannelReadStateService.java`
     - `backend/src/main/java/com/ech/backend/domain/channel/ChannelReadState.java`
     - `backend/src/main/java/com/ech/backend/domain/channel/ChannelReadStateRepository.java`

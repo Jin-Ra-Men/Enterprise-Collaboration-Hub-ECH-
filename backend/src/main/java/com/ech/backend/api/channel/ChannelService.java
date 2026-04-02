@@ -660,11 +660,11 @@ public class ChannelService {
     }
 
     private int resolveUnreadRootCount(Long channelId, String employeeNo) {
-        Long afterId = channelReadStateRepository
-                .findByChannel_IdAndUser_EmployeeNo(channelId, employeeNo)
-                .map(rs -> rs.getLastReadMessage() != null ? rs.getLastReadMessage().getId() : null)
-                .orElse(null);
-        long n = messageRepository.countRootMessagesAfter(channelId, afterId);
+        var opt = channelReadStateRepository.findByChannel_IdAndUser_EmployeeNo(channelId, employeeNo);
+        Message cursor = opt.map(rs -> rs.getLastReadMessage()).orElse(null);
+        OffsetDateTime cursorTime = cursor != null ? cursor.getCreatedAt() : null;
+        Long cursorId = cursor != null ? cursor.getId() : null;
+        long n = messageRepository.countRootMessagesNewerThanCursor(channelId, cursorTime, cursorId);
         if (n > Integer.MAX_VALUE) {
             return Integer.MAX_VALUE;
         }

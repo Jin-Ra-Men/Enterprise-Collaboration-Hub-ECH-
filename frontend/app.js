@@ -174,8 +174,14 @@ let timelineRootMessageById = new Map();
 let chatTimelineHasMoreOlder = false;
 let chatTimelineLoadingOlder = false;
 let messageListScrollHandlerBound = false;
+/** 메시지 목록 스크롤 위치 localStorage 저장(디바운스) 바인딩 여부 */
+let chatScrollPersistBound = false;
 // loadMessages(preserveScroll=true)일 때만 렌더 함수의 자동 스크롤을 억제/복원하기 위한 비율
 let pendingScrollRestoreRatio = null;
+/** 채널별 저장된 스크롤 비율 복원 시 render 단계 하단 고정 1회 생략 */
+let skipAutoScrollToBottomOnce = false;
+/** 열람 중 채널 실시간 읽음 처리 디바운스 */
+let markChannelCaughtUpTimer = null;
 let selectedMembers = [];     // 채널/DM 생성 시 선택된 사용자
 let selectedDmMembers = [];
 let selectedAddMembers = [];  // 기존 채널에 추가할 사용자
@@ -1613,48 +1619,74 @@ function scheduleRefreshMyChannels() {
   }, 400);
 }
 
-async function markChannelReadUpTo(channelId, lastReadMessageId) {
-  if (!currentUser || channelId == null || lastReadMessageId == null) return;
-  const mid = Number(lastReadMessageId);
-  if (!Number.isFinite(mid)) return;
+/** 채널 최신 루트까지 읽음(미읽음 배지). 대량 히스토리에서도 스크롤 없이 정리. */
+async function markChannelReadCaughtUp(channelId) {
+  if (!currentUser || channelId == null) return;
   try {
-    const res = await apiFetch(`/api/channels/${channelId}/read-state`, {
-      method: "PUT",
-      body: JSON.stringify({ employeeNo: currentUser.employeeNo, lastReadMessageId: mid }),
+    const res = await apiFetch(`/api/channels/${channelId}/read-state/mark-latest-root`, {
+      method: "POST",
+      body: JSON.stringify({ employeeNo: currentUser.employeeNo }),
     });
     if (!res.ok) {
       const j = await res.json().catch(() => ({}));
-      console.warn("read-state 갱신 실패", res.status, j.error?.message || "");
+      console.warn("read-state mark-latest-root 실패", res.status, j.error?.message || "");
     }
   } catch (e) {
-    console.warn("read-state 갱신 오류", e);
+    console.warn("read-state mark-latest-root 오류", e);
   }
 }
 
-/** API 메시지 목록에서 루트 메시지 id 최댓값 (읽음 포인터 갱신용) */
-function maxRootMessageIdFromList(msgs) {
-  if (!msgs || msgs.length === 0) return null;
-  let max = null;
-  for (const m of msgs) {
-    const pid = m.parentMessageId ?? m.parent_message_id;
-    if (pid != null && pid !== "") continue;
-    const id = Number(m.messageId ?? m.message_id);
-    if (!Number.isFinite(id)) continue;
-    if (max === null || id > max) max = id;
-  }
-  return max;
+function scheduleMarkChannelReadCaughtUp(channelId) {
+  if (!channelId || !currentUser) return;
+  if (markChannelCaughtUpTimer) clearTimeout(markChannelCaughtUpTimer);
+  markChannelCaughtUpTimer = setTimeout(() => {
+    markChannelCaughtUpTimer = null;
+    markChannelReadCaughtUp(channelId).then(() => loadMyChannels());
+  }, 320);
 }
 
-/** 타임라인(루트+답글) 목록에서 읽음 포인터용 최대 messageId */
-function maxTimelineMessageIdFromList(msgs) {
-  if (!msgs || !msgs.length) return null;
-  let max = null;
-  for (const m of msgs) {
-    const id = Number(m.messageId ?? m.message_id);
-    if (!Number.isFinite(id)) continue;
-    if (max === null || id > max) max = id;
+function chatScrollStorageKey() {
+  const emp = String(currentUser?.employeeNo || "").trim();
+  return emp ? `ech_chat_scroll_v1_${emp}` : null;
+}
+
+function persistChatScrollMemory(channelId) {
+  const key = chatScrollStorageKey();
+  if (!key || !messagesEl || channelId == null) return;
+  const h = messagesEl.scrollHeight || 1;
+  const ratio = Math.max(0, Math.min(1, (messagesEl.scrollTop || 0) / h));
+  try {
+    const raw = localStorage.getItem(key);
+    const map = raw ? JSON.parse(raw) : {};
+    if (typeof map !== "object" || map === null) return;
+    map[String(channelId)] = { ratio, ts: Date.now() };
+    localStorage.setItem(key, JSON.stringify(map));
+  } catch {
+    /* ignore */
   }
-  return max;
+}
+
+function readChatScrollRatio(channelId) {
+  const key = chatScrollStorageKey();
+  if (!key || channelId == null) return null;
+  try {
+    const raw = localStorage.getItem(key);
+    const map = raw ? JSON.parse(raw) : {};
+    const entry = map[String(channelId)];
+    const r = entry?.ratio;
+    if (typeof r !== "number" || !Number.isFinite(r)) return null;
+    return Math.max(0, Math.min(1, r));
+  } catch {
+    return null;
+  }
+}
+
+function applyChatScrollRatio(channelId) {
+  if (!messagesEl) return;
+  const ratio = readChatScrollRatio(channelId);
+  if (ratio == null) return;
+  const h = messagesEl.scrollHeight || 1;
+  messagesEl.scrollTop = Math.max(0, Math.min(h, ratio * h));
 }
 
 function formatUnreadBadgeCount(n) {
@@ -1869,6 +1901,10 @@ function renderMyWorkItemsSidebar(channels) {
 async function selectChannel(channelId, channelName, channelType, options = {}) {
   revokeImageAttachmentBlobUrls();
   closeModal("modalImagePreview");
+  const prevChannelId = activeChannelId;
+  if (prevChannelId != null && Number(prevChannelId) !== Number(channelId)) {
+    persistChatScrollMemory(prevChannelId);
+  }
   activeChannelId   = channelId;
   activeChannelType = channelType;
   activeChannelCreatorEmployeeNo = null;
@@ -1983,9 +2019,12 @@ async function loadMessages(channelId, { preserveScroll = false } = {}) {
 
     messagesEl.innerHTML = "";
     if (!res.ok) {
+      skipAutoScrollToBottomOnce = false;
       appendSystemMsg("메시지 로드 실패: " + (json.error?.message || ""));
       return;
     }
+
+    skipAutoScrollToBottomOnce = !preserveScroll && readChatScrollRatio(channelId) != null;
 
     let msgs = [];
     if (usedTimeline) {
@@ -2004,6 +2043,7 @@ async function loadMessages(channelId, { preserveScroll = false } = {}) {
         if (mid != null) timelineRootMessageById.set(Number(mid), m);
       });
       if (msgs.length === 0) {
+        skipAutoScrollToBottomOnce = false;
         appendSystemMsg("아직 메시지가 없습니다. 첫 메시지를 보내보세요! 👋");
       } else {
         renderTimelineMessages(msgs);
@@ -2018,6 +2058,7 @@ async function loadMessages(channelId, { preserveScroll = false } = {}) {
         if (mid != null) timelineRootMessageById.set(Number(mid), m);
       });
       if (msgs.length === 0) {
+        skipAutoScrollToBottomOnce = false;
         appendSystemMsg("아직 메시지가 없습니다. 첫 메시지를 보내보세요! 👋");
       } else {
         renderMessages(msgs);
@@ -2030,18 +2071,21 @@ async function loadMessages(channelId, { preserveScroll = false } = {}) {
       const nextTop = Math.max(0, Math.min(newH, newH * pendingScrollRestoreRatio));
       messagesEl.scrollTop = nextTop;
       pendingScrollRestoreRatio = null;
+    } else if (!preserveScroll && msgs.length > 0 && readChatScrollRatio(channelId) != null) {
+      requestAnimationFrame(() => {
+        applyChatScrollRatio(channelId);
+        requestAnimationFrame(() => applyChatScrollRatio(channelId));
+      });
     }
 
-    const maxId = usedTimeline ? maxTimelineMessageIdFromList(msgs) : maxRootMessageIdFromList(msgs);
-    if (maxId != null) {
-      await markChannelReadUpTo(channelId, maxId);
-    }
+    await markChannelReadCaughtUp(channelId);
     await loadMyChannels();
   } catch (err) {
     appendSystemMsg("메시지 로드 중 오류 발생");
     console.error(err);
   } finally {
     pendingScrollRestoreRatio = null;
+    skipAutoScrollToBottomOnce = false;
   }
 }
 
@@ -2735,7 +2779,7 @@ function renderMessages(msgs) {
   refreshPresenceDots();
   // 댓글 전송 등에서 스크롤 위치를 유지해야 하는 경우(= loadMessages(preserveScroll=true))
   // render 단계에서 자동 하단 스크롤을 하지 않고 loadMessages에서 복원한다.
-  if (pendingScrollRestoreRatio == null) {
+  if (pendingScrollRestoreRatio == null && !skipAutoScrollToBottomOnce) {
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 }
@@ -2814,7 +2858,7 @@ function renderTimelineMessages(items) {
   });
   trimMessages();
   refreshPresenceDots();
-  if (pendingScrollRestoreRatio == null) {
+  if (pendingScrollRestoreRatio == null && !skipAutoScrollToBottomOnce) {
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 }
@@ -3527,7 +3571,7 @@ function initSocket() {
       // 현재 채널에서 내 멘션이 포함된 메시지를 받으면 클라이언트가 폴백 토스트를 띄운다.
       maybeShowMentionToastFromMessage(msg);
       if (msg.messageId != null) {
-        markChannelReadUpTo(activeChannelId, msg.messageId).then(() => loadMyChannels());
+        scheduleMarkChannelReadCaughtUp(activeChannelId);
       }
     } else {
       pushNewMessageToast(msg);
@@ -3544,7 +3588,7 @@ function initSocket() {
     appendSystemMsg(p.text || "", { messageId: p.messageId, createdAt: p.createdAt });
     const mid = p.messageId != null ? Number(p.messageId) : NaN;
     if (Number.isFinite(mid)) {
-      markChannelReadUpTo(cid, mid).then(() => loadMyChannels());
+      scheduleMarkChannelReadCaughtUp(cid);
     }
   });
 
@@ -3619,7 +3663,7 @@ async function sendMessageViaApi(channelId, senderId, text) {
     createdAt: m.createdAt,
   });
   if (m.messageId != null) {
-    await markChannelReadUpTo(channelId, m.messageId);
+    await markChannelReadCaughtUp(channelId);
     await loadMyChannels();
   }
 }
@@ -6942,6 +6986,20 @@ function initEvents() {
     e.preventDefault();
     openUserProfile(emp);
   });
+
+  if (!chatScrollPersistBound) {
+    chatScrollPersistBound = true;
+    let scrollPersistT = null;
+    messagesEl.addEventListener(
+      "scroll",
+      () => {
+        if (!activeChannelId || !messagesEl) return;
+        if (scrollPersistT) clearTimeout(scrollPersistT);
+        scrollPersistT = setTimeout(() => persistChatScrollMemory(activeChannelId), 450);
+      },
+      { passive: true }
+    );
+  }
 
   ensureKanbanNewCardAssigneeUiBound();
   bindModalWorkHubKanbanSuggestKeyboard();

@@ -112,7 +112,7 @@
 - 공통:
   - `GET /api/health`
 - 채널 도메인:
-  - `GET /api/channels?employeeNo=...` — 내 채널/DM 목록. DM은 요약 `description`을 **조회자(employeeNo)를 제외한 멤버** 이름(없으면 사번)으로 계산; **`unreadCount`** 는 `channel_read_states` 읽음 포인터 이후 **루트 메시지** 수; **`lastMessageAt`** 는 채널별 루트 메시지 최신 시각(JSON ISO); **`dmPeerEmployeeNos`** 는 DM만 조회자 제외 멤버 **사번** 배열(사이드바 DM 프레즌스 점). 프론트는 채팅 열람·실시간 수신 시 `PUT .../read-state`로 포인터 갱신; **퀵 레일**은 ECH 헤더 아래·검색~목록과 같은 세로 구간(`#quickContainer`·`#quickRailScroll`); **미읽음 우선·최근 대화** 최대 15개·미읽음만 배지(`compareQuickRailChannel`); 좌측 패널 펼침 **324px**(64+260), 접힘 **64px**(퀵만); **접기**는 `#btnSidebarEdgeToggle`·`ech_sidebar_collapsed`
+  - `GET /api/channels?employeeNo=...` — 내 채널/DM 목록. DM은 요약 `description`을 **조회자(employeeNo)를 제외한 멤버** 이름(없으면 사번)으로 계산; **`unreadCount`** 는 읽음 포인터 메시지보다 타임라인상 **더 최신**인 **루트**만 센다(`created_at`·`id` 기준, `MessageRepository.countRootMessagesNewerThanCursor`); **`lastMessageAt`** 는 채널별 루트 메시지 최신 시각(JSON ISO); **`dmPeerEmployeeNos`** 는 DM만 조회자 제외 멤버 **사번** 배열(사이드바 DM 프레즌스 점). 프론트는 `loadMessages`·실시간 수신 시 `POST .../read-state/mark-latest-root`로 **최신 루트까지 읽음**(대량 히스토리에서도 배지 즉시 해제), 채널 전환·스크롤 시 `localStorage` `ech_chat_scroll_v1_{employeeNo}`에 **스크롤 비율** 저장·복원; **퀵 레일**은 ECH 헤더 아래·검색~목록과 같은 세로 구간(`#quickContainer`·`#quickRailScroll`); **미읽음 우선·최근 대화** 최대 15개·미읽음만 배지(`compareQuickRailChannel`); 좌측 패널 펼침 **324px**(64+260), 접힘 **64px**(퀵만); **접기**는 `#btnSidebarEdgeToggle`·`ech_sidebar_collapsed`
   - `POST /api/channels` — 생성자는 JWT에서 식별: **`uid` 클레임(= `users.id`) 우선**, 없으면 사원번호, 레거시 토큰은 숫자-only subject를 DB id로 폴백(숫자 사번과 충돌 시 재로그인 권장). body는 `workspaceKey`, `name`, `channelType` 등, 선택 `createdByEmployeeNo`(하위 호환), DM 시 `dmPeerEmployeeNos` (`CreateChannelRequest`)
   - 동일 1:1 DM 조합은 기존 채널을 우선 재사용(레거시 내부명 편차가 있어도 멤버 조합 기준으로 재사용)
   - `GET /api/channels/{channelId}`
@@ -121,6 +121,7 @@
   - `DELETE /api/channels/{channelId}/members?targetEmployeeNo=...` — **개설자(`created_by` = JWT 사원번호)만** 다른 멤버 제거; 본인(개설자) 제거는 400
   - `GET /api/channels/{channelId}/read-state?employeeNo=...`
   - `PUT /api/channels/{channelId}/read-state` — body: `employeeNo`, `lastReadMessageId`
+  - `POST /api/channels/{channelId}/read-state/mark-latest-root` — body: `employeeNo`(채널 최신 루트까지 읽음)
   - `GET /api/channels/{channelId}/files?employeeNo=...`
   - `POST /api/channels/{channelId}/files/upload?employeeNo=...` (multipart)
   - `POST /api/channels/{channelId}/files` (메타만)
