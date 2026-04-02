@@ -4873,9 +4873,11 @@ function renderKanbanCardDetailAssigneeChips() {
     return e;
   };
   if (!workHubDetailKanbanAssignees.length) {
-    wrap.innerHTML = `<span class="muted">담당 없음</span>`;
+    wrap.classList.add("kanban-assignee-chips-empty");
+    wrap.innerHTML = `<span class="muted kanban-assignee-empty-label">담당 없음</span>`;
     return;
   }
+  wrap.classList.remove("kanban-assignee-chips-empty");
   wrap.innerHTML = workHubDetailKanbanAssignees
     .map((emp) => `<span class="kanban-assignee-chip">
       <span class="kanban-assignee-label">${escHtml(resolveName(emp))}</span>
@@ -5204,7 +5206,7 @@ function renderKanbanBoard(board) {
                           })
                           .filter(Boolean)
                           .join("")}</div>`
-                      : `<div class="kanban-assignee-chips kanban-assignee-chips-empty"><span class="muted">담당 없음</span></div>`;
+                      : `<div class="kanban-assignee-chips kanban-assignee-chips-empty"><span class="muted kanban-assignee-empty-label">담당 없음</span></div>`;
                     const effectiveTitle = !isDraft && Number.isFinite(cardNumId) && workHubPendingCardTitle.has(cardNumId)
                       ? workHubPendingCardTitle.get(cardNumId)
                       : card.title;

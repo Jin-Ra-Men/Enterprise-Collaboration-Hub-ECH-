@@ -4,6 +4,9 @@
 
 ## 2026-04-02
 
+### Changed
+- 칸반 카드·상세 모달의 `담당 없음` 안내 글자 크기를 담당 칩(11px)보다 한 단계 작게 맞춤(10px, 보조색)
+
 ### Fixed
 - 칸반 담당 해제 저장: 보드 재조회 후 카드 탐색 실패·pending 맵 키 불일치로 `removeFinal`이 비어 `DELETE /api/kanban/cards/{id}/assignees/...`가 호출되지 않던 문제를 보정(`findWorkHubKanbanCardById`, `kanbanPendingAssigneeMapGet`, 카드 미탐색 시 스냅샷 해제 폴백)
 - 칸반 담당 `DELETE`: 자식만 `assigneeRepository.delete` 할 때 `KanbanCard.assignees` 컬렉션이 1차 캐시에 남아 응답 `assigneeEmployeeNos`에 제거 대상이 그대로 노출되던 문제를 보정(부모 컬렉션에서 제거·orphanRemoval, 폴백 삭제)

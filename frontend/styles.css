@@ -2434,6 +2434,16 @@ html[data-theme="blue"] .theme-option-btn.active {
 }
 .kanban-assignee-chips-empty {
   margin-bottom: 4px;
+  font-size: 10px;
+  line-height: 1.25;
+  color: var(--text-muted);
+}
+.kanban-assignee-chips-empty .kanban-assignee-empty-label,
+.kanban-assignee-empty-label {
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  font-weight: 400;
 }
 .kanban-assignee-chip {
   position: relative;
