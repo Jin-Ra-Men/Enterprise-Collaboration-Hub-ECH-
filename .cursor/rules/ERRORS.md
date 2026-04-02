@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-04-02 — `GET /api/channels` 500 · PostgreSQL `매개변수의 자료형을 알수가 없습니다` (`$2`)
+
+- **에러 요약**: `InvalidDataAccessResourceUsageException` / `오류: $2 매개변수의 자료형을 알수가 없습니다`
+- **발생 위치(파일/명령/기능)**: `GET /api/channels?employeeNo=...` → `ChannelService.resolveUnreadRootCount` → `MessageRepository.countRootMessagesNewerThanCursor`
+- **원인**: JPQL에 `:cursorTime IS NULL OR ...` 형태로 **null 커서**를 한 쿼리에 넣으면 Hibernate가 PostgreSQL용 SQL을 만들 때 **NULL 바인딩의 타입**을 추론하지 못함
+- **해결/현재 상태**: 읽음 포인터(커서 시각·id)가 없으면 `countRootMessagesInChannel`만 호출, 커서가 있을 때만 `countRootMessagesNewerThanCursor`(비-null 파라미터) 호출로 분리
+
+---
+
 ## 2026-04-02 — `GET .../messages/threads` → `MethodArgumentTypeMismatchException: For input string: "threads"`
 
 - **에러 요약**: `서버 내부 오류` / `MethodArgumentTypeMismatchException: For input string: "threads"`

@@ -408,7 +408,7 @@
   - 멤버 사용자 읽음 갱신 후 조회 값 일치
   - 비멤버/타 채널 메시지 ID 요청 실패
 - 비고:
-  - **미읽음 루트 건수**(`unreadCount`): 읽음 포인터 메시지보다 타임라인상 **더 최신**인 루트만 센다. 조건은 `(created_at > 커서.created_at) OR (created_at = 커서.created_at AND id > 커서.id)` (`MessageRepository.countRootMessagesNewerThanCursor`). DB에 `id`와 작성 시각이 어긋나는 시드/마이그레이션 데이터가 있어도 배지가 틀어지지 않게 하기 위함.
+  - **미읽음 루트 건수**(`unreadCount`): 읽음 포인터가 없으면 채널 내 루트 전체 건수(`countRootMessagesInChannel`). 포인터가 있으면 그보다 타임라인상 **더 최신**인 루트만 센다(`countRootMessagesNewerThanCursor`, `(created_at > 커서) OR (동일 시각 AND id > 커서.id)`). null 커서를 한 JPQL에 넣으면 PostgreSQL에서 매개변수 타입 오류가 날 수 있어 **서비스에서 분기**한다.
   - 프론트 **스크롤 기억**: 사용자·채널별로 메시지 목록 `scrollTop/scrollHeight` 비율을 `localStorage`에 저장(`ech_chat_scroll_v1_{employeeNo}`), 다른 채널로 전환 직전·스크롤 시(디바운스) 저장, `loadMessages` 후 복원(이미지 로드 보정용 이중 `requestAnimationFrame`).
   - 스키마: `docs/sql/postgresql_schema_draft.sql` (`channel_read_states`)
   - 구현 파일:

@@ -664,7 +664,12 @@ public class ChannelService {
         Message cursor = opt.map(rs -> rs.getLastReadMessage()).orElse(null);
         OffsetDateTime cursorTime = cursor != null ? cursor.getCreatedAt() : null;
         Long cursorId = cursor != null ? cursor.getId() : null;
-        long n = messageRepository.countRootMessagesNewerThanCursor(channelId, cursorTime, cursorId);
+        long n;
+        if (cursorTime == null || cursorId == null) {
+            n = messageRepository.countRootMessagesInChannel(channelId);
+        } else {
+            n = messageRepository.countRootMessagesNewerThanCursor(channelId, cursorTime, cursorId);
+        }
         if (n > Integer.MAX_VALUE) {
             return Integer.MAX_VALUE;
         }
