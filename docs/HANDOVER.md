@@ -440,6 +440,8 @@ Stop-Process -Id <PID> -Force
 - **키보드**: `bindKanbanAssigneeSuggestKeyboard`를 `modalWorkHub`와 `modalKanbanCardDetail` 모두에 붙여, 담당 검색 입력에서 ↑↓·Enter·Escape 동작을 동일하게 유지.
 - **사이드바 빈 문구**: `내 업무 항목`·`멘션` 섹션의 빈 상태는 `sidebar-item sidebar-item-empty`(작은 글자·`--text-muted` 계열).
 - **다크 기본 테마**: `:root`의 `--text-secondary` / `--text-muted`를 약간 밝게 조정해 보조 텍스트 대비를 올림. 범용 보조 문구는 `.muted`.
+- **내 업무 항목 동기화**: `flushWorkHubSave()` 성공 시 `scheduleRefreshMyChannels()`로 사이드바 담당 업무 목록을 갱신한다.
+- **채널 전환 없이 모달만**: 사이드바 행 클릭 시 `selectChannel`을 호출하지 않고 `workHubScopedChannelId`만 설정한 뒤 `loadWorkHubChannelMembersForAssignee` / `loadChannelWorkItems` / `loadChannelKanbanBoard`가 `getWorkHubChannelId()`로 해당 채널 API를 호출한다. 채팅 패널의 `activeChannelId`는 그대로. `closeModal("modalWorkHub")` 시 `clearWorkHubScopedChannel()`. 헤더 `📋`로 열 때는 `workHubScopedChannelId = null`로 현재 채널 기준.
 
 ---
 

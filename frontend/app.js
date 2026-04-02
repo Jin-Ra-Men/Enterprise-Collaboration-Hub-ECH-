@@ -216,7 +216,19 @@ let profileViewEmployeeNo = null;
 /** 업무/칸반 모달 상태 */
 let workHubBoardId = null;
 let workHubColumns = [];
-let workHubActiveChannelId = null;
+/** When set, Work Hub loads/saves for this channel without switching the main chat view. */
+let workHubScopedChannelId = null;
+
+function getWorkHubChannelId() {
+  const scoped = workHubScopedChannelId != null ? Number(workHubScopedChannelId) : null;
+  if (scoped != null && Number.isFinite(scoped) && scoped > 0) return scoped;
+  return activeChannelId != null ? Number(activeChannelId) : null;
+}
+
+function clearWorkHubScopedChannel() {
+  workHubScopedChannelId = null;
+}
+
 /** 좌측 하단 프레즌스 메뉴 이벤트(재로그인 시 중복 바인딩 방지) */
 let sidebarPresenceUiBound = false;
 /** 사이드바 섹션 토글·접기 버튼은 initEvents가 여러 번 호출돼도 한 번만 바인딩 */
@@ -1692,19 +1704,24 @@ function renderMyWorkItemsSidebar(channels) {
       const cid = Number(row.channelId ?? 0);
       const wid = Number(row.workItemId ?? 0);
       if (!cid || !wid) return;
-      await selectChannel(cid, String(row.channelName || "채널"), li.dataset.channelType || "PUBLIC");
+      workHubScopedChannelId = cid;
       clearWorkHubPendingMaps();
       clearPendingNewKanbanAssignees();
-      await Promise.all([loadWorkHubChannelMembersForAssignee(), loadChannelWorkItems(), loadChannelKanbanBoard()]);
-      ensureWorkHubWorkListDeleteBound();
-      openModal("modalWorkHub");
-      setTimeout(() => {
-        const rowEl = document.querySelector(`#channelWorkItemsList .channel-work-item[data-work-item-id="${wid}"]`);
-        if (!rowEl) return;
-        rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
-        rowEl.classList.add("work-item-row-highlight");
-        setTimeout(() => rowEl.classList.remove("work-item-row-highlight"), 2200);
-      }, 120);
+      try {
+        await Promise.all([loadWorkHubChannelMembersForAssignee(), loadChannelWorkItems(), loadChannelKanbanBoard()]);
+        ensureWorkHubWorkListDeleteBound();
+        openModal("modalWorkHub");
+        setTimeout(() => {
+          const rowEl = document.querySelector(`#channelWorkItemsList .channel-work-item[data-work-item-id="${wid}"]`);
+          if (!rowEl) return;
+          rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
+          rowEl.classList.add("work-item-row-highlight");
+          setTimeout(() => rowEl.classList.remove("work-item-row-highlight"), 2200);
+        }, 120);
+      } catch (e) {
+        clearWorkHubScopedChannel();
+        await uiAlert(e?.message || "업무/칸반 정보를 불러오지 못했습니다.");
+      }
     });
     myKanbanListEl.appendChild(li);
   });
@@ -4244,7 +4261,8 @@ function applyKanbanDnDOrder(columnId, orderedCardMeta) {
 }
 
 async function flushWorkHubSave() {
-  if (!activeChannelId || !currentUser) return false;
+  const hubCh = getWorkHubChannelId();
+  if (!hubCh || !currentUser) return false;
   try {
     const hasPending =
       workHubPendingWorkStatus.size > 0 ||
@@ -4262,7 +4280,7 @@ async function flushWorkHubSave() {
     }
 
     for (const draft of workHubPendingNewWorkItems) {
-      const res = await apiFetch(`/api/channels/${activeChannelId}/work-items`, {
+      const res = await apiFetch(`/api/channels/${hubCh}/work-items`, {
         method: "POST",
         body: JSON.stringify({
           createdByEmployeeNo: currentUser.employeeNo,
@@ -4427,6 +4445,7 @@ async function flushWorkHubSave() {
     workHubPendingCardAssigneeAdd.clear();
 
     await Promise.all([loadChannelWorkItems(), loadChannelKanbanBoard()]);
+    scheduleRefreshMyChannels();
     return true;
   } catch (e) {
     await uiAlert(e?.message || "저장에 실패했습니다.");
@@ -4566,9 +4585,10 @@ function normalizePendingCardAssigneeOps() {
 }
 
 async function loadChannelWorkItems() {
-  if (!activeChannelId || !currentUser) return;
+  const cid = getWorkHubChannelId();
+  if (!cid || !currentUser) return;
   const res = await apiFetch(
-    `/api/channels/${activeChannelId}/work-items?employeeNo=${encodeURIComponent(currentUser.employeeNo)}&limit=50`
+    `/api/channels/${cid}/work-items?employeeNo=${encodeURIComponent(currentUser.employeeNo)}&limit=50`
   );
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -4629,8 +4649,9 @@ async function enrichKanbanAssigneeLabels(boardEl) {
 
 async function loadWorkHubChannelMembersForAssignee() {
   workHubChannelMembersForAssignee = [];
-  if (!activeChannelId || !currentUser) return;
-  const res = await apiFetch(`/api/channels/${activeChannelId}`);
+  const cid = getWorkHubChannelId();
+  if (!cid || !currentUser) return;
+  const res = await apiFetch(`/api/channels/${cid}`);
   const json = await res.json().catch(() => ({}));
   if (!res.ok) return;
   workHubChannelMembersForAssignee = Array.isArray(json.data?.members) ? json.data.members : [];
@@ -4654,7 +4675,7 @@ function filterChannelMembersForAssigneeKeyword(keyword) {
 }
 
 async function fetchUsersForKanbanAssigneeSuggest(keyword) {
-  if (!workHubChannelMembersForAssignee.length && activeChannelId) {
+  if (!workHubChannelMembersForAssignee.length && getWorkHubChannelId()) {
     await loadWorkHubChannelMembersForAssignee();
   }
   return filterChannelMembersForAssigneeKeyword(keyword);
@@ -5378,9 +5399,10 @@ function renderKanbanBoard(board) {
 }
 
 async function loadChannelKanbanBoard() {
-  if (!activeChannelId || !currentUser) return;
+  const cid = getWorkHubChannelId();
+  if (!cid || !currentUser) return;
   const res = await apiFetch(
-    `/api/kanban/channels/${activeChannelId}/board?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`
+    `/api/kanban/channels/${cid}/board?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`
   );
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
@@ -5396,6 +5418,7 @@ document.getElementById("btnOpenWorkHub")?.addEventListener("click", async () =>
     await uiAlert("채널을 먼저 선택하세요.");
     return;
   }
+  workHubScopedChannelId = null;
   try {
     clearWorkHubPendingMaps();
     clearPendingNewKanbanAssignees();
@@ -5465,7 +5488,7 @@ document.getElementById("btnWorkHubSave")?.addEventListener("click", async () =>
   if (!(await uiConfirm("저장하시겠습니까?"))) return;
   const ok = await flushWorkHubSave();
   if (!ok) return;
-  document.getElementById("workHubModal")?.classList.add("hidden");
+  closeModal("modalWorkHub");
 });
 
 document.getElementById("btnSaveWorkItemDetail")?.addEventListener("click", async () => {
@@ -5735,8 +5758,11 @@ document.getElementById("btnProfileDm").addEventListener("click", async () => {
 /* ==========================================================================
  * 모달 유틸
  * ========================================================================== */
-function openModal(id)  { document.getElementById(id).classList.remove("hidden"); }
-function closeModal(id) { document.getElementById(id).classList.add("hidden"); }
+function openModal(id)  { document.getElementById(id)?.classList.remove("hidden"); }
+function closeModal(id) {
+  document.getElementById(id)?.classList.add("hidden");
+  if (id === "modalWorkHub") clearWorkHubScopedChannel();
+}
 
 document.querySelectorAll(".modal-close, .btn-cancel").forEach(btn => {
   btn.addEventListener("click", () => {
