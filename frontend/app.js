@@ -815,6 +815,11 @@ function filterImageFilesForHub(files) {
   return files.filter((f) => isImageContentType(f.contentType, f.originalFilename));
 }
 
+function filterNonImageFilesForHub(files) {
+  if (!Array.isArray(files)) return [];
+  return files.filter((f) => !isImageContentType(f.contentType, f.originalFilename));
+}
+
 function setFileHubTab(tab) {
   const allPane = document.getElementById("fileHubPaneAll");
   const imgPane = document.getElementById("fileHubPaneImages");
@@ -889,17 +894,28 @@ async function refreshChannelFileHubData(channelId) {
     if (Number(channelId) !== Number(activeChannelId)) return;
     const files = json.data || [];
     if (files.length === 0) {
-      emptyEl?.classList.remove("hidden");
+      if (emptyEl) {
+        emptyEl.textContent = "첨부 파일이 없습니다.";
+        emptyEl.classList.remove("hidden");
+      }
       emptyImg?.classList.remove("hidden");
       return;
     }
-    files.forEach((f) => {
+    const nonImageFiles = filterNonImageFilesForHub(files);
+    if (nonImageFiles.length === 0) {
+      if (emptyEl) {
+        emptyEl.textContent = "이미지는 「이미지」 탭에서만 표시됩니다.";
+        emptyEl.classList.remove("hidden");
+      }
+    } else {
+      emptyEl?.classList.add("hidden");
+    }
+    nonImageFiles.forEach((f) => {
       const li = document.createElement("li");
       li.className = "channel-file-item";
       const who = f.uploaderName ? escHtml(f.uploaderName) : `emp#${f.uploadedByEmployeeNo}`;
-      const icon = isImageContentType(f.contentType, f.originalFilename) ? "🖼" : "📎";
       li.innerHTML = `
-        <span class="channel-file-icon">${icon}</span>
+        <span class="channel-file-icon">📎</span>
         <span class="channel-file-meta">
           <span class="channel-file-name">${escHtml(f.originalFilename || "")}</span>
           <span class="channel-file-sub">${who} · ${fmtSize(f.sizeBytes)} · ${fmtDate(f.createdAt)}</span>

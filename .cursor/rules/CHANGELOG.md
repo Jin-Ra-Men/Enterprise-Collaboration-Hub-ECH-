@@ -4,6 +4,9 @@
 
 ## 2026-04-02
 
+### Changed
+- **첨부 모달** `전체 파일` 탭: 이미지 첨부는 목록에서 제외(이미지는 **이미지** 탭만). 이미지만 있는 경우 전체 탭에 안내 문구 표시
+
 ### Fixed
 - 메시지 API: `GET .../messages/threads`가 `/{messageId}`에 걸려 `MethodArgumentTypeMismatchException("threads")` 나던 문제를 `\\d+` 경로 제한으로 방지(단건·replies·comments POST 동일)
 
