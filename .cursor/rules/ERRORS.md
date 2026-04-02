@@ -245,3 +245,11 @@
 - **발생 위치(파일/명령/기능)**: `backend/src/main/java/com/ech/backend/domain/org/OrgGroupCodes.java`, 명령 `./gradlew compileJava`
 - **원인**: `switch` case 라벨에 `"문자열".toUpperCase()`를 사용하여 컴파일 타임 상수 조건을 위반
 - **해결/현재 상태**: `switch`를 `if` 체인 비교로 교체하여 컴파일 가능하도록 수정
+
+---
+## 2026-04-02 — GitHub Release 생성 실패 (403)
+
+- **에러 요약**: GitHub REST API `POST /repos/{owner}/{repo}/releases` 호출 시 `403 Resource not accessible by personal access token` 응답
+- **발생 위치(파일/명령/기능)**: `tools/create-github-release-v001.ps1` — `Invoke-RestMethod -Method Post -Uri "$baseUri/releases"`
+- **원인**: 토큰이 릴리즈 생성 권한(예: `contents: write` / Releases write / Repository 권한 또는 조직 SSO 승인)을 갖지 못한 것으로 추정
+- **해결/현재 상태**: `GET /user`, `GET /repos/{owner}/{repo}`는 성공(레포 접근은 가능)했으나 릴리즈 생성은 실패. 토큰의 릴리즈 생성 권한 재설정 또는 권한 포함 토큰 제공 필요
