@@ -4366,6 +4366,104 @@ document.getElementById("btnConfirmCreateDm").addEventListener("click", async ()
   }
 });
 
+function threadHubPreviewFromTimelineItem(item) {
+  const fp = tryParseFilePayload({
+    text: item.text,
+    messageType: item.messageType ?? item.message_type,
+  });
+  if (fp) return String(fp.originalFilename || "첨부파일").trim() || "첨부파일";
+  return mentionPreviewForToastClient(String(item.text || ""), 120);
+}
+
+function cacheRootMessageForThreadModal(item) {
+  const id = Number(item.messageId ?? item.message_id);
+  if (!Number.isFinite(id)) return;
+  timelineRootMessageById.set(id, {
+    messageId: id,
+    senderId: item.senderId ?? item.sender_id,
+    senderName: item.senderName ?? item.sender_name,
+    text: item.text,
+    createdAt: item.createdAt ?? item.created_at,
+    messageType: item.messageType ?? item.message_type,
+    parentMessageId: null,
+  });
+}
+
+/** 채널/DM: 스레드 활동이 있는 원글 목록(최근 활동 순) */
+async function refreshThreadHubData(channelId) {
+  const listEl = document.getElementById("threadHubList");
+  const emptyEl = document.getElementById("threadHubEmpty");
+  const errEl = document.getElementById("threadHubError");
+  if (!currentUser || !listEl) return;
+  listEl.innerHTML = "";
+  if (emptyEl) emptyEl.classList.add("hidden");
+  if (errEl) {
+    errEl.classList.add("hidden");
+    errEl.textContent = "";
+  }
+  try {
+    const res = await apiFetch(
+      `/api/channels/${channelId}/messages/threads?employeeNo=${encodeURIComponent(currentUser.employeeNo)}&limit=50`
+    );
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (errEl) {
+        errEl.textContent = json.error?.message || "목록을 불러오지 못했습니다.";
+        errEl.classList.remove("hidden");
+      }
+      return;
+    }
+    if (Number(channelId) !== Number(activeChannelId)) return;
+    const rows = Array.isArray(json.data) ? json.data : [];
+    if (rows.length === 0) {
+      emptyEl?.classList.remove("hidden");
+      return;
+    }
+    rows.forEach((item) => {
+      const rootId = Number(item.messageId ?? item.message_id);
+      if (!Number.isFinite(rootId)) return;
+      const n = threadCommentCountFromMsg(item);
+      const lastAt =
+        item.lastCommentAt ??
+        item.last_comment_at ??
+        item.createdAt ??
+        item.created_at;
+      const lastName = String(item.lastCommentSenderName ?? item.last_comment_sender_name ?? "").trim();
+      const snippet = threadHubPreviewFromTimelineItem(item);
+      const author = escHtml(String(item.senderName ?? item.sender_name ?? "").trim() || "?");
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "thread-hub-row";
+      row.dataset.rootMessageId = String(rootId);
+      const timePart = lastAt ? escHtml(fmtTime(lastAt)) : "";
+      const actInner = lastName
+        ? `${escHtml(lastName)}${timePart ? ` · ${timePart}` : ""}`
+        : timePart;
+      row.innerHTML = `
+        <span class="thread-hub-row-main">
+          <span class="thread-hub-row-author">${author}</span>
+          <span class="thread-hub-row-snippet">${escHtml(snippet)}</span>
+        </span>
+        <span class="thread-hub-row-meta">
+          <span class="thread-hub-row-count">${n}개의 댓글</span>
+          <span class="thread-hub-row-activity">${actInner || "—"}</span>
+        </span>`;
+      row.addEventListener("click", () => {
+        closeModal("modalThreadHub");
+        cacheRootMessageForThreadModal(item);
+        openThreadModal(rootId);
+      });
+      listEl.appendChild(row);
+    });
+  } catch (e) {
+    console.error("스레드 목록 로드 실패", e);
+    if (errEl) {
+      errEl.textContent = "목록을 불러오지 못했습니다.";
+      errEl.classList.remove("hidden");
+    }
+  }
+}
+
 /* ==========================================================================
  * 멤버 패널 토글
  * ========================================================================== */
@@ -4387,6 +4485,12 @@ document.getElementById("btnOpenImageHub")?.addEventListener("click", async () =
   await refreshChannelFileHubData(activeChannelId);
   setFileHubTab("images");
   openModal("modalFileHub");
+});
+
+document.getElementById("btnOpenThreadHub")?.addEventListener("click", async () => {
+  if (!activeChannelId) return;
+  await refreshThreadHubData(activeChannelId);
+  openModal("modalThreadHub");
 });
 
 document.querySelectorAll(".file-hub-tab[data-file-hub-tab]").forEach((btn) => {

@@ -331,6 +331,7 @@
 - **프레즌스**: `presence:set`/`presence:update`/스냅샷 키는 **사번 문자열**. 채팅·멤버 패널에서 `[data-presence-user]`에 사번을 두고 `refreshPresenceDots`가 갱신합니다. 로컬 UX: 좌측 하단 본인 상태 버튼(`#sidebarUserStatus`)으로 **온라인·자리비움** 전환(`AWAY`는 노란 점).
 - **이미지 첨부**: `contentType`이 이미지이거나 확장자가 이미지인 FILE 메시지는 채팅에 썸네일 표시, 클릭 시 `modalImagePreview`로 확대, **다운로드** 버튼은 기존 파일 다운로드 API 재사용(JWT `fetch` → `blob:` URL).
 - **첨부·이미지 모아보기**: `GET /api/channels/{channelId}/files` 응답의 `contentType`·파일명으로 이미지 필터. `refreshChannelFileHubData`가 목록·그리드를 갱신, `btnOpenImageHub`는 이미지 탭으로 모달 오픈.
+- **스레드 모아보기**: `GET /api/channels/{channelId}/messages/threads?employeeNo=&limit=`(기본 50, 서버 상한 100). 댓글·답글 활동이 있는 원글만 최근 활동 순. `btnOpenThreadHub` → `modalThreadHub`, 행 클릭 시 `cacheRootMessageForThreadModal` 후 `openThreadModal`.
 - `frontend/app.js`는 수신 메시지 DOM을 최대 200개로 유지해 브라우저 메모리·렌더 비용이 무한 증가하지 않도록 합니다.
 - 채팅 시각 표시: **동일 발신자·동일 분(로컬 캘린더 분)** 묶음에서는 **그 분의 마지막 메시지 줄에만** 시각을 붙이고, **분이 바뀌면** 각 메시지 줄에 시각을 붙인다(`minuteKey` / `renderMessages` / `appendMessageRealtime`). 시각은 **24시간제 `HH:mm`**이며 본문 바로 뒤에 약간 띄워 인라인으로 붙인다(`fmtTime`, `.msg-content-row`).
 
@@ -341,6 +342,7 @@
 - 메시지 도메인은 `messages.parent_message_id`로 부모/자식 관계를 관리합니다.
 - 스레드 조회는 `parent_message_id` 기준 오름차순(`createdAt ASC`)으로 반환됩니다.
 - 성능 고려로 `idx_messages_parent_message_id` 인덱스를 사용합니다.
+- 스레드 허브 목록은 `MessageRepository.findThreadRootIdsByChannelOrderByLastActivity`(네이티브 SQL, EXISTS + 서브쿼리 `MAX(created_at)` 정렬) 후 엔티티 로드·`attachThreadCommentSummaries`로 건수·마지막 활동 메타를 채웁니다.
 
 ## 7) 관리자 업그레이드 관리 기능 인수인계 메모 (예정)
 - 목표: 관리자 페이지에서 WAR 파일 업로드 기반 버전 관리/롤백 수행

@@ -161,4 +161,61 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
               )
             """)
     List<Message> findThreadActivityUnderRoots(@Param("rootIds") Collection<Long> rootIds);
+
+    /**
+     * 스레드 모아보기: 댓글(COMMENT_*)·답글(REPLY_*, 루트 직속 또는 댓글 하위)이 하나라도 있는
+     * 루트 메시지 id만, 마지막 스레드 활동 시각 기준 내림차순.
+     */
+    @Query(
+            value = """
+                    SELECT r.id
+                    FROM messages r
+                    WHERE r.channel_id = :channelId
+                      AND r.parent_message_id IS NULL
+                      AND r.archived_at IS NULL
+                      AND r.is_deleted = false
+                      AND EXISTS (
+                          SELECT 1
+                          FROM messages c
+                          WHERE c.channel_id = r.channel_id
+                            AND c.archived_at IS NULL
+                            AND c.is_deleted = false
+                            AND (
+                                (c.parent_message_id = r.id
+                                  AND (UPPER(COALESCE(c.message_type, '')) LIKE 'COMMENT%'
+                                       OR UPPER(COALESCE(c.message_type, '')) LIKE 'REPLY%'))
+                                OR (
+                                  UPPER(COALESCE(c.message_type, '')) LIKE 'REPLY%'
+                                  AND EXISTS (
+                                      SELECT 1 FROM messages p
+                                      WHERE p.id = c.parent_message_id
+                                        AND p.parent_message_id = r.id
+                                  )
+                                )
+                            )
+                      )
+                    ORDER BY (
+                        SELECT MAX(c2.created_at)
+                        FROM messages c2
+                        WHERE c2.channel_id = r.channel_id
+                          AND c2.archived_at IS NULL
+                          AND c2.is_deleted = false
+                          AND (
+                              (c2.parent_message_id = r.id
+                                AND (UPPER(COALESCE(c2.message_type, '')) LIKE 'COMMENT%'
+                                     OR UPPER(COALESCE(c2.message_type, '')) LIKE 'REPLY%'))
+                              OR (
+                                  UPPER(COALESCE(c2.message_type, '')) LIKE 'REPLY%'
+                                  AND EXISTS (
+                                      SELECT 1 FROM messages p2
+                                      WHERE p2.id = c2.parent_message_id
+                                        AND p2.parent_message_id = r.id
+                                  )
+                              )
+                          )
+                    ) DESC
+                    LIMIT :lim
+                    """,
+            nativeQuery = true)
+    List<Long> findThreadRootIdsByChannelOrderByLastActivity(@Param("channelId") long channelId, @Param("lim") int lim);
 }

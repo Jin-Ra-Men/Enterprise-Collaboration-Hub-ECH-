@@ -213,6 +213,7 @@
                 <button class="btn-member-panel-action hidden" id="btnHeaderNotifyToggle" type="button" title="다른 채에서 온 일반 메시지 토스트만 끔 · 멘션·미읽음 배지는 유지">🔕 알림 끄기</button>
                 <button class="btn-member-panel-action" id="btnOpenFileHub" title="첨부파일 모아보기">📎 첨부파일</button>
                 <button class="btn-member-panel-action" id="btnOpenImageHub" title="이미지 첨부만 모아보기">🖼 이미지 모아보기</button>
+                <button class="btn-member-panel-action" id="btnOpenThreadHub" type="button" title="댓글·답글이 있는 스레드 모아보기">💬 스레드 모아보기</button>
                 <button class="btn-member-panel-action" id="btnOpenWorkHub" title="업무/칸반">📋 업무/칸반</button>
                 <button class="btn-member-panel-action hidden" id="btnRenameChannel" title="채널 이름 변경">✏️ 채널 이름 변경</button>
                 <button class="btn-member-panel-action hidden" id="btnRenameDm" title="DM 이름 변경">✏️ DM 이름 변경</button>
@@ -543,6 +544,24 @@
         </div>
         <div class="modal-footer">
           <button class="btn-cancel" data-modal="modalFileHub">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modalThreadHub" class="modal-overlay hidden">
+      <div class="modal modal-wide modal-thread-hub">
+        <div class="modal-header">
+          <h3>스레드 모아보기</h3>
+          <button class="modal-close" data-modal="modalThreadHub" type="button">✕</button>
+        </div>
+        <div class="modal-body thread-hub-body">
+          <p class="thread-hub-hint">댓글·답글이 달린 원글만, 최근 스레드 활동 순으로 표시합니다.</p>
+          <p id="threadHubError" class="thread-hub-error hidden" role="alert"></p>
+          <div id="threadHubList" class="thread-hub-list"></div>
+          <p id="threadHubEmpty" class="channel-files-empty hidden">활성 스레드가 없습니다.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" type="button" data-modal="modalThreadHub">닫기</button>
         </div>
       </div>
     </div>

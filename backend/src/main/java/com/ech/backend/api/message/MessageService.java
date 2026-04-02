@@ -21,6 +21,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -499,6 +500,61 @@ public class MessageService {
             );
         }).toList();
         return attachThreadCommentSummaries(mapped);
+    }
+
+    /**
+     * 채널·DM 공통: 스레드(댓글/답글) 활동이 있는 원글만, 최근 활동 순.
+     */
+    public List<MessageTimelineItemResponse> getChannelThreadHubRoots(Long channelId, String employeeNo, int limit) {
+        if (!isUserMemberOfChannel(channelId, employeeNo)) {
+            throw new ForbiddenException("채널에 참여한 사용자가 아닙니다.");
+        }
+        int cap = Math.min(Math.max(limit, 1), 100);
+        List<Long> orderedIds = messageRepository.findThreadRootIdsByChannelOrderByLastActivity(channelId, cap);
+        if (orderedIds.isEmpty()) {
+            return List.of();
+        }
+        List<Message> loaded = messageRepository.findAllById(orderedIds);
+        Map<Long, Message> byId = new HashMap<>();
+        for (Message m : loaded) {
+            if (m.getParentMessage() != null) {
+                continue;
+            }
+            if (m.getChannel() == null || !m.getChannel().getId().equals(channelId)) {
+                continue;
+            }
+            if (m.isDeleted() || m.isArchived()) {
+                continue;
+            }
+            byId.put(m.getId(), m);
+        }
+        List<MessageTimelineItemResponse> placeholders = new ArrayList<>();
+        for (Long id : orderedIds) {
+            Message m = byId.get(id);
+            if (m == null) {
+                continue;
+            }
+            placeholders.add(
+                    new MessageTimelineItemResponse(
+                            m.getId(),
+                            m.getChannel().getId(),
+                            m.getSender().getEmployeeNo(),
+                            m.getSender().getName(),
+                            null,
+                            m.getBody(),
+                            m.getCreatedAt(),
+                            m.getMessageType(),
+                            false,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            0,
+                            null,
+                            null));
+        }
+        return attachThreadCommentSummaries(placeholders);
     }
 
     private List<MessageTimelineItemResponse> attachThreadCommentSummaries(List<MessageTimelineItemResponse> items) {

@@ -345,9 +345,10 @@
 ## 스레드 답글 기능 (부모/자식 메시지)
 - 목적: 채널 메시지에 대한 문맥형 답글(스레드) 생성/조회 지원
 - 사용자: Member, Manager, Admin
-- 관련 화면/경로: 채널 메시지 목록, 스레드 패널
+- 관련 화면/경로: 채널 메시지 목록, 스레드 패널, 햄버거 메뉴 **스레드 모아보기**(`modalThreadHub`, 채널·DM 공통)
 - 관련 API:
   - `GET /api/channels/{channelId}/messages?employeeNo=...&limit=` (채널 **루트** 메시지 목록)
+  - `GET /api/channels/{channelId}/messages/threads?employeeNo=...&limit=` (스레드 활동이 있는 **원글**만, 최근 스레드 활동 시각 내림차순, 상한 100; 응답 항목은 타임라인 ROOT와 동일하게 `threadCommentCount`·`lastCommentAt`·`lastCommentSenderName` 포함)
   - `GET /api/channels/{channelId}/messages/timeline?employeeNo=...&limit=` (메인 타임라인: 루트 + `REPLY_*` 답글, `isReply`·`replyTo*`·**`replyToSenderName`**(답장 대상 작성자 표시명)·`replyToPreview` 메타 포함)
   - `POST /api/channels/{channelId}/messages` (부모 메시지 생성)
   - `POST /api/channels/{channelId}/messages/{parentMessageId}/replies` (답글 생성)
@@ -372,7 +373,7 @@
   - 인덱스(`idx_messages_parent_message_id`) 기반 스레드 조회 성능 점검
 - 비고:
   - 타임라인 **ROOT** 항목은 `threadCommentCount`, `lastCommentAt`, `lastCommentSenderName`(댓글 1개 이상일 때)로 메인 목록에 **댓글 요약**을 그릴 수 있다.
-  - 프론트: 원글·첨부 행 하단 **「N개의 댓글」+ 마지막 댓글 시각** 클릭 시 스레드 모달(건수는 루트 직계 댓글·답글 + 댓글에 달린 답글까지 합산에 가깝게 집계); **답글** 선택 시 입력창 위 **답장 미리보기 바**(이름·본문 스니펫·취소).
+  - 프론트: 원글·첨부 행 하단 **「N개의 댓글」+ 마지막 댓글 시각** 클릭 시 스레드 모달(건수는 루트 직계 댓글·답글 + 댓글에 달린 답글까지 합산에 가깝게 집계); **답글** 선택 시 입력창 위 **답장 미리보기 바**(이름·본문 스니펫·취소). **스레드 모아보기**는 `refreshThreadHubData`·행 클릭 시 `openThreadModal`·`timelineRootMessageById` 캐시 주입.
   - 프론트 `loadMessages`: **timeline 요청이 HTTP 404**이면(구버전 백엔드 등) 위 루트 목록 API로 **자동 폴백**해 채팅 읽기는 가능(이 경우 타임라인 전용 답글 UI는 제한될 수 있음).
   - 구현 파일:
     - `backend/src/main/java/com/ech/backend/api/message/MessageController.java`

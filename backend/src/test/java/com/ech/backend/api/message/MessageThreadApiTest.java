@@ -257,6 +257,16 @@ class MessageThreadApiTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.messageId").value((int) rootMessageId))
                 .andExpect(jsonPath("$.data.text").value("root message"))
                 .andExpect(jsonPath("$.data.parentMessageId").isEmpty());
+
+        // 11) 스레드 모아보기: 활동이 있는 원글만, 최근 활동 순 — 동일 root가 선두에 오고 threadCommentCount >= 1
+        mockMvc.perform(get("/api/channels/" + channelId + "/messages/threads")
+                        .param("employeeNo", normalEmployeeNo)
+                        .param("limit", "20")
+                        .header("Authorization", "Bearer " + normalUserToken()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data[0].messageId").value((int) rootMessageId))
+                .andExpect(jsonPath("$.data[0].threadCommentCount").value(greaterThanOrEqualTo(1)));
     }
 
     private String normalUserToken() {

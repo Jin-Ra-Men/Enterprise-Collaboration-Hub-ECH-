@@ -73,6 +73,18 @@ public class MessageController {
     }
 
     /**
+     * 스레드 모아보기(활동이 있는 원글만, 최근 스레드 활동 순). 리터럴 경로는 {@code /{messageId}}보다 앞에 둔다.
+     */
+    @GetMapping("/threads")
+    public ApiResponse<List<MessageTimelineItemResponse>> getThreadHubRoots(
+            @PathVariable Long channelId,
+            @RequestParam String employeeNo,
+            @RequestParam(defaultValue = "50") int limit
+    ) {
+        return ApiResponse.success(messageService.getChannelThreadHubRoots(channelId, employeeNo, limit));
+    }
+
+    /**
      * 채널 내 메시지 단건(타임라인 범위 밖 원글 로드 등). 경로는 리터럴 {@code /timeline} 다음,
      * {@code /{id}/replies}보다 짧은 한 세그먼트만 매칭된다.
      */
