@@ -420,7 +420,7 @@
   - `PUT /api/kanban/cards/{cardId}` — 제목·설명·정렬·`status`·`columnId`(이동) 부분 갱신 (`actorEmployeeNo`)
   - `DELETE /api/kanban/cards/{cardId}`
   - `POST /api/kanban/cards/{cardId}/assignees` — 담당 추가 (body: `actorEmployeeNo`, `assigneeEmployeeNo`)
-  - `DELETE /api/kanban/cards/{cardId}/assignees/{assigneeEmployeeNo}?actorEmployeeNo=...`
+  - `DELETE /api/kanban/cards/{cardId}/assignees/{assigneeEmployeeNo}?actorEmployeeNo=...` — 서비스에서 `KanbanCard.assignees` 컬렉션과 DB를 일치시킨 뒤 응답을 만들어, 제거 직후 `assigneeEmployeeNos`에 해제 대상이 남는 영속성 캐시 불일치를 방지
   - `GET /api/kanban/cards/{cardId}/history?limit=` — 이벤트 이력(기본 50, 최대 100)
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:

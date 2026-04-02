@@ -38,6 +38,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -497,7 +498,14 @@ public class KanbanService {
                         assigneeRepository.findByCard_IdAndUser_EmployeeNo(cardId, u.getEmployeeNo())))
                 .orElseThrow(() -> new IllegalArgumentException("해당 담당자가 없습니다."));
         String removedEmpNo = link.getUser().getEmployeeNo();
-        assigneeRepository.delete(link);
+        Long removedLinkId = link.getId();
+        // Keep parent collection in sync; otherwise the managed KanbanCard.assignees list stays stale and
+        // toCardResponse still streams the removed user after assigneeRepository.delete only.
+        card.getAssignees().size();
+        boolean removedFromParent = card.getAssignees().removeIf(a -> Objects.equals(a.getId(), removedLinkId));
+        if (!removedFromParent) {
+            assigneeRepository.delete(link);
+        }
         eventRepository.save(new KanbanCardEvent(
                 card,
                 actor,
@@ -509,7 +517,7 @@ public class KanbanService {
         card.getColumn().getBoard().touch();
         cardRepository.save(card);
         boardRepository.save(card.getColumn().getBoard());
-        return toCardResponse(cardRepository.findById(cardId).orElseThrow());
+        return toCardResponse(card);
     }
 
     public List<KanbanCardEventResponse> listCardHistory(Long cardId, Integer limit) {
