@@ -3718,6 +3718,95 @@ let mentionSelectedIndex = 0;
 const shownMentionToastMessageIds = new Set();
 const shownNewMessageToastIds = new Set();
 
+// OS Notification helper for background mode.
+// - Desktop(Electron): main process Notification (no browser permission prompt)
+// - Web: Web Notifications API (permission can be required)
+let osNotificationPermissionRequestedOnce = false;
+const osNotificationOnClickHandlersByTag = new Map();
+let osNotificationClickBridgeBound = false;
+
+function isInBackgroundForOsNotification() {
+  const hidden = typeof document !== "undefined" ? !!document.hidden : false;
+  const hasFocusFn = typeof document !== "undefined" && typeof document.hasFocus === "function";
+  const focus = hasFocusFn ? !!document.hasFocus() : true;
+  return hidden || !focus;
+}
+
+async function ensureOsNotificationPermissionFromUserGesture() {
+  // Electron mode typically does not require Notification permission.
+  if (typeof window !== "undefined" && window.electronAPI?.showOsNotification) return true;
+  if (typeof window === "undefined" || !("Notification" in window)) return false;
+  if (Notification.permission === "granted") return true;
+  if (Notification.permission === "denied") return false;
+  if (osNotificationPermissionRequestedOnce) return false;
+  osNotificationPermissionRequestedOnce = true;
+  try {
+    const res = await Notification.requestPermission();
+    return res === "granted";
+  } catch {
+    return false;
+  }
+}
+
+function showOsNotificationIfAllowed({ tag, title, body, onClick }) {
+  if (!tag) tag = String(Date.now());
+
+  // Background-only rule.
+  if (!isInBackgroundForOsNotification()) return;
+
+  // Electron mode: forward to main process and wire click back to renderer by tag.
+  if (typeof window !== "undefined" && window.electronAPI?.showOsNotification) {
+    if (typeof onClick === "function") {
+      osNotificationOnClickHandlersByTag.set(String(tag), onClick);
+    }
+    if (!osNotificationClickBridgeBound && typeof window.electronAPI?.onOsNotificationClick === "function") {
+      osNotificationClickBridgeBound = true;
+      window.electronAPI.onOsNotificationClick(({ tag: clickedTag }) => {
+        const cb = osNotificationOnClickHandlersByTag.get(String(clickedTag));
+        if (typeof cb === "function") {
+          try {
+            cb();
+          } finally {
+            osNotificationOnClickHandlersByTag.delete(String(clickedTag));
+          }
+        } else {
+          osNotificationOnClickHandlersByTag.delete(String(clickedTag));
+        }
+      });
+    }
+    window.electronAPI.showOsNotification({ tag: String(tag), title: String(title || ""), body: String(body || "") });
+    return;
+  }
+
+  if (typeof window === "undefined" || !("Notification" in window)) return;
+  if (Notification.permission !== "granted") return;
+  if (!isInBackgroundForOsNotification()) return;
+
+  const n = new Notification(String(title || ""), { body: String(body || ""), tag: String(tag || "") });
+  if (typeof onClick === "function") {
+    n.onclick = () => {
+      try {
+        window.focus?.();
+        onClick();
+      } catch {
+        // ignore
+      }
+      try {
+        n.close();
+      } catch {
+        // ignore
+      }
+    };
+  }
+  setTimeout(() => {
+    try {
+      n.close();
+    } catch {
+      // ignore
+    }
+  }, 10_000);
+}
+
 function notifyMutedStorageKey() {
   const emp = String(currentUser?.employeeNo || "").trim();
   return emp ? `ech_notify_muted_channels_${emp}` : null;
@@ -3877,6 +3966,25 @@ function pushNewMessageToast(msg) {
   const locationText = isDm ? `DM · ${displayName}` : `채널 · #${displayName}`;
   const senderName = String(msg.senderName || msg.sender_name || "").trim() || "알 수 없음";
   const preview = String(msg.text || "").replace(/\s+/g, " ").trim().slice(0, 160);
+
+  // OS notification for background mode (general message mute already applied via early returns).
+  const midNumForOs = msg.messageId != null ? Number(msg.messageId) : null;
+  if (Number.isFinite(midNumForOs)) {
+    showOsNotificationIfAllowed({
+      tag: `ech_os_msg_${cid}_${midNumForOs}`,
+      title: "새 메시지",
+      body: `${senderName}: ${preview || "(내용 없음)"}`,
+      onClick: () => selectChannel(cid, displayName, channelType),
+    });
+  } else {
+    showOsNotificationIfAllowed({
+      tag: `ech_os_msg_${cid}_${Date.now()}`,
+      title: "새 메시지",
+      body: `${senderName}: ${preview || "(내용 없음)"}`,
+      onClick: () => selectChannel(cid, displayName, channelType),
+    });
+  }
+
   const stack = document.getElementById("mentionToastStack");
   if (!stack) return;
   const toast = document.createElement("button");
@@ -3885,6 +3993,8 @@ function pushNewMessageToast(msg) {
   toast.innerHTML = `<span class="mention-toast-title">새 메시지</span><span class="mention-toast-sub">${escHtml(senderName)}</span><span class="mention-toast-loc">${escHtml(locationText)}</span><span class="mention-toast-preview">${escHtml(preview || "(내용 없음)")}</span>`;
   toast.addEventListener("click", () => {
     toast.remove();
+    // Request permission from user gesture (click).
+    void ensureOsNotificationPermissionFromUserGesture();
     selectChannel(cid, displayName, channelType);
   });
   stack.appendChild(toast);
@@ -4084,12 +4194,36 @@ function pushMentionToast(p) {
       createdAt: p.createdAt || new Date().toISOString(),
     });
   }
+
+  // OS notification for mentions (mute ignored). Only fires in background.
+  const midNumForOs = p.messageId != null ? Number(p.messageId) : null;
+  if (Number.isFinite(midNumForOs)) {
+    showOsNotificationIfAllowed({
+      tag: `ech_os_mention_${cid}_${midNumForOs}`,
+      title: "새 멘션",
+      body: `${senderText}: ${preview || "(내용 없음)"}`,
+      onClick: () =>
+        selectChannel(cid, channelName, channelType, {
+          targetMessageId: midNumForOs,
+        }),
+    });
+  } else {
+    showOsNotificationIfAllowed({
+      tag: `ech_os_mention_${cid}_${Date.now()}`,
+      title: "새 멘션",
+      body: `${senderText}: ${preview || "(내용 없음)"}`,
+      onClick: () => selectChannel(cid, channelName, channelType),
+    });
+  }
+
   const toast = document.createElement("button");
   toast.type = "button";
   toast.className = "mention-toast";
   toast.innerHTML = `<span class="mention-toast-title">새 멘션</span><span class="mention-toast-sub">${escHtml(senderText)}</span><span class="mention-toast-loc">${escHtml(locationText)}</span><span class="mention-toast-preview">${escHtml(preview)}</span>`;
   toast.addEventListener("click", () => {
     toast.remove();
+    // Request permission from user gesture (click).
+    void ensureOsNotificationPermissionFromUserGesture();
     if (p.messageId != null) {
       removeUnreadMentionById(`m_${Number(p.messageId)}`);
     }
@@ -6475,21 +6609,31 @@ document.getElementById("btnLeaveChannel")?.addEventListener("click", async () =
   await leaveChannelAsMember(activeChannelId, name, activeChannelType);
 });
 
-document.getElementById("btnHeaderNotifyToggle")?.addEventListener("click", () => {
+document.getElementById("btnHeaderNotifyToggle")?.addEventListener("click", async () => {
   if (!activeChannelId || !currentUser) return;
   const muted = isChannelNotifyMuted(activeChannelId);
-  setChannelNotifyMuted(activeChannelId, !muted);
+  const nextMuted = !muted;
+  setChannelNotifyMuted(activeChannelId, nextMuted);
   syncHeaderNotifyButton();
+  // Request OS notification permission once when enabling general notifications.
+  if (!nextMuted) {
+    await ensureOsNotificationPermissionFromUserGesture();
+  }
 });
 
-document.getElementById("btnSidebarCtxToggleNotify")?.addEventListener("click", (e) => {
+document.getElementById("btnSidebarCtxToggleNotify")?.addEventListener("click", async (e) => {
   e.stopPropagation();
   if (sidebarCtxChannelId == null || !currentUser) return;
   const muted = isChannelNotifyMuted(sidebarCtxChannelId);
-  setChannelNotifyMuted(sidebarCtxChannelId, !muted);
+  const nextMuted = !muted;
+  setChannelNotifyMuted(sidebarCtxChannelId, nextMuted);
   syncSidebarCtxNotifyButtonLabel();
   syncHeaderNotifyButton();
   closeChannelSidebarContextMenu();
+  // Request OS notification permission once when enabling general notifications.
+  if (!nextMuted) {
+    await ensureOsNotificationPermissionFromUserGesture();
+  }
 });
 
 document.getElementById("btnSidebarCtxLeave")?.addEventListener("click", async (e) => {

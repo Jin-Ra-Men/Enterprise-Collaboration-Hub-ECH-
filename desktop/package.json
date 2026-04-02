@@ -1,0 +1,14 @@
+{
+  "name": "ech-desktop",
+  "version": "0.0.1",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": ">=20.0.0"
+  }
+}
+

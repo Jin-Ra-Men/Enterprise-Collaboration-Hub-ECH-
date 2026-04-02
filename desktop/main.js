@@ -1,0 +1,62 @@
+const path = require("path");
+const { app, BrowserWindow, ipcMain, Notification } = require("electron");
+
+/** @type {BrowserWindow | null} */
+let mainWindow = null;
+
+function createMainWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    show: true,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      preload: path.join(__dirname, "preload.js"),
+    },
+  });
+
+  const indexPath = path.join(__dirname, "..", "frontend", "index.html");
+  mainWindow.loadFile(indexPath);
+}
+
+ipcMain.on("os-notification-show", (event, payload) => {
+  try {
+    const tag = payload?.tag != null ? String(payload.tag) : "";
+    const title = payload?.title != null ? String(payload.title) : "알림";
+    const body = payload?.body != null ? String(payload.body) : "";
+
+    const n = new Notification({ title, body });
+    n.on("click", () => {
+      const targetWin = mainWindow ?? event?.sender?.browserWindow?.();
+      try {
+        targetWin?.show?.();
+        targetWin?.focus?.();
+      } catch {
+        // ignore
+      }
+      try {
+        event?.sender?.send?.("os-notification-click", { tag });
+      } catch {
+        // ignore
+      }
+    });
+
+    n.show();
+  } catch {
+    // ignore
+  }
+});
+
+app.whenReady().then(() => {
+  createMainWindow();
+});
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit();
+});
+
+app.on("activate", () => {
+  if (mainWindow == null) createMainWindow();
+});
+

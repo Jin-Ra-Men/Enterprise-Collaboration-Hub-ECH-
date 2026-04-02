@@ -7,6 +7,7 @@
 ### Added
 - **마지막 읽은 위치 앵커 UI**: 채널 재진입 시 이전에 보던 메시지 위치로 자동 스크롤하고 "마지막 읽은 위치" 구분선을 메시지 목록에 삽입. `chatReadAnchorStorageKey`, `persistChatReadAnchor`, `readChatReadAnchor`, `insertChatReadAnchorDivider`, `restoreChatReadAnchor` 구현. `styles.css`에 `.msg-read-anchor-divider`, `.msg-read-anchor-highlight` 스타일 추가. 앵커 복원 중 scroll 이벤트로 덮어쓰기 방지(`suppressPersistChatReadAnchorOnce` + RAF 이중 보호).
 - **백엔드 read-state 기반 "새 메시지" 구분선**: `fetchLastReadMessageId` — 채널 진입 시 `GET /api/channels/{id}/read-state` 조회(메시지 API와 병렬). `showNewMsgsDivider` — `lastReadMessageId` 이후 첫 번째 미읽음 메시지 앞에 "새 메시지" 구분선 삽입 및 스크롤. localStorage 앵커가 없는 첫 방문 DM/채널에서도 동작.
+- **데스크톱(Electron) 래퍼**: `desktop/`에 Electron 기본 앱 추가. `frontend/app.js`의 OS 알림은 Electron 메인(`Notification`)으로 포워딩되어, 브라우저 `Notification` 권한 요청 없이 백그라운드에서도 OS 알림을 표시(일반 메시지 mute는 유지, 멘션은 무조건 알림).
 
 ### Changed
 - **"마지막 읽은 위치" localStorage 앵커 제거**: `chatReadAnchorStorageKey`, `getTopVisibleTimelineMessageId`, `persistChatReadAnchor`, `readChatReadAnchor`, `insertChatReadAnchorDivider`, `restoreChatReadAnchor`, scroll 이벤트 리스너, `chatScrollPersistBound`, `suppressPersistChatReadAnchorOnce` 모두 삭제. 백엔드 read-state 기반 "새 메시지" 구분선만 유지.

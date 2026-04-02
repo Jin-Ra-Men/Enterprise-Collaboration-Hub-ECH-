@@ -226,3 +226,15 @@ cd backend
 - 백엔드를 띄운 뒤 **`http://localhost:8080/`** 로 접속해 UI를 확인합니다(백엔드가 `index.html` / `styles.css` / `app.js` 만 서빙).
 - 실시간(멘션·프레즌스·소켓 메시지) 기본 URL은 **페이지와 같은 호스트의 `:3001`** 입니다(예: 주소창이 `http://127.0.0.1:8080`이면 `http://127.0.0.1:3001`). 예전처럼 `localhost`만 하드코딩하면 `127.0.0.1`로 열 때 소켓이 끊길 수 있습니다.
 - 배포 환경에서 포트가 다르면 `index.html`의 `<meta name="ech-realtime-url" content="https://...">` 또는 브라우저에서 `localStorage.setItem('ech_realtime_url','https://...')` 로 덮어쓸 수 있습니다. HTTPS 페이지에서 HTTP 소켓은 브라우저 혼합 콘텐츠 정책으로 차단될 수 있으므로, TLS 또는 동일 오리진 리버스 프록시 구성이 필요합니다.
+
+### 5) 데스크톱 (Electron)
+- 목적: 웹 UI를 EXE(윈도우) 형태로 설치하고, **백그라운드에서도 OS 알림(일반 메시지/멘션)** 을 사용하기 위함입니다.
+- 전제: Backend(`:8080`)와 Realtime(`:3001`)는 로컬에서 실행되어 있어야 합니다.
+
+```bash
+cd desktop
+npm install
+npm start
+```
+
+- Electron으로 실행하면 브라우저 `Notification` 권한 요청 없이도 OS 알림을 띄우도록 구성되어 있습니다(Windows 알림센터 기준).
