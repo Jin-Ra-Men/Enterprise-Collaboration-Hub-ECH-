@@ -3541,7 +3541,14 @@ function syncHeaderNotifyButton() {
   }
   btn.classList.remove("hidden");
   const muted = isChannelNotifyMuted(activeChannelId);
-  btn.textContent = muted ? "🔔 알림 켜기" : "🔕 알림 끄기";
+  const iconEl = btn.querySelector(".btn-member-panel-action-icon");
+  const labelEl = btn.querySelector(".btn-member-panel-action-label");
+  if (iconEl && labelEl) {
+    iconEl.textContent = muted ? "🔔" : "🔕";
+    labelEl.textContent = muted ? "알림 켜기" : "알림 끄기";
+  } else {
+    btn.textContent = muted ? "🔔 알림 켜기" : "🔕 알림 끄기";
+  }
   btn.title = muted
     ? "일반 메시지 토스트 다시 받기(멘션·미읽음 배지는 항상 동작)"
     : "다른 채에서 온 일반 메시지 토스트만 끔 · 멘션 토스트·미읽음 배지는 유지";

@@ -862,6 +862,9 @@ span.section-toggle-static { cursor: default; }
 }
 .btn-member-panel-action {
   width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   text-align: left;
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
@@ -870,6 +873,21 @@ span.section-toggle-static { cursor: default; }
   color: var(--text-primary);
   background: var(--bg-chat);
   cursor: pointer;
+}
+/* 이모지 글리프 너비 차이로 본문이 들쭉날쭉해지지 않도록 고정 슬롯 */
+.btn-member-panel-action-icon {
+  flex: 0 0 1.5rem;
+  width: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05em;
+  line-height: 1;
+}
+.btn-member-panel-action-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
 }
 .btn-member-panel-action:hover {
   border-color: var(--border-focus);
