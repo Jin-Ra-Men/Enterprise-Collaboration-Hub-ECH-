@@ -499,6 +499,42 @@ span.section-toggle-static { cursor: default; }
 .sidebar-item.active { background: var(--sidebar-active-bg); color: var(--sidebar-item-fg-strong); font-weight: 600; border-left: 2px solid var(--accent); }
 .item-icon { flex-shrink: 0; width: 18px; text-align: center; font-size: 13px; }
 .item-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.assigned-kanban-item {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  grid-template-areas:
+    "icon title"
+    "icon meta";
+  align-items: start;
+  gap: 0 8px;
+  white-space: normal;
+}
+.assigned-kanban-item .item-icon {
+  grid-area: icon;
+  margin-top: 2px;
+}
+.assigned-kanban-item .item-label {
+  grid-area: title;
+  font-size: 13px;
+  line-height: 1.25;
+}
+.assigned-kanban-meta {
+  grid-area: meta;
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-item-empty {
+  cursor: default;
+  color: var(--text-secondary);
+}
+.sidebar-item-empty:hover {
+  background: transparent;
+  color: var(--text-secondary);
+}
 .mention-list .sidebar-item {
   display: flex;
   flex-direction: column;
@@ -2105,6 +2141,7 @@ html[data-theme="blue"] .theme-option-btn.active {
 
 .modal-work-hub {
   max-width: 1020px;
+  width: min(1020px, calc(100vw - 24px));
 }
 .modal-work-hub .modal-body {
   max-height: 70vh;
@@ -2127,6 +2164,7 @@ html[data-theme="blue"] .theme-option-btn.active {
   display: flex;
   flex-direction: column;
   align-self: stretch;
+  overflow: hidden;
 }
 .work-hub-panel h4 {
   margin-bottom: 8px;
@@ -2233,24 +2271,31 @@ html[data-theme="blue"] .theme-option-btn.active {
   flex-direction: column;
   gap: 8px;
   min-height: 0;
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
 }
 .channel-work-item {
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
   padding: 8px;
   background: var(--bg-elevated);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .channel-work-item-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+  min-width: 0;
 }
 .channel-work-item-head-actions {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+  min-width: 0;
 }
 .channel-work-item-head-actions .work-item-status-select {
   min-width: 0;
@@ -2262,18 +2307,24 @@ html[data-theme="blue"] .theme-option-btn.active {
   font-size: 14px;
   font-weight: 700;
   color: var(--text-primary);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .channel-work-item-meta {
   margin-top: 4px;
   font-size: 12px;
   color: var(--text-muted);
+  overflow-wrap: anywhere;
 }
 .channel-kanban-board {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
   gap: 10px;
   min-height: 0;
   width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px;
 }
 .kanban-col {
   border: 1px solid var(--border-subtle);
@@ -2316,6 +2367,10 @@ html[data-theme="blue"] .theme-option-btn.active {
   padding: 8px;
   background: var(--bg-elevated);
   min-height: 120px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  flex: 1 1 0;
 }
 .kanban-column h5 {
   margin: 0 0 8px;
@@ -2326,12 +2381,17 @@ html[data-theme="blue"] .theme-option-btn.active {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
+  overflow-x: hidden;
 }
 .kanban-card-item {
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
   padding: 8px;
   background: var(--bg-chat);
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .kanban-card-item-header {
   display: flex;
@@ -2351,6 +2411,7 @@ html[data-theme="blue"] .theme-option-btn.active {
   font-size: 12px;
   color: var(--text-secondary);
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .kanban-new-card-assignee-wrap {
   margin-top: 8px;
@@ -2494,7 +2555,26 @@ html[data-theme="blue"] .theme-option-btn.active {
 }
 .kanban-card-list {
   max-height: none;
-  overflow: visible;
+  overflow: hidden;
+}
+
+@media (max-width: 1080px) {
+  .work-hub-body {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .channel-kanban-board .kanban-column {
+    min-width: 240px;
+  }
+  .channel-work-item-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .channel-work-item-head-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 .work-item-status-select {
   min-width: 132px;

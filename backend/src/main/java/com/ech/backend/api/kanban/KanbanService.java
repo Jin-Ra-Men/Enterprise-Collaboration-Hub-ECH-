@@ -4,6 +4,7 @@ import com.ech.backend.api.auditlog.AuditLogService;
 import com.ech.backend.api.kanban.dto.CreateKanbanBoardRequest;
 import com.ech.backend.api.kanban.dto.CreateKanbanCardRequest;
 import com.ech.backend.api.kanban.dto.CreateKanbanColumnRequest;
+import com.ech.backend.api.kanban.dto.AssignedKanbanCardSummaryResponse;
 import com.ech.backend.api.kanban.dto.KanbanAssigneeMutationRequest;
 import com.ech.backend.api.kanban.dto.KanbanBoardDetailResponse;
 import com.ech.backend.api.kanban.dto.KanbanBoardSummaryResponse;
@@ -111,6 +112,31 @@ public class KanbanService {
                 .findByWorkspaceKeyOrderByCreatedAtDesc(key, PageRequest.of(0, MAX_BOARDS_LIST))
                 .stream()
                 .map(this::toSummary)
+                .toList();
+    }
+
+    public List<AssignedKanbanCardSummaryResponse> listAssignedChannelCards(String employeeNo, Integer limit) {
+        String emp = employeeNo == null ? "" : employeeNo.trim();
+        if (emp.isBlank()) {
+            throw new IllegalArgumentException("employeeNo는 필수입니다.");
+        }
+        userRepository.findByEmployeeNo(emp).orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        int size = limit == null ? 20 : Math.min(Math.max(limit, 1), 100);
+        return cardRepository.findAssignedChannelCards(emp, PageRequest.of(0, size)).stream()
+                .map(card -> {
+                    Channel channel = card.getColumn().getBoard().getSourceChannel();
+                    return new AssignedKanbanCardSummaryResponse(
+                            card.getId(),
+                            card.getTitle(),
+                            channel.getId(),
+                            channel.getName(),
+                            channel.getChannelType().name(),
+                            card.getColumn().getBoard().getId(),
+                            card.getColumn().getId(),
+                            card.getColumn().getName(),
+                            card.getUpdatedAt()
+                    );
+                })
                 .toList();
     }
 

@@ -3,6 +3,7 @@ package com.ech.backend.api.kanban;
 import com.ech.backend.api.kanban.dto.CreateKanbanBoardRequest;
 import com.ech.backend.api.kanban.dto.CreateKanbanCardRequest;
 import com.ech.backend.api.kanban.dto.CreateKanbanColumnRequest;
+import com.ech.backend.api.kanban.dto.AssignedKanbanCardSummaryResponse;
 import com.ech.backend.api.kanban.dto.KanbanAssigneeMutationRequest;
 import com.ech.backend.api.kanban.dto.KanbanBoardDetailResponse;
 import com.ech.backend.api.kanban.dto.KanbanBoardSummaryResponse;
@@ -55,6 +56,14 @@ public class KanbanController {
     @GetMapping("/boards/{boardId}")
     public ApiResponse<KanbanBoardDetailResponse> getBoard(@PathVariable Long boardId) {
         return ApiResponse.success(kanbanService.getBoard(boardId));
+    }
+
+    @GetMapping("/cards/assigned")
+    public ApiResponse<List<AssignedKanbanCardSummaryResponse>> listAssignedCards(
+            @RequestParam String employeeNo,
+            @RequestParam(required = false) Integer limit
+    ) {
+        return ApiResponse.success(kanbanService.listAssignedChannelCards(employeeNo, limit));
     }
 
     @GetMapping("/channels/{channelId}/board")

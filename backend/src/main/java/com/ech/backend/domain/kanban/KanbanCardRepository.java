@@ -39,4 +39,16 @@ public interface KanbanCardRepository extends JpaRepository<KanbanCard, Long> {
             ORDER BY c.createdAt DESC
             """)
     List<KanbanCard> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+    @Query("""
+            SELECT DISTINCT c FROM KanbanCard c
+            JOIN c.assignees asn
+            JOIN asn.user u
+            JOIN FETCH c.column col
+            JOIN FETCH col.board board
+            JOIN FETCH board.sourceChannel ch
+            WHERE u.employeeNo = :employeeNo
+            ORDER BY c.updatedAt DESC
+            """)
+    List<KanbanCard> findAssignedChannelCards(@Param("employeeNo") String employeeNo, Pageable pageable);
 }

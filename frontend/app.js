@@ -143,6 +143,7 @@ let activeChannelMemberMentionList = [];
 const activeChannelMemberOrgLineByEmployeeNo = new Map();
 /** 미확인 멘션 목록(사이드바 전용) */
 let mentionInboxItems = [];
+let myAssignedKanbanCards = [];
 let pendingFile    = null;
 // 스레드(댓글) 모달 상태
 let threadPendingFile = null;
@@ -232,6 +233,7 @@ const sidebarAvatar  = document.getElementById("sidebarAvatar");
 const sidebarUserName = document.getElementById("sidebarUserName");
 const channelListEl  = document.getElementById("channelList");
 const dmListEl       = document.getElementById("dmList");
+const myKanbanListEl = document.getElementById("myKanbanList");
 const messagesEl     = document.getElementById("messages");
 const messageInputEl = document.getElementById("messageInput");
 const messageContextMenuEl = document.getElementById("messageContextMenu");
@@ -1418,10 +1420,15 @@ function syncAllSidebarSectionChevrons() {
 async function loadMyChannels() {
   if (!currentUser) return;
   try {
-    const res  = await apiFetch(`/api/channels?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`);
-    const json = await res.json();
-    if (!res.ok) return;
-    const channels = normalizeSidebarChannels(Array.isArray(json.data) ? json.data : []);
+    const [channelRes, assignedRes] = await Promise.all([
+      apiFetch(`/api/channels?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`),
+      apiFetch(`/api/kanban/cards/assigned?employeeNo=${encodeURIComponent(currentUser.employeeNo)}&limit=30`),
+    ]);
+    const channelJson = await channelRes.json().catch(() => ({}));
+    const assignedJson = await assignedRes.json().catch(() => ({}));
+    if (!channelRes.ok) return;
+    const channels = normalizeSidebarChannels(Array.isArray(channelJson.data) ? channelJson.data : []);
+    myAssignedKanbanCards = assignedRes.ok && Array.isArray(assignedJson.data) ? assignedJson.data : [];
     renderChannelList(channels);
   } catch (err) {
     console.error("채널 목록 로드 실패", err);
@@ -1651,7 +1658,48 @@ function renderChannelList(channels) {
   });
 
   renderQuickUnreadList(channels);
+  renderMyAssignedKanbanList(channels);
   refreshPresenceDots();
+}
+
+function renderMyAssignedKanbanList(channels) {
+  if (!myKanbanListEl) return;
+  myKanbanListEl.innerHTML = "";
+  if (!Array.isArray(myAssignedKanbanCards) || !myAssignedKanbanCards.length) {
+    myKanbanListEl.innerHTML = `<li class="sidebar-item sidebar-item-empty">담당 카드 없음</li>`;
+    return;
+  }
+  const channelTypeById = new Map((channels || []).map((ch) => [Number(ch.channelId), String(ch.channelType || "PUBLIC")]));
+  myAssignedKanbanCards.forEach((card) => {
+    const li = document.createElement("li");
+    li.className = "sidebar-item assigned-kanban-item";
+    li.dataset.cardId = String(Number(card.cardId || 0));
+    li.dataset.channelId = String(Number(card.channelId || 0));
+    li.dataset.channelType = channelTypeById.get(Number(card.channelId || 0)) || String(card.channelType || "PUBLIC");
+    li.dataset.channelName = String(card.channelName || "채널");
+    li.title = `${String(card.title || "(제목 없음)")} · ${String(card.channelName || "채널")} / ${String(card.columnName || "")}`;
+    li.innerHTML = `<span class="item-icon">📌</span><span class="item-label">${escHtml(String(card.title || "(제목 없음)"))}</span>
+      <span class="assigned-kanban-meta">${escHtml(String(card.channelName || "채널"))}</span>`;
+    li.addEventListener("click", async () => {
+      const cid = Number(card.channelId || 0);
+      const cardId = Number(card.cardId || 0);
+      if (!cid || !cardId) return;
+      await selectChannel(cid, String(card.channelName || "채널"), li.dataset.channelType || "PUBLIC");
+      clearWorkHubPendingMaps();
+      clearPendingNewKanbanAssignees();
+      await Promise.all([loadWorkHubChannelMembersForAssignee(), loadChannelWorkItems(), loadChannelKanbanBoard()]);
+      ensureWorkHubWorkListDeleteBound();
+      openModal("modalWorkHub");
+      setTimeout(() => {
+        const cardEl = document.querySelector(`.kanban-card-item[data-kanban-card-id="${cardId}"]`);
+        if (!cardEl) return;
+        cardEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        cardEl.classList.add("kanban-card-highlight");
+        setTimeout(() => cardEl.classList.remove("kanban-card-highlight"), 2200);
+      }, 120);
+    });
+    myKanbanListEl.appendChild(li);
+  });
 }
 
 /* ==========================================================================
@@ -4331,7 +4379,13 @@ async function flushWorkHubSave() {
     }
     workHubPendingCardDeleteIds.clear();
 
-    for (const [cardId, empSet] of workHubPendingCardAssigneeRemove.entries()) {
+    // 담당자 변경은 저장 직전에 보드 최신 상태를 다시 받아 기준을 맞춘다.
+    // (작업 중 렌더 상태와 서버 상태가 어긋나도 해제/추가 diff가 안정적으로 계산되게 함)
+    if (workHubPendingCardAssigneeAdd.size > 0 || workHubPendingCardAssigneeRemove.size > 0) {
+      await loadChannelKanbanBoard();
+    }
+    const normalizedAssigneeOps = normalizePendingCardAssigneeOps();
+    for (const [cardId, empSet] of normalizedAssigneeOps.remove.entries()) {
       for (const emp of empSet.values()) {
         const res = await apiFetch(
           `/api/kanban/cards/${Number(cardId)}/assignees/${encodeURIComponent(emp)}?actorEmployeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
@@ -4345,7 +4399,7 @@ async function flushWorkHubSave() {
     }
     workHubPendingCardAssigneeRemove.clear();
 
-    for (const [cardId, empSet] of workHubPendingCardAssigneeAdd.entries()) {
+    for (const [cardId, empSet] of normalizedAssigneeOps.add.entries()) {
       for (const emp of empSet.values()) {
         const res = await apiFetch(`/api/kanban/cards/${Number(cardId)}/assignees`, {
           method: "POST",
@@ -4369,6 +4423,111 @@ async function flushWorkHubSave() {
     await Promise.all([loadChannelWorkItems(), loadChannelKanbanBoard()]).catch(() => {});
     return false;
   }
+}
+
+/** Kanban assignee employeeNo: trim; matching is case-insensitive (API vs DOM can differ slightly). */
+function normKanbanEmpNo(e) {
+  return String(e ?? "").trim();
+}
+
+function kanbanEmpMatchKey(e) {
+  const s = normKanbanEmpNo(e);
+  return s ? s.toLowerCase() : "";
+}
+
+/** Map matchKey -> canonical employeeNo as returned by API (for correct DELETE URL). */
+function kanbanAssigneeCanonMapFromList(list) {
+  const m = new Map();
+  if (!Array.isArray(list)) return m;
+  for (const x of list) {
+    const canon = normKanbanEmpNo(x);
+    const k = kanbanEmpMatchKey(canon);
+    if (!k) continue;
+    m.set(k, canon);
+  }
+  return m;
+}
+
+function kanbanPendingRemovesHas(remSet, assigneeEmp) {
+  if (!remSet || !remSet.size) return false;
+  const t = kanbanEmpMatchKey(assigneeEmp);
+  if (!t) return false;
+  for (const r of remSet) {
+    if (kanbanEmpMatchKey(r) === t) return true;
+  }
+  return false;
+}
+
+function kanbanEmpListHas(list, emp) {
+  const k = kanbanEmpMatchKey(emp);
+  if (!k) return false;
+  return list.some((x) => kanbanEmpMatchKey(x) === k);
+}
+
+function kanbanDeleteFromEmpSet(set, emp) {
+  if (!set || !set.size) return;
+  const t = kanbanEmpMatchKey(emp);
+  if (!t) return;
+  for (const x of [...set]) {
+    if (kanbanEmpMatchKey(x) === t) set.delete(x);
+  }
+}
+
+function normalizePendingCardAssigneeOps() {
+  const addByCard = new Map();
+  const removeByCard = new Map();
+  const snapAdd = new Map(
+    [...workHubPendingCardAssigneeAdd.entries()].map(([cid, s]) => [cid, new Set([...s].map(normKanbanEmpNo).filter(Boolean))])
+  );
+  const snapRem = new Map(
+    [...workHubPendingCardAssigneeRemove.entries()].map(([cid, s]) => [cid, new Set([...s].map(normKanbanEmpNo).filter(Boolean))])
+  );
+  const cardIds = new Set([
+    ...Array.from(snapAdd.keys()).map((x) => Number(x)),
+    ...Array.from(snapRem.keys()).map((x) => Number(x)),
+  ]);
+  for (const cardId of cardIds.values()) {
+    if (!Number.isFinite(cardId) || workHubPendingCardDeleteIds.has(cardId)) continue;
+    let base = [];
+    for (const col of activeWorkHubColumns) {
+      const cards = Array.isArray(col.cards) ? col.cards : [];
+      const found = cards.find((c) => Number(c.id) === Number(cardId));
+      if (found) {
+        base = Array.isArray(found.assigneeEmployeeNos) ? found.assigneeEmployeeNos : [];
+        break;
+      }
+    }
+    const baseMap = kanbanAssigneeCanonMapFromList(base);
+    const nextMap = new Map(baseMap);
+    const remPending = snapRem.get(cardId);
+    if (remPending) {
+      for (const r of remPending) {
+        const k = kanbanEmpMatchKey(r);
+        if (k) nextMap.delete(k);
+      }
+    }
+    const addPending = snapAdd.get(cardId);
+    if (addPending) {
+      for (const a of addPending) {
+        const canon = normKanbanEmpNo(a);
+        const k = kanbanEmpMatchKey(canon);
+        if (k) nextMap.set(k, canon);
+      }
+    }
+    const removeFinal = new Set();
+    for (const [k, canonB] of baseMap) {
+      if (!nextMap.has(k)) removeFinal.add(canonB);
+    }
+    const addFinal = new Set();
+    for (const [k, canonN] of nextMap) {
+      if (!baseMap.has(k)) addFinal.add(canonN);
+    }
+    if (addFinal.size) addByCard.set(cardId, addFinal);
+    if (removeFinal.size) removeByCard.set(cardId, removeFinal);
+  }
+  workHubPendingCardAssigneeAdd = addByCard;
+  workHubPendingCardAssigneeRemove = removeByCard;
+  return { add: addByCard, remove: removeByCard };
 }
 
 async function loadChannelWorkItems() {
@@ -4643,16 +4802,58 @@ function openKanbanCardDetailModal(rawId, isDraft) {
   openModal("modalKanbanCardDetail");
 }
 
+function getEffectiveKanbanCardAssignees(cardId) {
+  const id = Number(cardId);
+  if (!id) return [];
+  let base = [];
+  for (const col of activeWorkHubColumns) {
+    const cards = Array.isArray(col.cards) ? col.cards : [];
+    const found = cards.find((c) => Number(c.id) === id);
+    if (found) {
+      base = Array.isArray(found.assigneeEmployeeNos) ? found.assigneeEmployeeNos : [];
+      break;
+    }
+  }
+  const m = kanbanAssigneeCanonMapFromList(base);
+  const rem = workHubPendingCardAssigneeRemove.get(id);
+  if (rem) {
+    for (const emp of rem.values()) {
+      const k = kanbanEmpMatchKey(emp);
+      if (k) m.delete(k);
+    }
+  }
+  const add = workHubPendingCardAssigneeAdd.get(id);
+  if (add) {
+    for (const emp of add.values()) {
+      const canon = normKanbanEmpNo(emp);
+      const k = kanbanEmpMatchKey(canon);
+      if (k) m.set(k, canon);
+    }
+  }
+  return [...m.values()];
+}
+
 function renderKanbanCardDetailAssigneeChips() {
   const wrap = document.getElementById("kanbanCardDetailAssigneeChips");
   if (!wrap) return;
+  const resolveName = (emp) => {
+    const e = String(emp || "").trim();
+    if (!e) return "";
+    if (kanbanAssigneeNameCache[e]) return kanbanAssigneeNameCache[e];
+    const m = workHubChannelMembersForAssignee.find((x) => String(x.employeeNo || "").trim() === e);
+    if (m?.name) {
+      kanbanAssigneeNameCache[e] = String(m.name).trim();
+      return kanbanAssigneeNameCache[e];
+    }
+    return e;
+  };
   if (!workHubDetailKanbanAssignees.length) {
     wrap.innerHTML = `<span class="muted">담당 없음</span>`;
     return;
   }
   wrap.innerHTML = workHubDetailKanbanAssignees
     .map((emp) => `<span class="kanban-assignee-chip">
-      <span class="kanban-assignee-label">${escHtml(emp)}</span>
+      <span class="kanban-assignee-label">${escHtml(resolveName(emp))}</span>
       <button type="button" class="kanban-detail-assignee-remove" data-emp="${escHtml(emp)}" title="담당 해제">✕</button>
     </span>`)
     .join("");
@@ -4836,7 +5037,7 @@ function ensureKanbanBoardAssigneeUiBound() {
         }
         workHubPendingCardAssigneeRemove.get(cid).add(assigneeEmp);
         if (workHubPendingCardAssigneeAdd.has(cid)) {
-          workHubPendingCardAssigneeAdd.get(cid).delete(assigneeEmp);
+          kanbanDeleteFromEmpSet(workHubPendingCardAssigneeAdd.get(cid), assigneeEmp);
         }
       }
       await loadChannelKanbanBoard();
@@ -4864,7 +5065,7 @@ function ensureKanbanBoardAssigneeUiBound() {
         }
         workHubPendingCardAssigneeAdd.get(cid).add(emp);
         if (workHubPendingCardAssigneeRemove.has(cid)) {
-          workHubPendingCardAssigneeRemove.get(cid).delete(emp);
+          kanbanDeleteFromEmpSet(workHubPendingCardAssigneeRemove.get(cid), emp);
         }
       }
       const inp = root.querySelector(`.kanban-assignee-search[data-card-id="${cardIdRaw}"]`);
@@ -4950,12 +5151,16 @@ function renderKanbanBoard(board) {
                       const add = workHubPendingCardAssigneeAdd.get(cardNumId);
                       const rem = workHubPendingCardAssigneeRemove.get(cardNumId);
                       if (add && add.size) {
-                        const s = new Set(assigns);
-                        add.forEach((x) => s.add(x));
-                        assigns = [...s];
+                        const m = kanbanAssigneeCanonMapFromList(assigns);
+                        add.forEach((x) => {
+                          const c = normKanbanEmpNo(x);
+                          const k = kanbanEmpMatchKey(c);
+                          if (k) m.set(k, c);
+                        });
+                        assigns = [...m.values()];
                       }
                       if (rem && rem.size) {
-                        assigns = assigns.filter((x) => !rem.has(x));
+                        assigns = assigns.filter((x) => !kanbanPendingRemovesHas(rem, x));
                       }
                     }
                     const assignedPipe = assigns
@@ -5218,22 +5423,26 @@ document.getElementById("btnSaveKanbanCardDetail")?.addEventListener("click", as
     workHubPendingCardTitle.set(id, title);
     workHubPendingCardDescription.set(id, description || null);
     if (columnId) workHubPendingCardColumn.set(id, columnId);
-    const next = new Set(workHubDetailKanbanAssignees);
-    const prev = new Set(workHubDetailKanbanAssigneesInitial);
-    for (const emp of prev.values()) {
-      if (!next.has(emp)) {
-        if (!workHubPendingCardAssigneeRemove.has(id)) workHubPendingCardAssigneeRemove.set(id, new Set());
-        workHubPendingCardAssigneeRemove.get(id).add(emp);
-        if (workHubPendingCardAssigneeAdd.has(id)) workHubPendingCardAssigneeAdd.get(id).delete(emp);
+    const nextArr = workHubDetailKanbanAssignees.map(normKanbanEmpNo).filter(Boolean);
+    const prevArr = getEffectiveKanbanCardAssignees(id);
+    const addSet = new Set(workHubPendingCardAssigneeAdd.get(id) || []);
+    const removeSet = new Set(workHubPendingCardAssigneeRemove.get(id) || []);
+    for (const emp of prevArr) {
+      if (!kanbanEmpListHas(nextArr, emp)) {
+        removeSet.add(normKanbanEmpNo(emp));
+        kanbanDeleteFromEmpSet(addSet, emp);
       }
     }
-    for (const emp of next.values()) {
-      if (!prev.has(emp)) {
-        if (!workHubPendingCardAssigneeAdd.has(id)) workHubPendingCardAssigneeAdd.set(id, new Set());
-        workHubPendingCardAssigneeAdd.get(id).add(emp);
-        if (workHubPendingCardAssigneeRemove.has(id)) workHubPendingCardAssigneeRemove.get(id).delete(emp);
+    for (const emp of nextArr) {
+      if (!kanbanEmpListHas(prevArr, emp)) {
+        addSet.add(emp);
+        kanbanDeleteFromEmpSet(removeSet, emp);
       }
     }
+    if (addSet.size) workHubPendingCardAssigneeAdd.set(id, addSet);
+    else workHubPendingCardAssigneeAdd.delete(id);
+    if (removeSet.size) workHubPendingCardAssigneeRemove.set(id, removeSet);
+    else workHubPendingCardAssigneeRemove.delete(id);
   }
   closeModal("modalKanbanCardDetail");
   await loadChannelKanbanBoard();
