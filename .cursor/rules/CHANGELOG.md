@@ -2,6 +2,12 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-04-03
+
+### Changed
+- **desktop(Electron)**: `package.json`에 `repository` URL 추가, `build:win`을 `electron-builder --win nsis --publish never`로 변경해 빌드 말미 `publish.provider` null 오류로 실패하던 문제 방지
+- **GitHub Release**: `v0.0.1` 릴리즈에 Windows NSIS 설치 파일(`ECH Setup 0.0.1.exe`) 업로드
+
 ## 2026-04-02
 
 ### Added
