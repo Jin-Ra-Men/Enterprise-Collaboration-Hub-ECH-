@@ -200,7 +200,8 @@
 - 저장 키: `ech_notify_muted_channels_{employeeNo}` — JSON 숫자 배열(채널 ID). `isChannelNotifyMuted` / `setChannelNotifyMuted`.
 - 효과: 음소거된 채널에서는 **`pushNewMessageToast`만** 억제. **멘션 토스트**(`pushMentionToast`, `mention:notify` 및 현재 채널 `message:new` 폴백)는 음소거와 **무관하게 항상** 표시. **미읽음 배지**(`unreadCount` 기반 사이드바·퀵 레일)는 서버/읽음 상태 그대로이며 음소거와 **무관**.
 - 현재 보고 있는 채널은 신규 일반 메시지 토스트 대상에서 제외(기존과 동일).
-- UI: `#channelList` / `#dmList` / `#quickRailScroll`의 `.channel-item` **우클릭** → `#channelSidebarContextMenu`(`알림 끄기`↔`알림 켜기`, `채팅방 나가기`). 채널·DM 상단 햄버거(멤버 패널) `#btnHeaderNotifyToggle`에서 동일 토글.
+- UI: `#channelList` / `#dmList` / `#quickRailScroll`의 `.channel-item` **우클릭** → `#channelSidebarContextMenu`(`알림 끄기`↔`알림 켜기`, `채팅방 나가기`). 채널·DM 상단 햄버거(멤버 패널) `#btnHeaderNotifyToggle`에서 동일 토글. 음소거 시 목록 행에 **벨+슬래시** 아이콘(`notifyMutedBellSvg`) 표시.
+- 햄버거 패널 순서(위→아래): 알림 끄기/켜기 → 첨부파일 → 업무/칸반 → 이름 변경 → **멤버 목록** 제목 → 멤버 리스트 → 구성원 추가 → 채팅방 나가기 → 채널 폐쇄.
 - 비고: 업무 사이드바 변경 등 `pushActivityToast`는 별도 정책(채널 음소거와 무관할 수 있음).
 
 ---

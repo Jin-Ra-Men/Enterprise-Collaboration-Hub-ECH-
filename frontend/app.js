@@ -183,6 +183,8 @@ let kanbanDnDSourceColumnId = null;
 let sidebarCtxChannelId = null;
 let sidebarCtxChannelName = "";
 let sidebarCtxChannelType = "PUBLIC";
+/** `loadMyChannels` 직후 스냅샷 — 알림 음소거 토글 시 목록 아이콘만 다시 그릴 때 사용 */
+let lastSidebarChannelsSnapshot = [];
 /** 신규 카드 폼에 미리 넣을 담당자 `{ employeeNo, name }` */
 let pendingNewKanbanCardAssignees = [];
 let kanbanNewCardAssigneeUiBound = false;
@@ -1314,6 +1316,7 @@ function showLogin() {
 function showMain(user) {
   currentUser = user;
   lastWorkSidebarSig = null;
+  lastSidebarChannelsSnapshot = [];
   loginPage.classList.add("hidden");
   mainApp.classList.remove("hidden");
   const preferredTheme = VALID_THEMES.includes(user?.themePreference)
@@ -1470,6 +1473,7 @@ async function loadMyChannels() {
       });
     }
     lastWorkSidebarSig = nextWorkSig;
+    lastSidebarChannelsSnapshot = channels;
     renderChannelList(channels);
   } catch (err) {
     console.error("채널 목록 로드 실패", err);
@@ -1645,11 +1649,12 @@ function renderQuickUnreadList(channels) {
     const badgeHtml = badgeTxt
       ? `<em class="quick-rail-badge" aria-hidden="true">${escHtml(badgeTxt)}</em>`
       : "";
+    const muteRailHtml = quickRailNotifyMutedHtml(ch.channelId);
     const leadHtml =
       ch.channelType === "DM"
         ? `<span class="quick-rail-dm-lead">${dmSidebarLeadingHtml(ch.dmPeerEmployeeNos)}</span>`
         : `<span class="quick-rail-icon">${ch.channelType === "PRIVATE" ? "🔒" : "#"}</span>`;
-    btn.innerHTML = `${leadHtml}<span class="quick-rail-label">${escHtml(cap)}</span>${badgeHtml}`;
+    btn.innerHTML = `${leadHtml}<span class="quick-rail-label">${escHtml(cap)}</span>${muteRailHtml}${badgeHtml}`;
     btn.setAttribute("data-tooltip-title", displayName);
     btn.title = displayName;
     const al = badgeTxt
@@ -1683,13 +1688,14 @@ function renderChannelList(channels) {
       ? `<span class="channel-unread-badge" aria-label="미읽음 ${badgeTxt}건">${escHtml(badgeTxt)}</span>`
       : "";
 
+    const muteHtml = notifyMutedIconHtml(ch.channelId);
     if (ch.channelType === "DM") {
       const dmLead = dmSidebarLeadingHtml(ch.dmPeerEmployeeNos);
-      li.innerHTML = `${dmLead}<span class="item-label">${escHtml(displayName)}</span>${badgeHtml}`;
+      li.innerHTML = `${dmLead}<span class="item-label">${escHtml(displayName)}</span>${muteHtml}${badgeHtml}`;
       dmListEl.appendChild(li);
     } else {
       const icon = ch.channelType === "PRIVATE" ? "🔒" : "#";
-      li.innerHTML = `<span class="item-icon">${icon}</span><span class="item-label">${escHtml(ch.name)}</span>${badgeHtml}`;
+      li.innerHTML = `<span class="item-icon">${icon}</span><span class="item-label">${escHtml(ch.name)}</span>${muteHtml}${badgeHtml}`;
       channelListEl.appendChild(li);
     }
 
@@ -3414,6 +3420,30 @@ function setChannelNotifyMuted(channelId, muted) {
   if (muted) s.add(id);
   else s.delete(id);
   saveMutedChannelIds(s);
+  refreshSidebarMuteIndicators();
+}
+
+/** 벨+슬래시 SVG(일반 알림 끔 표시). size: 픽셀 너비·높이 */
+function notifyMutedBellSvg(size = 14) {
+  const s = Number(size) || 14;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><line x1="2" y1="2" x2="22" y2="22"/></svg>`;
+}
+
+function notifyMutedIconHtml(channelId) {
+  if (!isChannelNotifyMuted(channelId)) return "";
+  return `<span class="channel-notify-muted-icon" title="이 채팅방 일반 알림 끔" aria-label="일반 알림 끔">${notifyMutedBellSvg(14)}</span>`;
+}
+
+function quickRailNotifyMutedHtml(channelId) {
+  if (!isChannelNotifyMuted(channelId)) return "";
+  return `<span class="quick-rail-notify-muted-icon" title="일반 알림 끔" aria-hidden="true">${notifyMutedBellSvg(12)}</span>`;
+}
+
+function refreshSidebarMuteIndicators() {
+  if (!currentUser || !Array.isArray(lastSidebarChannelsSnapshot) || lastSidebarChannelsSnapshot.length === 0) {
+    return;
+  }
+  renderChannelList(lastSidebarChannelsSnapshot);
 }
 
 function syncHeaderNotifyButton() {

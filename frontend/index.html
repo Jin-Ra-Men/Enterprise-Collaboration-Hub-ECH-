@@ -208,18 +208,20 @@
               <h3>채널 메뉴</h3>
               <button id="btnCloseMemberPanel" class="btn-panel-close">✕</button>
             </div>
-            <div class="member-panel-actions">
-              <button class="btn-member-panel-action" id="btnOpenWorkHub" title="업무/칸반">📋 업무/칸반</button>
+            <div class="member-panel-actions member-panel-actions-top">
+              <button class="btn-member-panel-action hidden" id="btnHeaderNotifyToggle" type="button" title="다른 채에서 온 일반 메시지 토스트만 끔 · 멘션·미읽음 배지는 유지">🔕 알림 끄기</button>
               <button class="btn-member-panel-action" id="btnOpenFileHub" title="첨부파일 모아보기">📎 첨부파일</button>
+              <button class="btn-member-panel-action" id="btnOpenWorkHub" title="업무/칸반">📋 업무/칸반</button>
               <button class="btn-member-panel-action hidden" id="btnRenameChannel" title="채널 이름 변경">✏️ 채널 이름 변경</button>
               <button class="btn-member-panel-action hidden" id="btnRenameDm" title="DM 이름 변경">✏️ DM 이름 변경</button>
+            </div>
+            <div class="member-panel-member-heading" id="memberPanelMemberHeading">멤버 목록</div>
+            <ul id="memberList" class="member-list"></ul>
+            <div class="member-panel-actions member-panel-actions-bottom">
               <button class="btn-member-panel-action" id="btnAddMembersLater" title="구성원 추가">➕ 구성원 추가</button>
-              <button class="btn-member-panel-action hidden" id="btnHeaderNotifyToggle" type="button" title="다른 채에서 온 일반 메시지 토스트만 끔 · 멘션·미읽음 배지는 유지">🔕 알림 끄기</button>
               <button class="btn-member-panel-action" id="btnLeaveChannel" title="채팅방 나가기">🚪 채팅방 나가기</button>
               <button class="btn-member-panel-action hidden" id="btnCloseChannel" title="채널 폐쇄">🗑️ 채널 폐쇄</button>
             </div>
-            <div class="member-panel-list-title">멤버</div>
-            <ul id="memberList" class="member-list"></ul>
           </div>
 
           <!-- 메시지 영역 -->
