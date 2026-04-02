@@ -1812,6 +1812,51 @@ async function restoreChatReadAnchor(channelId, usedTimeline) {
   }
 }
 
+/**
+ * 채널의 현재 읽음 포인터(lastReadMessageId)를 백엔드에서 가져온다.
+ * 이 값은 markChannelReadCaughtUp 호출 *전*에 조회해야 유효하다.
+ */
+async function fetchLastReadMessageId(channelId) {
+  try {
+    const empQ = encodeURIComponent(currentUser.employeeNo);
+    const res = await apiFetch(`/api/channels/${channelId}/read-state?employeeNo=${empQ}`);
+    if (!res.ok) return null;
+    const json = await res.json().catch(() => ({}));
+    const mid = Number(json?.data?.lastReadMessageId ?? json?.lastReadMessageId);
+    return Number.isFinite(mid) && mid > 0 ? mid : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * lastReadMid 이후에 새 메시지가 있을 경우 "새 메시지" 구분선을 삽입하고
+ * 첫 번째 새 메시지 앞에 위치시킨 뒤 그 구분선을 반환한다.
+ * 삽입하지 않은 경우 null을 반환한다.
+ */
+function showNewMsgsDivider(lastReadMid) {
+  if (!messagesEl || lastReadMid == null || !Number.isFinite(Number(lastReadMid))) return null;
+  clearChatReadAnchorUi();
+
+  const lastReadEl = document.getElementById(`msg-${Number(lastReadMid)}`);
+  if (!lastReadEl) return null;
+
+  // lastReadEl 다음에 오는 첫 번째 루트 메시지 행(= 첫 번째 미읽음 메시지) 탐색
+  let firstNewEl = lastReadEl.nextElementSibling;
+  while (firstNewEl && !String(firstNewEl.id || "").startsWith("msg-")) {
+    firstNewEl = firstNewEl.nextElementSibling;
+  }
+  if (!firstNewEl) return null; // 새 메시지 없음(이미 최신까지 읽은 상태)
+
+  const div = document.createElement("div");
+  div.className = "msg-system msg-read-anchor-divider";
+  div.dataset.anchorMessageId = String(lastReadMid);
+  div.textContent = "새 메시지";
+  messagesEl.insertBefore(div, firstNewEl);
+  firstNewEl.classList.add("msg-read-anchor-highlight");
+  return div;
+}
+
 function formatUnreadBadgeCount(n) {
   const v = Number(n);
   if (!Number.isFinite(v) || v <= 0) return "";
@@ -2129,6 +2174,9 @@ async function loadMessages(channelId, { preserveScroll = false } = {}) {
     const timelineUrl = `/api/channels/${channelId}/messages/timeline?employeeNo=${empQ}&limit=${TIMELINE_PAGE_LIMIT}`;
     const legacyUrl = `/api/channels/${channelId}/messages?employeeNo=${empQ}&limit=50`;
 
+    // read-state 조회는 메시지 로드와 병렬로 실행 — markChannelReadCaughtUp 전에 해야 유효하다.
+    const readStateProm = !preserveScroll ? fetchLastReadMessageId(channelId) : Promise.resolve(null);
+
     let res = await apiFetch(timelineUrl);
     let json = await res.json().catch(() => ({}));
     let usedTimeline = true;
@@ -2147,7 +2195,10 @@ async function loadMessages(channelId, { preserveScroll = false } = {}) {
       return;
     }
 
-    skipAutoScrollToBottomOnce = !preserveScroll && readChatReadAnchor(channelId) != null;
+    // 백엔드 read-state 또는 로컬 앵커가 있으면 자동 하단 스크롤 억제
+    const lastReadMidFromServer = await readStateProm;
+    skipAutoScrollToBottomOnce = !preserveScroll &&
+      (lastReadMidFromServer != null || readChatReadAnchor(channelId) != null);
 
     let msgs = [];
     if (usedTimeline) {
@@ -2197,10 +2248,32 @@ async function loadMessages(channelId, { preserveScroll = false } = {}) {
     }
 
     if (!preserveScroll && msgs.length > 0) {
-      await restoreChatReadAnchor(channelId, usedTimeline);
+      // 1순위: 백엔드 read-state 기반 "새 메시지" 구분선
+      const divEl = showNewMsgsDivider(lastReadMidFromServer);
+      if (divEl) {
+        // 구분선이 삽입된 경우 해당 위치로 스크롤
+        suppressPersistChatReadAnchorOnce = true;
+        requestAnimationFrame(() => {
+          divEl.scrollIntoView({ behavior: "auto", block: "start" });
+          requestAnimationFrame(() => { suppressPersistChatReadAnchorOnce = false; });
+        });
+        // 혹시 채널 전환 후 이미 갖고 있던 로컬 앵커는 제거(충돌 방지)
+        try {
+          const key = chatReadAnchorStorageKey();
+          if (key) {
+            const raw = localStorage.getItem(key);
+            const map = raw ? JSON.parse(raw) : {};
+            delete map[String(channelId)];
+            localStorage.setItem(key, JSON.stringify(map));
+          }
+        } catch { /* ignore */ }
+      } else {
+        // 2순위: localStorage 기반 스크롤 위치 복원(새 메시지 없는 재방문 시)
+        await restoreChatReadAnchor(channelId, usedTimeline);
+      }
     }
 
-    // 앵커 복원이 끝난 뒤 읽음 처리 — 복원 전에 처리하면 앵커 저장값이 지워질 수 있다.
+    // 앵커/구분선 표시가 끝난 뒤 읽음 처리 — 이 전에 처리하면 저장 포인터가 최신으로 바뀐다.
     await markChannelReadCaughtUp(channelId);
     await loadMyChannels();
   } catch (err) {
