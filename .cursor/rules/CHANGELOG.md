@@ -13,6 +13,7 @@
 - **데스크톱**: `package.json` 버전 `0.0.9` (릴리즈)
 - **`README.md`**: 내부망 데스크톱 자동 업데이트(`/desktop-updates`, `ech-server.json`) 안내 추가
 - **`docs/FEATURE_SPEC.md`**: Electron 내부망 generic 피드·백엔드 정적 경로 설명 추가
+- **`docs/DEPLOYMENT_WINDOWS.md`**: 이후 배포 절차에 `frontend/` 복사·ZIP 통째 갱신·`desktop-updates` 검증 보강(JAR만 교체 시 웹 UI 미갱신 이유 명시)
 
 ### Added
 - **관리자 기초설정(app_settings) 직접 추가**

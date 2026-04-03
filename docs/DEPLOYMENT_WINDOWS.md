@@ -267,19 +267,70 @@ curl http://localhost:3001/health          # {"status":"ok"} 확인
 
 ## 업데이트 절차 (이후 배포)
 
+운영 백엔드는 **JAR 안의 클래스**와 별도로, **`{설치경로}\frontend\`** 의 `index.html` / `styles.css` / `app.js` 를 읽습니다(`FrontendResourceConfig`). **JAR만 갈아끼우면 API·`/desktop-updates` 등은 새 버전이 되지만, 웹 화면은 예전 파일 그대로**일 수 있으므로 아래를 함께 반영하세요.
+
+### 방법 A — ZIP으로 통째로 갱신 (권장, 변경 범위 클 때)
+
+개발 PC(인터넷 가능)에서:
+
 ```powershell
-# 1. 새 JAR 빌드 (개발 PC)
-cd backend && ./gradlew.bat bootJar
-
-# 2. 새 JAR WEB 서버로 복사
-Copy-Item "backend/build/libs/ech-backend-*.jar" "\\192.168.11.168\c$\ECH\backend\ech-backend.jar"
-
-# 3. 백엔드 서비스 재시작 (WEB 서버에서)
-Restart-Service ECH-Backend
-
-# 4. 리얼타임 코드 변경 시
-pm2 restart ech-realtime
+cd "저장소 루트"
+.\deploy\build-package.ps1
 ```
+
+생성된 `deploy\ECH-deploy.zip` 을 WEB 서버로 옮긴 뒤, **기존 `C:\ECH-deploy` 를 백업**하고 압축 해제한 다음 관리자 PowerShell에서 `.\setup-web-server.ps1` 을 다시 실행해도 되고, 이미 서비스가 있으면 **수동으로 파일만 덮어쓴 뒤 서비스만 재시작**해도 됩니다(아래 방법 B와 동일 파일 세트).
+
+### 방법 B — 최소 패치 (이미 `C:\ECH` 구조가 잡혀 있을 때)
+
+개발 PC에서 빌드 후, 아래를 WEB 서버(`192.168.11.168` 등)로 복사합니다. 경로는 설치 시 쓴 `INSTALL_DIR` 기준(문서 예시는 `C:\ECH`).
+
+```powershell
+# 0. 변수 (개발 PC — 저장소 루트에서 실행)
+$WEB = "\\192.168.11.168\c$\ECH"   # 실제 서버 주소/공유로 변경
+
+# 1. Spring Boot JAR (plain 제외한 fat JAR 하나를 ech-backend.jar 로 덮어쓰기)
+cd backend
+.\gradlew.bat bootJar
+cd ..
+$jar = Get-ChildItem "backend\build\libs\*.jar" | Where-Object { $_.Name -notmatch "plain" } |
+       Sort-Object LastWriteTime -Descending | Select-Object -First 1
+Copy-Item $jar.FullName "$WEB\backend\ech-backend.jar" -Force
+
+# 2. 프론트엔드 (필수 — 웹 UI 갱신)
+Copy-Item "frontend\index.html" "$WEB\frontend\" -Force
+Copy-Item "frontend\styles.css" "$WEB\frontend\" -Force
+Copy-Item "frontend\app.js"     "$WEB\frontend\" -Force
+
+# 3. 리얼타임 코드가 이번 릴리즈에 포함되었으면 realtime 폴더 통째로 덮어쓰기 후
+#    WEB 서버에서: cd C:\ECH\realtime && npm install --omit=dev && pm2 restart ech-realtime
+```
+
+WEB 서버에서:
+
+```powershell
+Restart-Service ECH-Backend
+# 리얼타임을 갱신했을 때만
+# cd C:\ECH\realtime; pm2 restart ech-realtime
+```
+
+### 데스크톱 자동 업데이트 파일(내부망)
+
+Electron 설치형을 배포하는 경우, 새 버전마다 `desktop` 빌드 산출물을 서버의 **`C:\ECH\releases\desktop`**(또는 `DESKTOP_UPDATE_DIR`)에 넣습니다.
+
+```powershell
+# 개발 PC (예: desktop\dist 에 빌드된 뒤)
+$rel = "\\192.168.11.168\c$\ECH\releases\desktop"
+Copy-Item "desktop\dist\latest.yml"           $rel -Force
+Copy-Item "desktop\dist\ECH-Setup-*.exe"      $rel -Force
+# 있으면 blockmap도 함께
+```
+
+동작 확인(브라우저 또는 WEB 서버에서):
+
+- `http://ech.co.kr:8080/api/health`
+- `http://ech.co.kr:8080/desktop-updates/latest.yml` (파일이 있으면 200·본문에 버전 정보)
+
+환경변수 `APP_RELEASES_DIR` / `DESKTOP_UPDATE_DIR` 를 바꾼 적이 없다면 **추가 패치는 필요 없습니다**. 새 코드만 위 파일들로 반영하면 됩니다.
 
 ---
 
