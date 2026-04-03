@@ -439,8 +439,29 @@ if (-not $javaExe) {
 }
 if (-not $javaExe) { Fatal "java.exe 를 찾을 수 없습니다. Java 17 설치 후 PowerShell 창을 닫고 다시 실행하세요." }
 
+# DB 등 모든 설정값을 -D JVM 인수로 직접 전달 (NSSM 환경변수 전달 불안정 문제 회피)
+$fileStorageDir = $FILE_STORAGE_INPUT.Replace('\', '/')
+$jvmArgs = (
+    "-Xms128m -Xmx512m",
+    "-DDB_HOST=$DB_HOST",
+    "-DDB_PORT=$DB_PORT",
+    "-DDB_NAME=$DB_NAME",
+    "-DDB_USER=$DB_USER",
+    "-DDB_PASSWORD=$DB_PASSWORD",
+    "-DJWT_SECRET=$JWT_SECRET",
+    "-DJWT_EXPIRATION_MS=28800000",
+    "-DREALTIME_INTERNAL_TOKEN=$REALTIME_TOKEN",
+    "-DREALTIME_INTERNAL_BASE_URL=http://localhost:3001",
+    "-DFILE_STORAGE_DIR=$fileStorageDir",
+    "-DAPP_RELEASES_DIR=$($INSTALL_DIR.Replace('\','/'))/releases",
+    "-DMAX_UPLOAD_SIZE=500MB",
+    "-DMAX_REQUEST_SIZE=500MB",
+    "-DEXPOSE_ERROR_DETAIL=false",
+    "-jar `"$INSTALL_DIR\backend\ech-backend.jar`""
+) -join " "
+
 & "$nssmPath" install $svcName "$javaExe" | Out-Null
-& "$nssmPath" set $svcName AppParameters "-Xms256m -Xmx1g -jar `"$INSTALL_DIR\backend\ech-backend.jar`"" | Out-Null
+& "$nssmPath" set $svcName AppParameters $jvmArgs | Out-Null
 & "$nssmPath" set $svcName AppDirectory "$INSTALL_DIR\backend" | Out-Null
 & "$nssmPath" set $svcName AppStdout "$INSTALL_DIR\logs\backend-out.log" | Out-Null
 & "$nssmPath" set $svcName AppStderr "$INSTALL_DIR\logs\backend-error.log" | Out-Null
