@@ -64,10 +64,25 @@ function createMainWindow() {
     },
   });
 
-  const indexInPackage = path.join(__dirname, "frontend", "index.html");
-  const indexInDev = path.join(__dirname, "..", "frontend", "index.html");
-  const indexPath = fs.existsSync(indexInPackage) ? indexInPackage : indexInDev;
-  mainWindow.loadFile(indexPath);
+  // 서버 URL 결정: ech-server.json > 환경변수 > 기본값(ech.co.kr:8080)
+  // 배포 시 exe 옆에 ech-server.json {"serverUrl":"http://192.168.x.x:8080"} 으로 재정의 가능
+  let serverUrl = "http://ech.co.kr:8080";
+  try {
+    const cfgPath = path.join(path.dirname(process.execPath), "ech-server.json");
+    if (fs.existsSync(cfgPath)) {
+      const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
+      if (cfg && cfg.serverUrl) serverUrl = cfg.serverUrl.replace(/\/$/, "");
+    }
+  } catch { /* ignore */ }
+
+  if (app.isPackaged) {
+    // 운영: 서버에서 직접 index.html 로드 (origin = serverUrl → API/Socket URL 자동 결정)
+    mainWindow.loadURL(serverUrl + "/index.html");
+  } else {
+    // 개발: 로컬 파일 로드
+    const indexInDev = path.join(__dirname, "..", "frontend", "index.html");
+    mainWindow.loadFile(indexInDev);
+  }
 
   // X 버튼 → 트레이로 숨기기 (완전 종료 아님)
   mainWindow.on("close", (e) => {
