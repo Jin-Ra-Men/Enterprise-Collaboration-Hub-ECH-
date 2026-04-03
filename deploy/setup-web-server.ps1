@@ -97,20 +97,46 @@ foreach ($d in $dirs) {
 # ════════════════════════════════════════════
 Title "2단계 — Java 17 확인"
 
+# PATH 새로고침 (수동 설치 직후 세션에 반영되지 않을 수 있음)
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+# JAVA_HOME 환경변수 또는 Program Files 하위 JDK 경로도 탐색
+function Find-JavaExeOnDisk {
+    $candidates = @(
+        $env:JAVA_HOME,
+        "C:\Program Files\Eclipse Adoptium",
+        "C:\Program Files\Java",
+        "C:\Program Files\Microsoft",
+        "C:\Program Files\BellSoft"
+    )
+    foreach ($base in $candidates) {
+        if (-not $base -or -not (Test-Path $base)) { continue }
+        $found = Get-ChildItem -Path $base -Recurse -Filter "java.exe" -ErrorAction SilentlyContinue |
+                 Where-Object { $_.FullName -notmatch "jre.*bin\\java\.exe" -or $_.FullName -match "jdk" } |
+                 Select-Object -First 1
+        if ($found) { return $found.FullName }
+    }
+    return $null
+}
+
 $javaOk = $false
 try {
     $jver = & java -version 2>&1
-    if ($jver -match "17\." -or $jver -match "version ""17") { $javaOk = $true }
+    if ($jver -match "17\." -or $jver -match 'version "17') { $javaOk = $true }
 } catch {}
 
 if ($javaOk) {
-    Ok "Java 17 이미 설치됨"
+    Ok "Java 17 이미 설치됨 (PATH)"
 } else {
     Info "Java 17 설치 중 (winget)..."
+    $wingetOk = $false
     try {
-        winget install --id EclipseAdoptium.Temurin.17.JRE -e --silent --accept-package-agreements --accept-source-agreements
-        Ok "Java 17 설치 완료"
-    } catch {
+        winget install --id EclipseAdoptium.Temurin.17.JDK -e --silent --accept-package-agreements --accept-source-agreements 2>&1 | Out-Null
+        $wingetOk = $true
+        Ok "Java 17 설치 완료 (winget)"
+    } catch {}
+
+    if (-not $wingetOk) {
         Write-Host @"
 
   [!!] winget 으로 Java 자동 설치에 실패했습니다.
@@ -119,10 +145,32 @@ if ($javaOk) {
     이 스크립트를 다시 실행하세요.
 
 "@ -ForegroundColor Yellow
-        Fatal "Java 17 설치 필요"
     }
-    # PATH 새로고침
+
+    # PATH 새로고침 후 재확인
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+    $javaOk = $false
+    try {
+        $jver = & java -version 2>&1
+        if ($jver -match "17\." -or $jver -match 'version "17') { $javaOk = $true }
+    } catch {}
+
+    if (-not $javaOk) {
+        # Program Files 직접 탐색 (수동 설치 경로)
+        $diskJava = Find-JavaExeOnDisk
+        if ($diskJava) {
+            $javaDir = Split-Path $diskJava
+            $env:Path = "$javaDir;$env:Path"
+            [System.Environment]::SetEnvironmentVariable("Path", "$javaDir;" + [System.Environment]::GetEnvironmentVariable("Path","Machine"), "Machine")
+            Ok "Java 발견 (디스크 탐색): $diskJava"
+            $javaOk = $true
+        }
+    }
+
+    if (-not $javaOk) {
+        Fatal "Java 17 을 찾을 수 없습니다. 설치 후 PowerShell 창을 닫고 다시 관리자 권한으로 실행하세요."
+    }
 }
 
 # ════════════════════════════════════════════
@@ -258,10 +306,14 @@ if ($existing) {
     Warn "기존 서비스 '$svcName' 제거"
 }
 
-# 자바 경로 탐색
+# 자바 경로 탐색 (PATH 재확인 후 디스크 탐색 폴백)
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 $javaCmdObj = Get-Command java -ErrorAction SilentlyContinue
 $javaExe = if ($javaCmdObj) { $javaCmdObj.Source } else { $null }
-if (-not $javaExe) { Fatal "java.exe 를 찾을 수 없습니다. Java 17 설치를 확인하세요." }
+if (-not $javaExe) {
+    $javaExe = Find-JavaExeOnDisk
+}
+if (-not $javaExe) { Fatal "java.exe 를 찾을 수 없습니다. Java 17 설치 후 PowerShell 창을 닫고 다시 실행하세요." }
 
 & "$nssmPath" install $svcName "$javaExe" | Out-Null
 & "$nssmPath" set $svcName AppParameters "-Xms256m -Xmx1g -jar `"$INSTALL_DIR\backend\ech-backend.jar`"" | Out-Null
