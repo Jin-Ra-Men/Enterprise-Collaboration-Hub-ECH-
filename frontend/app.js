@@ -5244,6 +5244,13 @@ function syncKanbanBoardFromDomFull(boardEl) {
   syncKanbanBoardPartial(boardEl, ids);
 }
 
+function isEditableDropTarget(target) {
+  const el = target instanceof Element ? target : null;
+  if (!el) return false;
+  const hit = el.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"], [contenteditable="plaintext-only"]');
+  return !!hit;
+}
+
 /** Prevent accidental drop of a kanban card onto search inputs / textareas (would insert drag text). */
 function ensureKanbanDragInputGuard() {
   if (ensureKanbanDragInputGuard._done) return;
@@ -5260,12 +5267,8 @@ function ensureKanbanDragInputGuard() {
     "dragover",
     (ev) => {
       if (!ev.target.closest("#channelKanbanBoard")) return;
-      const el = ev.target;
       if (
-        (el instanceof HTMLInputElement ||
-          el instanceof HTMLTextAreaElement ||
-          el instanceof HTMLSelectElement ||
-          el.isContentEditable) &&
+        isEditableDropTarget(ev.target) &&
         (isKanbanCardDrag(ev) || document.querySelector("#channelKanbanBoard .kanban-card-dragging"))
       ) {
         ev.preventDefault();
@@ -5282,17 +5285,44 @@ function ensureKanbanDragInputGuard() {
     "drop",
     (ev) => {
       if (!ev.target.closest("#channelKanbanBoard")) return;
-      const el = ev.target;
       if (
-        (el instanceof HTMLInputElement ||
-          el instanceof HTMLTextAreaElement ||
-          el instanceof HTMLSelectElement ||
-          el.isContentEditable) &&
+        isEditableDropTarget(ev.target) &&
         (isKanbanCardDrag(ev) || document.querySelector("#channelKanbanBoard .kanban-card-dragging"))
       ) {
         ev.preventDefault();
         ev.stopPropagation();
       }
+    },
+    true
+  );
+}
+
+/** Global safety: if pointer misses board and lands on any editable control, do not insert drag payload text. */
+if (!window._echKanbanGlobalDropGuard) {
+  window._echKanbanGlobalDropGuard = true;
+  const isKanbanDragActive = () =>
+    !!document.querySelector("#channelKanbanBoard .kanban-card-dragging");
+  document.addEventListener(
+    "dragover",
+    (ev) => {
+      if (!isKanbanDragActive()) return;
+      if (!isEditableDropTarget(ev.target)) return;
+      ev.preventDefault();
+      try {
+        ev.dataTransfer.dropEffect = "none";
+      } catch (_) {
+        /* ignore */
+      }
+    },
+    true
+  );
+  document.addEventListener(
+    "drop",
+    (ev) => {
+      if (!isKanbanDragActive()) return;
+      if (!isEditableDropTarget(ev.target)) return;
+      ev.preventDefault();
+      ev.stopPropagation();
     },
     true
   );
@@ -6490,13 +6520,18 @@ function renderKanbanBoard(board) {
       const article = sel.closest(".kanban-card-item");
       const renderCol = Number(article?.dataset.renderColumnId || 0);
       const pending = workHubPendingCardColumn.get(cardId);
+      const baseCol = pending != null ? Number(pending) : Number(card?.columnId || 0);
       const resolved =
         renderCol > 0
           ? renderCol
-          : pending != null
-            ? Number(pending)
-            : Number(card?.columnId || 0);
+          : baseCol;
       sel.value = String(resolved);
+      if (renderCol > 0 && baseCol > 0 && renderCol !== baseCol) {
+        // When visual bucket and base state diverge, trust the rendered column and repair pending state.
+        workHubPendingCardColumn.set(cardId, renderCol);
+        const wi = Number(article?.dataset.workItemId || "");
+        syncPendingWorkItemStatusFromKanbanColumn(wi, renderCol);
+      }
     }
     sel.addEventListener("change", () => {
       const isDraftLocal = sel.dataset.isDraft === "1";
