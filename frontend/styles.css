@@ -4218,7 +4218,9 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
  * ========================================================= */
 .modal-orgchart {
   width: min(92vw, 1080px);
-  height: min(88vh, 780px);
+  /* 기본 max-height를 오버라이드해 충분한 높이 확보 */
+  max-height: min(90vh, 820px) !important;
+  height: min(88vh, 820px);
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -4238,6 +4240,8 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
 .orgchart-body {
   display: flex;
   flex: 1;
+  /* min-height: 0 이 없으면 flex 자식이 부모를 밀어내어 잘림 발생 */
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -4250,9 +4254,11 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 0;
 }
 .orgchart-tree-scroll {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 12px 8px;
 }
@@ -4313,6 +4319,8 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
 /* 우측 멤버 패널 */
 .orgchart-member-pane {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -4335,6 +4343,7 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
 }
 .orgchart-member-grid {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 16px 20px;
   display: grid;

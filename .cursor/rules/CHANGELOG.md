@@ -11,6 +11,9 @@
   - `/api/user-directory/organization` API 활용, MEMBER 이상 접근 가능
   - 팀 선택 시 멤버 카드(이름·사번·직급·직위·직책 배지) 표시, 새로고침 버튼 지원
   - `styles.css`: `.btn-workspace-tool`, `.modal-orgchart`, `.orgchart-*` 스타일 추가
+- **조직도 모달 멤버 정렬 및 레이아웃 개선**
+  - 팀장(직책) 최우선 → 부장→차장→과장→대리→사원→인턴→기타 직급 순 → 이름 가나다 순 정렬
+  - flex `min-height: 0` 누락으로 모달 내용이 잘리던 문제 수정 (tree/member pane 전체)
 
 ### Fixed
 - **사용자 삭제 연쇄 FK 오류 3차 수정 (실제 DB에 CASCADE 전무 대응)**

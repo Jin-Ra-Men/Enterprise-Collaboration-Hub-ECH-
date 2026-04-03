@@ -8835,6 +8835,29 @@ function renderOrgChartTree(data) {
   scroll.innerHTML = parts.join("");
 }
 
+/**
+ * 팀 구성원 정렬: 직책 "팀장" 최우선, 이후 직급 순(부장→차장→과장→대리→사원→인턴→기타), 이름 가나다 순.
+ */
+function sortOrgChartMembers(users) {
+  const JOB_LEVEL_ORDER = ["부장", "차장", "과장", "대리", "사원", "인턴"];
+  const levelRank = (level) => {
+    if (!level) return 999;
+    const idx = JOB_LEVEL_ORDER.findIndex(l => level.includes(l));
+    return idx >= 0 ? idx : 998;
+  };
+  return [...users].sort((a, b) => {
+    // 팀장 직책 최우선
+    const aIsLeader = (a.jobTitle ?? "").includes("팀장") ? 0 : 1;
+    const bIsLeader = (b.jobTitle ?? "").includes("팀장") ? 0 : 1;
+    if (aIsLeader !== bIsLeader) return aIsLeader - bIsLeader;
+    // 직급 순
+    const rankDiff = levelRank(a.jobLevel) - levelRank(b.jobLevel);
+    if (rankDiff !== 0) return rankDiff;
+    // 동직급이면 이름 가나다
+    return (a.name ?? "").localeCompare(b.name ?? "", "ko");
+  });
+}
+
 function renderOrgChartMembers(team) {
   const grid        = document.getElementById("orgChartMemberGrid");
   const teamNameEl  = document.getElementById("orgChartTeamName");
@@ -8844,7 +8867,7 @@ function renderOrgChartMembers(team) {
   if (teamNameEl)  teamNameEl.textContent  = team.name;
   if (teamCountEl) teamCountEl.textContent = `${team.users?.length ?? 0}명`;
 
-  const users = team.users ?? [];
+  const users = sortOrgChartMembers(team.users ?? []);
   if (!users.length) {
     grid.innerHTML = '<p class="orgchart-hint">팀 구성원이 없습니다.</p>';
     return;
