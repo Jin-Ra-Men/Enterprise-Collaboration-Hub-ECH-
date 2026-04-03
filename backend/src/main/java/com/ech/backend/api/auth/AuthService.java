@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
-    private static final Set<String> ALLOWED_THEMES = Set.of("dark", "light", "blue");
+    private static final Set<String> ALLOWED_THEMES = Set.of("dark", "light");
 
     private final List<AuthProvider> authProviders;
     private final JwtUtil jwtUtil;

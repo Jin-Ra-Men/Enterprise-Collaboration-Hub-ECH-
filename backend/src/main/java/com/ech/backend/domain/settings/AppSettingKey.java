@@ -13,4 +13,10 @@ public final class AppSettingKey {
 
     /** 단일 첨부파일 최대 크기 (MB) */
     public static final String FILE_MAX_SIZE_MB = "file.max-size-mb";
+
+    /**
+     * 비밀번호가 없는 사용자에게 기동 시 한 번 적용되는 초기 평문 비밀번호.
+     * 관리자 설정에서 변경 가능. 값이 비어 있으면 내장 기본값을 사용한다.
+     */
+    public static final String AUTH_INITIAL_PASSWORD_PLAINTEXT = "auth.initial-password-plaintext";
 }

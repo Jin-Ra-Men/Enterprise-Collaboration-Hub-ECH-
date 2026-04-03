@@ -5,9 +5,15 @@
 ## 2026-04-03
 
 ### Added
+- **로그인**: 아이디 저장(`localStorage`), 퀵 레일 📌 **고정**(사이드바 접기 비활성화)
+- **백엔드 설정**: `auth.initial-password-plaintext` — 비밀번호 미설정 사용자 기동 시 적용 평문(관리자 설정에서 변경, `DataInitializer`가 `initDefaultAppSettings` 이후 읽음)
 - **desktop(Electron) 자동 업데이트**: `electron-updater` 의존성, `build.publish`(GitHub), 패키지 실행 시 `checkForUpdatesAndNotify`·6시간 주기 재확인·다운로드 완료 OS 알림(`main.js`)
 - **릴리즈 업로드**: `tools/publish-electron-github-release.ps1`가 `latest.yml`에서 설치 파일명을 읽어 **설치 파일 + `latest.yml` + `.blockmap`(있을 때)** 을 동일 태그에 업로드; 기본 태그 `v{package.json version}`
 - **문서**: `README.md`(데스크톱 자동 업데이트), `docs/FEATURE_SPEC.md`, `docs/HANDOVER.md`에 배포·메타 요구사항 반영
+
+### Changed
+- **UI/UX**: 공통 알림·확인 다이얼로그 우측 ✕ 제거; **파랑 테마** 제거(서버 허용 테마 `dark`/`light`만); 전체검색 **한 글자** 시 안내 `검색어는 두글자 이상부터 가능합니다.`; 채널 입장 시 타임라인 **맨 아래**로 스크롤(새 메시지 구분선은 유지); 업무 허브 **복원·완전 삭제**는 **저장** 시 일괄 반영; 업무 목록·칸반 패널 **간격** 보강; **Electron**에서는 멘션/새 메시지 **인앱 토스트 생략**(OS 알림만으로 중복 방지)
+- **문서**: `README.md` 테마·초기 비밀번호 설명 갱신
 
 ### Changed
 - **desktop**: `version` `0.0.4`(업데이터·릴리즈 메타 반영 빌드용)

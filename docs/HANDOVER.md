@@ -28,6 +28,10 @@
    - UI 테마(검정/하양/파랑)는 로그인 후 사용자 영역의 톱니바퀴 팝업에서 변경하며, 서버 `PUT /api/auth/me/theme`로 `users.theme_preference`에 저장됩니다(로그아웃/재로그인 후에도 사용자별 유지). `localStorage ech_theme`는 초기 페인트(FoUC 완화)용 캐시로 함께 사용합니다.
 4. 환경 설정 상세: `docs/ENVIRONMENT_SETUP.md`
 
+## 2-0-2-1) 초기 로그인 비밀번호(미설정 사용자)
+- DB `app_settings` 키 **`auth.initial-password-plaintext`**: 비밀번호 해시가 없는 사용자에게 **서버 기동 시 한 번** 적용되는 평문 값. 관리자 **설정** 화면에서 변경 가능.
+- 이미 비밀번호가 있는 계정은 변경되지 않음. 값이 비어 있으면 `DataInitializer` 내장 기본(`Test1234!`)을 사용.
+
 ## 2-0-2) 데스크톱(Electron) 배포·자동 업데이트
 - 빌드: `cd desktop && npm install && npm run build:win` → `desktop/dist/`에 NSIS 설치 파일, **`latest.yml`**, (생성 시) **`*.exe.blockmap`**
 - GitHub 릴리즈: **설치 파일만** 올리면 `electron-updater`가 메타를 못 읽어 자동 업데이트가 동작하지 않음. 동일 태그에 `latest.yml`과 blockmap까지 올릴 것

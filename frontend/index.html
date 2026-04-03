@@ -12,7 +12,8 @@
       (function () {
         try {
           var t = localStorage.getItem("ech_theme");
-          if (t === "light" || t === "blue") document.documentElement.setAttribute("data-theme", t);
+          if (t === "light") document.documentElement.setAttribute("data-theme", "light");
+          else if (t === "dark") document.documentElement.setAttribute("data-theme", "dark");
         } catch (e) {}
       })();
     </script>
@@ -35,11 +36,12 @@
           <div class="form-group">
             <label for="loginPassword">비밀번호</label>
             <input id="loginPassword" type="password" placeholder="비밀번호 입력" autocomplete="current-password" required />
+            <label class="login-remember"><input type="checkbox" id="loginRememberId" /> 아이디 저장</label>
           </div>
           <p id="loginError" class="login-error hidden"></p>
           <button type="submit" id="loginBtn" class="btn-login">로그인</button>
         </form>
-        <p class="login-hint">테스트 계정 기본 비밀번호: <code>Test1234!</code></p>
+        <p class="login-hint">초기 비밀번호는 관리자 <strong>설정</strong> 화면의 <code>auth.initial-password-plaintext</code> 값과 동일합니다. (미설정 사용자에게만 기동 시 적용)</p>
       </div>
     </div>
 
@@ -57,6 +59,7 @@
 
         <div class="sidebar-body">
           <nav id="quickContainer" class="quick-rail" aria-label="최근 대화·미읽음 빠른 이동">
+            <button type="button" id="btnQuickRailPin" class="quick-rail-pin-btn" title="사이드바 접기 비활성화(고정)" aria-label="퀵 레일·사이드바 고정" aria-pressed="false">📌</button>
             <div class="quick-rail-scroll" id="quickRailScroll"></div>
           </nav>
           <div class="sidebar-main">
@@ -330,7 +333,6 @@
             <span id="appDialogBadge" class="app-dialog-badge">i</span>
             <h3 id="appDialogTitle">알림</h3>
           </div>
-          <button class="modal-close" id="btnCloseAppDialog">✕</button>
         </div>
         <div class="modal-body">
           <p id="appDialogMessage" class="app-dialog-message"></p>
@@ -655,7 +657,7 @@
             </select>
           </div>
           <div id="workItemDetailInactiveActions" class="work-item-inactive-actions hidden">
-            <p class="muted work-item-inactive-hint">비활성 처리된 업무입니다. 복원하거나 DB에서 완전히 삭제할 수 있습니다.</p>
+            <p class="muted work-item-inactive-hint">비활성 처리된 업무입니다. <strong>복원</strong>·<strong>완전 삭제</strong>는 하단 <strong>저장</strong> 시 서버에 반영됩니다.</p>
             <button type="button" class="btn-secondary btn-sm" id="btnWorkItemRestore">복원</button>
             <button type="button" class="btn-danger btn-sm" id="btnWorkItemPurge">완전 삭제</button>
           </div>
@@ -772,7 +774,6 @@
           <div class="theme-picker-options" role="group" aria-label="화면 테마 선택">
             <button type="button" class="theme-option-btn" data-theme="dark">검정</button>
             <button type="button" class="theme-option-btn" data-theme="light">하양</button>
-            <button type="button" class="theme-option-btn" data-theme="blue">파랑</button>
           </div>
         </div>
       </div>

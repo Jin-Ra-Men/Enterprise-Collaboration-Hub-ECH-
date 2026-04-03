@@ -84,45 +84,6 @@ html[data-theme="light"] {
   --sidebar-search-placeholder: rgba(15, 23, 42, 0.45);
 }
 
-html[data-theme="blue"] {
-  --bg-app: #eef4fb;
-  --bg-sidebar: #ffffff;
-  --bg-sidebar-hover: rgba(2, 132, 199, 0.08);
-  --bg-chat: #f8fbff;
-  --bg-message-hover: rgba(2, 132, 199, 0.06);
-  --bg-channel-files-strip: #eef6ff;
-  --bg-elevated: #ffffff;
-  --bg-input: #f3f8ff;
-  --border-subtle: rgba(2, 132, 199, 0.16);
-  --border-focus: rgba(2, 132, 199, 0.45);
-  --focus-ring: rgba(2, 132, 199, 0.18);
-  --text-primary: #0f172a;
-  --text-secondary: #334155;
-  --text-muted: #64748b;
-  --accent: #0284c7;
-  --accent-hover: #0ea5e9;
-  --accent-pressed: #0369a1;
-  --success: #059669;
-  --sidebar-text: #334155;
-  --grad-login-page: linear-gradient(165deg, #f6fbff 0%, #eaf4ff 50%, #f4f9ff 100%);
-  --grad-logo: linear-gradient(145deg, #0ea5e9, #0284c7);
-  --grad-btn-login: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
-  --grad-btn-primary: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
-  --grad-avatar: linear-gradient(145deg, #0ea5e9, #0284c7);
-  --grad-btn-search-sub: linear-gradient(180deg, #1d4ed8 0%, #1e40af 100%);
-  --sidebar-border: rgba(2, 132, 199, 0.12);
-  --sidebar-search-bg: #eef6ff;
-  --sidebar-item-fg: #334155;
-  --sidebar-item-fg-strong: #0f172a;
-  --sidebar-item-hover-bg: rgba(2, 132, 199, 0.1);
-  --sidebar-active-bg: rgba(2, 132, 199, 0.16);
-  --sidebar-user-bg: #eef6ff;
-  --sidebar-avatar-bg: #bae6fd;
-  --workspace-btn-fg: #334155;
-  --sidebar-search-input-fg: #0f172a;
-  --sidebar-search-placeholder: rgba(15, 23, 42, 0.45);
-}
-
 /* ── 리셋 / 기본 ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 /* 설치형·창 크기 조절 시 뷰포트 높이 기준(100dvh)으로 레이아웃이 잘리지 않도록 */
@@ -205,6 +166,17 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 .btn-login:disabled { opacity: .6; cursor: default; }
 .login-hint { text-align: center; font-size: 13px; color: var(--text-muted); margin-top: 18px; }
 .login-hint code { background: var(--bg-input); padding: 2px 6px; border-radius: 4px; color: var(--accent); }
+.login-remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.login-remember input { cursor: pointer; }
 
 /* ============================================================
  * 앱 레이아웃 (Slack-like)
@@ -247,6 +219,33 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
   flex-direction: column;
   min-height: 0;
   align-self: stretch;
+}
+.quick-rail-pin-btn {
+  flex-shrink: 0;
+  width: calc(100% - 12px);
+  max-width: 52px;
+  margin: 8px auto 2px;
+  padding: 6px 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  font-size: 14px;
+  line-height: 1.2;
+  cursor: pointer;
+  color: var(--sidebar-item-fg);
+}
+.quick-rail-pin-btn:hover {
+  background: var(--sidebar-item-hover-bg);
+  color: var(--sidebar-item-fg-strong);
+}
+.quick-rail-pin-btn[aria-pressed="true"] {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  background: var(--sidebar-active-bg);
+}
+.app-layout.quick-rail-pinned .sidebar-edge-toggle {
+  opacity: 0.35;
+  pointer-events: none;
+  cursor: not-allowed;
 }
 .quick-rail-scroll {
   flex: 1;
@@ -2042,10 +2041,6 @@ html[data-theme="light"] .reply-composer-banner {
 html[data-theme="light"] .theme-option-btn.active {
   background: rgba(99, 102, 241, 0.12);
 }
-html[data-theme="blue"] .theme-option-btn.active {
-  background: rgba(56, 189, 248, 0.12);
-}
-
 /* 사용자 검색 */
 .member-search-wrap { display: flex; gap: 8px; margin-bottom: 10px; }
 .member-search-wrap input {
@@ -2492,10 +2487,13 @@ html[data-theme="blue"] .theme-option-btn.active {
 .work-hub-body {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 40px;
   align-items: stretch;
   width: 100%;
   min-width: 0;
+}
+.work-hub-body > .work-hub-panel + .work-hub-panel {
+  margin-top: 4px;
 }
 .work-hub-panel {
   border: 1px solid var(--border-subtle);

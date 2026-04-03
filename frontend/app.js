@@ -73,8 +73,12 @@ const TIMELINE_PAGE_LIMIT = 100;
 const MAX_CHAT_DOM_NODES = 4000;
 const HARD_MAX_CHAT_DOM_NODES = 10000;
 const THEME_KEY  = "ech_theme";
-const VALID_THEMES = ["dark", "light", "blue"];
+const VALID_THEMES = ["dark", "light"];
 const SIDEBAR_COLLAPSED_KEY = "ech_sidebar_collapsed";
+/** "1" 이면 사이드바 접기 비활성화(퀵 레일·목록 항상 펼침) */
+const SIDEBAR_QUICK_PIN_KEY = "ech_sidebar_quick_pinned";
+const LOGIN_REMEMBER_KEY = "ech_login_remember";
+const LOGIN_SAVED_ID_KEY = "ech_saved_login_id";
 /** 퀵 레일에 표시할 최대 대화 수(미읽음 우선 후 최근 순) */
 const QUICK_RAIL_MAX_ITEMS = 15;
 
@@ -112,6 +116,14 @@ function initTheme() {
     saved = localStorage.getItem(THEME_KEY) || "dark";
   } catch (e) {
     /* ignore */
+  }
+  if (saved === "blue") {
+    saved = "dark";
+    try {
+      localStorage.setItem(THEME_KEY, "dark");
+    } catch (e2) {
+      /* ignore */
+    }
   }
   if (!VALID_THEMES.includes(saved)) saved = "dark";
   applyTheme(saved);
@@ -219,6 +231,10 @@ let workHubPendingCardTitle = new Map();
 let workHubPendingCardDescription = new Map();
 /** 업무 허브: 저장 시 반영할 업무 항목 삭제 ID */
 let workHubPendingWorkDeleteIds = new Set();
+/** 저장 시 POST /restore 로 반영 */
+let workHubPendingWorkRestoreIds = new Set();
+/** 저장 시 DELETE hard 로 반영 */
+let workHubPendingWorkPurgeIds = new Set();
 /** 업무 허브: 저장 시 반영할 칸반 카드 삭제 ID */
 let workHubPendingCardDeleteIds = new Set();
 /** 업무 허브: 저장 시 생성할 신규 업무 draft */
@@ -261,6 +277,7 @@ let sidebarPresenceUiBound = false;
 /** 사이드바 섹션 토글·접기 버튼은 initEvents가 여러 번 호출돼도 한 번만 바인딩 */
 let sidebarSectionTogglesBound = false;
 let sidebarCollapseBound = false;
+let sidebarQuickRailPinBound = false;
 let mentionInboxUiBound = false;
 
 /* ── DOM 참조 ── */
@@ -475,7 +492,7 @@ function appDialogElements() {
 
 function openAppDialog({ title = "알림", message = "", mode = "alert", defaultValue = "" }) {
   const els = appDialogElements();
-  if (!els.modal || !els.title || !els.message || !els.ok || !els.cancel || !els.close || !els.input || !els.badge) {
+  if (!els.modal || !els.title || !els.message || !els.ok || !els.cancel || !els.input || !els.badge) {
     if (mode === "confirm") return Promise.resolve(window.confirm(message));
     if (mode === "prompt") return Promise.resolve(window.prompt(message, defaultValue || ""));
     window.alert(message);
@@ -485,7 +502,7 @@ function openAppDialog({ title = "알림", message = "", mode = "alert", default
     const cleanup = () => {
       els.ok.removeEventListener("click", onOk);
       els.cancel.removeEventListener("click", onCancel);
-      els.close.removeEventListener("click", onCancel);
+      if (els.close) els.close.removeEventListener("click", onCancel);
       els.modal.removeEventListener("click", onOverlay);
       document.removeEventListener("keydown", onEsc);
       els.modal.classList.add("hidden");
@@ -537,7 +554,7 @@ function openAppDialog({ title = "알림", message = "", mode = "alert", default
     }
     els.ok.addEventListener("click", onOk);
     els.cancel.addEventListener("click", onCancel);
-    els.close.addEventListener("click", onCancel);
+    if (els.close) els.close.addEventListener("click", onCancel);
     els.modal.addEventListener("click", onOverlay);
     document.addEventListener("keydown", onEsc);
     els.modal.classList.remove("hidden");
@@ -1411,8 +1428,22 @@ function avatarInitials(name) {
 function showLogin() {
   loginPage.classList.remove("hidden");
   mainApp.classList.add("hidden");
-  document.getElementById("loginId").value = "";
-  document.getElementById("loginPassword").value = "";
+  const idEl = document.getElementById("loginId");
+  const pwEl = document.getElementById("loginPassword");
+  const rememberEl = document.getElementById("loginRememberId");
+  if (idEl) {
+    idEl.value = "";
+    try {
+      if (localStorage.getItem(LOGIN_REMEMBER_KEY) === "1") {
+        idEl.value = localStorage.getItem(LOGIN_SAVED_ID_KEY) || "";
+        if (rememberEl) rememberEl.checked = true;
+      }
+    } catch (e) {
+      /* ignore */
+    }
+  }
+  if (pwEl) pwEl.value = "";
+  if (rememberEl && localStorage.getItem(LOGIN_REMEMBER_KEY) !== "1") rememberEl.checked = false;
   hideLoginError();
 }
 
@@ -1422,10 +1453,12 @@ function showMain(user) {
   lastSidebarChannelsSnapshot = [];
   loginPage.classList.add("hidden");
   mainApp.classList.remove("hidden");
-  const preferredTheme = VALID_THEMES.includes(user?.themePreference)
+  let preferredTheme = VALID_THEMES.includes(user?.themePreference)
     ? user.themePreference
     : (localStorage.getItem(THEME_KEY) || "dark");
-  applyTheme(preferredTheme);
+  if (preferredTheme === "blue") preferredTheme = "dark";
+  applyTheme(VALID_THEMES.includes(preferredTheme) ? preferredTheme : "dark");
+  applyQuickRailPinUi();
   applySidebarCollapsedState();
 
   sidebarUserName.textContent = `${user.name}`;
@@ -1481,6 +1514,18 @@ loginForm.addEventListener("submit", async (e) => {
     }
     const { token, ...user } = json.data;
     saveSession(token, user);
+    try {
+      const rememberEl = document.getElementById("loginRememberId");
+      if (rememberEl?.checked) {
+        localStorage.setItem(LOGIN_REMEMBER_KEY, "1");
+        localStorage.setItem(LOGIN_SAVED_ID_KEY, loginId);
+      } else {
+        localStorage.removeItem(LOGIN_REMEMBER_KEY);
+        localStorage.removeItem(LOGIN_SAVED_ID_KEY);
+      }
+    } catch (e) {
+      /* ignore */
+    }
     showMain(user);
   } catch {
     showLoginError("서버에 연결할 수 없습니다.");
@@ -1732,7 +1777,53 @@ function setSidebarCollapsedUi(collapsed) {
   }
 }
 
+function isQuickRailPinned() {
+  try {
+    return localStorage.getItem(SIDEBAR_QUICK_PIN_KEY) === "1";
+  } catch (e) {
+    return false;
+  }
+}
+
+function applyQuickRailPinUi() {
+  if (!mainApp) return;
+  const pinned = isQuickRailPinned();
+  mainApp.classList.toggle("quick-rail-pinned", pinned);
+  const btn = document.getElementById("btnQuickRailPin");
+  if (btn) {
+    btn.setAttribute("aria-pressed", pinned ? "true" : "false");
+    btn.title = pinned ? "고정 해제 (사이드바 접기 허용)" : "사이드바 접기 비활성화(고정)";
+  }
+}
+
+function toggleQuickRailPinned() {
+  const next = !isQuickRailPinned();
+  try {
+    localStorage.setItem(SIDEBAR_QUICK_PIN_KEY, next ? "1" : "0");
+  } catch (e) {
+    /* ignore */
+  }
+  if (next) {
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, "0");
+    } catch (e2) {
+      /* ignore */
+    }
+    setSidebarCollapsedUi(false);
+  }
+  applyQuickRailPinUi();
+}
+
 function applySidebarCollapsedState() {
+  if (isQuickRailPinned()) {
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, "0");
+    } catch (e) {
+      /* ignore */
+    }
+    setSidebarCollapsedUi(false);
+    return;
+  }
   let collapsed = false;
   try {
     collapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
@@ -1743,6 +1834,7 @@ function applySidebarCollapsedState() {
 }
 
 function toggleSidebarCollapsed() {
+  if (isQuickRailPinned()) return;
   const next = !mainApp.classList.contains("sidebar-collapsed");
   try {
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
@@ -2087,13 +2179,10 @@ async function loadMessages(channelId, { preserveScroll = false } = {}) {
     }
 
     if (!preserveScroll && msgs.length > 0) {
-      // 백엔드 read-state 기반 "새 메시지" 구분선 삽입 및 스크롤
-      const divEl = showNewMsgsDivider(lastReadMidFromServer);
-      if (divEl) {
-        requestAnimationFrame(() => {
-          divEl.scrollIntoView({ behavior: "auto", block: "start" });
-        });
-      }
+      showNewMsgsDivider(lastReadMidFromServer);
+      requestAnimationFrame(() => {
+        if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
+      });
     }
 
     // 앵커/구분선 표시가 끝난 뒤 읽음 처리 — 이 전에 처리하면 저장 포인터가 최신으로 바뀐다.
@@ -3752,6 +3841,10 @@ async function ensureOsNotificationPermissionFromUserGesture() {
   }
 }
 
+function isEchElectronClient() {
+  return typeof window !== "undefined" && typeof window.electronAPI?.showOsNotification === "function";
+}
+
 function showOsNotificationIfAllowed({ tag, title, body, onClick }) {
   if (!tag) tag = String(Date.now());
 
@@ -3989,6 +4082,8 @@ function pushNewMessageToast(msg) {
     });
   }
 
+  if (isEchElectronClient()) return;
+
   const stack = document.getElementById("mentionToastStack");
   if (!stack) return;
   const toast = document.createElement("button");
@@ -4219,6 +4314,8 @@ function pushMentionToast(p) {
       onClick: () => selectChannel(cid, channelName, channelType),
     });
   }
+
+  if (isEchElectronClient()) return;
 
   const toast = document.createElement("button");
   toast.type = "button";
@@ -4919,11 +5016,24 @@ function normalizeWorkStatusLabel(status) {
   return "OPEN";
 }
 
+/** 업무 허브 UI: 비활성/복원·완전삭제 대기 상태를 반영한 inUse */
+function effectiveWorkItemInUseForUi(workItemId) {
+  const wid = Number(workItemId);
+  if (!wid) return true;
+  if (workHubPendingWorkPurgeIds.has(wid)) return false;
+  if (workHubPendingWorkRestoreIds.has(wid)) return true;
+  const w = lastChannelWorkItemsForHub.find((x) => Number(x.id) === wid);
+  return w ? w.inUse !== false : true;
+}
+
 function renderChannelWorkItems(items) {
   const listEl = document.getElementById("channelWorkItemsList");
   if (!listEl) return;
   const savedItems = Array.isArray(items)
-    ? items.filter((item) => !workHubPendingWorkDeleteIds.has(Number(item.id)))
+    ? items.filter(
+        (item) =>
+          !workHubPendingWorkDeleteIds.has(Number(item.id)) && !workHubPendingWorkPurgeIds.has(Number(item.id))
+      )
     : [];
   const draftItems = workHubPendingNewWorkItems.map((d, i) => ({
     id: `draft-${i}`,
@@ -4942,7 +5052,7 @@ function renderChannelWorkItems(items) {
   visibleItems.forEach((item) => {
     const li = document.createElement("li");
     const isDraft = item._isDraft === true;
-    const inactive = !isDraft && item.inUse === false;
+    const inactive = !isDraft && !effectiveWorkItemInUseForUi(Number(item.id));
     li.className = inactive ? "channel-work-item channel-work-item-inactive" : "channel-work-item";
     const id = isDraft ? String(item.id) : Number(item.id);
     if (!isDraft) {
@@ -5033,6 +5143,8 @@ function clearWorkHubPendingMaps() {
   workHubPendingCardTitle.clear();
   workHubPendingCardDescription.clear();
   workHubPendingWorkDeleteIds.clear();
+  workHubPendingWorkRestoreIds.clear();
+  workHubPendingWorkPurgeIds.clear();
   workHubPendingCardDeleteIds.clear();
   workHubPendingCardAssigneeAdd.clear();
   workHubPendingCardAssigneeRemove.clear();
@@ -5129,6 +5241,10 @@ async function flushWorkHubSave() {
   try {
     const hasPending =
       workHubPendingWorkStatus.size > 0 ||
+      workHubPendingWorkTitle.size > 0 ||
+      workHubPendingWorkDescription.size > 0 ||
+      workHubPendingWorkRestoreIds.size > 0 ||
+      workHubPendingWorkPurgeIds.size > 0 ||
       workHubPendingCardColumn.size > 0 ||
       workHubPendingCardSortOrder.size > 0 ||
       workHubPendingWorkDeleteIds.size > 0 ||
@@ -5159,6 +5275,18 @@ async function flushWorkHubSave() {
     }
     workHubPendingNewWorkItems = [];
 
+    for (const rid of [...workHubPendingWorkRestoreIds]) {
+      const res = await apiFetch(
+        `/api/work-items/${Number(rid)}/restore?actorEmployeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
+        { method: "POST" }
+      );
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(j.error?.message || `업무 복원에 실패했습니다. (${rid})`);
+      }
+    }
+    workHubPendingWorkRestoreIds.clear();
+
     const pendingWorkIds = new Set([
       ...Array.from(workHubPendingWorkStatus.keys()),
       ...Array.from(workHubPendingWorkTitle.keys()),
@@ -5167,6 +5295,7 @@ async function flushWorkHubSave() {
     for (const workItemIdRaw of pendingWorkIds.values()) {
       const workItemId = Number(workItemIdRaw);
       if (workHubPendingWorkDeleteIds.has(Number(workItemId))) continue;
+      if (workHubPendingWorkPurgeIds.has(Number(workItemId))) continue;
       const status = workHubPendingWorkStatus.get(workItemId);
       const title = workHubPendingWorkTitle.get(workItemId);
       const description = workHubPendingWorkDescription.get(workItemId);
@@ -5188,6 +5317,7 @@ async function flushWorkHubSave() {
     workHubPendingWorkTitle.clear();
     workHubPendingWorkDescription.clear();
     for (const workItemId of workHubPendingWorkDeleteIds.values()) {
+      if (workHubPendingWorkPurgeIds.has(Number(workItemId))) continue;
       const res = await apiFetch(
         `/api/work-items/${Number(workItemId)}?actorEmployeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
         { method: "DELETE" }
@@ -5198,6 +5328,18 @@ async function flushWorkHubSave() {
       }
     }
     workHubPendingWorkDeleteIds.clear();
+
+    for (const workItemId of [...workHubPendingWorkPurgeIds]) {
+      const res = await apiFetch(
+        `/api/work-items/${Number(workItemId)}?actorEmployeeNo=${encodeURIComponent(currentUser.employeeNo)}&hard=true`,
+        { method: "DELETE" }
+      );
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(j.error?.message || `업무 완전 삭제에 실패했습니다. (${workItemId})`);
+      }
+    }
+    workHubPendingWorkPurgeIds.clear();
 
     for (const draft of workHubPendingNewKanbanCards) {
       const targetColumnId = Number(draft.columnId || activeWorkHubFirstColumnId);
@@ -5467,7 +5609,7 @@ async function loadChannelWorkItems() {
 function populateKanbanNewCardWorkItemSelect() {
   const sel = document.getElementById("kanbanNewCardWorkItemSelect");
   if (!sel) return;
-  const list = lastChannelWorkItemsForHub.filter((w) => w.inUse !== false);
+  const list = lastChannelWorkItemsForHub.filter((w) => effectiveWorkItemInUseForUi(Number(w.id)));
   sel.innerHTML =
     `<option value="">업무 항목 선택(필수)</option>` +
     list
@@ -5736,7 +5878,7 @@ function openWorkItemDetailModal(rawId, isDraft) {
       inactiveWrap.classList.add("hidden");
     } else {
       const rowItem = lastChannelWorkItemsForHub.find((x) => Number(x.id) === Number(rawId));
-      const showInactive = rowItem && rowItem.inUse === false;
+      const showInactive = rowItem != null && !effectiveWorkItemInUseForUi(Number(rawId));
       inactiveWrap.classList.toggle("hidden", !showInactive);
     }
   }
@@ -6114,7 +6256,7 @@ function renderKanbanBoard(board) {
     title: d.title,
     description: d.description || "",
     workItemId: d.workItemId,
-    workItemInUse: true,
+    workItemInUse: effectiveWorkItemInUseForUi(Number(d.workItemId)),
     assigneeEmployeeNos: Array.isArray(d.assigneeEmployeeNos) ? d.assigneeEmployeeNos : [],
     _isDraft: true,
   }));
@@ -6190,7 +6332,8 @@ function renderKanbanBoard(board) {
                     const workItemIdVal = isDraft
                       ? Number(card.workItemId || 0)
                       : Number(card.workItemId ?? card.work_item_id ?? 0);
-                    const wiInactive = !isDraft && card.workItemInUse === false;
+                    const wiInactive =
+                      Number(workItemIdVal) > 0 && !effectiveWorkItemInUseForUi(workItemIdVal);
                     const workRef =
                       Number.isFinite(workItemIdVal) && workItemIdVal > 0
                         ? `<div class="kanban-card-work-ref muted">${escHtml(workItemTitleForKanbanCard(workItemIdVal))}</div>`
@@ -6431,20 +6574,13 @@ document.getElementById("btnWorkItemRestore")?.addEventListener("click", async (
   if (!meta || meta.isDraft || !currentUser) return;
   const id = Number(meta.id);
   if (!id) return;
-  const res = await apiFetch(
-    `/api/work-items/${id}/restore?actorEmployeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
-    { method: "POST" }
-  );
-  const j = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    await uiAlert(j.error?.message || "복원에 실패했습니다.");
-    return;
-  }
+  workHubPendingWorkRestoreIds.add(id);
+  workHubPendingWorkPurgeIds.delete(id);
+  workHubPendingWorkDeleteIds.delete(id);
   closeModal("modalWorkItemDetail");
   document.getElementById("workItemDetailInactiveActions")?.classList.add("hidden");
   await loadChannelWorkItems();
-  await loadChannelKanbanBoard();
-  scheduleRefreshMyChannels();
+  void loadChannelKanbanBoard();
 });
 
 document.getElementById("btnWorkItemPurge")?.addEventListener("click", async () => {
@@ -6452,21 +6588,17 @@ document.getElementById("btnWorkItemPurge")?.addEventListener("click", async () 
   if (!meta || meta.isDraft || !currentUser) return;
   const id = Number(meta.id);
   if (!id) return;
-  if (!(await uiConfirm("연결된 칸반 카드까지 모두 삭제합니다. 계속할까요?"))) return;
-  const res = await apiFetch(
-    `/api/work-items/${id}?actorEmployeeNo=${encodeURIComponent(currentUser.employeeNo)}&hard=true`,
-    { method: "DELETE" }
-  );
-  const j = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    await uiAlert(j.error?.message || "완전 삭제에 실패했습니다.");
-    return;
-  }
+  if (!(await uiConfirm("연결된 칸반 카드까지 모두 삭제합니다. 저장 시 서버에 반영됩니다. 계속할까요?"))) return;
+  workHubPendingWorkPurgeIds.add(id);
+  workHubPendingWorkRestoreIds.delete(id);
+  workHubPendingWorkDeleteIds.delete(id);
+  workHubPendingWorkStatus.delete(id);
+  workHubPendingWorkTitle.delete(id);
+  workHubPendingWorkDescription.delete(id);
   closeModal("modalWorkItemDetail");
   document.getElementById("workItemDetailInactiveActions")?.classList.add("hidden");
   await loadChannelWorkItems();
-  await loadChannelKanbanBoard();
-  scheduleRefreshMyChannels();
+  void loadChannelKanbanBoard();
 });
 
 document.getElementById("btnSaveKanbanCardDetail")?.addEventListener("click", async () => {
@@ -7048,24 +7180,24 @@ async function handleSearchResultClick(item) {
 document.getElementById("searchForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const q = document.getElementById("searchInput").value.trim();
-  if (q.length < 2) return;
+  if (q.length === 0) return;
   const selectedType = document.getElementById("searchTypeSelect").value || "ALL";
   const modalInput = document.getElementById("searchModalInput");
   if (modalInput) modalInput.value = q;
   await runSearch(q, selectedType);
-  openModal("searchModal");
 });
 
 document.getElementById("searchTypeSelect").addEventListener("change", () => {
   const qModal = document.getElementById("searchModalInput")?.value?.trim?.() || "";
   const qSidebar = document.getElementById("searchInput").value.trim();
   const q = qModal || qSidebar;
-  if (q.length >= 2) runSearch(q, document.getElementById("searchTypeSelect").value);
+  if (q.length === 1) void runSearch(q, document.getElementById("searchTypeSelect").value);
+  else if (q.length >= 2) void runSearch(q, document.getElementById("searchTypeSelect").value);
 });
 
 document.getElementById("searchModalSubmitBtn")?.addEventListener("click", async () => {
   const q = document.getElementById("searchModalInput")?.value?.trim?.() || "";
-  if (q.length < 2) return;
+  if (q.length === 0) return;
   document.getElementById("searchInput").value = q;
   const selectedType = document.getElementById("searchTypeSelect").value || "ALL";
   await runSearch(q, selectedType);
@@ -7075,7 +7207,7 @@ document.getElementById("searchModalInput")?.addEventListener("keydown", async (
   if (e.key !== "Enter") return;
   e.preventDefault();
   const q = document.getElementById("searchModalInput")?.value?.trim?.() || "";
-  if (q.length < 2) return;
+  if (q.length === 0) return;
   document.getElementById("searchInput").value = q;
   const selectedType = document.getElementById("searchTypeSelect").value || "ALL";
   await runSearch(q, selectedType);
@@ -7083,13 +7215,24 @@ document.getElementById("searchModalInput")?.addEventListener("keydown", async (
 
 async function runSearch(q, type) {
   const resultsEl = document.getElementById("searchResults");
+  const qt = String(q || "").trim();
+  if (qt.length === 0) return;
+  if (qt.length === 1) {
+    resultsEl.innerHTML = '<p class="empty-notice">검색어는 두글자 이상부터 가능합니다.</p>';
+    const mt = document.getElementById("searchModalTitle");
+    if (mt) mt.textContent = "검색";
+    const modalInput = document.getElementById("searchModalInput");
+    if (modalInput && modalInput.value !== qt) modalInput.value = qt;
+    openModal("searchModal");
+    return;
+  }
   resultsEl.innerHTML = '<p class="empty-notice">검색 중...</p>';
-  document.getElementById("searchModalTitle").textContent = `"${q}" 검색 결과`;
+  document.getElementById("searchModalTitle").textContent = `"${qt}" 검색 결과`;
   const modalInput = document.getElementById("searchModalInput");
-  if (modalInput && modalInput.value !== q) modalInput.value = q;
+  if (modalInput && modalInput.value !== qt) modalInput.value = qt;
   openModal("searchModal");
   try {
-    const res  = await apiFetch(`/api/search?q=${encodeURIComponent(q)}&type=${type}&limit=30`);
+    const res  = await apiFetch(`/api/search?q=${encodeURIComponent(qt)}&type=${type}&limit=30`);
     const json = await res.json();
     if (!res.ok) { resultsEl.innerHTML = `<p class="empty-notice">${json.error?.message || "오류"}</p>`; return; }
     const rawItems = Array.isArray(json.data?.items) ? json.data.items : [];
@@ -7193,6 +7336,16 @@ function initEvents() {
       e.stopPropagation();
       toggleSidebarCollapsed();
     });
+  }
+
+  if (!sidebarQuickRailPinBound) {
+    sidebarQuickRailPinBound = true;
+    document.getElementById("btnQuickRailPin")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      toggleQuickRailPinned();
+    });
+    applyQuickRailPinUi();
   }
 
   if (!mentionInboxUiBound) {

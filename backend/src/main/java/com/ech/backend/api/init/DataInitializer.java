@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>비밀번호가 없는(null) 사용자에 한해 한 번만 설정되며, 이미 설정된 경우 덮어쓰지 않는다.
  * <ul>
- *   <li>기본 비밀번호: {@code Test1234!}</li>
+ *   <li>기본 비밀번호: 설정 키 {@code auth.initial-password-plaintext} (미생성 시 {@code Test1234!})</li>
  * </ul>
  *
  * <p><b>운영 전환 시 주의:</b> 그룹웨어 인증(GroupwareAuthProvider) 도입 후에는
@@ -63,9 +63,9 @@ public class DataInitializer implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        initDefaultPasswords();
         initDefaultRetentionPolicies();
         initDefaultAppSettings();
+        initDefaultPasswords();
         ensureChannelTypeConstraintAllowsDm();
     }
 
@@ -74,13 +74,19 @@ public class DataInitializer implements ApplicationRunner {
         if (usersWithoutPassword.isEmpty()) {
             return;
         }
-        String encodedDefault = passwordEncoder.encode(DEFAULT_PASSWORD);
+        String plain = appSettingRepository
+                .findByKey(AppSettingKey.AUTH_INITIAL_PASSWORD_PLAINTEXT)
+                .map(AppSetting::getValue)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .orElse(DEFAULT_PASSWORD);
+        String encodedDefault = passwordEncoder.encode(plain);
         for (User user : usersWithoutPassword) {
             user.setPasswordHash(encodedDefault);
         }
         userRepository.saveAll(usersWithoutPassword);
-        log.info("[DataInitializer] 비밀번호 미설정 사용자 {}명에게 기본 비밀번호 적용 완료. (Test1234!)",
-                usersWithoutPassword.size());
+        log.info("[DataInitializer] 비밀번호 미설정 사용자 {}명에게 초기 비밀번호 적용 완료. (설정 키: {})",
+                usersWithoutPassword.size(), AppSettingKey.AUTH_INITIAL_PASSWORD_PLAINTEXT);
     }
 
     /**
@@ -108,6 +114,8 @@ public class DataInitializer implements ApplicationRunner {
                 "첨부파일 저장 기본 경로. 변경 즉시 반영(재기동 불필요). 절대 경로 권장.");
         seedSetting(AppSettingKey.FILE_MAX_SIZE_MB, "100",
                 "단일 첨부파일 최대 업로드 크기(MB).");
+        seedSetting(AppSettingKey.AUTH_INITIAL_PASSWORD_PLAINTEXT, DEFAULT_PASSWORD,
+                "비밀번호가 없는 사용자에게 기동 시 적용되는 초기 평문 비밀번호. 이미 해시가 있는 계정은 변경되지 않음.");
     }
 
     private void seedSetting(String key, String value, String description) {
