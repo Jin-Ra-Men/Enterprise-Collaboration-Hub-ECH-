@@ -83,10 +83,20 @@ $pgRegPaths = @(
 foreach ($reg in $pgRegPaths) {
     if (Test-Path $reg) {
         Get-ChildItem $reg -ErrorAction SilentlyContinue | ForEach-Object {
-            $base = (Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue).Base_Directory
+            $props = Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue
+            if (-not $props) { return }
+            $base = $null
+            # 속성 존재 여부를 안전하게 확인
+            if ($props.PSObject.Properties["Base_Directory"]) {
+                $base = $props.Base_Directory
+            } elseif ($props.PSObject.Properties["InstallationDirectory"]) {
+                $base = $props.InstallationDirectory
+            }
             if ($base -and (Test-Path "$base\bin\psql.exe")) {
                 $pgBin  = "$base\bin"
-                $pgData = (Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue).Data_Directory
+                if ($props.PSObject.Properties["Data_Directory"]) {
+                    $pgData = $props.Data_Directory
+                }
             }
         }
     }
