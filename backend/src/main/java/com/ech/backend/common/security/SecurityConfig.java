@@ -38,6 +38,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 공개 엔드포인트
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/ad-login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/health").permitAll()
                         // 그 외 모든 /api/** 는 인증 필요
                         .requestMatchers("/api/**").authenticated()

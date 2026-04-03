@@ -16,5 +16,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
       // ignore
     }
   },
+  /** AD 자동 로그인: 현재 Windows 계정의 sAMAccountName을 반환 */
+  getWindowsUsername: () => {
+    try {
+      return ipcRenderer.invoke("get-windows-username");
+    } catch {
+      return Promise.resolve(null);
+    }
+  },
 });
 

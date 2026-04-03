@@ -492,3 +492,37 @@ Stop-Process -Id <PID> -Force
 - 채널 운영:
   - 관리자 위임은 `channels.created_by`만 전환(멤버 row 재생성 제거)
   - 채널 폐쇄는 멤버/읽음 상태 정리로 사용자 목록에서 제거하는 방식으로 제약 오류를 회피
+
+---
+
+## AD 자동 로그인 / 관리자 사용자 관리 (Phase 5, 2026-04-03)
+
+### AD 자동 로그인 흐름
+1. Electron main.js: `ipcMain.handle('get-windows-username', () => os.userInfo().username)` — IPC 핸들러 등록
+2. preload.js: `electronAPI.getWindowsUsername = () => ipcRenderer.invoke('get-windows-username')` 노출
+3. app.js `tryAdAutoLogin()`: Electron 환경 감지 후 Windows 사용자명을 `employeeNo`로 삼아 `POST /api/auth/ad-login` 호출
+4. 백엔드 `AuthService.adLogin()`: `UserRepository.findByEmployeeNo()` → ACTIVE 상태 검증 → JWT 발급
+5. 실패 시 일반 로그인 화면으로 폴백
+
+### 관리자 사용자 관리 주요 파일
+| 역할 | 경로 |
+|------|------|
+| Controller | `backend/.../api/admin/user/AdminUserController.java` |
+| Service | `backend/.../api/admin/user/AdminUserService.java` |
+| 조회 DTO | `api/admin/user/dto/AdminUserListItemResponse.java` |
+| 저장 DTO | `api/admin/user/dto/AdminUserSaveRequest.java` |
+| 드롭다운 DTO | `api/admin/user/dto/OrgGroupOptionResponse.java` |
+| 프론트 뷰 | `frontend/index.html` `#viewUserManagement` |
+| 프론트 JS | `frontend/app.js` (사용자 관리 함수 블록) |
+
+### 운영 주의사항
+- **INACTIVE 계정**: 일반 로그인(`/api/auth/login`)과 AD 로그인(`/api/auth/ad-login`) 모두 차단됨
+- **사용자 하드 삭제**: `org_group_members`의 조직 배정 레코드도 함께 삭제됨; 채널 멤버십 등은 별도 처리 필요
+- **ADMIN 자기 자신 삭제 방지 미구현**: 현재 자신의 계정을 삭제해도 API가 처리됨 → 운영 시 주의
+- **AD 신뢰 모델**: Windows 계정명과 DB `employee_no`를 1:1 매핑; AD 조인되지 않은 환경에서는 사원번호 직접 입력으로 우회 가능 → 반드시 사내 AD 환경에서만 배포
+
+### 배치 저장 메커니즘 (프론트엔드)
+- 편집/삭제는 `adminUserPendingChanges` Map에 `{ action: 'create'|'update'|'delete', data }` 형태로 누적
+- 배너에 미반영 변경 건수 표시
+- "저장" 클릭 시: delete → update → create 순서로 순차 API 호출
+- "취소" 클릭 시: Map 초기화 후 서버 데이터로 재렌더링

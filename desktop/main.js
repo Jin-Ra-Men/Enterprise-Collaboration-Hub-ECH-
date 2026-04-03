@@ -1,4 +1,5 @@
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const { app, BrowserWindow, ipcMain, Menu, Notification } = require("electron");
 const { autoUpdater } = require("electron-updater");
@@ -50,6 +51,22 @@ function setupAutoUpdater() {
     console.warn("[ECH] autoUpdater init failed:", e?.message || e);
   }
 }
+
+/**
+ * AD 자동 로그인용: 현재 Windows 로그인 계정의 sAMAccountName을 반환한다.
+ * 도메인 접두사(DOMAIN\username)가 있으면 제거하고 소문자로 반환한다.
+ */
+ipcMain.handle("get-windows-username", () => {
+  try {
+    let username = os.userInfo().username || "";
+    if (username.includes("\\")) {
+      username = username.split("\\").pop();
+    }
+    return username.trim().toLowerCase();
+  } catch {
+    return null;
+  }
+});
 
 ipcMain.on("os-notification-show", (event, payload) => {
   try {

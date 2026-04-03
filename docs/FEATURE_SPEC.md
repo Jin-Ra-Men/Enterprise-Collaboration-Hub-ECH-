@@ -875,3 +875,65 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 - 테스트 기준:
   - 이전 버전 설치 후 상위 버전 릴리즈에 `latest.yml`+설치파일(+blockmap) 업로드 → 앱 기동 또는 주기 점검(6시간) 후 다운로드·종료 시 적용 확인
 - 비고: `npm run build:win`은 `--publish never`로 업로드는 하지 않되, `publish` 설정이 있으면 `latest.yml` 등이 `dist`에 생성됨
+
+---
+
+## AD 자동 로그인 (Phase 5-1, 2026-04-03)
+
+- 목적: AD 도메인 가입 사내 PC에서 Electron 앱 실행 시 별도 로그인 없이 자동 인증
+- 사용자: 사내 AD 도메인에 조인된 Windows PC를 사용하는 모든 직원
+- 관련 화면/경로:
+  - `desktop/main.js` — IPC 핸들러 `get-windows-username` (Node `os.userInfo().username` 취득)
+  - `desktop/preload.js` — `electronAPI.getWindowsUsername()` 렌더러에 노출
+  - `frontend/app.js` — `tryAdAutoLogin()`: 앱 초기화 시 Electron 환경 감지 → AD 로그인 시도
+- 관련 API:
+  - `POST /api/auth/ad-login` — 사원번호 수신, DB 존재 + ACTIVE 상태 검증 후 JWT 발급
+  - 요청 body: `{ "employeeNo": "사원번호" }`
+  - 응답: `LoginResponse` (JWT 토큰 + 사용자 기본 정보)
+- 인증 흐름:
+  1. Electron main.js: `os.userInfo().username`으로 Windows 로그인 계정명 취득
+  2. 렌더러: `electronAPI.getWindowsUsername()` 호출
+  3. `tryAdAutoLogin()`: 취득된 username을 `employeeNo`로 삼아 `/api/auth/ad-login` 호출
+  4. 백엔드: DB에서 해당 사원번호 조회 → ACTIVE 여부 확인 → JWT 발급
+  5. 토큰을 `sessionStorage`에 저장 후 메인 화면 진입
+  6. AD 로그인 실패(미등록·비활성) 시 일반 로그인 화면으로 폴백
+- 보안 고려사항:
+  - AD 조인 PC의 Windows 세션을 신뢰 기반으로 삼으므로, 비AD 환경에서는 사원번호를 임의 입력할 수 있음 → 운영 환경에서는 반드시 AD 조인 PC에서만 배포
+  - 일반 로그인(`POST /api/auth/login`)도 INACTIVE 계정은 차단
+- 예외 케이스:
+  - 미등록 사원번호: `"이 PC의 Windows 계정(XXX)은 시스템에 등록되지 않았습니다."` 오류 → 일반 로그인 화면
+  - INACTIVE 계정: `"비활성화된 계정입니다."` 오류 → 일반 로그인 화면
+  - Electron 외 환경(웹 브라우저): AD 자동 로그인 시도 없이 일반 로그인 화면
+
+---
+
+## 관리자 사용자 관리 (Phase 5-2, 2026-04-03)
+
+- 목적: 관리자가 직접 사용자 계정을 CRUD하고, 조직 정보(부서/직급/직위/직책)를 관리
+- 사용자: ADMIN 역할을 가진 관리자
+- 관련 화면/경로:
+  - 사이드바 관리자 메뉴 → "사용자 관리" 항목
+  - `frontend/index.html` `#viewUserManagement` 뷰, `#modalAdminUserEdit` 편집 모달
+  - `frontend/app.js` — 사용자 관리 함수 블록 (`loadAdminUsers`, `renderAdminUserTable`, `openAdminUserEditModal`, `saveAdminUsers` 등)
+  - `frontend/styles.css` — 사용자 관리 테이블·모달 스타일
+- 관련 API (모두 ADMIN 전용):
+  - `GET /api/admin/users` — 전체 사용자 목록 + 조직 정보 조회
+  - `GET /api/admin/users/org-options` — 부서(TEAM)/직급(JOB_LEVEL)/직위(JOB_POSITION)/직책(JOB_TITLE) 드롭다운 옵션
+  - `POST /api/admin/users` — 사용자 신규 등록
+  - `PUT /api/admin/users/{employeeNo}` — 사용자 정보/상태/조직 수정
+  - `DELETE /api/admin/users/{employeeNo}` — DB 하드 삭제
+- 주요 기능:
+  - **테이블 뷰**: 사원번호/이름/이메일/역할/상태/부서/직급/직위/직책 표시
+  - **배치 저장**: 신규 추가·편집·삭제 모두 "저장" 버튼 클릭 시 일괄 반영 (중간 변경은 메모리에 보류)
+  - **상태 관리**: ACTIVE(사용)/INACTIVE(미사용) 전환 — INACTIVE 계정은 로그인 불가
+  - **하드 삭제**: DB에서 완전 삭제 (복구 불가; `org_group_members` 조직 배정도 함께 삭제)
+  - **조직 배정**: 부서(TEAM)/직급(JOB_LEVEL)/직위(JOB_POSITION)/직책(JOB_TITLE)별 드롭다운 선택
+- 데이터 모델:
+  - `users` 테이블: `employee_no`, `email`, `name`, `role`(MEMBER/ADMIN), `status`(ACTIVE/INACTIVE)
+  - `org_group_members` 테이블: `(employee_no, member_group_type)` UNIQUE — 타입당 하나의 그룹 배정
+  - 부서/직급/직위/직책 정보는 `org_groups` → `org_group_members` JOIN으로 조회
+- 상태 전이/예외:
+  - 사원번호 중복 시 `POST` 409 오류
+  - 존재하지 않는 사원번호로 `PUT`/`DELETE` 시 404 오류
+  - ADMIN 본인 계정 삭제 방지는 현재 구현되어 있지 않음 (운영 주의)
+- 보류 알림 배너: 저장 전 변경 건수를 배너로 표시, 취소 시 전체 초기화

@@ -1,5 +1,6 @@
 package com.ech.backend.api.auth;
 
+import com.ech.backend.api.auth.dto.AdLoginRequest;
 import com.ech.backend.api.auth.dto.LoginRequest;
 import com.ech.backend.api.auth.dto.LoginResponse;
 import com.ech.backend.common.exception.UnauthorizedException;
@@ -54,6 +55,9 @@ public class AuthService {
         if (user == null) {
             throw new UnauthorizedException("사원번호/이메일 또는 비밀번호가 올바르지 않습니다.");
         }
+        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+            throw new UnauthorizedException("비활성화된 계정입니다. 관리자에게 문의하세요.");
+        }
 
         String resolvedDepartment = resolveDepartmentFromTeam(user);
 
@@ -81,6 +85,33 @@ public class AuthService {
                 role.name(),
                 normalizeThemeOrDefault(user.getThemePreference())
         );
+    }
+
+    /**
+     * AD 자동 로그인.
+     * Windows 도메인 가입 PC에서 Electron이 현재 로그인된 Windows 계정명(sAMAccountName)을
+     * 전송하면, DB에 해당 사원번호가 존재하고 상태가 ACTIVE인 경우 JWT를 발급한다.
+     */
+    public LoginResponse adLogin(AdLoginRequest request) {
+        String empNo = request.employeeNo().trim();
+        User user = userRepository.findByEmployeeNo(empNo)
+                .orElseThrow(() -> new UnauthorizedException(
+                        "이 PC의 Windows 계정(" + empNo + ")은 시스템에 등록되지 않았습니다. 관리자에게 문의하세요."));
+        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+            throw new UnauthorizedException("비활성화된 계정입니다. 관리자에게 문의하세요.");
+        }
+
+        String resolvedDepartment = resolveDepartmentFromTeam(user);
+        AppRole role = AppRole.parse(user.getRole());
+        if (role == null) role = AppRole.MEMBER;
+
+        UserPrincipal principal = new UserPrincipal(
+                user.getId(), user.getEmployeeNo(), user.getEmail(), user.getName(), resolvedDepartment, role);
+        String token = jwtUtil.generateToken(principal);
+
+        return new LoginResponse(
+                token, user.getId(), user.getEmployeeNo(), user.getEmail(), user.getName(),
+                resolvedDepartment, role.name(), normalizeThemeOrDefault(user.getThemePreference()));
     }
 
     @Transactional

@@ -125,6 +125,7 @@
             </span>
           </div>
           <ul class="sidebar-list">
+            <li class="sidebar-item" id="navUserManagement" data-view="userManagement">👤 사용자 관리</li>
             <li class="sidebar-item" id="navReleases" data-view="releases">🚀 배포 관리</li>
             <li class="sidebar-item" id="navSettings" data-view="settings">⚙️ 설정</li>
           </ul>
@@ -295,6 +296,41 @@
           </table>
         </div>
 
+        <!-- 사용자 관리 패널 (관리자) -->
+        <div id="viewUserManagement" class="view-admin hidden">
+          <div class="admin-panel-header">
+            <h2>👤 사용자 관리</h2>
+            <div class="admin-user-toolbar">
+              <button id="btnAdminUserNew" class="btn-primary btn-sm-action">+ 새 사용자</button>
+              <button id="btnAdminUserSave" class="btn-primary btn-sm-action">저장</button>
+              <button id="btnAdminUserReset" class="btn-secondary btn-sm-action">변경 취소</button>
+            </div>
+          </div>
+          <div id="adminUserPendingBanner" class="admin-pending-banner hidden">
+            변경사항 <strong id="adminUserPendingCount">0</strong>건이 저장 대기 중입니다. [저장] 버튼을 눌러 반영하세요.
+          </div>
+          <div class="admin-user-table-wrap">
+            <table class="data-table" id="adminUserTable">
+              <thead>
+                <tr>
+                  <th>사원번호(AD)</th>
+                  <th>이름</th>
+                  <th>이메일</th>
+                  <th>부서</th>
+                  <th>직급</th>
+                  <th>직위</th>
+                  <th>직책</th>
+                  <th>역할</th>
+                  <th>상태</th>
+                  <th>등록일</th>
+                  <th>작업</th>
+                </tr>
+              </thead>
+              <tbody id="adminUserTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- 설정 패널 (관리자) -->
         <div id="viewSettings" class="view-admin hidden">
           <div class="admin-panel-header">
@@ -324,6 +360,72 @@
       <button type="button" class="context-menu-item" id="btnSidebarCtxToggleNotify" role="menuitem">알림 끄기</button>
       <button type="button" class="context-menu-item" id="btnSidebarCtxQuickRailPin" role="menuitem">퀵 레일에 고정</button>
       <button type="button" class="context-menu-item" id="btnSidebarCtxLeave" role="menuitem">채팅방 나가기</button>
+    </div>
+
+    <!-- 사용자 등록/편집 모달 -->
+    <div id="modalAdminUserEdit" class="modal-overlay hidden">
+      <div class="modal modal-medium">
+        <div class="modal-header">
+          <h3 id="adminUserEditTitle">사용자 등록</h3>
+          <button type="button" class="modal-close" data-modal="modalAdminUserEdit">✕</button>
+        </div>
+        <div class="modal-body admin-user-edit-body">
+          <div class="admin-user-edit-grid">
+            <div class="form-group">
+              <label for="auEmpNo">사원번호 <span class="required">*</span> <small class="hint">(AD sAMAccountName)</small></label>
+              <input id="auEmpNo" type="text" placeholder="예) jsmith" autocomplete="off" />
+            </div>
+            <div class="form-group">
+              <label for="auName">이름 <span class="required">*</span></label>
+              <input id="auName" type="text" placeholder="예) 홍길동" />
+            </div>
+            <div class="form-group">
+              <label for="auEmail">이메일 <span class="required">*</span></label>
+              <input id="auEmail" type="email" placeholder="예) user@company.com" />
+            </div>
+            <div class="form-group">
+              <label for="auRole">역할</label>
+              <select id="auRole">
+                <option value="MEMBER">일반 (MEMBER)</option>
+                <option value="MANAGER">매니저 (MANAGER)</option>
+                <option value="ADMIN">관리자 (ADMIN)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="auStatus">상태</label>
+              <select id="auStatus">
+                <option value="ACTIVE">사용 (ACTIVE)</option>
+                <option value="INACTIVE">미사용 (INACTIVE)</option>
+              </select>
+            </div>
+          </div>
+          <hr class="modal-divider" />
+          <p class="admin-user-org-label">조직 정보 (선택)</p>
+          <div class="admin-user-edit-grid">
+            <div class="form-group">
+              <label for="auTeam">부서</label>
+              <select id="auTeam"><option value="">선택 안함</option></select>
+            </div>
+            <div class="form-group">
+              <label for="auJobLevel">직급</label>
+              <select id="auJobLevel"><option value="">선택 안함</option></select>
+            </div>
+            <div class="form-group">
+              <label for="auJobPosition">직위</label>
+              <select id="auJobPosition"><option value="">선택 안함</option></select>
+            </div>
+            <div class="form-group">
+              <label for="auJobTitle">직책</label>
+              <select id="auJobTitle"><option value="">선택 안함</option></select>
+            </div>
+          </div>
+          <p id="adminUserEditError" class="login-error hidden" style="margin-top:8px"></p>
+        </div>
+        <div class="modal-footer">
+          <button id="btnAdminUserEditConfirm" class="btn-primary" data-edit-emp="">확인</button>
+          <button type="button" class="btn-secondary" data-modal="modalAdminUserEdit">취소</button>
+        </div>
+      </div>
     </div>
 
     <div id="modalAppDialog" class="modal-overlay hidden modal-stacked">

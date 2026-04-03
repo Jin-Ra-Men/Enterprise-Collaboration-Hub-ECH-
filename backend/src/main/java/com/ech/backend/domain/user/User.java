@@ -89,6 +89,34 @@ public class User {
         this.passwordHash = passwordHash;
     }
 
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public OffsetDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void setName(String name) {
+        this.name = name;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
     public String getThemePreference() {
         return themePreference;
     }

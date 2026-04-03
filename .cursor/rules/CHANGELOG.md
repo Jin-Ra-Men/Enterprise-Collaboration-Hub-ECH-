@@ -775,3 +775,36 @@
 - 중복 변경이력 파일 제거 (`docs/CHANGELOG_AI.md`, `CHANGELOG`)
 - 루트 에러 파일 제거 (`ERRORS.md`)
 - 구 룰 파일 제거 (`.cursor/rules/changelog-ai-log.mdc`)
+
+## 2026-04-03
+
+### Added
+- AD 자동 로그인 구현 (Phase 5-1 완료)
+  - `desktop/main.js`: IPC 핸들러 `get-windows-username` (os.userInfo 기반 Windows 사용자명 취득)
+  - `desktop/preload.js`: `electronAPI.getWindowsUsername()` 렌더러에 노출
+  - `api/auth/dto/AdLoginRequest.java`: 사원번호 수신 DTO
+  - `AuthService.adLogin()`: 사원번호 DB 존재 + ACTIVE 상태 검증 후 JWT 발급
+  - `AuthController`: `POST /api/auth/ad-login` 엔드포인트 추가
+  - `SecurityConfig`: `/api/auth/ad-login` permitAll 추가
+  - `AuthService.login()`: 기존 일반 로그인에 INACTIVE 계정 차단 로직 추가
+  - `frontend/app.js`: `tryAdAutoLogin()` — 앱 초기화 시 Electron 환경에서 AD 자동 로그인 시도
+  - 로드맵 Phase 5-1 완료 처리(`[v]`)
+- 관리자 사용자 관리 기능 구현 (Phase 5-2 완료)
+  - `api/admin/user/AdminUserController.java`: 5개 엔드포인트
+    - `GET /api/admin/users` — 전체 사용자 + 조직 정보 조회 (ADMIN)
+    - `GET /api/admin/users/org-options` — 부서/직급/직위/직책 드롭다운 옵션 (ADMIN)
+    - `POST /api/admin/users` — 사용자 등록 (ADMIN)
+    - `PUT /api/admin/users/{employeeNo}` — 사용자 정보/상태/조직 수정 (ADMIN)
+    - `DELETE /api/admin/users/{employeeNo}` — 하드 삭제 (ADMIN)
+  - `api/admin/user/AdminUserService.java`: 사용자 CRUD + org_group_members 연동 로직
+  - `api/admin/user/dto/AdminUserListItemResponse.java`: 조회 응답 DTO
+  - `api/admin/user/dto/AdminUserSaveRequest.java`: 등록/수정 요청 DTO
+  - `api/admin/user/dto/OrgGroupOptionResponse.java`: 드롭다운 옵션 응답 DTO
+  - `domain/user/User.java`: setName/setEmail/setRole/setStatus setter 추가
+  - `domain/user/UserRepository.java`: `findAllByOrderByNameAsc()` 추가
+  - `domain/org/OrgGroupMemberRepository.java`: `findMembersByEmployeeNos()` 추가
+  - `domain/org/OrgGroupRepository.java`: `findByGroupCode()` 추가
+  - `frontend/index.html`: 사이드바 관리자 메뉴 "사용자 관리" 항목 + 사용자 관리 뷰 + 편집 모달 추가
+  - `frontend/app.js`: `loadAdminUsers()`, `renderAdminUserTable()`, `openAdminUserEditModal()`, `saveAdminUsers()` 등 사용자 관리 함수 블록 추가
+  - `frontend/styles.css`: 사용자 관리 테이블·모달·배지 스타일 추가
+  - 로드맵 Phase 5-2 완료 처리(`[v]`)

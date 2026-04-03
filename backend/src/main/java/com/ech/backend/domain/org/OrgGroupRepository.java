@@ -15,5 +15,7 @@ public interface OrgGroupRepository extends JpaRepository<OrgGroup, Long> {
             String memberOfGroupCode,
             boolean isActive
     );
+
+    Optional<OrgGroup> findByGroupCode(String groupCode);
 }
 

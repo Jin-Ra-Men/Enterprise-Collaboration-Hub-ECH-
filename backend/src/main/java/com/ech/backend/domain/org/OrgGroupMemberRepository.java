@@ -36,4 +36,16 @@ public interface OrgGroupMemberRepository extends JpaRepository<OrgGroupMember, 
             @Param("memberGroupType") String memberGroupType,
             @Param("employeeNos") Collection<String> employeeNos
     );
+
+    /** 관리자용: 다수 사원번호에 대해 모든 그룹 타입 멤버를 한 번에 조회 */
+    @Query("""
+            SELECT m
+            FROM OrgGroupMember m
+            JOIN FETCH m.user u
+            JOIN FETCH m.group g
+            WHERE u.employeeNo IN :employeeNos
+            """)
+    List<OrgGroupMember> findAllByEmployeeNosWithGroupAndUser(
+            @Param("employeeNos") Collection<String> employeeNos
+    );
 }

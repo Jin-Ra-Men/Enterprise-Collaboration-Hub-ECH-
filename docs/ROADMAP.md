@@ -99,3 +99,19 @@
 - [v] 4-4. 운영 문서/배포 문서 정리
   - [v] 4-4-1. 배포 절차/롤백 절차 문서화
   - [v] 4-4-2. 모니터링/알람 기준 문서화
+
+## Phase 5 - AD 인증 / 사용자 관리
+- [v] 5-1. AD 자동 로그인 (Electron 전용)
+  - [v] 5-1-1. Electron main.js IPC `get-windows-username` (os.userInfo 기반)
+  - [v] 5-1-2. preload.js `electronAPI.getWindowsUsername` 노출
+  - [v] 5-1-3. 백엔드 `POST /api/auth/ad-login` 구현 (사원번호 존재+ACTIVE 검증 후 JWT 발급)
+  - [v] 5-1-4. 기존 일반 로그인에 INACTIVE 계정 차단 로직 추가
+  - [v] 5-1-5. 프론트 `tryAdAutoLogin()` — 앱 초기화 시 AD 자동 로그인 시도
+- [v] 5-2. 관리자 사용자 관리 기능
+  - [v] 5-2-1. 백엔드 `GET /api/admin/users` — 전체 사용자 + 조직 정보 조회
+  - [v] 5-2-2. 백엔드 `GET /api/admin/users/org-options` — 부서/직급/직위/직책 드롭다운
+  - [v] 5-2-3. 백엔드 `POST /api/admin/users` — 사용자 등록
+  - [v] 5-2-4. 백엔드 `PUT /api/admin/users/{employeeNo}` — 사용자 정보/상태/조직 수정
+  - [v] 5-2-5. 백엔드 `DELETE /api/admin/users/{employeeNo}` — 하드 삭제
+  - [v] 5-2-6. 프론트 사이드바 관리자 메뉴에 "👤 사용자 관리" 추가
+  - [v] 5-2-7. 프론트 사용자 관리 페이지 (테이블 + 편집 모달 + 배치 저장)

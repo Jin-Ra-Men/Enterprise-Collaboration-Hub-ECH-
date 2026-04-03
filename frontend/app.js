@@ -1497,7 +1497,7 @@ function showMain(user) {
 }
 
 function showView(viewId) {
-  ["viewWelcome","viewChat","viewReleases","viewSettings"].forEach(id => {
+  ["viewWelcome","viewChat","viewReleases","viewSettings","viewUserManagement"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add("hidden");
   });
@@ -7253,6 +7253,10 @@ document.addEventListener("click", async (e) => {
 /* ==========================================================================
  * 관리자: 배포 관리 / 설정
  * ========================================================================== */
+document.getElementById("navUserManagement").addEventListener("click", () => {
+  showView("viewUserManagement");
+  void loadAdminUserPage();
+});
 document.getElementById("navReleases").addEventListener("click", () => {
   showView("viewReleases");
   loadReleases();
@@ -7719,12 +7723,45 @@ function initEvents() {
 }
 
 /* ==========================================================================
+ * AD 자동 로그인 (Electron 전용)
+ * ========================================================================== */
+async function tryAdAutoLogin() {
+  if (typeof window.electronAPI?.getWindowsUsername !== "function") return false;
+  try {
+    const windowsUsername = await window.electronAPI.getWindowsUsername();
+    if (!windowsUsername || !windowsUsername.trim()) return false;
+    const res = await fetch(`${API_BASE}/api/auth/ad-login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ employeeNo: windowsUsername.trim() }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json.success === false) {
+      console.warn("[ECH] AD 자동 로그인 실패:", json.error?.message || res.status);
+      return false;
+    }
+    const { token, ...user } = json.data;
+    saveSession(token, user);
+    showMain(user);
+    return true;
+  } catch (e) {
+    console.warn("[ECH] AD 자동 로그인 오류:", e?.message || e);
+    return false;
+  }
+}
+
+/* ==========================================================================
  * 초기화
  * ========================================================================== */
 (async function init() {
   const token = getToken();
   const user  = getUser();
-  if (!token || !user) { showLogin(); return; }
+  if (!token || !user) {
+    // Electron 환경에서 AD 자동 로그인 시도
+    const adOk = await tryAdAutoLogin();
+    if (!adOk) showLogin();
+    return;
+  }
 
   try {
     const res = await apiFetch("/api/auth/me");
@@ -7741,11 +7778,14 @@ function initEvents() {
         console.error("/api/auth/me 실패", res.status, "(본문 파싱 불가)");
       }
       clearSession();
-      showLogin();
+      // 토큰 만료 시에도 AD 자동 로그인 재시도
+      const adOk = await tryAdAutoLogin();
+      if (!adOk) showLogin();
     }
   } catch {
     clearSession();
-    showLogin();
+    const adOk = await tryAdAutoLogin();
+    if (!adOk) showLogin();
   }
 })();
 initTheme();
@@ -7772,4 +7812,270 @@ function scheduleSidebarAndPresenceSync() {
 window.addEventListener("focus", scheduleSidebarAndPresenceSync);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") scheduleSidebarAndPresenceSync();
+});
+
+/* ==========================================================================
+ * 관리자 - 사용자 관리
+ * ========================================================================== */
+let adminUserList = [];          // 서버에서 로드한 원본 목록
+let adminUserOrgOptions = null;  // 조직 드롭다운 옵션
+/** employeeNo → { op: 'create'|'update'|'delete', data: {...} } */
+const adminUserPendingChanges = new Map();
+
+async function loadAdminUserPage() {
+  try {
+    const [usersRes, orgRes] = await Promise.all([
+      apiFetch("/api/admin/users"),
+      apiFetch("/api/admin/users/org-options"),
+    ]);
+    const usersJson = await usersRes.json().catch(() => ({}));
+    const orgJson   = await orgRes.json().catch(() => ({}));
+    if (!usersRes.ok) throw new Error(usersJson.error?.message || "사용자 목록 조회 실패");
+    if (!orgRes.ok)   throw new Error(orgJson.error?.message   || "조직 정보 조회 실패");
+    adminUserList = usersJson.data || [];
+    adminUserOrgOptions = orgJson.data || { teams: [], jobLevels: [], jobPositions: [], jobTitles: [] };
+    adminUserPendingChanges.clear();
+    renderAdminUserTable();
+  } catch (e) {
+    await uiAlert(e?.message || "사용자 목록을 불러오지 못했습니다.");
+  }
+}
+
+function renderAdminUserTable() {
+  const tbody = document.getElementById("adminUserTableBody");
+  if (!tbody) return;
+  const rows = buildEffectiveAdminUserList();
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--text-muted);padding:24px">등록된 사용자가 없습니다.</td></tr>`;
+    updateAdminUserPendingBanner();
+    return;
+  }
+
+  tbody.innerHTML = rows.map(row => {
+    const pending   = adminUserPendingChanges.get(row.employeeNo);
+    const isNew     = pending?.op === "create";
+    const isDeleted = pending?.op === "delete";
+    const isModified= pending?.op === "update";
+    let rowClass = isNew ? "admin-row-new" : isDeleted ? "admin-row-deleted" : isModified ? "admin-row-modified" : "";
+
+    const statusBadge = row.status === "ACTIVE"
+      ? `<span class="badge badge-active">사용</span>`
+      : `<span class="badge badge-inactive">미사용</span>`;
+    const roleLabel = row.role === "ADMIN" ? "관리자" : row.role === "MANAGER" ? "매니저" : "일반";
+    const createdAt = row.createdAt
+      ? new Date(row.createdAt).toLocaleDateString("ko-KR", { year:"2-digit", month:"2-digit", day:"2-digit" })
+      : "-";
+
+    const actionsBtns = isDeleted
+      ? `<button class="btn-sm btn-secondary" data-action="restore" data-emp="${escHtml(row.employeeNo)}">복원</button>`
+      : `<button class="btn-sm btn-secondary" data-action="edit"    data-emp="${escHtml(row.employeeNo)}">편집</button>
+         <button class="btn-sm btn-danger"    data-action="delete"  data-emp="${escHtml(row.employeeNo)}">삭제</button>`;
+
+    return `<tr class="${rowClass}" data-emp="${escHtml(row.employeeNo)}">
+      <td><code class="emp-code">${escHtml(row.employeeNo)}</code></td>
+      <td>${escHtml(row.name || "")}</td>
+      <td class="cell-email">${escHtml(row.email || "")}</td>
+      <td>${escHtml(row.teamDisplayName || "-")}</td>
+      <td>${escHtml(row.jobLevelDisplayName || "-")}</td>
+      <td>${escHtml(row.jobPositionDisplayName || "-")}</td>
+      <td>${escHtml(row.jobTitleDisplayName || "-")}</td>
+      <td>${escHtml(roleLabel)}</td>
+      <td>${statusBadge}</td>
+      <td class="cell-date">${createdAt}</td>
+      <td class="admin-user-actions">${actionsBtns}</td>
+    </tr>`;
+  }).join("");
+
+  updateAdminUserPendingBanner();
+}
+
+function buildEffectiveAdminUserList() {
+  const map = new Map(adminUserList.map(u => [u.employeeNo, { ...u }]));
+  for (const [empNo, change] of adminUserPendingChanges) {
+    if (change.op === "create")  map.set(empNo, change.data);
+    else if (change.op === "update" && map.has(empNo))
+      map.set(empNo, { ...map.get(empNo), ...change.data });
+    // delete: 행은 남기되 renderAdminUserTable에서 스타일 처리
+  }
+  return [...map.values()];
+}
+
+function updateAdminUserPendingBanner() {
+  const count = adminUserPendingChanges.size;
+  const banner   = document.getElementById("adminUserPendingBanner");
+  const countEl  = document.getElementById("adminUserPendingCount");
+  if (banner)  banner.classList.toggle("hidden", count === 0);
+  if (countEl) countEl.textContent = String(count);
+}
+
+function openAdminUserEditModal(employeeNo) {
+  const isNew = !employeeNo;
+  document.getElementById("adminUserEditTitle").textContent = isNew ? "새 사용자 등록" : "사용자 편집";
+  const empNoInput = document.getElementById("auEmpNo");
+  empNoInput.disabled = !isNew;
+
+  // 폼 초기화
+  document.getElementById("auEmpNo").value = "";
+  document.getElementById("auName").value  = "";
+  document.getElementById("auEmail").value = "";
+  document.getElementById("auRole").value  = "MEMBER";
+  document.getElementById("auStatus").value = "ACTIVE";
+  document.getElementById("adminUserEditError").textContent = "";
+  document.getElementById("adminUserEditError").classList.add("hidden");
+
+  // 조직 드롭다운 채우기
+  populateAdminUserOrgDropdowns();
+
+  if (!isNew) {
+    const pending = adminUserPendingChanges.get(employeeNo);
+    const base    = adminUserList.find(u => u.employeeNo === employeeNo);
+    const data    = pending?.data ?? base ?? {};
+    document.getElementById("auEmpNo").value       = data.employeeNo        || "";
+    document.getElementById("auName").value         = data.name              || "";
+    document.getElementById("auEmail").value        = data.email             || "";
+    document.getElementById("auRole").value         = data.role              || "MEMBER";
+    document.getElementById("auStatus").value       = data.status            || "ACTIVE";
+    document.getElementById("auTeam").value         = data.teamGroupCode     || "";
+    document.getElementById("auJobLevel").value     = data.jobLevelGroupCode || "";
+    document.getElementById("auJobPosition").value  = data.jobPositionGroupCode || "";
+    document.getElementById("auJobTitle").value     = data.jobTitleGroupCode || "";
+  }
+
+  document.getElementById("btnAdminUserEditConfirm").dataset.editEmp = employeeNo || "";
+  openModal("modalAdminUserEdit");
+}
+
+function populateAdminUserOrgDropdowns() {
+  if (!adminUserOrgOptions) return;
+  const fill = (selId, opts) => {
+    const sel = document.getElementById(selId);
+    if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = `<option value="">선택 안함</option>` +
+      (opts || []).map(o => `<option value="${escHtml(o.groupCode)}">${escHtml(o.displayName)}</option>`).join("");
+    sel.value = prev;
+  };
+  fill("auTeam",        adminUserOrgOptions.teams        || []);
+  fill("auJobLevel",    adminUserOrgOptions.jobLevels    || []);
+  fill("auJobPosition", adminUserOrgOptions.jobPositions || []);
+  fill("auJobTitle",    adminUserOrgOptions.jobTitles    || []);
+}
+
+function resolveOrgDisplayName(groupCode, type) {
+  if (!adminUserOrgOptions || !groupCode) return null;
+  const map = { TEAM: "teams", JOB_LEVEL: "jobLevels", JOB_POSITION: "jobPositions", JOB_TITLE: "jobTitles" };
+  const arr = adminUserOrgOptions[map[type]] || [];
+  return arr.find(o => o.groupCode === groupCode)?.displayName || null;
+}
+
+// 사용자 관리 버튼/테이블 이벤트 위임
+document.getElementById("btnAdminUserNew").addEventListener("click", () => openAdminUserEditModal(null));
+document.getElementById("btnAdminUserReset").addEventListener("click", () => {
+  adminUserPendingChanges.clear();
+  renderAdminUserTable();
+});
+
+document.getElementById("adminUserTableBody").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-action]");
+  if (!btn) return;
+  const empNo  = btn.dataset.emp;
+  const action = btn.dataset.action;
+  if (action === "edit")    openAdminUserEditModal(empNo);
+  if (action === "restore") { adminUserPendingChanges.delete(empNo); renderAdminUserTable(); }
+  if (action === "delete") {
+    const base = adminUserList.find(u => u.employeeNo === empNo);
+    const isNewRow = adminUserPendingChanges.get(empNo)?.op === "create";
+    if (isNewRow) {
+      adminUserPendingChanges.delete(empNo);
+    } else if (base) {
+      adminUserPendingChanges.set(empNo, { op: "delete", data: base });
+    }
+    renderAdminUserTable();
+  }
+});
+
+document.getElementById("btnAdminUserEditConfirm").addEventListener("click", () => {
+  const empNoEl = document.getElementById("auEmpNo");
+  const editEmp = document.getElementById("btnAdminUserEditConfirm").dataset.editEmp;
+  const isNew   = !editEmp;
+
+  const empNo   = empNoEl.value.trim();
+  const name    = document.getElementById("auName").value.trim();
+  const email   = document.getElementById("auEmail").value.trim();
+  const role    = document.getElementById("auRole").value;
+  const status  = document.getElementById("auStatus").value;
+  const teamGroupCode         = document.getElementById("auTeam").value;
+  const jobLevelGroupCode     = document.getElementById("auJobLevel").value;
+  const jobPositionGroupCode  = document.getElementById("auJobPosition").value;
+  const jobTitleGroupCode     = document.getElementById("auJobTitle").value;
+
+  const errEl = document.getElementById("adminUserEditError");
+  if (!empNo) { errEl.textContent = "사원번호를 입력하세요."; errEl.classList.remove("hidden"); return; }
+  if (!name)  { errEl.textContent = "이름을 입력하세요.";     errEl.classList.remove("hidden"); return; }
+  if (!email) { errEl.textContent = "이메일을 입력하세요.";   errEl.classList.remove("hidden"); return; }
+  errEl.classList.add("hidden");
+
+  if (isNew && adminUserList.some(u => u.employeeNo === empNo) && adminUserPendingChanges.get(empNo)?.op !== "delete") {
+    errEl.textContent = "이미 존재하는 사원번호입니다."; errEl.classList.remove("hidden"); return;
+  }
+
+  const data = {
+    employeeNo: empNo, name, email, role, status,
+    teamGroupCode, jobLevelGroupCode, jobPositionGroupCode, jobTitleGroupCode,
+    teamDisplayName:        resolveOrgDisplayName(teamGroupCode,        "TEAM"),
+    jobLevelDisplayName:    resolveOrgDisplayName(jobLevelGroupCode,    "JOB_LEVEL"),
+    jobPositionDisplayName: resolveOrgDisplayName(jobPositionGroupCode, "JOB_POSITION"),
+    jobTitleDisplayName:    resolveOrgDisplayName(jobTitleGroupCode,    "JOB_TITLE"),
+  };
+  adminUserPendingChanges.set(empNo, { op: isNew ? "create" : "update", data });
+  closeModal("modalAdminUserEdit");
+  renderAdminUserTable();
+});
+
+document.getElementById("btnAdminUserSave").addEventListener("click", async () => {
+  if (adminUserPendingChanges.size === 0) { await uiAlert("저장할 변경사항이 없습니다."); return; }
+  if (!(await uiConfirm(`변경사항 ${adminUserPendingChanges.size}건을 저장하시겠습니까?`))) return;
+
+  const errors = [];
+  for (const [empNo, change] of adminUserPendingChanges) {
+    try {
+      if (change.op === "delete") {
+        const res = await apiFetch(`/api/admin/users/${encodeURIComponent(empNo)}`, { method: "DELETE" });
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          errors.push(`[삭제 ${empNo}] ${j.error?.message || res.status}`);
+        }
+      } else if (change.op === "create") {
+        const res = await apiFetch("/api/admin/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(change.data),
+        });
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          errors.push(`[등록 ${empNo}] ${j.error?.message || res.status}`);
+        }
+      } else if (change.op === "update") {
+        const res = await apiFetch(`/api/admin/users/${encodeURIComponent(empNo)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(change.data),
+        });
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          errors.push(`[수정 ${empNo}] ${j.error?.message || res.status}`);
+        }
+      }
+    } catch (e) {
+      errors.push(`[${empNo}] 네트워크 오류`);
+    }
+  }
+
+  if (errors.length) {
+    await uiAlert("일부 저장 실패:\n" + errors.join("\n"));
+  }
+
+  // 저장 후 목록 새로고침
+  await loadAdminUserPage();
 });

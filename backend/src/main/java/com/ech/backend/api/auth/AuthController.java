@@ -1,5 +1,6 @@
 package com.ech.backend.api.auth;
 
+import com.ech.backend.api.auth.dto.AdLoginRequest;
 import com.ech.backend.api.auth.dto.LoginRequest;
 import com.ech.backend.api.auth.dto.LoginResponse;
 import com.ech.backend.api.auth.dto.MeResponse;
@@ -28,12 +29,22 @@ public class AuthController {
     }
 
     /**
-     * 로그인. 사원번호 또는 이메일 + 비밀번호로 JWT를 발급한다.
+     * 일반 로그인. 사원번호 또는 이메일 + 비밀번호로 JWT를 발급한다.
      * 인증 없이 호출 가능 (SecurityConfig에서 permitAll 설정됨).
      */
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.success(authService.login(request));
+    }
+
+    /**
+     * AD 자동 로그인 (Electron 전용).
+     * AD 도메인 가입 PC에서 Electron이 Windows 계정명(sAMAccountName)을 전송하면 JWT를 발급한다.
+     * 인증 없이 호출 가능 (SecurityConfig에서 permitAll 설정됨).
+     */
+    @PostMapping("/ad-login")
+    public ApiResponse<LoginResponse> adLogin(@Valid @RequestBody AdLoginRequest request) {
+        return ApiResponse.success(authService.adLogin(request));
     }
 
     /**
