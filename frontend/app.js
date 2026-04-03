@@ -8801,7 +8801,6 @@ function renderOrgChartTree(data) {
     parts.push(`<button type="button" class="orgchart-company-label orgchart-node-btn"
       data-node-type="company" data-co="${escHtml(co.name)}">
       🏢 ${escHtml(co.name)}
-      ${coDirectCnt > 0 ? `<span class="orgchart-node-count orgchart-direct-badge" title="직속">${coDirectCnt}</span>` : ""}
     </button>`);
 
     for (const div of (co.divisions ?? [])) {
@@ -8814,7 +8813,6 @@ function renderOrgChartTree(data) {
         <button type="button" class="orgchart-div-name-btn orgchart-node-btn"
           data-node-type="division" data-co="${escHtml(co.name)}" data-div="${escHtml(div.name)}">
           📂 ${escHtml(div.name)}
-          ${divDirectCnt > 0 ? `<span class="orgchart-node-count orgchart-direct-badge" title="직속 ${divDirectCnt}명">직속 ${divDirectCnt}</span>` : ""}
           <span class="orgchart-node-count">${divTotalCnt}</span>
         </button>
       </div>`);

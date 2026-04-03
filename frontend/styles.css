@@ -4281,11 +4281,7 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
   color: var(--sidebar-item-fg-strong);
   font-weight: 700;
 }
-.orgchart-direct-badge {
-  background: rgba(99,102,241,.18);
-  color: var(--accent, #7c3aed);
-  font-size: 10px;
-}
+
 /* 본부 블록: details 대신 div + data-expanded 방식 사용 */
 .orgchart-div-block { margin-left: 8px; }
 .orgchart-div-header { display: flex; align-items: center; gap: 2px; }
