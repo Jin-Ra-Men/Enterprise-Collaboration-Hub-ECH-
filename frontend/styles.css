@@ -2749,39 +2749,21 @@ html[data-theme="light"] .theme-option-btn.active {
 }
 .kanban-card-item-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 6px;
 }
-.kanban-card-drag-handle {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  min-width: 40px;
-  min-height: 40px;
-  margin: -4px 4px -4px -6px;
-  padding: 8px 10px;
+.kanban-card-item[draggable="true"] {
   cursor: grab;
-  user-select: none;
-  touch-action: none;
-  color: var(--text-muted);
-  font-size: 16px;
-  line-height: 1;
-  letter-spacing: -0.5px;
-  border-radius: 8px;
-  border: 1px solid transparent;
 }
-.kanban-card-drag-handle:hover {
-  color: var(--text-primary);
-  background: var(--bg-elevated);
-  border-color: var(--border-subtle);
+.kanban-card-item[draggable="true"] input,
+.kanban-card-item[draggable="true"] select,
+.kanban-card-item[draggable="true"] textarea,
+.kanban-card-item[draggable="true"] button {
+  cursor: auto;
 }
-.kanban-card-drag-handle:active {
-  cursor: grabbing;
-  background: var(--bg-elevated);
-  border-color: var(--border-subtle);
+.kanban-card-item[draggable="true"] .kanban-card-column-select {
+  cursor: pointer;
 }
 .kanban-card-item-header strong {
   flex: 1;

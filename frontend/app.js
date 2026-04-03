@@ -5366,6 +5366,79 @@ function applyKanbanColumnSelectToColumnId(sel, columnIdNum) {
   return String(sel.value) === want;
 }
 
+/** One delegated listener survives `<select>` replacement after DnD (avoids stale listeners on replaced nodes). */
+function ensureKanbanBoardColumnSelectChangeDelegated(boardEl) {
+  if (!boardEl || boardEl.dataset.echKanbanColSelectDelegated === "1") return;
+  boardEl.dataset.echKanbanColSelectDelegated = "1";
+  boardEl.addEventListener("change", (e) => {
+    const sel = e.target.closest(".kanban-card-column-select");
+    if (!sel || !boardEl.contains(sel)) return;
+    const isDraftLocal = sel.dataset.isDraft === "1";
+    const raw = String(sel.dataset.cardId || "");
+    const targetColumnId = Number(sel.value);
+    if (!targetColumnId) return;
+    const bumpCid = getWorkHubChannelId();
+    if (bumpCid) bumpKanbanBoardFetchGeneration(bumpCid);
+    if (isDraftLocal) {
+      const idx = Number(raw.replace("draft-card-", ""));
+      const d = Number.isFinite(idx) ? workHubPendingNewKanbanCards[idx] : null;
+      if (!d) return;
+      d.columnId = targetColumnId;
+      syncPendingWorkItemStatusFromKanbanColumn(d.workItemId, targetColumnId);
+    } else {
+      const cid = Number(raw);
+      if (!cid) return;
+      workHubPendingCardColumn.set(cid, targetColumnId);
+      const wi = Number(sel.closest(".kanban-card-item")?.dataset.workItemId || "");
+      syncPendingWorkItemStatusFromKanbanColumn(wi, targetColumnId);
+    }
+    void Promise.all([loadChannelKanbanBoard(), loadChannelWorkItems()]);
+  });
+}
+
+/**
+ * Replace each column `<select>` with a fresh element after DnD so Chrome does not keep stale UI state
+ * when the card lived under a `draggable` ancestor (whole-card drag UX).
+ */
+function rebuildKanbanCardColumnSelectDom(boardEl) {
+  if (!boardEl || !Array.isArray(activeWorkHubColumns) || !activeWorkHubColumns.length) return;
+  boardEl.querySelectorAll(".kanban-card-item").forEach((cardEl) => {
+    const row = cardEl.querySelector(".kanban-card-move-row");
+    const del = cardEl.querySelector(".kanban-card-delete-btn");
+    const oldSel = cardEl.querySelector(".kanban-card-column-select");
+    if (!row || !del || !oldSel) return;
+    const colId = Number(cardEl.closest(".kanban-column")?.dataset.columnId || 0);
+    if (!colId) return;
+    const rawId = String(oldSel.dataset.cardId || "");
+    const isDraft = oldSel.dataset.isDraft === "1";
+    const newSel = document.createElement("select");
+    newSel.className = "kanban-card-column-select";
+    newSel.dataset.cardId = rawId;
+    newSel.dataset.isDraft = isDraft ? "1" : "0";
+    for (const c of activeWorkHubColumns) {
+      const opt = document.createElement("option");
+      opt.value = String(Number(c.id));
+      opt.textContent = String(c.name || "컬럼");
+      newSel.appendChild(opt);
+    }
+    applyKanbanColumnSelectToColumnId(newSel, colId);
+    oldSel.replaceWith(newSel);
+    cardEl.dataset.renderColumnId = String(colId);
+    if (isDraft === "1") {
+      const idx = Number(rawId.replace("draft-card-", ""));
+      const d = Number.isFinite(idx) ? workHubPendingNewKanbanCards[idx] : null;
+      if (d) syncPendingWorkItemStatusFromKanbanColumn(d.workItemId, colId);
+    } else {
+      const cid = Number(del.dataset.cardId || "");
+      if (Number.isFinite(cid)) {
+        workHubPendingCardColumn.set(cid, colId);
+        const wi = Number(cardEl.dataset.workItemId || "");
+        syncPendingWorkItemStatusFromKanbanColumn(wi, colId);
+      }
+    }
+  });
+}
+
 /** Keep per-card column dropdown in sync with the `.kanban-column` that contains the card (avoids stale <select> after DOM moves). */
 function syncKanbanCardColumnSelectsFromDom(boardEl) {
   if (!boardEl) return;
@@ -6309,7 +6382,6 @@ function ensureKanbanBoardAssigneeUiBound() {
     const cardItem = e.target.closest(".kanban-card-item");
     if (
       cardItem &&
-      !e.target.closest(".kanban-card-drag-handle") &&
       !e.target.closest(".kanban-card-delete-btn") &&
       !e.target.closest(".kanban-card-column-select") &&
       !e.target.closest(".kanban-assignee-add") &&
@@ -6434,6 +6506,7 @@ function renderKanbanBoard(board) {
   const boardEl = document.getElementById("channelKanbanBoard");
   if (!boardEl) return;
   ensureKanbanDragInputGuard();
+  ensureKanbanBoardColumnSelectChangeDelegated(boardEl);
   const cols = Array.isArray(board?.columns) ? board.columns : [];
   activeWorkHubColumns = cols;
   activeWorkHubFirstColumnId = cols.length ? Number(cols[0].id) : null;
@@ -6532,7 +6605,6 @@ function renderKanbanBoard(board) {
                     return `
               <article class="kanban-card-item${wiInactive ? " kanban-card-item-inactive" : ""}" data-kanban-card-id="${isDraft ? "" : Number(card.id)}" data-render-column-id="${Number(col.id)}" data-work-item-id="${Number.isFinite(workItemIdVal) && workItemIdVal > 0 ? workItemIdVal : ""}" data-card-raw-id="${escHtml(cardRawId)}" data-is-draft="${isDraft ? "1" : "0"}">
                 <div class="kanban-card-item-header">
-                  <span class="kanban-card-drag-handle" draggable="true" role="button" tabindex="0" title="드래그하여 이동" aria-label="드래그하여 카드 이동">⋮⋮</span>
                   <strong>${escHtml(effectiveTitle || "(제목 없음)")}</strong>
                   <button type="button" class="btn-icon-delete kanban-card-delete-btn" data-card-id="${escHtml(cardRawId)}" data-is-draft="${isDraft ? "1" : "0"}" title="삭제" aria-label="삭제">✕</button>
                 </div>
@@ -6594,34 +6666,21 @@ function renderKanbanBoard(board) {
         syncPendingWorkItemStatusFromKanbanColumn(wi, hostCol);
       }
     }
-    sel.addEventListener("change", () => {
-      const isDraftLocal = sel.dataset.isDraft === "1";
-      const raw = String(sel.dataset.cardId || "");
-      const targetColumnId = Number(sel.value);
-      if (!targetColumnId) return;
-      const bumpCid = getWorkHubChannelId();
-      if (bumpCid) bumpKanbanBoardFetchGeneration(bumpCid);
-      if (isDraftLocal) {
-        const idx = Number(raw.replace("draft-card-", ""));
-        const d = Number.isFinite(idx) ? workHubPendingNewKanbanCards[idx] : null;
-        if (!d) return;
-        d.columnId = targetColumnId;
-        syncPendingWorkItemStatusFromKanbanColumn(d.workItemId, targetColumnId);
-      } else {
-        const cid = Number(raw);
-        if (!cid) return;
-        workHubPendingCardColumn.set(cid, targetColumnId);
-        const wi = Number(sel.closest(".kanban-card-item")?.dataset.workItemId || "");
-        syncPendingWorkItemStatusFromKanbanColumn(wi, targetColumnId);
-      }
-      void Promise.all([loadChannelKanbanBoard(), loadChannelWorkItems()]);
-    });
   });
-  // Drag handle only (not the whole card): Chrome mis-syncs `<select>` inside a `draggable="true"` ancestor after moves.
-  boardEl.querySelectorAll(".kanban-card-drag-handle").forEach((handleEl) => {
-    handleEl.addEventListener("dragstart", (ev) => {
-      const cardEl = handleEl.closest(".kanban-card-item");
-      if (!cardEl) return;
+  // Whole-card drag; cancel when starting from controls so `<select>`/검색/버튼 remain usable. After drop, `rebuildKanbanCardColumnSelectDom` refreshes `<select>` nodes for Chrome.
+  boardEl.querySelectorAll(".kanban-card-item").forEach((cardEl) => {
+    cardEl.setAttribute("draggable", "true");
+    cardEl.addEventListener("dragstart", (ev) => {
+      const t = ev.target;
+      if (
+        t instanceof Element &&
+        t.closest(
+          "input, textarea, select, button, label, .kanban-assignee-add, .kanban-assignee-suggest, a[href]"
+        )
+      ) {
+        ev.preventDefault();
+        return;
+      }
       const dt = ev.dataTransfer;
       if (dt) {
         dt.setData("application/x-ech-kanban-card", "1");
@@ -6643,10 +6702,7 @@ function renderKanbanBoard(board) {
       kanbanDnDSourceColumnId = srcCol;
       cardEl.dataset.dragSourceColumnId = srcCol != null ? String(srcCol) : "";
     });
-    handleEl.addEventListener("dragend", () => {
-      const cardEl = handleEl.closest(".kanban-card-item");
-      if (!cardEl) return;
-      // Let `drop` run first in browsers that fire dragend early; avoids incomplete sync & stale column <select>.
+    cardEl.addEventListener("dragend", () => {
       setTimeout(() => {
         cardEl.classList.remove("kanban-card-dragging");
         delete cardEl.dataset.dragSourceColumnId;
@@ -6719,7 +6775,7 @@ function renderKanbanBoard(board) {
       await new Promise((r) => setTimeout(r, 0));
       syncKanbanBoardFromDomFull(boardEl);
       syncKanbanDraftsOrderFromDom(boardEl);
-      syncKanbanCardColumnSelectsFromDom(boardEl);
+      rebuildKanbanCardColumnSelectDom(boardEl);
       // Do not call `loadChannelKanbanBoard` here: DnD already moved the DOM. A full re-render from GET
       // races with rapid consecutive drops and can rebuild `<select>` from stale server + pending timing.
       await loadChannelWorkItems();
