@@ -1,11 +1,56 @@
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { app, BrowserWindow, ipcMain, Menu, Notification } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, Notification } = require("electron");
 const { autoUpdater } = require("electron-updater");
 
 /** @type {BrowserWindow | null} */
 let mainWindow = null;
+/** @type {Tray | null} */
+let tray = null;
+
+function showMainWindow() {
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function createTray() {
+  const iconInPackage = path.join(__dirname, "assets", "tray-icon.png");
+  const iconInDev     = path.join(__dirname, "assets", "tray-icon.png");
+  const iconPath      = fs.existsSync(iconInPackage) ? iconInPackage : iconInDev;
+
+  let icon;
+  try {
+    icon = nativeImage.createFromPath(iconPath);
+  } catch {
+    icon = nativeImage.createEmpty();
+  }
+
+  tray = new Tray(icon);
+  tray.setToolTip("ECH");
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: "열기",
+      click: () => showMainWindow(),
+    },
+    { type: "separator" },
+    {
+      label: "종료",
+      click: () => {
+        app.isQuitting = true;
+        app.quit();
+      },
+    },
+  ]);
+
+  tray.setContextMenu(contextMenu);
+
+  // 트레이 아이콘 클릭(좌클릭) → 창 표시
+  tray.on("click", () => showMainWindow());
+}
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
@@ -23,6 +68,14 @@ function createMainWindow() {
   const indexInDev = path.join(__dirname, "..", "frontend", "index.html");
   const indexPath = fs.existsSync(indexInPackage) ? indexInPackage : indexInDev;
   mainWindow.loadFile(indexPath);
+
+  // X 버튼 → 트레이로 숨기기 (완전 종료 아님)
+  mainWindow.on("close", (e) => {
+    if (!app.isQuitting) {
+      e.preventDefault();
+      mainWindow.hide();
+    }
+  });
 }
 
 function setupAutoUpdater() {
@@ -102,11 +155,14 @@ app.whenReady().then(() => {
     Menu.setApplicationMenu(null);
   }
   createMainWindow();
+  createTray();
   setupAutoUpdater();
 });
 
+// 트레이 모드: 모든 창이 닫혀도 앱은 트레이에서 계속 실행
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") app.quit();
+  // macOS 외에서는 트레이가 있으면 유지, 없으면 종료
+  if (process.platform !== "darwin" && !tray) app.quit();
 });
 
 app.on("activate", () => {

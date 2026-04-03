@@ -1,6 +1,6 @@
 {
   "name": "ech-desktop",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "private": true,
   "main": "main.js",
   "repository": {
@@ -27,6 +27,11 @@
     "files": [
       "main.js",
       "preload.js",
+      {
+        "from": "assets",
+        "to": "assets",
+        "filter": ["**/*"]
+      },
       {
         "from": "../frontend",
         "to": "frontend",
