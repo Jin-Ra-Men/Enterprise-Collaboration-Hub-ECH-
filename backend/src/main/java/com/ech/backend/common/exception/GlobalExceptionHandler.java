@@ -102,11 +102,20 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         safeLog("DATA_INTEGRITY", exception, request);
+        // 실제 DB 원인 메시지를 추출해 디버깅에 활용
+        String cause = "";
+        Throwable root = exception.getRootCause();
+        if (root != null && root.getMessage() != null) {
+            String msg = root.getMessage();
+            // PostgreSQL 제약 위반 메시지에서 핵심만 추출
+            int detailIdx = msg.indexOf("Detail:");
+            cause = " [원인: " + (detailIdx > 0 ? msg.substring(0, detailIdx).trim() : msg.split("\n")[0]) + "]";
+        }
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.fail(
                         "DATA_INTEGRITY",
-                        "DB 제약 위반으로 저장할 수 없습니다. users.employee_no 기준 스키마·외래키 이관을 확인하세요."
+                        "DB 제약 위반" + cause
                 ));
     }
 

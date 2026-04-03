@@ -5,6 +5,9 @@
 ## 2026-04-03
 
 ### Fixed
+- **DataIntegrityViolation 에러 응답에 실제 DB 원인 메시지 포함**
+  - `GlobalExceptionHandler.handleDataIntegrity()` — PostgreSQL root cause 메시지 추출
+  - 에러 응답: "DB 제약 위반 [원인: ...]" 으로 개선
 - **사용자 완전 삭제 시 DB 제약 위반 오류 해소**
   - `AdminUserService.deleteUser()` — 단순 `delete()` 대신 FK 순서에 맞는 연쇄 삭제 로직으로 교체
   - 삭제 순서: kanban_card_events → work_items(채널 기준) → work_items(생성자 기준) → kanban_boards → messages → channel_files → channels → users
