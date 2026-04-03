@@ -7822,28 +7822,51 @@ document.addEventListener("visibilitychange", () => {
  * 관리자 - 사용자 관리
  * ========================================================================== */
 let adminUserList = [];          // 서버에서 로드한 원본 목록
-let adminUserOrgOptions = null;  // 조직 드롭다운 옵션
+let adminUserOrgOptions = null;  // 조직 드롭다운 옵션 (teams/jobLevels/...)
+let adminUserOrgTree = [];       // 전체 조직 그룹 (트리뷰용)
+let userViewMode = "tree";       // "tree" | "flat"
+let userOrgExpanded = new Set(); // 펼쳐진 조직 노드 코드
 /** employeeNo → { op: 'create'|'update'|'delete', data: {...} } */
 const adminUserPendingChanges = new Map();
 
 async function loadAdminUserPage() {
   try {
-    const [usersRes, orgRes] = await Promise.all([
+    const [usersRes, orgRes, treeRes] = await Promise.all([
       apiFetch("/api/admin/users"),
       apiFetch("/api/admin/users/org-options"),
+      apiFetch("/api/admin/org-groups"),
     ]);
     const usersJson = await usersRes.json().catch(() => ({}));
     const orgJson   = await orgRes.json().catch(() => ({}));
+    const treeJson  = await treeRes.json().catch(() => ({}));
     if (!usersRes.ok) throw new Error(usersJson.error?.message || "사용자 목록 조회 실패");
     if (!orgRes.ok)   throw new Error(orgJson.error?.message   || "조직 정보 조회 실패");
-    adminUserList = usersJson.data || [];
-    adminUserOrgOptions = orgJson.data || { teams: [], jobLevels: [], jobPositions: [], jobTitles: [] };
+    adminUserList       = usersJson.data || [];
+    adminUserOrgOptions = orgJson.data  || { teams: [], jobLevels: [], jobPositions: [], jobTitles: [] };
+    adminUserOrgTree    = treeJson.data || [];
+    // 처음 로드 시 모든 노드 펼침
+    if (userOrgExpanded.size === 0 || adminUserOrgTree.length > 0) {
+      userOrgExpanded = new Set([...adminUserOrgTree.map(g => g.groupCode), "__unassigned__"]);
+    }
     adminUserPendingChanges.clear();
-    renderAdminUserTable();
+    renderAdminUserView();
   } catch (e) {
     await uiAlert(e?.message || "사용자 목록을 불러오지 못했습니다.");
   }
 }
+
+function renderAdminUserView() {
+  if (userViewMode === "tree") renderAdminUserTreeView();
+  else renderAdminUserTable();
+}
+
+// 보기 토글
+document.getElementById("btnUserViewToggle").addEventListener("click", () => {
+  userViewMode = userViewMode === "tree" ? "flat" : "tree";
+  document.getElementById("btnUserViewToggle").textContent =
+    userViewMode === "tree" ? "📋 목록 보기" : "🏢 조직별 보기";
+  renderAdminUserView();
+});
 
 /** org options 기반 인라인 셀렉트 HTML 생성 헬퍼 */
 function buildOrgInlineSelect(field, empNo, currentCode, options, isDeleted) {
@@ -7872,59 +7895,7 @@ function renderAdminUserTable() {
     return;
   }
 
-  tbody.innerHTML = rows.map(row => {
-    const pending   = adminUserPendingChanges.get(row.employeeNo);
-    const isNew     = pending?.op === "create";
-    const isDeleted = pending?.op === "delete";
-    const isModified= pending?.op === "update";
-    const eff       = pending?.data ?? row; // 현재 반영된 데이터 (pending 우선)
-    let rowClass = isNew ? "admin-row-new" : isDeleted ? "admin-row-deleted" : isModified ? "admin-row-modified" : "";
-
-    const curRole   = eff.role   ?? "MEMBER";
-    const curStatus = eff.status ?? "ACTIVE";
-    const curTeam   = eff.teamGroupCode          ?? null;
-    const curLevel  = eff.jobLevelGroupCode      ?? null;
-    const curPos    = eff.jobPositionGroupCode   ?? null;
-    const curTitle  = eff.jobTitleGroupCode      ?? null;
-    const emp       = row.employeeNo;
-
-    const createdAt = row.createdAt
-      ? new Date(row.createdAt).toLocaleDateString("ko-KR", { year:"2-digit", month:"2-digit", day:"2-digit" })
-      : "-";
-
-    const roleSelect = isDeleted
-      ? `<span class="text-muted">${curRole === "ADMIN" ? "관리자" : curRole === "MANAGER" ? "매니저" : "일반"}</span>`
-      : `<select class="inline-select" data-field="role" data-emp="${escHtml(emp)}">
-           <option value="MEMBER"  ${curRole==="MEMBER"  ? "selected" : ""}>일반</option>
-           <option value="MANAGER" ${curRole==="MANAGER" ? "selected" : ""}>매니저</option>
-           <option value="ADMIN"   ${curRole==="ADMIN"   ? "selected" : ""}>관리자</option>
-         </select>`;
-
-    const statusSelect = isDeleted
-      ? `<span class="badge badge-inactive">삭제예정</span>`
-      : `<select class="inline-select status-select" data-field="status" data-emp="${escHtml(emp)}">
-           <option value="ACTIVE"   ${curStatus==="ACTIVE"   ? "selected" : ""}>사용</option>
-           <option value="INACTIVE" ${curStatus==="INACTIVE" ? "selected" : ""}>미사용</option>
-         </select>`;
-
-    const teamSelect  = buildOrgInlineSelect("teamGroupCode",        emp, curTeam,  opts.teams,        isDeleted);
-    const levelSelect = buildOrgInlineSelect("jobLevelGroupCode",    emp, curLevel, opts.jobLevels,    isDeleted);
-    const posSelect   = buildOrgInlineSelect("jobPositionGroupCode", emp, curPos,   opts.jobPositions, isDeleted);
-    const titleSelect = buildOrgInlineSelect("jobTitleGroupCode",    emp, curTitle, opts.jobTitles,    isDeleted);
-
-    return `<tr class="${rowClass}" data-emp="${escHtml(emp)}" title="우클릭: 편집/삭제">
-      <td><code class="emp-code">${escHtml(emp)}</code></td>
-      <td>${escHtml(row.name || "")}</td>
-      <td class="cell-email">${escHtml(row.email || "")}</td>
-      <td>${teamSelect}</td>
-      <td>${levelSelect}</td>
-      <td>${posSelect}</td>
-      <td>${titleSelect}</td>
-      <td>${roleSelect}</td>
-      <td>${statusSelect}</td>
-      <td class="cell-date">${createdAt}</td>
-    </tr>`;
-  }).join("");
+  tbody.innerHTML = rows.map(row => renderUserRow(row, opts, 0)).join("");
 
   updateAdminUserPendingBanner();
 }
@@ -7947,6 +7918,152 @@ function updateAdminUserPendingBanner() {
   if (banner)  banner.classList.toggle("hidden", count === 0);
   if (countEl) countEl.textContent = String(count);
 }
+
+// ── 사용자 공통 행 렌더 헬퍼 ──────────────────────────────────────────────
+function renderUserRow(row, opts, indentPx) {
+  const pending   = adminUserPendingChanges.get(row.employeeNo);
+  const isNew     = pending?.op === "create";
+  const isDeleted = pending?.op === "delete";
+  const isModified= pending?.op === "update";
+  const eff       = pending?.data ?? row;
+  let rowClass = isNew ? "admin-row-new" : isDeleted ? "admin-row-deleted" : isModified ? "admin-row-modified" : "";
+
+  const curRole   = eff.role   ?? "MEMBER";
+  const curStatus = eff.status ?? "ACTIVE";
+  const curTeam   = eff.teamGroupCode          ?? null;
+  const curLevel  = eff.jobLevelGroupCode      ?? null;
+  const curPos    = eff.jobPositionGroupCode   ?? null;
+  const curTitle  = eff.jobTitleGroupCode      ?? null;
+  const emp       = row.employeeNo;
+
+  const createdAt = row.createdAt
+    ? new Date(row.createdAt).toLocaleDateString("ko-KR", { year:"2-digit", month:"2-digit", day:"2-digit" })
+    : "-";
+
+  const roleSelect = isDeleted
+    ? `<span class="text-muted">${curRole==="ADMIN"?"관리자":curRole==="MANAGER"?"매니저":"일반"}</span>`
+    : `<select class="inline-select" data-field="role" data-emp="${escHtml(emp)}">
+         <option value="MEMBER"  ${curRole==="MEMBER"  ?"selected":""}>일반</option>
+         <option value="MANAGER" ${curRole==="MANAGER" ?"selected":""}>매니저</option>
+         <option value="ADMIN"   ${curRole==="ADMIN"   ?"selected":""}>관리자</option>
+       </select>`;
+
+  const statusSelect = isDeleted
+    ? `<span class="badge badge-inactive">삭제예정</span>`
+    : `<select class="inline-select status-select" data-field="status" data-emp="${escHtml(emp)}">
+         <option value="ACTIVE"   ${curStatus==="ACTIVE"  ?"selected":""}>사용</option>
+         <option value="INACTIVE" ${curStatus==="INACTIVE"?"selected":""}>미사용</option>
+       </select>`;
+
+  const teamSel  = buildOrgInlineSelect("teamGroupCode",        emp, curTeam,  opts.teams,        isDeleted);
+  const levelSel = buildOrgInlineSelect("jobLevelGroupCode",    emp, curLevel, opts.jobLevels,    isDeleted);
+  const posSel   = buildOrgInlineSelect("jobPositionGroupCode", emp, curPos,   opts.jobPositions, isDeleted);
+  const titleSel = buildOrgInlineSelect("jobTitleGroupCode",    emp, curTitle, opts.jobTitles,    isDeleted);
+
+  const firstCellStyle = indentPx > 0 ? ` style="padding-left:${indentPx}px"` : "";
+  return `<tr class="${rowClass}" data-emp="${escHtml(emp)}" title="우클릭: 편집/삭제">
+    <td${firstCellStyle}><code class="emp-code">${escHtml(emp)}</code></td>
+    <td>${escHtml(row.name || "")}</td>
+    <td class="cell-email">${escHtml(row.email || "")}</td>
+    <td>${teamSel}</td>
+    <td>${levelSel}</td>
+    <td>${posSel}</td>
+    <td>${titleSel}</td>
+    <td>${roleSelect}</td>
+    <td>${statusSelect}</td>
+    <td class="cell-date">${createdAt}</td>
+  </tr>`;
+}
+
+// ── 트리뷰 렌더 ──────────────────────────────────────────────────────────
+function renderAdminUserTreeView() {
+  const tbody = document.getElementById("adminUserTableBody");
+  if (!tbody) return;
+
+  const rows = buildEffectiveAdminUserList();
+  const opts = adminUserOrgOptions || { teams: [], jobLevels: [], jobPositions: [], jobTitles: [] };
+
+  // 사용자를 teamGroupCode 기준으로 묶기
+  const usersByTeam = new Map();
+  const unassigned  = [];
+  for (const user of rows) {
+    const eff = (adminUserPendingChanges.get(user.employeeNo)?.data ?? user);
+    const tc  = eff.teamGroupCode;
+    if (tc) {
+      if (!usersByTeam.has(tc)) usersByTeam.set(tc, []);
+      usersByTeam.get(tc).push(user);
+    } else {
+      unassigned.push(user);
+    }
+  }
+
+  const structural = adminUserOrgTree.filter(g => ["COMPANY","DIVISION","TEAM"].includes(g.groupType));
+  const orgMap     = new Map(structural.map(g => [g.groupCode, g]));
+  const getKids    = (code) => structural.filter(g => g.memberOfGroupCode === code);
+  const companies  = structural.filter(g => g.groupType === "COMPANY" && (!g.memberOfGroupCode || !orgMap.has(g.memberOfGroupCode)));
+  const COLSPAN    = 10;
+
+  const parts = [];
+  const TYPE_LABEL = { COMPANY:"회사", DIVISION:"본부/부서", TEAM:"팀" };
+  const TYPE_CLASS = { COMPANY:"ot-company", DIVISION:"ot-division", TEAM:"ot-team" };
+
+  function renderOrgRow(g, depth) {
+    const isExpanded = userOrgExpanded.has(g.groupCode);
+    const kids       = getKids(g.groupCode);
+    const teamUsers  = g.groupType === "TEAM" ? (usersByTeam.get(g.groupCode) || []) : [];
+    const hasContent = kids.length > 0 || teamUsers.length > 0;
+    const typeLabel  = TYPE_LABEL[g.groupType] || g.groupType;
+    const typeCls    = TYPE_CLASS[g.groupType] || "";
+    const indent     = 10 + depth * 20;
+    const count      = g.groupType === "TEAM" ? ` <span class="tree-count">${teamUsers.length}명</span>` : "";
+
+    parts.push(`<tr class="user-tree-group-row" data-ugroup="${escHtml(g.groupCode)}">
+      <td colspan="${COLSPAN}" class="user-tree-group-cell" style="padding-left:${indent}px">
+        ${hasContent ? `<button class="org-tree-toggle-btn user-tree-toggle" data-utoggle="${escHtml(g.groupCode)}">${isExpanded ? "▼" : "▶"}</button>` : `<span class="org-tree-bullet">·</span>`}
+        <span class="org-type-badge ${typeCls}">${typeLabel}</span>
+        <span class="user-tree-group-name">${escHtml(g.displayName)}</span>${count}
+      </td>
+    </tr>`);
+
+    if (isExpanded) {
+      for (const kid of kids) renderOrgRow(kid, depth + 1);
+      const userIndent = indent + 20;
+      for (const user of teamUsers) parts.push(renderUserRow(user, opts, userIndent));
+    }
+  }
+
+  for (const company of companies) renderOrgRow(company, 0);
+
+  // 미배정 사용자
+  if (unassigned.length > 0) {
+    const isExp = userOrgExpanded.has("__unassigned__");
+    parts.push(`<tr class="user-tree-group-row" data-ugroup="__unassigned__">
+      <td colspan="${COLSPAN}" class="user-tree-group-cell">
+        <button class="org-tree-toggle-btn user-tree-toggle" data-utoggle="__unassigned__">${isExp ? "▼" : "▶"}</button>
+        <span class="user-tree-group-name">⬜ 미배정</span>
+        <span class="tree-count">${unassigned.length}명</span>
+      </td>
+    </tr>`);
+    if (isExp) for (const user of unassigned) parts.push(renderUserRow(user, opts, 30));
+  }
+
+  if (!parts.length) {
+    parts.push(`<tr><td colspan="${COLSPAN}" style="text-align:center;color:var(--text-muted);padding:24px">등록된 사용자가 없습니다.</td></tr>`);
+  }
+
+  tbody.innerHTML = parts.join("");
+  updateAdminUserPendingBanner();
+}
+
+// ── 트리 노드 접기/펼치기 클릭 ────────────────────────────────────────────
+document.getElementById("adminUserTableBody").addEventListener("click", (e) => {
+  const toggleBtn = e.target.closest("[data-utoggle]");
+  if (!toggleBtn) return;
+  const code = toggleBtn.dataset.utoggle;
+  if (userOrgExpanded.has(code)) userOrgExpanded.delete(code);
+  else userOrgExpanded.add(code);
+  renderAdminUserView();
+});
 
 function openAdminUserEditModal(employeeNo) {
   const isNew = !employeeNo;
@@ -8205,26 +8322,53 @@ document.getElementById("btnAdminUserSave").addEventListener("click", async () =
 /* ==========================================================================
  * 관리자 - 조직 관리
  * ========================================================================== */
-let orgGroupList = [];          // 서버에서 로드한 전체 그룹 목록
-let orgEditingCode = null;      // 현재 편집 중인 그룹 코드 (null = 신규)
+let orgGroupList = [];                       // 서버에서 로드한 원본 목록
+let orgEditingCode = null;                   // 현재 편집 중인 코드 (null = 신규)
+const orgPendingChanges = new Map();         // groupCode → { op, data }
+let orgExpandedSet = new Set();              // 현재 펼쳐진 노드 코드 집합
 
+// ─── 데이터 헬퍼 ──────────────────────────────────────────────────────────
+function buildEffectiveOrgList() {
+  const map = new Map(orgGroupList.map(g => [g.groupCode, { ...g }]));
+  for (const [code, change] of orgPendingChanges) {
+    if (change.op === "create")       map.set(code, { ...change.data, _pending: "create" });
+    else if (change.op === "update")  map.set(code, { ...map.get(code), ...change.data, _pending: "update" });
+    else if (change.op === "delete" && map.has(code)) map.set(code, { ...map.get(code), _pending: "delete" });
+  }
+  return [...map.values()];
+}
+
+function updateOrgPendingBanner() {
+  const count   = orgPendingChanges.size;
+  const banner  = document.getElementById("orgPendingBanner");
+  const countEl = document.getElementById("orgPendingCount");
+  if (banner)  banner.classList.toggle("hidden", count === 0);
+  if (countEl) countEl.textContent = String(count);
+}
+
+// ─── 로드 ──────────────────────────────────────────────────────────────────
 async function loadOrgManagementPage() {
   try {
     const res  = await apiFetch("/api/admin/org-groups");
     const json = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(json.error?.message || "조직 목록 조회 실패");
     orgGroupList = json.data || [];
+    // 새로 로드 시 모든 노드를 펼침 (기존 expand 상태 초기화)
+    orgExpandedSet = new Set(orgGroupList.map(g => g.groupCode));
+    orgPendingChanges.clear();
     renderOrgManagement();
   } catch (e) {
     await uiAlert(e?.message || "조직 목록을 불러오지 못했습니다.");
   }
 }
 
+// ─── 렌더 ──────────────────────────────────────────────────────────────────
 function renderOrgManagement() {
-  const structural  = orgGroupList.filter(g => ["COMPANY","DIVISION","TEAM"].includes(g.groupType));
-  const jobLevels   = orgGroupList.filter(g => g.groupType === "JOB_LEVEL");
-  const jobPositions= orgGroupList.filter(g => g.groupType === "JOB_POSITION");
-  const jobTitles   = orgGroupList.filter(g => g.groupType === "JOB_TITLE");
+  const eff = buildEffectiveOrgList();
+  const structural  = eff.filter(g => ["COMPANY","DIVISION","TEAM"].includes(g.groupType));
+  const jobLevels   = eff.filter(g => g.groupType === "JOB_LEVEL");
+  const jobPositions= eff.filter(g => g.groupType === "JOB_POSITION");
+  const jobTitles   = eff.filter(g => g.groupType === "JOB_TITLE");
 
   const treeEl = document.getElementById("orgTreeContainer");
   if (treeEl) treeEl.innerHTML = buildOrgTreeHtml(structural) || `<p class="org-empty">등록된 조직이 없습니다.<br><small>위 [+ 회사 추가] 버튼으로 최상위 조직을 추가하세요.</small></p>`;
@@ -8232,39 +8376,53 @@ function renderOrgManagement() {
   renderOrgFlatList("orgJobLevelList",    jobLevels);
   renderOrgFlatList("orgJobPositionList", jobPositions);
   renderOrgFlatList("orgJobTitleList",    jobTitles);
+  updateOrgPendingBanner();
 }
 
 function buildOrgTreeHtml(structural) {
   const map      = new Map(structural.map(g => [g.groupCode, g]));
   const roots    = structural.filter(g => !g.memberOfGroupCode || !map.has(g.memberOfGroupCode));
-  const children = (parentCode) => structural.filter(g => g.memberOfGroupCode === parentCode);
+  const getKids  = (code) => structural.filter(g => g.memberOfGroupCode === code);
 
   const TYPE_LABEL = { COMPANY:"회사", DIVISION:"본부/부서", TEAM:"팀" };
   const TYPE_CLASS = { COMPANY:"ot-company", DIVISION:"ot-division", TEAM:"ot-team" };
 
   function renderNode(g, depth) {
-    const kids     = children(g.groupCode);
-    const typeLabel= TYPE_LABEL[g.groupType] || g.groupType;
-    const typeCls  = TYPE_CLASS[g.groupType] || "";
+    const kids       = getKids(g.groupCode);
+    const isExpanded = orgExpandedSet.has(g.groupCode);
+    const typeLabel  = TYPE_LABEL[g.groupType] || g.groupType;
+    const typeCls    = TYPE_CLASS[g.groupType] || "";
     const inactiveCls = g.isActive ? "" : "org-node-inactive";
-    const indent   = depth * 20;
-    return `
-      <div class="org-tree-node ${inactiveCls}" data-code="${escHtml(g.groupCode)}" style="margin-left:${indent}px">
+    const pendingCls  = g._pending === "create" ? "org-pending-create"
+                      : g._pending === "update" ? "org-pending-update"
+                      : g._pending === "delete" ? "org-pending-delete" : "";
+    const indent   = depth * 22;
+
+    const toggleBtn = kids.length
+      ? `<button class="org-tree-toggle-btn" data-org-toggle="${escHtml(g.groupCode)}" title="${isExpanded ? "접기" : "펼치기"}">${isExpanded ? "▼" : "▶"}</button>`
+      : `<span class="org-tree-bullet">·</span>`;
+
+    const deleteLabel = g._pending === "delete" ? "복원" : "삭제";
+    const deleteAction = g._pending === "delete" ? "org-restore" : "org-delete";
+
+    const node = `
+      <div class="org-tree-node ${inactiveCls} ${pendingCls}" data-code="${escHtml(g.groupCode)}" style="margin-left:${indent}px">
         <div class="org-tree-row">
-          <span class="org-tree-bullet">${kids.length ? "▸" : "·"}</span>
+          ${toggleBtn}
           <span class="org-type-badge ${typeCls}">${typeLabel}</span>
           <span class="org-display-name">${escHtml(g.displayName)}</span>
           <code class="org-code-small">${escHtml(g.groupCode)}</code>
           ${!g.isActive ? '<span class="org-badge-inactive">비활성</span>' : ""}
+          ${g._pending ? `<span class="org-pending-badge">${g._pending === "create" ? "추가" : g._pending === "update" ? "수정" : "삭제예정"}</span>` : ""}
           <div class="org-node-btns">
-            ${g.groupType !== "TEAM" ? `<button class="btn-xs btn-secondary" data-action="org-add-child" data-parent="${escHtml(g.groupCode)}" data-ptype="${escHtml(g.groupType)}">+ 하위</button>` : ""}
-            <button class="btn-xs btn-secondary" data-action="org-edit" data-code="${escHtml(g.groupCode)}">편집</button>
-            <button class="btn-xs btn-danger"    data-action="org-delete" data-code="${escHtml(g.groupCode)}">삭제</button>
+            ${g.groupType !== "TEAM" && g._pending !== "delete" ? `<button class="btn-xs btn-secondary" data-action="org-add-child" data-parent="${escHtml(g.groupCode)}" data-ptype="${escHtml(g.groupType)}">+ 하위</button>` : ""}
+            ${g._pending !== "delete" ? `<button class="btn-xs btn-secondary" data-action="org-edit" data-code="${escHtml(g.groupCode)}">편집</button>` : ""}
+            <button class="btn-xs ${g._pending === "delete" ? "btn-secondary" : "btn-danger"}" data-action="${deleteAction}" data-code="${escHtml(g.groupCode)}">${deleteLabel}</button>
           </div>
         </div>
-      </div>
-      ${kids.map(k => renderNode(k, depth + 1)).join("")}
-    `;
+      </div>`;
+    const childrenHtml = isExpanded ? kids.map(k => renderNode(k, depth + 1)).join("") : "";
+    return node + childrenHtml;
   }
   return roots.map(r => renderNode(r, 0)).join("");
 }
@@ -8272,24 +8430,34 @@ function buildOrgTreeHtml(structural) {
 function renderOrgFlatList(containerId, groups) {
   const el = document.getElementById(containerId);
   if (!el) return;
-  if (!groups.length) { el.innerHTML = `<p class="org-empty">항목이 없습니다.</p>`; return; }
-  const sorted = [...groups].sort((a,b) => a.sortOrder - b.sortOrder || a.displayName.localeCompare(b.displayName));
-  el.innerHTML = sorted.map(g => `
-    <div class="org-flat-item ${g.isActive ? "" : "org-node-inactive"}" data-code="${escHtml(g.groupCode)}">
+  const visible = groups.filter(g => g._pending !== "delete");
+  const deleted = groups.filter(g => g._pending === "delete");
+  const all = [...visible.sort((a,b) => a.sortOrder - b.sortOrder || a.displayName.localeCompare(b.displayName)), ...deleted];
+  if (!all.length) { el.innerHTML = `<p class="org-empty">항목이 없습니다.</p>`; return; }
+  el.innerHTML = all.map(g => {
+    const pendingCls = g._pending === "create" ? "org-pending-create"
+                     : g._pending === "update" ? "org-pending-update"
+                     : g._pending === "delete" ? "org-pending-delete" : "";
+    const deleteLabel  = g._pending === "delete" ? "복원" : "삭제";
+    const deleteAction = g._pending === "delete" ? "org-restore" : "org-delete";
+    return `
+    <div class="org-flat-item ${g.isActive ? "" : "org-node-inactive"} ${pendingCls}" data-code="${escHtml(g.groupCode)}">
       <span class="org-display-name">${escHtml(g.displayName)}</span>
       <code class="org-code-small">${escHtml(g.groupCode)}</code>
       <span class="org-sort-label">순서 ${g.sortOrder}</span>
       ${!g.isActive ? '<span class="org-badge-inactive">비활성</span>' : ""}
+      ${g._pending ? `<span class="org-pending-badge">${g._pending === "create" ? "추가" : g._pending === "update" ? "수정" : "삭제예정"}</span>` : ""}
       <div class="org-node-btns">
-        <button class="btn-xs btn-secondary" data-action="org-edit"   data-code="${escHtml(g.groupCode)}">편집</button>
-        <button class="btn-xs btn-danger"    data-action="org-delete" data-code="${escHtml(g.groupCode)}">삭제</button>
+        ${g._pending !== "delete" ? `<button class="btn-xs btn-secondary" data-action="org-edit" data-code="${escHtml(g.groupCode)}">편집</button>` : ""}
+        <button class="btn-xs ${g._pending === "delete" ? "btn-secondary" : "btn-danger"}" data-action="${deleteAction}" data-code="${escHtml(g.groupCode)}">${deleteLabel}</button>
       </div>
-    </div>
-  `).join("");
+    </div>`;
+  }).join("");
 }
 
-// ─── 탭 전환 ──────────────────────────────────────────────────────────────
+// ─── 탭 전환 + 이벤트 위임 ─────────────────────────────────────────────────
 document.getElementById("viewOrgManagement").addEventListener("click", (e) => {
+  // 탭 전환
   const tab = e.target.closest(".org-tab");
   if (tab) {
     document.querySelectorAll(".org-tab").forEach(t => t.classList.remove("active"));
@@ -8300,8 +8468,18 @@ document.getElementById("viewOrgManagement").addEventListener("click", (e) => {
     return;
   }
 
-  // 버튼 위임
-  const btn    = e.target.closest("[data-action]");
+  // 트리 노드 접기/펼치기
+  const toggleBtn = e.target.closest("[data-org-toggle]");
+  if (toggleBtn) {
+    const code = toggleBtn.dataset.orgToggle;
+    if (orgExpandedSet.has(code)) orgExpandedSet.delete(code);
+    else orgExpandedSet.add(code);
+    renderOrgManagement();
+    return;
+  }
+
+  // 버튼 액션 위임
+  const btn = e.target.closest("[data-action]");
   if (!btn) return;
   const action = btn.dataset.action;
 
@@ -8309,20 +8487,79 @@ document.getElementById("viewOrgManagement").addEventListener("click", (e) => {
   if (action === "org-add-flat")  openOrgGroupModal(null, btn.dataset.type, null);
   if (action === "org-add-child") {
     const ptype = btn.dataset.ptype;
-    const childType = ptype === "COMPANY" ? "DIVISION" : "TEAM";
-    openOrgGroupModal(null, childType, btn.dataset.parent);
+    openOrgGroupModal(null, ptype === "COMPANY" ? "DIVISION" : "TEAM", btn.dataset.parent);
   }
-  if (action === "org-edit")   openOrgGroupModal(btn.dataset.code, null, null);
-  if (action === "org-delete") void handleOrgGroupDelete(btn.dataset.code);
+  if (action === "org-edit")    openOrgGroupModal(btn.dataset.code, null, null);
+  if (action === "org-delete")  markOrgGroupPendingDelete(btn.dataset.code);
+  if (action === "org-restore") { orgPendingChanges.delete(btn.dataset.code); renderOrgManagement(); }
 });
 
 document.getElementById("btnRefreshOrg").addEventListener("click", () => void loadOrgManagementPage());
+
+document.getElementById("btnOrgReset").addEventListener("click", () => {
+  orgPendingChanges.clear();
+  renderOrgManagement();
+});
+
+document.getElementById("btnOrgSave").addEventListener("click", async () => {
+  if (orgPendingChanges.size === 0) { await uiAlert("저장할 변경사항이 없습니다."); return; }
+  if (!(await uiConfirm(`변경사항 ${orgPendingChanges.size}건을 저장하시겠습니까?`))) return;
+  await saveOrgChanges();
+});
+
+// ─── pending 삭제 마킹 (재귀 - 자식 포함) ─────────────────────────────────
+function markOrgGroupPendingDelete(groupCode) {
+  const eff = buildEffectiveOrgList();
+  const kids = eff.filter(g => g.memberOfGroupCode === groupCode);
+  for (const kid of kids) markOrgGroupPendingDelete(kid.groupCode);
+  const existing = orgPendingChanges.get(groupCode);
+  if (existing?.op === "create") {
+    orgPendingChanges.delete(groupCode);   // 아직 서버에 없는 항목은 바로 제거
+  } else {
+    const g = eff.find(x => x.groupCode === groupCode);
+    if (g) orgPendingChanges.set(groupCode, { op: "delete", data: { ...g } });
+  }
+  renderOrgManagement();
+}
+
+// ─── 일괄 저장 ────────────────────────────────────────────────────────────
+function getOrgDepth(data) {
+  const typeDepth = { COMPANY: 0, DIVISION: 1, TEAM: 2, JOB_LEVEL: 0, JOB_POSITION: 0, JOB_TITLE: 0 };
+  return typeDepth[data.groupType] ?? 0;
+}
+
+async function saveOrgChanges() {
+  const creates = [...orgPendingChanges.entries()]
+    .filter(([, c]) => c.op === "create")
+    .sort(([, a], [, b]) => getOrgDepth(a.data) - getOrgDepth(b.data));
+  const updates = [...orgPendingChanges.entries()].filter(([, c]) => c.op === "update");
+  const deletes = [...orgPendingChanges.entries()]
+    .filter(([, c]) => c.op === "delete")
+    .sort(([, a], [, b]) => getOrgDepth(b.data) - getOrgDepth(a.data)); // 깊은 순서
+
+  const errors = [];
+  for (const [, change] of creates) {
+    const res = await apiFetch("/api/admin/org-groups", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(change.data) });
+    if (!res.ok) { const j = await res.json().catch(()=>({})); errors.push(`[생성 ${change.data.groupCode}] ${j.error?.message || res.status}`); }
+  }
+  for (const [code, change] of updates) {
+    const res = await apiFetch(`/api/admin/org-groups/${encodeURIComponent(code)}`, { method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(change.data) });
+    if (!res.ok) { const j = await res.json().catch(()=>({})); errors.push(`[수정 ${code}] ${j.error?.message || res.status}`); }
+  }
+  for (const [code] of deletes) {
+    const res = await apiFetch(`/api/admin/org-groups/${encodeURIComponent(code)}`, { method:"DELETE" });
+    if (!res.ok) { const j = await res.json().catch(()=>({})); errors.push(`[삭제 ${code}] ${j.error?.message || res.status}`); }
+  }
+  if (errors.length) await uiAlert("일부 저장 실패:\n" + errors.join("\n"));
+  await loadOrgManagementPage();
+}
 
 // ─── 조직 그룹 모달 ─────────────────────────────────────────────────────
 function openOrgGroupModal(editCode, defaultType, defaultParent) {
   orgEditingCode = editCode || null;
   const isEdit   = !!orgEditingCode;
-  const existing = isEdit ? orgGroupList.find(g => g.groupCode === orgEditingCode) : null;
+  // 편집 시 pending 데이터 우선, 없으면 서버 데이터
+  const existing = isEdit ? (buildEffectiveOrgList().find(g => g.groupCode === orgEditingCode)) : null;
 
   document.getElementById("orgGroupEditTitle").textContent = isEdit ? "조직 그룹 편집" : "조직 그룹 추가";
   document.getElementById("orgGroupEditError").textContent = "";
@@ -8330,12 +8567,12 @@ function openOrgGroupModal(editCode, defaultType, defaultParent) {
   document.getElementById("btnOrgGroupEditConfirm").dataset.editCode = editCode || "";
 
   const typeEl = document.getElementById("ogType");
-  typeEl.value = existing ? existing.groupType : (defaultType || "COMPANY");
-  typeEl.disabled = isEdit; // 편집 시 유형 변경 불가
+  typeEl.value    = existing ? existing.groupType : (defaultType || "COMPANY");
+  typeEl.disabled = isEdit;
 
-  const codeEl  = document.getElementById("ogCode");
+  const codeEl    = document.getElementById("ogCode");
   codeEl.value    = existing ? existing.groupCode : "";
-  codeEl.readOnly = isEdit; // 편집 시 코드 변경 불가
+  codeEl.readOnly = isEdit;
 
   document.getElementById("ogDisplayName").value = existing ? existing.displayName : "";
   document.getElementById("ogSortOrder").value   = existing ? existing.sortOrder   : 0;
@@ -8347,21 +8584,23 @@ function openOrgGroupModal(editCode, defaultType, defaultParent) {
 }
 
 function updateOrgParentDropdown(groupType, selectedParent) {
-  const row    = document.getElementById("ogParentRow");
-  const sel    = document.getElementById("ogParent");
+  const row = document.getElementById("ogParentRow");
+  const sel = document.getElementById("ogParent");
   const needsParent = ["DIVISION","TEAM"].includes(groupType);
   row.classList.toggle("hidden", !needsParent);
   if (!needsParent) { sel.value = ""; return; }
   const parentType = groupType === "DIVISION" ? "COMPANY" : "DIVISION";
-  const options = orgGroupList.filter(g => g.groupType === parentType && g.isActive);
+  const eff = buildEffectiveOrgList();
+  const options = eff.filter(g => g.groupType === parentType && g._pending !== "delete");
   sel.innerHTML = `<option value="">(없음)</option>` +
     options.map(g => `<option value="${escHtml(g.groupCode)}" ${g.groupCode === selectedParent ? "selected" : ""}>${escHtml(g.displayName)}</option>`).join("");
 }
 
 function updateOrgPathPreview() {
-  const displayName  = document.getElementById("ogDisplayName").value.trim();
-  const parentCode   = document.getElementById("ogParent").value;
-  const parent       = orgGroupList.find(g => g.groupCode === parentCode);
+  const displayName = document.getElementById("ogDisplayName").value.trim();
+  const parentCode  = document.getElementById("ogParent").value;
+  const eff  = buildEffectiveOrgList();
+  const parent = eff.find(g => g.groupCode === parentCode);
   let path = displayName || "(표시명 입력 후 확인)";
   if (parent) {
     const parentPath = parent.groupPath || parent.displayName;
@@ -8377,51 +8616,64 @@ document.getElementById("ogType").addEventListener("change", (e) => {
 document.getElementById("ogParent").addEventListener("change", updateOrgPathPreview);
 document.getElementById("ogDisplayName").addEventListener("input", updateOrgPathPreview);
 
-document.getElementById("btnOrgGroupEditConfirm").addEventListener("click", async () => {
-  const isEdit    = !!document.getElementById("btnOrgGroupEditConfirm").dataset.editCode;
-  const groupCode = document.getElementById("ogCode").value.trim();
-  const groupType = document.getElementById("ogType").value;
+document.getElementById("btnOrgGroupEditConfirm").addEventListener("click", () => {
+  const isEdit      = !!document.getElementById("btnOrgGroupEditConfirm").dataset.editCode;
+  const groupCode   = document.getElementById("ogCode").value.trim();
+  const groupType   = document.getElementById("ogType").value;
   const displayName = document.getElementById("ogDisplayName").value.trim();
   const parentCode  = document.getElementById("ogParent").value || null;
   const sortOrder   = parseInt(document.getElementById("ogSortOrder").value) || 0;
   const isActive    = document.getElementById("ogIsActive").checked;
 
   const errEl = document.getElementById("orgGroupEditError");
-  if (!groupCode)    { errEl.textContent = "그룹 코드를 입력하세요."; errEl.classList.remove("hidden"); return; }
-  if (!displayName)  { errEl.textContent = "표시명을 입력하세요.";    errEl.classList.remove("hidden"); return; }
+  if (!groupCode)   { errEl.textContent = "그룹 코드를 입력하세요."; errEl.classList.remove("hidden"); return; }
+  if (!displayName) { errEl.textContent = "표시명을 입력하세요.";    errEl.classList.remove("hidden"); return; }
 
-  const body = { groupType, groupCode, displayName, memberOfGroupCode: parentCode, sortOrder, isActive };
-
-  try {
-    let res;
-    if (isEdit) {
-      res = await apiFetch(`/api/admin/org-groups/${encodeURIComponent(orgEditingCode)}`, { method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
-    } else {
-      res = await apiFetch("/api/admin/org-groups", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) });
+  // 코드 중복 검사 (신규 생성 시)
+  if (!isEdit) {
+    const eff = buildEffectiveOrgList();
+    if (eff.some(g => g.groupCode === groupCode && g._pending !== "delete")) {
+      errEl.textContent = "이미 존재하는 그룹 코드입니다.";
+      errEl.classList.remove("hidden");
+      return;
     }
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) { errEl.textContent = json.error?.message || "저장 실패"; errEl.classList.remove("hidden"); return; }
-    closeModal("modalOrgGroupEdit");
-    await loadOrgManagementPage();
-  } catch (err) {
-    errEl.textContent = err?.message || "저장 중 오류가 발생했습니다.";
-    errEl.classList.remove("hidden");
   }
+
+  const parentPath = (() => {
+    const eff = buildEffectiveOrgList();
+    const p = eff.find(g => g.groupCode === parentCode);
+    if (!p) return displayName;
+    return (p.groupPath || p.displayName) + "/" + displayName;
+  })();
+
+  const data = { groupType, groupCode, displayName, memberOfGroupCode: parentCode, sortOrder, isActive, groupPath: parentPath };
+
+  if (isEdit) {
+    const prev = orgPendingChanges.get(orgEditingCode);
+    const op   = prev?.op === "create" ? "create" : "update";
+    orgPendingChanges.set(orgEditingCode, { op, data: { ...data, groupCode: orgEditingCode } });
+    // 표시명이 바뀌면 자식의 경로도 재계산
+    updatePendingChildPaths(orgEditingCode, parentPath);
+  } else {
+    orgExpandedSet.add(groupCode); // 새 노드는 펼친 상태로
+    orgPendingChanges.set(groupCode, { op: "create", data });
+  }
+
+  closeModal("modalOrgGroupEdit");
+  renderOrgManagement();
 });
 
-async function handleOrgGroupDelete(groupCode) {
-  const g = orgGroupList.find(x => x.groupCode === groupCode);
-  const hasChildren = orgGroupList.some(x => x.memberOfGroupCode === groupCode);
-  const msg = hasChildren
-    ? `[${g?.displayName}] 및 모든 하위 조직을 삭제합니다.\n이 작업은 되돌릴 수 없습니다. 계속하시겠습니까?`
-    : `[${g?.displayName}]을(를) 삭제합니다. 계속하시겠습니까?`;
-  if (!(await uiConfirm(msg))) return;
-  try {
-    const res  = await apiFetch(`/api/admin/org-groups/${encodeURIComponent(groupCode)}`, { method:"DELETE" });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) { await uiAlert(json.error?.message || "삭제 실패"); return; }
-    await loadOrgManagementPage();
-  } catch (e) {
-    await uiAlert(e?.message || "삭제 중 오류가 발생했습니다.");
+function updatePendingChildPaths(parentCode, parentPath) {
+  const eff = buildEffectiveOrgList();
+  const kids = eff.filter(g => g.memberOfGroupCode === parentCode);
+  for (const kid of kids) {
+    const newPath = parentPath + "/" + kid.displayName;
+    const prev = orgPendingChanges.get(kid.groupCode);
+    if (prev) {
+      prev.data = { ...prev.data, groupPath: newPath };
+    } else {
+      orgPendingChanges.set(kid.groupCode, { op: "update", data: { ...kid, groupPath: newPath } });
+    }
+    updatePendingChildPaths(kid.groupCode, newPath);
   }
 }

@@ -305,9 +305,10 @@
               <button id="btnAdminUserNew" class="btn-primary btn-sm-action">+ 새 사용자</button>
               <button id="btnAdminUserSave" class="btn-primary btn-sm-action">저장</button>
               <button id="btnAdminUserReset" class="btn-secondary btn-sm-action">변경 취소</button>
+              <button id="btnUserViewToggle" class="btn-secondary btn-sm-action">📋 목록 보기</button>
             </div>
           </div>
-          <p class="admin-hint">우클릭으로 편집·삭제, 역할/상태 셀렉트는 직접 변경 후 [저장]</p>
+          <p class="admin-hint">우클릭으로 편집·삭제, 역할/상태/조직 셀렉트는 직접 변경 후 [저장]</p>
           <div id="adminUserPendingBanner" class="admin-pending-banner hidden">
             변경사항 <strong id="adminUserPendingCount">0</strong>건이 저장 대기 중입니다. [저장] 버튼을 눌러 반영하세요.
           </div>
@@ -336,7 +337,14 @@
         <div id="viewOrgManagement" class="view-admin hidden">
           <div class="admin-panel-header">
             <h2>🏢 조직 관리</h2>
-            <button id="btnRefreshOrg" class="btn-refresh">새로고침</button>
+            <div class="admin-user-toolbar">
+              <button id="btnOrgSave" class="btn-primary btn-sm-action">저장</button>
+              <button id="btnOrgReset" class="btn-secondary btn-sm-action">변경 취소</button>
+              <button id="btnRefreshOrg" class="btn-refresh">새로고침</button>
+            </div>
+          </div>
+          <div id="orgPendingBanner" class="admin-pending-banner hidden">
+            변경사항 <strong id="orgPendingCount">0</strong>건이 저장 대기 중입니다. [저장] 버튼을 눌러 반영하세요.
           </div>
           <div class="org-tabs">
             <button class="org-tab active" data-tab="structure">조직 구조</button>

@@ -1,7 +1,14 @@
-fix: 사용자 관리 조직/직급/직위/직책 인라인 셀렉트 추가
+feat: 조직관리 일괄저장/접기펼치기 + 사용자관리 트리뷰 구현
 
-- 부서/직급/직위/직책 컬럼을 텍스트에서 인라인 셀렉트로 교체
-- org options(GET /api/admin/users/org-options) 기반으로 드롭다운 항목 렌더링
-- 셀렉트 변경 시 groupCode + displayName 동시 갱신 (ORG_CODE_TO_DISPLAY 맵)
-- buildOrgInlineSelect 헬퍼 함수 신규 추가
-- inline-select-org 스타일 추가 (max-width 130px)
+- 조직관리: pending 시스템 추가 (저장/취소 버튼, 변경 배너)
+  - 추가/수정/삭제 모두 즉시 반영하지 않고 pending 마킹 후 일괄 저장
+  - 삭제 시 자식 그룹까지 재귀적으로 pending delete 처리
+  - 저장 순서: 생성(루트 우선) → 수정 → 삭제(깊은 순)
+  - 트리 노드 ▼/▶ 버튼으로 접기/펼치기 (orgExpandedSet)
+  - pending 상태별 시각적 표시 (녹색 추가/보라 수정/빨강 삭제예정)
+- 사용자관리: 조직별 트리뷰 + 접기/펼치기
+  - 기본값: 조직별 트리 보기 (회사 > 본부 > 팀 > 사용자)
+  - [📋 목록 보기] / [🏢 조직별 보기] 토글 버튼
+  - 미배정 사용자 별도 그룹으로 표시
+  - 트리 헤더 행에 팀원 수 배지 표시
+  - renderUserRow 헬퍼 함수로 flat/tree 공통 사용자 행 렌더링
