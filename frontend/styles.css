@@ -3913,6 +3913,7 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
 .inline-select.status-select option[value="ACTIVE"]   { color: #4ade80; }
 .inline-select.status-select option[value="INACTIVE"] { color: #f87171; }
 .inline-select:focus { outline: none; border-color: var(--border-focus); }
+.inline-select-org { max-width: 130px; }
 
 /* ============================================================
  * 관리자 - 조직 관리

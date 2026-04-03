@@ -7845,10 +7845,26 @@ async function loadAdminUserPage() {
   }
 }
 
+/** org options 기반 인라인 셀렉트 HTML 생성 헬퍼 */
+function buildOrgInlineSelect(field, empNo, currentCode, options, isDeleted) {
+  if (isDeleted) {
+    const found = options.find(o => o.groupCode === currentCode);
+    return `<span class="text-muted">${found ? escHtml(found.displayName) : "-"}</span>`;
+  }
+  const opts = options.map(o =>
+    `<option value="${escHtml(o.groupCode)}" ${o.groupCode === currentCode ? "selected" : ""}>${escHtml(o.displayName)}</option>`
+  ).join("");
+  return `<select class="inline-select inline-select-org" data-field="${field}" data-emp="${escHtml(empNo)}">
+    <option value="">(없음)</option>
+    ${opts}
+  </select>`;
+}
+
 function renderAdminUserTable() {
   const tbody = document.getElementById("adminUserTableBody");
   if (!tbody) return;
   const rows = buildEffectiveAdminUserList();
+  const opts = adminUserOrgOptions || { teams: [], jobLevels: [], jobPositions: [], jobTitles: [] };
 
   if (!rows.length) {
     tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:24px">등록된 사용자가 없습니다.</td></tr>`;
@@ -7861,37 +7877,49 @@ function renderAdminUserTable() {
     const isNew     = pending?.op === "create";
     const isDeleted = pending?.op === "delete";
     const isModified= pending?.op === "update";
+    const eff       = pending?.data ?? row; // 현재 반영된 데이터 (pending 우선)
     let rowClass = isNew ? "admin-row-new" : isDeleted ? "admin-row-deleted" : isModified ? "admin-row-modified" : "";
 
-    const curRole   = pending?.data?.role   ?? row.role   ?? "MEMBER";
-    const curStatus = pending?.data?.status ?? row.status ?? "ACTIVE";
+    const curRole   = eff.role   ?? "MEMBER";
+    const curStatus = eff.status ?? "ACTIVE";
+    const curTeam   = eff.teamGroupCode          ?? null;
+    const curLevel  = eff.jobLevelGroupCode      ?? null;
+    const curPos    = eff.jobPositionGroupCode   ?? null;
+    const curTitle  = eff.jobTitleGroupCode      ?? null;
+    const emp       = row.employeeNo;
+
     const createdAt = row.createdAt
       ? new Date(row.createdAt).toLocaleDateString("ko-KR", { year:"2-digit", month:"2-digit", day:"2-digit" })
       : "-";
 
     const roleSelect = isDeleted
       ? `<span class="text-muted">${curRole === "ADMIN" ? "관리자" : curRole === "MANAGER" ? "매니저" : "일반"}</span>`
-      : `<select class="inline-select" data-field="role" data-emp="${escHtml(row.employeeNo)}">
+      : `<select class="inline-select" data-field="role" data-emp="${escHtml(emp)}">
            <option value="MEMBER"  ${curRole==="MEMBER"  ? "selected" : ""}>일반</option>
            <option value="MANAGER" ${curRole==="MANAGER" ? "selected" : ""}>매니저</option>
            <option value="ADMIN"   ${curRole==="ADMIN"   ? "selected" : ""}>관리자</option>
          </select>`;
 
     const statusSelect = isDeleted
-      ? `<span class="badge badge-inactive">미사용(삭제예정)</span>`
-      : `<select class="inline-select status-select" data-field="status" data-emp="${escHtml(row.employeeNo)}">
+      ? `<span class="badge badge-inactive">삭제예정</span>`
+      : `<select class="inline-select status-select" data-field="status" data-emp="${escHtml(emp)}">
            <option value="ACTIVE"   ${curStatus==="ACTIVE"   ? "selected" : ""}>사용</option>
            <option value="INACTIVE" ${curStatus==="INACTIVE" ? "selected" : ""}>미사용</option>
          </select>`;
 
-    return `<tr class="${rowClass}" data-emp="${escHtml(row.employeeNo)}" title="우클릭: 편집/삭제">
-      <td><code class="emp-code">${escHtml(row.employeeNo)}</code></td>
+    const teamSelect  = buildOrgInlineSelect("teamGroupCode",        emp, curTeam,  opts.teams,        isDeleted);
+    const levelSelect = buildOrgInlineSelect("jobLevelGroupCode",    emp, curLevel, opts.jobLevels,    isDeleted);
+    const posSelect   = buildOrgInlineSelect("jobPositionGroupCode", emp, curPos,   opts.jobPositions, isDeleted);
+    const titleSelect = buildOrgInlineSelect("jobTitleGroupCode",    emp, curTitle, opts.jobTitles,    isDeleted);
+
+    return `<tr class="${rowClass}" data-emp="${escHtml(emp)}" title="우클릭: 편집/삭제">
+      <td><code class="emp-code">${escHtml(emp)}</code></td>
       <td>${escHtml(row.name || "")}</td>
       <td class="cell-email">${escHtml(row.email || "")}</td>
-      <td>${escHtml(row.teamDisplayName || "-")}</td>
-      <td>${escHtml(row.jobLevelDisplayName || "-")}</td>
-      <td>${escHtml(row.jobPositionDisplayName || "-")}</td>
-      <td>${escHtml(row.jobTitleDisplayName || "-")}</td>
+      <td>${teamSelect}</td>
+      <td>${levelSelect}</td>
+      <td>${posSelect}</td>
+      <td>${titleSelect}</td>
       <td>${roleSelect}</td>
       <td>${statusSelect}</td>
       <td class="cell-date">${createdAt}</td>
@@ -7988,6 +8016,21 @@ document.getElementById("btnAdminUserReset").addEventListener("click", () => {
 });
 
 // ── 인라인 셀렉트(역할/상태) 즉시 반영 ─────────────────────────────────────
+// org 그룹코드 필드 → 대응 displayName 필드 매핑
+const ORG_CODE_TO_DISPLAY = {
+  teamGroupCode:        "teamDisplayName",
+  jobLevelGroupCode:    "jobLevelDisplayName",
+  jobPositionGroupCode: "jobPositionDisplayName",
+  jobTitleGroupCode:    "jobTitleDisplayName",
+};
+// org 그룹코드 필드 → adminUserOrgOptions 키 매핑
+const ORG_CODE_TO_OPTS_KEY = {
+  teamGroupCode:        "teams",
+  jobLevelGroupCode:    "jobLevels",
+  jobPositionGroupCode: "jobPositions",
+  jobTitleGroupCode:    "jobTitles",
+};
+
 document.getElementById("adminUserTableBody").addEventListener("change", (e) => {
   const sel = e.target.closest("select[data-field]");
   if (!sel) return;
@@ -7995,16 +8038,26 @@ document.getElementById("adminUserTableBody").addEventListener("change", (e) => 
   const field = sel.dataset.field;
   const value = sel.value;
 
-  const base    = adminUserList.find(u => u.employeeNo === empNo);
+  const base     = adminUserList.find(u => u.employeeNo === empNo);
   const existing = adminUserPendingChanges.get(empNo);
   if (existing?.op === "delete") return;
 
+  // org 필드 변경 시 displayName 도 함께 갱신
+  const extraFields = {};
+  const displayField = ORG_CODE_TO_DISPLAY[field];
+  if (displayField) {
+    const optsKey  = ORG_CODE_TO_OPTS_KEY[field];
+    const optsList = adminUserOrgOptions?.[optsKey] ?? [];
+    const matched  = optsList.find(o => o.groupCode === value);
+    extraFields[displayField] = matched?.displayName ?? null;
+  }
+
   if (existing) {
-    existing.data = { ...existing.data, [field]: value };
+    existing.data = { ...existing.data, [field]: value, ...extraFields };
     if (existing.op !== "create") existing.op = "update";
     adminUserPendingChanges.set(empNo, existing);
   } else if (base) {
-    adminUserPendingChanges.set(empNo, { op: "update", data: { ...base, [field]: value } });
+    adminUserPendingChanges.set(empNo, { op: "update", data: { ...base, [field]: value, ...extraFields } });
   }
 
   const row = sel.closest("tr[data-emp]");
