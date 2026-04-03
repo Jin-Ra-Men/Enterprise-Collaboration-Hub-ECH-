@@ -68,9 +68,43 @@ if (-not $REALTIME_TOKEN) { Fatal "내부 통신 토큰은 필수입니다." }
 $INSTALL_DIR    = Ask "설치 경로" "C:\ECH"
 
 Write-Host ""
+Info "─── 파일 저장소 설정 ───"
+Info "  첨부파일을 이 서버(로컬)에 저장하려면: C:\ECH\storage (기본)"
+Info "  DB 서버(네트워크)에 저장하려면 : \\\\192.168.11.179\ECHStorage"
+$FILE_STORAGE_INPUT = Ask "파일 저장 경로 (로컬 또는 UNC)" "$INSTALL_DIR\storage"
+
+# UNC 경로 여부 판별
+$isUncStorage = $FILE_STORAGE_INPUT.StartsWith("\\")
+
+$SVC_ACCOUNT_USER = ""
+$SVC_ACCOUNT_PASS = ""
+if ($isUncStorage) {
+    Write-Host @"
+
+  [안내] 네트워크(UNC) 경로 사용 시 Windows 서비스가 네트워크에 접근할 수 있도록
+  이 서버와 DB 서버 양쪽에 동일한 로컬 계정(사용자명/비밀번호)이 필요합니다.
+
+  사전 작업:
+    1. DB 서버(192.168.11.179)에서 폴더 공유:
+       - C:\ECHStorage 폴더 생성
+       - 마우스 우클릭 → 속성 → 공유 → 고급 공유
+       - 공유 이름: ECHStorage, 권한: Everyone 또는 아래 계정에 전체 권한
+    2. 이 서버(WEB)와 DB 서버 양쪽에 동일한 로컬 계정 생성:
+       net user echsvc <비밀번호> /add
+       net localgroup Administrators echsvc /add  (또는 최소 권한)
+
+"@ -ForegroundColor Yellow
+    $SVC_ACCOUNT_USER = Ask "서비스 실행 계정 (도메인\사용자 또는 .\로컬계정)" ".\echsvc"
+    $SVC_ACCOUNT_PASS = AskPw "서비스 계정 비밀번호"
+    if (-not $SVC_ACCOUNT_PASS) { Fatal "서비스 계정 비밀번호는 필수입니다." }
+}
+
+Write-Host ""
 Info "설정 요약:"
 Info "  DB           : ${DB_USER}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 Info "  설치 경로    : $INSTALL_DIR"
+Info "  파일 저장소  : $FILE_STORAGE_INPUT"
+if ($isUncStorage) { Info "  서비스 계정  : $SVC_ACCOUNT_USER" }
 $yn = Ask "위 설정으로 진행하시겠습니까? (Y/n)" "Y"
 if ($yn.ToUpper() -ne "Y") { exit 0 }
 
@@ -313,7 +347,7 @@ $vars = [ordered]@{
     "JWT_EXPIRATION_MS"          = "28800000"
     "REALTIME_INTERNAL_TOKEN"    = $REALTIME_TOKEN
     "REALTIME_INTERNAL_BASE_URL" = "http://localhost:3001"
-    "FILE_STORAGE_DIR"           = "$INSTALL_DIR\storage".Replace('\','/')
+    "FILE_STORAGE_DIR"           = $FILE_STORAGE_INPUT.Replace('\','/')
     "APP_RELEASES_DIR"           = "$INSTALL_DIR\releases".Replace('\','/')
     "MAX_UPLOAD_SIZE"            = "500MB"
     "MAX_REQUEST_SIZE"           = "500MB"
@@ -384,6 +418,31 @@ if (-not $javaExe) { Fatal "java.exe 를 찾을 수 없습니다. Java 17 설치
 & "$nssmPath" set $svcName AppRotateBytes 10485760 | Out-Null
 & "$nssmPath" set $svcName Start SERVICE_AUTO_START | Out-Null
 & "$nssmPath" set $svcName DisplayName "ECH Backend (Spring Boot)" | Out-Null
+
+# UNC 경로 사용 시: 네트워크 접근 가능한 계정으로 서비스 실행
+if ($isUncStorage -and $SVC_ACCOUNT_USER -and $SVC_ACCOUNT_PASS) {
+    & "$nssmPath" set $svcName ObjectName "$SVC_ACCOUNT_USER" "$SVC_ACCOUNT_PASS" | Out-Null
+    Ok "서비스 계정 설정: $SVC_ACCOUNT_USER"
+    # DB 서버 네트워크 자격증명 등록 (cmdkey)
+    $uncHost = ($FILE_STORAGE_INPUT -replace '^\\\\([^\\]+).*','$1')
+    cmdkey /add:$uncHost /user:$SVC_ACCOUNT_USER /pass:$SVC_ACCOUNT_PASS | Out-Null
+    Ok "네트워크 자격증명 등록: $uncHost"
+    # 로컬 폴더 대신 UNC 연결 테스트
+    try {
+        $null = Get-ChildItem $FILE_STORAGE_INPUT -ErrorAction Stop
+        Ok "네트워크 저장소 접근 확인: $FILE_STORAGE_INPUT"
+    } catch {
+        Warn "네트워크 저장소 접근 실패 — DB 서버 공유 설정을 확인하세요: $FILE_STORAGE_INPUT"
+        Warn "서비스는 계속 등록합니다. 백엔드 기동 전 공유 설정을 완료하세요."
+    }
+} else {
+    # 로컬 저장소: storage 폴더 생성
+    $localStorage = $FILE_STORAGE_INPUT.Replace('/', '\')
+    if (-not (Test-Path $localStorage)) {
+        New-Item -ItemType Directory -Path $localStorage -Force | Out-Null
+        Ok "로컬 저장소 폴더 생성: $localStorage"
+    }
+}
 
 # 서비스에 환경변수 전달
 foreach ($k in $vars.Keys) {
