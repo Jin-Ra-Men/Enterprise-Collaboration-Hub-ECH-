@@ -8807,16 +8807,17 @@ function renderOrgChartTree(data) {
     for (const div of (co.divisions ?? [])) {
       const divDirectCnt = div.directMembers?.length ?? 0;
       const divTotalCnt  = divDirectCnt + (div.teams ?? []).reduce((s, t) => s + (t.users?.length ?? 0), 0);
-      parts.push(`<details class="orgchart-div-details" open>`);
-      parts.push(`<summary>
+      parts.push(`<div class="orgchart-div-block" data-expanded="true">`);
+      parts.push(`<div class="orgchart-div-header">
+        <button type="button" class="orgchart-div-toggle-btn"
+          data-node-type="div-toggle" data-co="${escHtml(co.name)}" data-div="${escHtml(div.name)}">▶</button>
         <button type="button" class="orgchart-div-name-btn orgchart-node-btn"
           data-node-type="division" data-co="${escHtml(co.name)}" data-div="${escHtml(div.name)}">
-          <span class="orgchart-div-toggle">▶</span>
           📂 ${escHtml(div.name)}
           ${divDirectCnt > 0 ? `<span class="orgchart-node-count orgchart-direct-badge" title="직속 ${divDirectCnt}명">직속 ${divDirectCnt}</span>` : ""}
           <span class="orgchart-node-count">${divTotalCnt}</span>
         </button>
-      </summary>`);
+      </div>`);
       parts.push(`<div class="orgchart-div-teams">`);
       for (const team of (div.teams ?? [])) {
         const cnt = team.users?.length ?? 0;
@@ -8830,7 +8831,7 @@ function renderOrgChartTree(data) {
           <span class="orgchart-node-count">${cnt}</span>
         </button>`);
       }
-      parts.push(`</div></details>`);
+      parts.push(`</div></div>`);
     }
     parts.push(`</div>`);
   }
@@ -8900,13 +8901,21 @@ document.getElementById("orgChartMemberGrid").addEventListener("click", (e) => {
 });
 
 document.getElementById("orgChartTreeScroll").addEventListener("click", (e) => {
-  // summary 클릭 시 details 토글은 브라우저가 처리하지만, 내부 버튼 클릭은 직접 처리
-  const btn = e.target.closest(".orgchart-node-btn");
-  if (!btn || !orgChartData) return;
+  if (!orgChartData) return;
 
-  // details > summary 안의 버튼: 클릭해도 details가 토글되지 않도록 막음
-  const summary = btn.closest("summary");
-  if (summary) e.preventDefault();
+  // ── 토글 버튼: 본부 접기/펼치기만 처리 ──────────────────────────────
+  const toggleBtn = e.target.closest(".orgchart-div-toggle-btn");
+  if (toggleBtn) {
+    const block = toggleBtn.closest(".orgchart-div-block");
+    if (block) {
+      block.dataset.expanded = block.dataset.expanded === "true" ? "false" : "true";
+    }
+    return;
+  }
+
+  // ── 노드 버튼: 멤버 표시 ─────────────────────────────────────────────
+  const btn = e.target.closest(".orgchart-node-btn");
+  if (!btn) return;
 
   const nodeType = btn.dataset.nodeType;
   const coName   = btn.dataset.co;
@@ -8932,19 +8941,14 @@ document.getElementById("orgChartTreeScroll").addEventListener("click", (e) => {
       if (co.name !== coName) continue;
       const div = (co.divisions ?? []).find(d => d.name === divName);
       if (div) {
-        nodeLabel   = div.name + " (직속)";
+        nodeLabel   = div.name;
         nodeMembers = div.directMembers ?? [];
       }
       break;
     }
-    // details 토글 직접 처리
-    if (summary) {
-      const details = summary.closest("details");
-      if (details) details.open = !details.open;
-    }
   } else if (nodeType === "company") {
     const co = (orgChartData.companies ?? []).find(c => c.name === coName);
-    if (co) { nodeLabel = co.name + " (직속)"; nodeMembers = co.directMembers ?? []; }
+    if (co) { nodeLabel = co.name; nodeMembers = co.directMembers ?? []; }
   }
 
   if (nodeMembers === null) return;

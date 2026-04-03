@@ -4286,16 +4286,23 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
   color: var(--accent, #7c3aed);
   font-size: 10px;
 }
-.orgchart-div-details { margin-left: 8px; }
-.orgchart-div-details > summary {
-  list-style: none;
-  padding: 0;
-  user-select: none;
+/* 본부 블록: details 대신 div + data-expanded 방식 사용 */
+.orgchart-div-block { margin-left: 8px; }
+.orgchart-div-header { display: flex; align-items: center; gap: 2px; }
+.orgchart-div-toggle-btn {
+  flex-shrink: 0;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; border-radius: 4px;
+  font-size: 10px; color: var(--text-muted);
+  cursor: pointer;
+  transition: background .12s, transform .15s;
 }
-.orgchart-div-details > summary::-webkit-details-marker { display: none; }
+.orgchart-div-toggle-btn:hover { background: var(--bg-sidebar-hover); }
+.orgchart-div-block[data-expanded="true"] .orgchart-div-toggle-btn { transform: rotate(90deg); }
 .orgchart-div-name-btn {
   display: flex; align-items: center; gap: 6px;
-  width: 100%; padding: 5px 10px;
+  flex: 1; padding: 5px 8px;
   font-size: 12px; font-weight: 600;
   color: var(--text-secondary);
   background: transparent; border: none;
@@ -4308,12 +4315,7 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
   color: var(--sidebar-item-fg-strong);
   font-weight: 700;
 }
-.orgchart-div-toggle {
-  font-size: 10px; color: var(--text-muted);
-  transition: transform .15s;
-  flex-shrink: 0;
-}
-.orgchart-div-details[open] > summary .orgchart-div-toggle { transform: rotate(90deg); }
+.orgchart-div-block[data-expanded="false"] > .orgchart-div-teams { display: none; }
 .orgchart-div-teams { padding-left: 8px; }
 
 .orgchart-team-btn {
