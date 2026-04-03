@@ -8,6 +8,9 @@
 - **desktop(Electron)**: `package.json`에 `repository` URL 추가, `build:win`을 `electron-builder --win nsis --publish never`로 변경해 빌드 말미 `publish.provider` null 오류로 실패하던 문제 방지
 - **GitHub Release**: `v0.0.1` 릴리즈에 Windows NSIS 설치 파일(`ECH Setup 0.0.1.exe`) 업로드
 
+### Fixed
+- **Electron 설치형 흰 화면**: `electron-builder`가 프로젝트 밖 `../frontend/*` 경로를 asar에 넣지 않아 `app.asar`에 프론트가 비어 있었음 — `files`에 `from`/`to`로 `frontend/` 전체를 패키지에 포함하고, `main.js`에서 패키지 내 `frontend/index.html` 우선 로드
+
 ## 2026-04-02
 
 ### Added

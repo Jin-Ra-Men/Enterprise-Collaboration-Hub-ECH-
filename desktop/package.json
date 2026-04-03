@@ -25,9 +25,11 @@
     "files": [
       "main.js",
       "preload.js",
-      "../frontend/index.html",
-      "../frontend/styles.css",
-      "../frontend/app.js"
+      {
+        "from": "../frontend",
+        "to": "frontend",
+        "filter": ["**/*"]
+      }
     ],
     "asar": true,
     "win": {

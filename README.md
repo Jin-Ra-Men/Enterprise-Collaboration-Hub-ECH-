@@ -238,3 +238,4 @@ npm start
 ```
 
 - Electron으로 실행하면 브라우저 `Notification` 권한 요청 없이도 OS 알림을 띄우도록 구성되어 있습니다(Windows 알림센터 기준).
+- Windows 설치 파일(NSIS): `desktop`에서 `npm run build:win` → `desktop/dist/ECH Setup 0.0.1.exe`. 패키지에는 상위 `frontend/` 전체가 `electron-builder` `files`의 `from`/`to`로 `app.asar` 안 `frontend/`에 포함되며, 설치형에서 흰 화면만 보이면 이 포함 여부·`main.js`의 `index.html` 경로를 확인합니다.

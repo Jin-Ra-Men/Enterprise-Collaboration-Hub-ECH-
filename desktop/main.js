@@ -1,3 +1,4 @@
+const fs = require("fs");
 const path = require("path");
 const { app, BrowserWindow, ipcMain, Notification } = require("electron");
 
@@ -16,7 +17,9 @@ function createMainWindow() {
     },
   });
 
-  const indexPath = path.join(__dirname, "..", "frontend", "index.html");
+  const indexInPackage = path.join(__dirname, "frontend", "index.html");
+  const indexInDev = path.join(__dirname, "..", "frontend", "index.html");
+  const indexPath = fs.existsSync(indexInPackage) ? indexInPackage : indexInDev;
   mainWindow.loadFile(indexPath);
 }
 
