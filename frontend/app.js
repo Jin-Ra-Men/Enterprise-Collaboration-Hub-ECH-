@@ -6476,17 +6476,39 @@ function renderKanbanBoard(board) {
         cardEl.classList.remove("kanban-card-dragging");
         delete cardEl.dataset.dragSourceColumnId;
         kanbanDnDSourceColumnId = null;
+        boardEl.querySelectorAll(".kanban-column.kanban-column-drag-over").forEach((c) =>
+          c.classList.remove("kanban-column-drag-over")
+        );
       }, 0);
     });
   });
-  boardEl.querySelectorAll(".kanban-card-list").forEach((listEl) => {
-    listEl.addEventListener("dragover", (ev) => {
+  /** DnD on whole column: `.kanban-card-list` used to be height = cards only, so empty space below cards never received dragover/drop. */
+  boardEl.querySelectorAll(".kanban-column").forEach((colEl) => {
+    const listEl = colEl.querySelector(".kanban-card-list");
+    if (!listEl) return;
+    const clearColumnDragOver = () => {
+      boardEl.querySelectorAll(".kanban-column.kanban-column-drag-over").forEach((c) =>
+        c.classList.remove("kanban-column-drag-over")
+      );
+    };
+    const handleDragOver = (ev) => {
       ev.preventDefault();
+      try {
+        ev.dataTransfer.dropEffect = "move";
+      } catch (_) {
+        /* ignore */
+      }
       const dragging = boardEl.querySelector(".kanban-card-dragging");
       if (!dragging) return;
+      clearColumnDragOver();
+      colEl.classList.add("kanban-column-drag-over");
       listEl.querySelector(".empty-notice")?.remove();
       const cards = [...listEl.querySelectorAll(".kanban-card-item:not(.kanban-card-dragging)")];
       cards.forEach((c) => c.classList.remove("kanban-drop-before"));
+      if (!cards.length) {
+        listEl.appendChild(dragging);
+        return;
+      }
       const next = cards.find((c) => ev.clientY <= c.getBoundingClientRect().top + c.offsetHeight / 2);
       if (next) {
         next.classList.add("kanban-drop-before");
@@ -6494,12 +6516,20 @@ function renderKanbanBoard(board) {
       } else {
         listEl.appendChild(dragging);
       }
-    });
-    listEl.addEventListener("dragleave", () => {
-      [...listEl.querySelectorAll(".kanban-card-item")].forEach((c) => c.classList.remove("kanban-drop-before"));
-    });
-    listEl.addEventListener("drop", async (ev) => {
+    };
+    colEl.addEventListener("dragenter", (ev) => {
       ev.preventDefault();
+    });
+    colEl.addEventListener("dragover", handleDragOver);
+    colEl.addEventListener("dragleave", (ev) => {
+      if (!colEl.contains(ev.relatedTarget)) {
+        colEl.classList.remove("kanban-column-drag-over");
+      }
+    });
+    colEl.addEventListener("drop", async (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      colEl.classList.remove("kanban-column-drag-over");
       boardEl.querySelectorAll(".kanban-drop-before").forEach((c) => c.classList.remove("kanban-drop-before"));
       syncKanbanBoardFromDomFull(boardEl);
       syncKanbanDraftsOrderFromDom(boardEl);

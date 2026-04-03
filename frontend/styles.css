@@ -2718,9 +2718,13 @@ html[data-theme="light"] .theme-option-btn.active {
   max-width: 100%;
   overflow: hidden;
   flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
 }
 .kanban-column h5 {
   margin: 0 0 8px;
+  flex-shrink: 0;
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -2730,6 +2734,9 @@ html[data-theme="light"] .theme-option-btn.active {
   gap: 8px;
   min-width: 0;
   overflow-x: hidden;
+  flex: 1 1 auto;
+  align-self: stretch;
+  min-height: 8rem;
 }
 .kanban-card-item {
   border: 1px solid var(--border-subtle);
@@ -2993,8 +3000,12 @@ html[data-theme="light"] .theme-option-btn.active {
 }
 .kanban-card-list {
   max-height: none;
-  min-height: 44px;
+  min-height: 8rem;
   overflow: hidden;
+}
+.kanban-column.kanban-column-drag-over {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
 }
 
 @media (max-width: 640px) {

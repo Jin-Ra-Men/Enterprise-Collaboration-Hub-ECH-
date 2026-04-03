@@ -510,6 +510,7 @@
   - 칸반 카드는 컬럼 내 세로 순서뿐 아니라 **컬럼 간 드래그앤드롭**으로 이동 가능. 드롭 시 출발·도착 컬럼의 순서·컬럼 임시 상태를 반영하고, **저장** 시 컬럼이 바뀐 카드에 대해 `PUT .../kanban/cards/{id}`에 `columnId`와 함께 컬럼에 대응하는 `status`(`OPEN`/`IN_PROGRESS`/`DONE`, 기본 3컬럼은 정렬 순 0·1·2)를 함께 보낸다
   - 카드가 **연결된 업무(`work_item_id`)** 가 있을 때, 드래그앤드롭·카드 행 컬럼 셀렉트·카드 상세에서 컬럼을 바꾸면 프론트의 **`workHubPendingWorkStatus`**(업무 목록 저장용)도 동일 컬럼 기준 `statusForKanbanColumnId`로 맞춘다. 그렇지 않으면 업무 행은 예전 상태(예: 진행 중)를 **저장**에 실어 보내 카드는 완료 컬럼인데 업무 상태만 어긋날 수 있다
   - 드롭 직후에는 보드 **모든 컬럼**의 카드 순서·`columnId` pending을 DOM에서 다시 읽고(`syncKanbanBoardFromDomFull`), 카드 하단 컬럼 `<select>` 값을 카드가 실제로 들어 있는 컬럼(`data-column-id`)과 맞춘다 — `dragend`/`drop` 이벤트 순서 차이로 셀렉트만 어긋나는 현상 방지
+  - 드래그앤드롭 타깃은 **`.kanban-card-list`만**이 아니라 **`section.kanban-column` 전체**(`dragover`/`drop` on column, 리스트는 컬럼 높이를 채워 카드 아래 빈 영역에서도 수신). 컬럼에 점선 강조(`.kanban-column-drag-over`)
 - 상태 전이/예외 케이스:
   - 비멤버 조회/생성/수정 시 예외
   - `sourceMessageId` 지정 시 다른 채널 메시지를 참조하면 생성 거부
