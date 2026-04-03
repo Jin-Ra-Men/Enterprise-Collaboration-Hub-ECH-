@@ -237,11 +237,35 @@ if ($hbaContent -match [regex]::Escape($newRule)) {
 Title "5단계 — PostgreSQL 서비스 재시작"
 
 if ($pgService) {
-    Restart-Service $pgService -Force
-    Start-Sleep -Seconds 3
+    # Stop → 완전 정지 대기 → Start 순서로 처리 (Restart-Service 는 간혹 실패)
+    Info "서비스 중지 중..."
+    Stop-Service $pgService -Force -ErrorAction SilentlyContinue
+    $waited = 0
+    while ((Get-Service $pgService).Status -ne "Stopped" -and $waited -lt 20) {
+        Start-Sleep -Seconds 2; $waited += 2
+    }
+
+    Info "서비스 시작 중..."
+    Start-Service $pgService -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 5
+
     $svcStatus = (Get-Service $pgService).Status
-    if ($svcStatus -eq "Running") { Ok "PostgreSQL 재시작 완료 (Running)" }
-    else { Fatal "PostgreSQL 재시작 실패. 서비스 상태: $svcStatus" }
+    if ($svcStatus -eq "Running") {
+        Ok "PostgreSQL 재시작 완료 (Running)"
+    } else {
+        # 로그 파일에서 마지막 오류 출력
+        $logDir = Join-Path (Split-Path $pgData -Parent) "data\log"
+        if (-not (Test-Path $logDir)) { $logDir = "$pgData\log" }
+        $lastLog = Get-ChildItem $logDir -Filter "*.log" -ErrorAction SilentlyContinue |
+                   Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        Write-Host "`n  [PostgreSQL 최근 로그]" -ForegroundColor Yellow
+        if ($lastLog) {
+            Get-Content $lastLog.FullName -Tail 20 | ForEach-Object { Write-Host "  $_" -ForegroundColor Yellow }
+        } else {
+            Write-Host "  로그 파일을 찾을 수 없습니다. 경로: $logDir" -ForegroundColor Yellow
+        }
+        Fatal "PostgreSQL 시작 실패 (상태: $svcStatus). 위 로그를 확인하세요."
+    }
 } else {
     Warn "PostgreSQL 서비스를 찾을 수 없습니다. 수동으로 재시작해 주세요."
 }
