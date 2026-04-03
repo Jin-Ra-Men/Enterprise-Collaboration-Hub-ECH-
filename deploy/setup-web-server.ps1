@@ -178,30 +178,80 @@ if ($javaOk) {
 # ════════════════════════════════════════════
 Title "3단계 — Node.js 확인"
 
-$nodeOk = $false
-try {
-    $nver = & node -v 2>&1
-    if ($nver -match "v\d+\." -and [int]($nver -replace "v(\d+)\..*",'$1') -ge 18) { $nodeOk = $true }
-} catch {}
+# PATH 새로고침 (수동 설치 직후 세션에 반영되지 않을 수 있음)
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+
+function Find-NodeExeOnDisk {
+    $candidates = @(
+        $env:NODE_HOME,
+        "C:\Program Files\nodejs",
+        "C:\Program Files (x86)\nodejs"
+    )
+    foreach ($base in $candidates) {
+        if (-not $base -or -not (Test-Path $base)) { continue }
+        $exe = Join-Path $base "node.exe"
+        if (Test-Path $exe) { return $exe }
+    }
+    # AppData\Roaming\nvm 또는 기타 경로 추가 탐색
+    $found = Get-ChildItem -Path "C:\Program Files" -Recurse -Filter "node.exe" -ErrorAction SilentlyContinue |
+             Select-Object -First 1
+    if ($found) { return $found.FullName }
+    return $null
+}
+
+function Test-NodeVersion {
+    try {
+        $nver = & node -v 2>&1
+        if ($nver -match "v(\d+)\." -and [int]$Matches[1] -ge 18) { return $true }
+    } catch {}
+    return $false
+}
+
+$nodeOk = Test-NodeVersion
 
 if ($nodeOk) {
+    $nver = & node -v 2>&1
     Ok "Node.js 이미 설치됨 ($nver)"
 } else {
     Info "Node.js LTS 설치 중 (winget)..."
+    $wingetNodeOk = $false
     try {
-        winget install --id OpenJS.NodeJS.LTS -e --silent --accept-package-agreements --accept-source-agreements
-        Ok "Node.js 설치 완료"
-    } catch {
+        winget install --id OpenJS.NodeJS.LTS -e --silent --accept-package-agreements --accept-source-agreements 2>&1 | Out-Null
+        $wingetNodeOk = $true
+        Ok "Node.js 설치 완료 (winget)"
+    } catch {}
+
+    if (-not $wingetNodeOk) {
         Write-Host @"
 
   [!!] winget 으로 Node.js 자동 설치에 실패했습니다.
-  수동 설치:
-    https://nodejs.org/ 에서 LTS 버전 설치 후 재실행하세요.
+  수동 설치 방법:
+    인터넷 되는 PC 에서 아래 URL 다운로드 후 이 서버에 복사/설치하세요.
+    https://nodejs.org/dist/v20.19.0/node-v20.19.0-x64.msi  (Node.js v20 LTS)
+    설치 후 PowerShell 창을 닫고 관리자 권한으로 다시 실행하세요.
 
 "@ -ForegroundColor Yellow
-        Fatal "Node.js 설치 필요"
     }
+
+    # PATH 새로고침 후 재확인
     $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+    $nodeOk = Test-NodeVersion
+
+    if (-not $nodeOk) {
+        # Program Files 직접 탐색 (수동 설치 경로)
+        $diskNode = Find-NodeExeOnDisk
+        if ($diskNode) {
+            $nodeDir = Split-Path $diskNode
+            $env:Path = "$nodeDir;$env:Path"
+            [System.Environment]::SetEnvironmentVariable("Path", "$nodeDir;" + [System.Environment]::GetEnvironmentVariable("Path","Machine"), "Machine")
+            Ok "Node.js 발견 (디스크 탐색): $diskNode"
+            $nodeOk = $true
+        }
+    }
+
+    if (-not $nodeOk) {
+        Fatal "Node.js v18 이상을 찾을 수 없습니다. 설치 후 PowerShell 창을 닫고 다시 관리자 권한으로 실행하세요."
+    }
 }
 
 # ════════════════════════════════════════════
