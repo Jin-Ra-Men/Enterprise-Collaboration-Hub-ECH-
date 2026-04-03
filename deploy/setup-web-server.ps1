@@ -369,23 +369,49 @@ Title "6단계 — Spring Boot Windows 서비스 등록 (NSSM)"
 
 $nssmPath = "$INSTALL_DIR\tools\nssm.exe"
 if (-not (Test-Path $nssmPath)) {
-    Info "NSSM 다운로드 중..."
-    try {
-        $nssmUrl = "https://nssm.cc/release/nssm-2.24.zip"
-        $nssmZip = "$env:TEMP\nssm.zip"
-        Invoke-WebRequest -Uri $nssmUrl -OutFile $nssmZip -UseBasicParsing
-        Expand-Archive -Path $nssmZip -DestinationPath "$env:TEMP\nssm-extract" -Force
-        $nssmExe = Get-ChildItem "$env:TEMP\nssm-extract" -Recurse -Filter "nssm.exe" |
-                   Where-Object { $_.FullName -match "win64" } |
-                   Select-Object -First 1
-        if (-not $nssmExe) {
-            $nssmExe = Get-ChildItem "$env:TEMP\nssm-extract" -Recurse -Filter "nssm.exe" | Select-Object -First 1
+    New-Item -ItemType Directory -Path "$INSTALL_DIR\tools" -Force | Out-Null
+
+    # 1순위: 배포 패키지 내 tools\nssm.exe (build-package.ps1 이 포함시킨 것)
+    $pkgNssm = Join-Path $scriptDir "tools\nssm.exe"
+    if (Test-Path $pkgNssm) {
+        Copy-Item $pkgNssm $nssmPath -Force
+        Ok "NSSM 패키지에서 복사: $nssmPath"
+    } else {
+        # 2순위: 인터넷 다운로드 시도
+        Info "NSSM 다운로드 중..."
+        $downloaded = $false
+        try {
+            $nssmUrl = "https://nssm.cc/release/nssm-2.24.zip"
+            $nssmZip = "$env:TEMP\nssm.zip"
+            Invoke-WebRequest -Uri $nssmUrl -OutFile $nssmZip -UseBasicParsing -TimeoutSec 30
+            Expand-Archive -Path $nssmZip -DestinationPath "$env:TEMP\nssm-extract" -Force
+            $nssmExe = Get-ChildItem "$env:TEMP\nssm-extract" -Recurse -Filter "nssm.exe" |
+                       Where-Object { $_.FullName -match "win64" } |
+                       Select-Object -First 1
+            if (-not $nssmExe) {
+                $nssmExe = Get-ChildItem "$env:TEMP\nssm-extract" -Recurse -Filter "nssm.exe" | Select-Object -First 1
+            }
+            Copy-Item $nssmExe.FullName $nssmPath -Force
+            Ok "NSSM 다운로드 완료"
+            $downloaded = $true
+        } catch {}
+
+        if (-not $downloaded) {
+            Write-Host @"
+
+  [!!] NSSM 을 찾을 수 없습니다.
+  해결 방법 (택1):
+
+  A) 개발 PC 에서 build-package.ps1 을 다시 실행하면 tools\nssm.exe 가
+     ECH-deploy.zip 에 자동 포함됩니다. ZIP 을 다시 받아 압축 해제 후 재실행하세요.
+
+  B) 인터넷 되는 PC 에서 아래 URL 다운로드 후 이 서버에 복사:
+     https://nssm.cc/release/nssm-2.24.zip
+     압축 해제 → win64\nssm.exe 를 $nssmPath 에 복사 후 재실행하세요.
+
+"@ -ForegroundColor Yellow
+            Fatal "NSSM 설치 필요"
         }
-        Copy-Item $nssmExe.FullName $nssmPath -Force
-        Ok "NSSM 다운로드 완료"
-    } catch {
-        Warn "NSSM 자동 다운로드 실패. 수동으로 https://nssm.cc/download 에서 nssm.exe 를 $nssmPath 에 복사 후 재실행하세요."
-        Fatal "NSSM 다운로드 실패"
     }
 } else {
     Ok "NSSM 이미 존재: $nssmPath"

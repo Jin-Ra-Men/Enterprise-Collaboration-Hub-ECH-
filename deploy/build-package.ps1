@@ -79,6 +79,33 @@ if (Test-Path "$deploy\nginx.conf") {
 }
 Ok "설정 파일 복사"
 
+# ── NSSM 미리 다운로드 (인터넷 가능한 개발 PC에서 패키지에 포함) ──
+Title "2-1단계 — NSSM 다운로드 (패키지 포함용)"
+New-Item -ItemType Directory -Path "$outDir\tools" -Force | Out-Null
+$nssmLocal = "$outDir\tools\nssm.exe"
+if (Test-Path $nssmLocal) {
+    Ok "NSSM 이미 존재 (캐시): $nssmLocal"
+} else {
+    Info "NSSM 다운로드 중..."
+    try {
+        $nssmZip = "$env:TEMP\nssm-pkg.zip"
+        Invoke-WebRequest -Uri "https://nssm.cc/release/nssm-2.24.zip" -OutFile $nssmZip -UseBasicParsing
+        Expand-Archive -Path $nssmZip -DestinationPath "$env:TEMP\nssm-pkg-extract" -Force
+        $nssmExe = Get-ChildItem "$env:TEMP\nssm-pkg-extract" -Recurse -Filter "nssm.exe" |
+                   Where-Object { $_.FullName -match "win64" } |
+                   Select-Object -First 1
+        if (-not $nssmExe) {
+            $nssmExe = Get-ChildItem "$env:TEMP\nssm-pkg-extract" -Recurse -Filter "nssm.exe" | Select-Object -First 1
+        }
+        Copy-Item $nssmExe.FullName $nssmLocal -Force
+        Remove-Item "$env:TEMP\nssm-pkg-extract" -Recurse -Force -ErrorAction SilentlyContinue
+        Ok "NSSM 패키지 포함 완료: tools\nssm.exe"
+    } catch {
+        Warn "NSSM 자동 다운로드 실패 — 수동으로 https://nssm.cc/download 에서 nssm.exe(64bit)를"
+        Warn "  $nssmLocal  에 복사한 뒤 zip 재생성이 필요합니다."
+    }
+}
+
 # ── 3. ZIP 압축 ──────────────────────────────────────────────
 Title "3단계 — ZIP 패키지 생성"
 if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
