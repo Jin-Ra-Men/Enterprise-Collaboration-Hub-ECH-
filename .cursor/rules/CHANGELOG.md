@@ -12,6 +12,7 @@
 - **내 업무 항목**: 비활성(`in_use=false`) 업무는 `GET .../sidebar/by-assigned-cards`에서 제외
 
 ### Fixed
+- **칸반 DnD(Chrome) 행 컬럼 `<select>` 불일치**: 카드 `article` 전체 `draggable` 대신 제목 줄 **`⋮⋮` 드래그 핸들**(`.kanban-card-drag-handle`)만 `draggable` — 자식 `<select>`가 draggable 조상 안에 있을 때 이동 후 표시가 어긋나는 브라우저 동작 회피(`frontend/app.js`, `frontend/styles.css`)
 - **칸반 DnD만 사용 시 행 컬럼 `<select>` 불일치(추가)**: 이동한 `<select>`에 `selectedIndex`로 컬럼 옵션을 강제 지정(`applyKanbanColumnSelectToColumnId`); 호스트 컬럼 id는 **카드·셀렉트 각각 `closest(.kanban-column)`** 폴백; `drop` 후 **`setTimeout(0)` 한 틱** 뒤 `sync*` 재실행으로 dragend/DOM 안정화 이후 재동기화(`frontend/app.js`)
 - **칸반 DnD 후 셀렉트 불일치**: 컬럼 `drop` 처리에서 **`loadChannelKanbanBoard`(풀 렌더) 호출 제거** — 드래그로 DOM 위치는 이미 반영되므로 `sync*`·`loadChannelWorkItems`만 수행해 연속 DnD 시 GET 재렌더 레이스를 제거; 렌더 시 행 `<select>` 기본값은 **`data-render-column-id` 우선**(`frontend/app.js`)
 - **칸반 연속 DnD**: 컬럼 `drop` 직후 **이중 `requestAnimationFrame` 대기 전**에 fetch 세대를 한 번 더 올려, 직전 드롭의 느린 GET 응답이 다음 드롭 DOM을 덮어쓰지 않게 함; 컬럼 `<select>` `change`에도 동일 선제 bump(`frontend/app.js`)

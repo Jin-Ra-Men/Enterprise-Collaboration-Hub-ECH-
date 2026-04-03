@@ -6307,7 +6307,14 @@ function ensureKanbanBoardAssigneeUiBound() {
   kanbanBoardAssigneeUiBound = true;
   root.addEventListener("click", async (e) => {
     const cardItem = e.target.closest(".kanban-card-item");
-    if (cardItem && !e.target.closest(".kanban-card-delete-btn") && !e.target.closest(".kanban-card-column-select") && !e.target.closest(".kanban-assignee-add") && !e.target.closest(".kanban-assignee-remove")) {
+    if (
+      cardItem &&
+      !e.target.closest(".kanban-card-drag-handle") &&
+      !e.target.closest(".kanban-card-delete-btn") &&
+      !e.target.closest(".kanban-card-column-select") &&
+      !e.target.closest(".kanban-assignee-add") &&
+      !e.target.closest(".kanban-assignee-remove")
+    ) {
       const raw = String(cardItem.dataset.cardRawId || "");
       const isDraft = cardItem.dataset.isDraft === "1";
       openKanbanCardDetailModal(raw, isDraft);
@@ -6525,6 +6532,7 @@ function renderKanbanBoard(board) {
                     return `
               <article class="kanban-card-item${wiInactive ? " kanban-card-item-inactive" : ""}" data-kanban-card-id="${isDraft ? "" : Number(card.id)}" data-render-column-id="${Number(col.id)}" data-work-item-id="${Number.isFinite(workItemIdVal) && workItemIdVal > 0 ? workItemIdVal : ""}" data-card-raw-id="${escHtml(cardRawId)}" data-is-draft="${isDraft ? "1" : "0"}">
                 <div class="kanban-card-item-header">
+                  <span class="kanban-card-drag-handle" draggable="true" role="button" tabindex="0" title="드래그하여 이동" aria-label="드래그하여 카드 이동">⋮⋮</span>
                   <strong>${escHtml(effectiveTitle || "(제목 없음)")}</strong>
                   <button type="button" class="btn-icon-delete kanban-card-delete-btn" data-card-id="${escHtml(cardRawId)}" data-is-draft="${isDraft ? "1" : "0"}" title="삭제" aria-label="삭제">✕</button>
                 </div>
@@ -6609,9 +6617,11 @@ function renderKanbanBoard(board) {
       void Promise.all([loadChannelKanbanBoard(), loadChannelWorkItems()]);
     });
   });
-  boardEl.querySelectorAll(".kanban-card-item").forEach((cardEl) => {
-    cardEl.setAttribute("draggable", "true");
-    cardEl.addEventListener("dragstart", (ev) => {
+  // Drag handle only (not the whole card): Chrome mis-syncs `<select>` inside a `draggable="true"` ancestor after moves.
+  boardEl.querySelectorAll(".kanban-card-drag-handle").forEach((handleEl) => {
+    handleEl.addEventListener("dragstart", (ev) => {
+      const cardEl = handleEl.closest(".kanban-card-item");
+      if (!cardEl) return;
       const dt = ev.dataTransfer;
       if (dt) {
         dt.setData("application/x-ech-kanban-card", "1");
@@ -6621,13 +6631,21 @@ function renderKanbanBoard(board) {
           /* ignore */
         }
         dt.effectAllowed = "move";
+        try {
+          const cr = cardEl.getBoundingClientRect();
+          dt.setDragImage(cardEl, ev.clientX - cr.left, ev.clientY - cr.top);
+        } catch (_) {
+          /* ignore */
+        }
       }
       cardEl.classList.add("kanban-card-dragging");
       const srcCol = Number(cardEl.closest(".kanban-column")?.dataset.columnId || 0) || null;
       kanbanDnDSourceColumnId = srcCol;
       cardEl.dataset.dragSourceColumnId = srcCol != null ? String(srcCol) : "";
     });
-    cardEl.addEventListener("dragend", () => {
+    handleEl.addEventListener("dragend", () => {
+      const cardEl = handleEl.closest(".kanban-card-item");
+      if (!cardEl) return;
       // Let `drop` run first in browsers that fire dragend early; avoids incomplete sync & stale column <select>.
       setTimeout(() => {
         cardEl.classList.remove("kanban-card-dragging");
