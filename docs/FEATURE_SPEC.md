@@ -510,6 +510,7 @@
   - 칸반 카드는 컬럼 내 세로 순서뿐 아니라 **컬럼 간 드래그앤드롭**으로 이동 가능. 드롭 시 출발·도착 컬럼의 순서·컬럼 임시 상태를 반영하고, **저장** 시 컬럼이 바뀐 카드에 대해 `PUT .../kanban/cards/{id}`에 `columnId`와 함께 컬럼에 대응하는 `status`(`OPEN`/`IN_PROGRESS`/`DONE`, 기본 3컬럼은 정렬 순 0·1·2)를 함께 보낸다
   - 카드가 **연결된 업무(`work_item_id`)** 가 있을 때, 드래그앤드롭·카드 행 컬럼 셀렉트·카드 상세에서 컬럼을 바꾸면 프론트의 **`workHubPendingWorkStatus`**(업무 목록 저장용)도 동일 컬럼 기준 `statusForKanbanColumnId`로 맞춘다. 그렇지 않으면 업무 행은 예전 상태(예: 진행 중)를 **저장**에 실어 보내 카드는 완료 컬럼인데 업무 상태만 어긋날 수 있다
   - 드롭 직후에는 보드 **모든 컬럼**의 카드 순서·`columnId` pending을 DOM에서 다시 읽고(`syncKanbanBoardFromDomFull`), 카드 하단 컬럼 `<select>` 값을 카드가 실제로 들어 있는 컬럼(`data-column-id`)과 맞춘다 — `dragend`/`drop` 이벤트 순서 차이로 셀렉트만 어긋나는 현상 방지
+  - `loadChannelKanbanBoard()`는 DnD·저장·셀렉트 변경 등으로 **동시에 여러 번** 호출될 수 있다. 채널별 **요청 세대(`kanbanBoardFetchGenByChannelId`)**를 두어, 늦게 완료된 **오래된 응답**은 `renderKanbanBoard`를 호출하지 않게 해 카드 컬럼과 행 `<select>`가 다시 어긋나는 간헐 현상을 막는다(동기 XHR로 바꿀 필요 없음)
   - 드래그앤드롭 타깃은 **`.kanban-card-list`만**이 아니라 **`section.kanban-column` 전체**(`dragover`/`drop` on column, 리스트는 컬럼 높이를 채워 카드 아래 빈 영역에서도 수신). 컬럼에 점선 강조(`.kanban-column-drag-over`)
   - 카드 `<article>`에 **`data-render-column-id`**(렌더 버킷 컬럼 id)를 두어 행 하단 컬럼 `<select>` 표시값이 실제 칸과 일치하도록 함. 드래그 데이터는 **`application/x-ech-kanban-card`**(및 빈 `text/plain`)로 두어 검색 `input` 등에 실수로 놓을 때 문자열이 끼어드는 것을 방지하고, 업무 허브 캡처에서 해당 입력류 위 `drop`을 막음
 - 상태 전이/예외 케이스:

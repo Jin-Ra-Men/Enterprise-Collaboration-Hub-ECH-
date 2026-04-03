@@ -205,6 +205,21 @@ let selectedAddMembers = [];  // 기존 채널에 추가할 사용자
 let activeWorkHubBoardId = null;
 let activeWorkHubFirstColumnId = null;
 let activeWorkHubColumns = [];
+/** Per-channel generation for `GET .../kanban/channels/{id}/board` — stale responses must not call `renderKanbanBoard`. */
+const kanbanBoardFetchGenByChannelId = Object.create(null);
+
+function bumpKanbanBoardFetchGeneration(channelId) {
+  const k = String(channelId);
+  const next = (kanbanBoardFetchGenByChannelId[k] || 0) + 1;
+  kanbanBoardFetchGenByChannelId[k] = next;
+  return next;
+}
+
+function kanbanBoardFetchIsStale(channelId, myGen) {
+  if (getWorkHubChannelId() !== Number(channelId)) return true;
+  const current = kanbanBoardFetchGenByChannelId[String(channelId)] || 0;
+  return current !== myGen;
+}
 /** 칸반 카드 담당자 표시명 캐시(사번 → 이름) */
 const kanbanAssigneeNameCache = Object.create(null);
 let kanbanBoardAssigneeUiBound = false;
@@ -6651,14 +6666,17 @@ function renderKanbanBoard(board) {
 async function loadChannelKanbanBoard() {
   const cid = getWorkHubChannelId();
   if (!cid || !currentUser) return;
+  const myGen = bumpKanbanBoardFetchGeneration(cid);
   const res = await apiFetch(
     `/api/kanban/channels/${cid}/board?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`
   );
   const json = await res.json().catch(() => ({}));
+  if (kanbanBoardFetchIsStale(cid, myGen)) return;
   if (!res.ok) {
     throw new Error(json.error?.message || "칸반 보드 조회 실패");
   }
   const board = json.data || {};
+  if (kanbanBoardFetchIsStale(cid, myGen)) return;
   activeWorkHubBoardId = Number(board.id) || null;
   renderKanbanBoard(board);
 }
