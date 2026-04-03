@@ -4,12 +4,18 @@ import com.ech.backend.api.admin.user.dto.AdminUserListItemResponse;
 import com.ech.backend.api.admin.user.dto.AdminUserSaveRequest;
 import com.ech.backend.api.admin.user.dto.OrgGroupOptionResponse;
 import com.ech.backend.common.exception.NotFoundException;
+import com.ech.backend.domain.channel.ChannelRepository;
+import com.ech.backend.domain.file.ChannelFileRepository;
+import com.ech.backend.domain.kanban.KanbanBoardRepository;
+import com.ech.backend.domain.kanban.KanbanCardEventRepository;
+import com.ech.backend.domain.message.MessageRepository;
 import com.ech.backend.domain.org.OrgGroup;
 import com.ech.backend.domain.org.OrgGroupMember;
 import com.ech.backend.domain.org.OrgGroupMemberRepository;
 import com.ech.backend.domain.org.OrgGroupRepository;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
+import com.ech.backend.domain.work.WorkItemRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -27,17 +33,35 @@ public class AdminUserService {
     private final OrgGroupRepository orgGroupRepository;
     private final OrgGroupMemberRepository orgGroupMemberRepository;
     private final PasswordEncoder passwordEncoder;
+    private final KanbanCardEventRepository kanbanCardEventRepository;
+    private final KanbanBoardRepository kanbanBoardRepository;
+    private final WorkItemRepository workItemRepository;
+    private final MessageRepository messageRepository;
+    private final ChannelFileRepository channelFileRepository;
+    private final ChannelRepository channelRepository;
 
     public AdminUserService(
             UserRepository userRepository,
             OrgGroupRepository orgGroupRepository,
             OrgGroupMemberRepository orgGroupMemberRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            KanbanCardEventRepository kanbanCardEventRepository,
+            KanbanBoardRepository kanbanBoardRepository,
+            WorkItemRepository workItemRepository,
+            MessageRepository messageRepository,
+            ChannelFileRepository channelFileRepository,
+            ChannelRepository channelRepository
     ) {
         this.userRepository = userRepository;
         this.orgGroupRepository = orgGroupRepository;
         this.orgGroupMemberRepository = orgGroupMemberRepository;
         this.passwordEncoder = passwordEncoder;
+        this.kanbanCardEventRepository = kanbanCardEventRepository;
+        this.kanbanBoardRepository = kanbanBoardRepository;
+        this.workItemRepository = workItemRepository;
+        this.messageRepository = messageRepository;
+        this.channelFileRepository = channelFileRepository;
+        this.channelRepository = channelRepository;
     }
 
     @Transactional(readOnly = true)
@@ -113,11 +137,34 @@ public class AdminUserService {
         return toResponse(user);
     }
 
+    /**
+     * 사용자 완전 삭제.
+     * users.employee_no를 참조하는 FK 중 ON DELETE CASCADE가 없는 테이블을 먼저 정리한 후 삭제한다.
+     *
+     * 삭제 순서:
+     *  1) kanban_card_events  (actor_user_id FK, 캐스케이드 없음)
+     *  2) work_items          (created_by FK + 삭제될 채널의 source_channel_id FK, 캐스케이드 없음)
+     *  3) kanban_boards       (created_by FK → 컬럼→카드→담당자·이벤트 CASCADE)
+     *  4) messages            (sender_id FK, 캐스케이드 없음)
+     *  5) channel_files       (uploaded_by FK, 캐스케이드 없음)
+     *  6) channels            (created_by FK → 멤버·메시지·읽음상태·파일 CASCADE)
+     *  7) users               (org_group_members·channel_members 등 CASCADE로 자동 정리)
+     */
     @Transactional
     public void deleteUser(String employeeNo) {
-        User user = userRepository.findByEmployeeNo(employeeNo.trim())
-                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다: " + employeeNo));
-        userRepository.delete(user);
+        String empNo = employeeNo.trim();
+        userRepository.findByEmployeeNo(empNo)
+                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다: " + empNo));
+
+        kanbanCardEventRepository.deleteByActorEmployeeNo(empNo);
+        workItemRepository.deleteBySourceChannelCreatorEmployeeNo(empNo);
+        workItemRepository.deleteByCreatorEmployeeNo(empNo);
+        kanbanBoardRepository.deleteByCreatorEmployeeNo(empNo);
+        messageRepository.deleteBySenderEmployeeNo(empNo);
+        channelFileRepository.deleteByUploaderEmployeeNo(empNo);
+        channelRepository.deleteByCreatorEmployeeNo(empNo);
+
+        userRepository.deleteByEmployeeNo(empNo);
     }
 
     @Transactional(readOnly = true)

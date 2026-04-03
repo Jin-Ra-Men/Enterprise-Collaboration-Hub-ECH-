@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -36,4 +37,22 @@ public interface WorkItemRepository extends JpaRepository<WorkItem, Long> {
             ORDER BY w.createdAt DESC
             """)
     List<WorkItem> searchByKeyword(@Param("keyword") String keyword, Pageable pageable);
+
+    /** 사용자 삭제: 해당 사용자가 생성한 work_item 삭제 */
+    @Modifying
+    @Query(value = "DELETE FROM work_items WHERE created_by = :empNo", nativeQuery = true)
+    void deleteByCreatorEmployeeNo(@Param("empNo") String employeeNo);
+
+    /**
+     * 사용자 삭제: 삭제 대상 채널에 연결된 work_item 삭제
+     * (channels.created_by 기준, work_items에 ON DELETE CASCADE가 없으므로 선제 삭제 필요)
+     */
+    @Modifying
+    @Query(value = """
+            DELETE FROM work_items
+            WHERE source_channel_id IN (
+                SELECT id FROM channels WHERE created_by = :empNo
+            )
+            """, nativeQuery = true)
+    void deleteBySourceChannelCreatorEmployeeNo(@Param("empNo") String employeeNo);
 }

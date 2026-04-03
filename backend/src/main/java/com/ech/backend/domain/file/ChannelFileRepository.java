@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -30,4 +31,9 @@ public interface ChannelFileRepository extends JpaRepository<ChannelFile, Long> 
     List<ChannelFile> searchInJoinedChannels(@Param("keyword") String keyword,
                                               @Param("employeeNo") String employeeNo,
                                               Pageable pageable);
+
+    /** 사용자 삭제: 해당 사용자가 업로드한 파일 메타데이터 삭제 (FK 해소) */
+    @Modifying
+    @Query(value = "DELETE FROM channel_files WHERE uploaded_by = :empNo", nativeQuery = true)
+    void deleteByUploaderEmployeeNo(@Param("empNo") String employeeNo);
 }

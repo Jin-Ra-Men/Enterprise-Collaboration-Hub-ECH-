@@ -97,4 +97,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
             @Param("employeeNo") String employeeNo,
             @Param("themePreference") String themePreference
     );
+
+    @Modifying
+    @Query("DELETE FROM User u WHERE u.employeeNo = :employeeNo")
+    void deleteByEmployeeNo(@Param("employeeNo") String employeeNo);
 }

@@ -4,6 +4,18 @@
 
 ## 2026-04-03
 
+### Fixed
+- **사용자 완전 삭제 시 DB 제약 위반 오류 해소**
+  - `AdminUserService.deleteUser()` — 단순 `delete()` 대신 FK 순서에 맞는 연쇄 삭제 로직으로 교체
+  - 삭제 순서: kanban_card_events → work_items(채널 기준) → work_items(생성자 기준) → kanban_boards → messages → channel_files → channels → users
+  - `KanbanCardEventRepository.deleteByActorEmployeeNo()` 네이티브 쿼리 추가
+  - `KanbanBoardRepository.deleteByCreatorEmployeeNo()` 네이티브 쿼리 추가
+  - `WorkItemRepository.deleteByCreatorEmployeeNo()` / `deleteBySourceChannelCreatorEmployeeNo()` 추가
+  - `MessageRepository.deleteBySenderEmployeeNo()` 네이티브 쿼리 추가
+  - `ChannelFileRepository.deleteByUploaderEmployeeNo()` 네이티브 쿼리 추가
+  - `ChannelRepository.deleteByCreatorEmployeeNo()` 네이티브 쿼리 추가
+  - `UserRepository.deleteByEmployeeNo()` JPQL 쿼리 추가
+
 ### Changed
 - **조직 그룹 `group_path` 저장 형식 변경: 표시명+슬래시 → 코드+세미콜론**
   - 변경 전: `코비젼/CS사업본부/CS영업팀` (display_name + `/`)

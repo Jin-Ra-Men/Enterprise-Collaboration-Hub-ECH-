@@ -1,0 +1,19 @@
+fix: 사용자 삭제 시 DB 제약 위반 오류 해소
+
+users.employee_no를 참조하는 FK에 ON DELETE CASCADE가 없는 테이블을
+FK 의존 순서에 맞게 먼저 삭제하는 연쇄 삭제 로직 구현
+
+삭제 순서:
+  1. kanban_card_events (actor_user_id FK)
+  2. work_items — 삭제될 채널 소속 (source_channel_id FK)
+  3. work_items — 생성자 기준 (created_by FK)
+  4. kanban_boards (created_by FK, CASCADE → 컬럼·카드·담당자·이벤트)
+  5. messages (sender_id FK)
+  6. channel_files (uploaded_by FK)
+  7. channels (created_by FK, CASCADE → 멤버·메시지·읽음상태·파일)
+  8. users (CASCADE → org_group_members 등)
+
+각 Repository에 @Modifying 네이티브/JPQL 쿼리 추가:
+  KanbanCardEventRepository, KanbanBoardRepository,
+  WorkItemRepository, MessageRepository,
+  ChannelFileRepository, ChannelRepository, UserRepository

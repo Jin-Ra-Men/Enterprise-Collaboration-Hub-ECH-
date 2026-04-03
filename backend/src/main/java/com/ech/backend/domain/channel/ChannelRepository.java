@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -38,4 +39,9 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
     List<Channel> searchByKeywordInJoinedChannels(@Param("keyword") String keyword,
                                                   @Param("employeeNo") String employeeNo,
                                                   Pageable pageable);
+
+    /** 사용자 삭제: 해당 사용자가 생성한 채널 전체 삭제 (멤버·메시지·읽음상태·파일 CASCADE) */
+    @Modifying
+    @Query(value = "DELETE FROM channels WHERE created_by = :empNo", nativeQuery = true)
+    void deleteByCreatorEmployeeNo(@Param("empNo") String employeeNo);
 }

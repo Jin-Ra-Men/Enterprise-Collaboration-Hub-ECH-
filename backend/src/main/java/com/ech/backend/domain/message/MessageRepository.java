@@ -257,4 +257,9 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
                     """,
             nativeQuery = true)
     List<Long> findThreadRootIdsByChannelOrderByLastActivity(@Param("channelId") long channelId, @Param("lim") int lim);
+
+    /** 사용자 삭제: 해당 사용자가 발송한 메시지 전체 삭제 (채널 삭제 전 FK 해소) */
+    @Modifying
+    @Query(value = "DELETE FROM messages WHERE sender_id = :empNo", nativeQuery = true)
+    void deleteBySenderEmployeeNo(@Param("empNo") String employeeNo);
 }
