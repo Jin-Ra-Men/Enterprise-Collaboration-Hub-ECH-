@@ -10,6 +10,9 @@
 - **테마 팝업**: 옵션 2열 그리드·폭 정리로 빈 칸 제거
 - **내 업무 항목**: 비활성(`in_use=false`) 업무는 `GET .../sidebar/by-assigned-cards`에서 제외
 
+### Fixed
+- **로그인 아이디 저장**: `.login-form label`·`input { width:100% }`가 체크박스까지 적용되어 클릭 영역이 과대·세로로 깨지던 문제 — `.login-form label.login-remember`(`inline-flex`·`width:fit-content`)·`input[type=checkbox]`로 재정의, 마크업 순서 `아이디 저장` + 체크박스
+
 ### Added
 - **Windows 로컬 기동**: 루트 `start-ech-dev.bat`(헬스 확인 후 미기동 서버만 새 창에서 실행), `tools/start-ech-backend.bat`, `tools/start-ech-realtime.bat`; `README.md`·`docs/ENVIRONMENT_SETUP.md` 안내
 - **로그인**: 아이디 저장(`localStorage`)
