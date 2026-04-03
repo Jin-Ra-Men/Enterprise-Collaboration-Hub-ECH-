@@ -12,6 +12,8 @@
 - **내 업무 항목**: 비활성(`in_use=false`) 업무는 `GET .../sidebar/by-assigned-cards`에서 제외
 
 ### Fixed
+- **칸반 DnD**: 카드가 옮겨진 컬럼과 행 **컬럼 `<select>`** 불일치 — 렌더 시 `data-render-column-id`(컬럼 버킷)를 두고 셀렉트 기본값을 그 id로 고정; `syncKanbanCardColumnSelectsFromDom`에서 pending도 `closest(.kanban-column)` 기준으로 갱신
+- **칸반 DnD**: 드래그 시작 시 `text/plain: kanban-card` 대신 **`application/x-ech-kanban-card`** + 빈 `text/plain`, 업무 허브에서 **input/textarea/select/contenteditable** 위 드롭 시 `preventDefault`로 검색창 등에 문자열이 들어가지 않게 함
 - **칸반 DnD**: 드롭이 카드·셀렉트 바로 아래 좁은 영역에서만 잡히던 문제 — `.kanban-column` 전체에 `dragover`/`drop` 연결, `.kanban-card-list`는 컬럼 내 **세로로 확장**(flex·`min-height`)해 빈 공간에서도 드롭 가능; 컬럼 강조(`.kanban-column-drag-over`)
 - **업무·칸반 허브**: 칸반 DnD 후 카드는 옮겨졌는데 행 **컬럼 셀렉트**만 이전 컬럼(예: 완료)에 머물던 문제 — 드롭 시 **전 컬럼 DOM** 기준 `syncKanbanBoardFromDomFull`, 셀렉트를 호스트 컬럼과 맞춤(`syncKanbanCardColumnSelectsFromDom`), 렌더 시 `pending` 없으면 `select`의 `.kanban-column` 부모 id 폴백, `dragend` 정리를 `setTimeout(0)`로 지연해 `drop`과 레이스 완화
 - **업무·칸반 허브**: 칸반 카드만 컬럼 이동(DnD/셀렉트)했을 때 연결 **업무 항목**의 pending 상태가 갱신되지 않아, **저장** 시 카드는 완료 컬럼·업무는 진행 중 등으로 엇갈리던 문제 — 이동한 컬럼에 맞춰 `workHubPendingWorkStatus` 동기화, DnD 후 업무 목록도 다시 렌더

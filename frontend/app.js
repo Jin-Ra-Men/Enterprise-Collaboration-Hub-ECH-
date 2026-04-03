@@ -5244,6 +5244,60 @@ function syncKanbanBoardFromDomFull(boardEl) {
   syncKanbanBoardPartial(boardEl, ids);
 }
 
+/** Prevent accidental drop of a kanban card onto search inputs / textareas (would insert drag text). */
+function ensureKanbanDragInputGuard() {
+  if (ensureKanbanDragInputGuard._done) return;
+  ensureKanbanDragInputGuard._done = true;
+  const hub = document.getElementById("modalWorkHub");
+  if (!hub) return;
+  const isKanbanCardDrag = (ev) => {
+    const types = ev.dataTransfer?.types;
+    if (!types) return false;
+    if (typeof types.contains === "function") return types.contains("application/x-ech-kanban-card");
+    return Array.from(types).includes("application/x-ech-kanban-card");
+  };
+  hub.addEventListener(
+    "dragover",
+    (ev) => {
+      if (!ev.target.closest("#channelKanbanBoard")) return;
+      const el = ev.target;
+      if (
+        (el instanceof HTMLInputElement ||
+          el instanceof HTMLTextAreaElement ||
+          el instanceof HTMLSelectElement ||
+          el.isContentEditable) &&
+        (isKanbanCardDrag(ev) || document.querySelector("#channelKanbanBoard .kanban-card-dragging"))
+      ) {
+        ev.preventDefault();
+        try {
+          ev.dataTransfer.dropEffect = "none";
+        } catch (_) {
+          /* ignore */
+        }
+      }
+    },
+    true
+  );
+  hub.addEventListener(
+    "drop",
+    (ev) => {
+      if (!ev.target.closest("#channelKanbanBoard")) return;
+      const el = ev.target;
+      if (
+        (el instanceof HTMLInputElement ||
+          el instanceof HTMLTextAreaElement ||
+          el instanceof HTMLSelectElement ||
+          el.isContentEditable) &&
+        (isKanbanCardDrag(ev) || document.querySelector("#channelKanbanBoard .kanban-card-dragging"))
+      ) {
+        ev.preventDefault();
+        ev.stopPropagation();
+      }
+    },
+    true
+  );
+}
+
 /** Keep per-card column dropdown in sync with the `.kanban-column` that contains the card (avoids stale <select> after DOM moves). */
 function syncKanbanCardColumnSelectsFromDom(boardEl) {
   if (!boardEl) return;
@@ -5254,6 +5308,8 @@ function syncKanbanCardColumnSelectsFromDom(boardEl) {
     const colId = Number(cardEl.closest(".kanban-column")?.dataset.columnId || 0);
     if (!colId) return;
     sel.value = String(colId);
+    const cid = Number(del.dataset.cardId || "");
+    if (Number.isFinite(cid)) workHubPendingCardColumn.set(cid, colId);
   });
 }
 
@@ -6295,6 +6351,7 @@ function ensureKanbanBoardAssigneeUiBound() {
 function renderKanbanBoard(board) {
   const boardEl = document.getElementById("channelKanbanBoard");
   if (!boardEl) return;
+  ensureKanbanDragInputGuard();
   const cols = Array.isArray(board?.columns) ? board.columns : [];
   activeWorkHubColumns = cols;
   activeWorkHubFirstColumnId = cols.length ? Number(cols[0].id) : null;
@@ -6391,7 +6448,7 @@ function renderKanbanBoard(board) {
                         ? `<div class="kanban-card-work-ref muted">${escHtml(workItemTitleForKanbanCard(workItemIdVal))}</div>`
                         : "";
                     return `
-              <article class="kanban-card-item${wiInactive ? " kanban-card-item-inactive" : ""}" data-kanban-card-id="${isDraft ? "" : Number(card.id)}" data-work-item-id="${Number.isFinite(workItemIdVal) && workItemIdVal > 0 ? workItemIdVal : ""}" data-card-raw-id="${escHtml(cardRawId)}" data-is-draft="${isDraft ? "1" : "0"}">
+              <article class="kanban-card-item${wiInactive ? " kanban-card-item-inactive" : ""}" data-kanban-card-id="${isDraft ? "" : Number(card.id)}" data-render-column-id="${Number(col.id)}" data-work-item-id="${Number.isFinite(workItemIdVal) && workItemIdVal > 0 ? workItemIdVal : ""}" data-card-raw-id="${escHtml(cardRawId)}" data-is-draft="${isDraft ? "1" : "0"}">
                 <div class="kanban-card-item-header">
                   <strong>${escHtml(effectiveTitle || "(제목 없음)")}</strong>
                   <button type="button" class="btn-icon-delete kanban-card-delete-btn" data-card-id="${escHtml(cardRawId)}" data-is-draft="${isDraft ? "1" : "0"}" title="삭제" aria-label="삭제">✕</button>
@@ -6430,13 +6487,14 @@ function renderKanbanBoard(board) {
     } else {
       const cardId = Number(rawId);
       const card = effectiveSavedCards.find((c) => Number(c.id) === cardId);
+      const article = sel.closest(".kanban-card-item");
+      const renderCol = Number(article?.dataset.renderColumnId || 0);
       const pending = workHubPendingCardColumn.get(cardId);
-      const hostColId = Number(sel.closest(".kanban-column")?.dataset.columnId || 0);
       const resolved =
-        pending != null
-          ? Number(pending)
-          : hostColId > 0
-            ? hostColId
+        renderCol > 0
+          ? renderCol
+          : pending != null
+            ? Number(pending)
             : Number(card?.columnId || 0);
       sel.value = String(resolved);
     }
@@ -6464,7 +6522,16 @@ function renderKanbanBoard(board) {
   boardEl.querySelectorAll(".kanban-card-item").forEach((cardEl) => {
     cardEl.setAttribute("draggable", "true");
     cardEl.addEventListener("dragstart", (ev) => {
-      ev.dataTransfer?.setData("text/plain", "kanban-card");
+      const dt = ev.dataTransfer;
+      if (dt) {
+        dt.setData("application/x-ech-kanban-card", "1");
+        try {
+          dt.setData("text/plain", "");
+        } catch (_) {
+          /* ignore */
+        }
+        dt.effectAllowed = "move";
+      }
       cardEl.classList.add("kanban-card-dragging");
       const srcCol = Number(cardEl.closest(".kanban-column")?.dataset.columnId || 0) || null;
       kanbanDnDSourceColumnId = srcCol;
