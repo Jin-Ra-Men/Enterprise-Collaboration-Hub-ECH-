@@ -280,11 +280,21 @@ if (Test-Path $pm2Src) {
 
 # realtime npm install
 Info "리얼타임 의존성 설치 중 (npm install)..."
-Push-Location "$INSTALL_DIR\realtime"
-try {
-    & npm install --omit=dev 2>&1 | Out-Null
+$npmLogDir = "$INSTALL_DIR\logs"
+if (-not (Test-Path $npmLogDir)) { New-Item -ItemType Directory -Path $npmLogDir -Force | Out-Null }
+$npmProc = Start-Process -FilePath "npm" `
+    -ArgumentList "install", "--omit=dev" `
+    -WorkingDirectory "$INSTALL_DIR\realtime" `
+    -RedirectStandardOutput "$npmLogDir\npm-install-out.log" `
+    -RedirectStandardError  "$npmLogDir\npm-install-err.log" `
+    -Wait -PassThru -NoNewWindow
+if ($npmProc.ExitCode -eq 0) {
     Ok "npm install 완료"
-} finally { Pop-Location }
+} else {
+    Warn "npm install 실패 (exit=$($npmProc.ExitCode)) — 로그: $npmLogDir\npm-install-err.log"
+    Get-Content "$npmLogDir\npm-install-err.log" -ErrorAction SilentlyContinue | Select-Object -Last 10 | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
+    Fatal "npm install 실패. 위 오류 내용을 확인하세요."
+}
 
 # ════════════════════════════════════════════
 # 5. 시스템 환경변수 등록
