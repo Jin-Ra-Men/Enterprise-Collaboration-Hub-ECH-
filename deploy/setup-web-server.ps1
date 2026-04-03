@@ -299,35 +299,39 @@ if (-not (Test-Path $jarSrc)) { Fatal "JAR 파일이 없습니다: $jarSrc`nbuil
 Copy-Item $jarSrc "$INSTALL_DIR\backend\ech-backend.jar" -Force
 Ok "백엔드 JAR 복사"
 
-# realtime
+# realtime (node_modules 포함 전체 복사)
 $realtimeSrc = Join-Path $scriptDir "realtime"
 if (-not (Test-Path $realtimeSrc)) { Fatal "realtime 폴더가 없습니다: $realtimeSrc" }
 Copy-Item "$realtimeSrc\*" "$INSTALL_DIR\realtime\" -Recurse -Force
 Ok "리얼타임 소스 복사"
 
-# PM2 설정 파일 복사
-$pm2Src = Join-Path $scriptDir "pm2.ecosystem.config.cjs"
-if (Test-Path $pm2Src) {
-    Copy-Item $pm2Src "$INSTALL_DIR\realtime\pm2.ecosystem.config.cjs" -Force
-    Ok "PM2 설정 파일 복사"
-}
-
-# realtime npm install
-Info "리얼타임 의존성 설치 중 (npm install)..."
+# node_modules 존재 확인 — 없으면 npm install 시도 (인터넷 필요)
 $npmLogDir = "$INSTALL_DIR\logs"
 if (-not (Test-Path $npmLogDir)) { New-Item -ItemType Directory -Path $npmLogDir -Force | Out-Null }
-$npmProc = Start-Process -FilePath "npm" `
-    -ArgumentList "install", "--omit=dev" `
-    -WorkingDirectory "$INSTALL_DIR\realtime" `
-    -RedirectStandardOutput "$npmLogDir\npm-install-out.log" `
-    -RedirectStandardError  "$npmLogDir\npm-install-err.log" `
-    -Wait -PassThru -NoNewWindow
-if ($npmProc.ExitCode -eq 0) {
-    Ok "npm install 완료"
+if (Test-Path "$INSTALL_DIR\realtime\node_modules\socket.io") {
+    Ok "node_modules 확인 (패키지 포함분 사용)"
 } else {
-    Warn "npm install 실패 (exit=$($npmProc.ExitCode)) — 로그: $npmLogDir\npm-install-err.log"
-    Get-Content "$npmLogDir\npm-install-err.log" -ErrorAction SilentlyContinue | Select-Object -Last 10 | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
-    Fatal "npm install 실패. 위 오류 내용을 확인하세요."
+    Warn "node_modules 없음 — npm install 시도 중 (인터넷 필요)..."
+    $npmProc = Start-Process -FilePath "npm" `
+        -ArgumentList "install", "--omit=dev" `
+        -WorkingDirectory "$INSTALL_DIR\realtime" `
+        -RedirectStandardOutput "$npmLogDir\npm-install-out.log" `
+        -RedirectStandardError  "$npmLogDir\npm-install-err.log" `
+        -Wait -PassThru -NoNewWindow
+    if ($npmProc.ExitCode -eq 0) {
+        Ok "npm install 완료"
+    } else {
+        Write-Host @"
+
+  [!!] npm install 실패 — 인터넷 없는 서버에서는 개발 PC에서 아래를 실행 후
+       ECH-deploy.zip 을 다시 만들어야 합니다:
+
+       .\deploy\build-package.ps1   (node_modules 자동 포함)
+
+"@ -ForegroundColor Yellow
+        Get-Content "$npmLogDir\npm-install-err.log" -ErrorAction SilentlyContinue | Select-Object -Last 10 | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
+        Fatal "node_modules 설치 실패"
+    }
 }
 
 # ════════════════════════════════════════════

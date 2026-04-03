@@ -58,8 +58,23 @@ New-Item -ItemType Directory "$outDir\realtime" | Out-Null
 Copy-Item $jarFile.FullName "$outDir\backend\ech-backend.jar"
 Ok "JAR 복사: ech-backend.jar"
 
-# realtime 복사 (node_modules 제외)
-$realtimeSrc = Get-ChildItem $realtime -Exclude "node_modules"
+# realtime node_modules 사전 설치 (개발 PC 인터넷 활용)
+Title "1-1단계 — realtime npm install (패키지 포함용)"
+$realtimeNodeModules = "$realtime\node_modules"
+if (-not (Test-Path $realtimeNodeModules)) {
+    Info "node_modules 없음 — npm install 실행 중..."
+    $npmProc = Start-Process -FilePath "npm" `
+        -ArgumentList "install", "--omit=dev" `
+        -WorkingDirectory $realtime `
+        -Wait -PassThru -NoNewWindow
+    if ($npmProc.ExitCode -ne 0) { Fatal "npm install 실패 (exit=$($npmProc.ExitCode))" }
+    Ok "npm install 완료"
+} else {
+    Ok "node_modules 이미 존재 — 재사용"
+}
+
+# realtime 전체 복사 (node_modules 포함)
+$realtimeSrc = Get-ChildItem $realtime
 foreach ($item in $realtimeSrc) {
     if ($item.PSIsContainer) {
         Copy-Item $item.FullName "$outDir\realtime\$($item.Name)" -Recurse
@@ -67,7 +82,7 @@ foreach ($item in $realtimeSrc) {
         Copy-Item $item.FullName "$outDir\realtime\"
     }
 }
-Ok "realtime 소스 복사"
+Ok "realtime 소스 + node_modules 복사"
 
 # 설정 파일 복사
 Copy-Item "$deploy\env.prod"                      "$outDir\"
