@@ -482,57 +482,59 @@ if ($st -eq "Running") { Ok "ECH-Backend 서비스 시작 완료" }
 else { Warn "서비스 상태: $st — 잠시 후 확인하세요 (Spring Boot 초기 기동에 10~20초 소요)" }
 
 # ════════════════════════════════════════════
-# 7. PM2 설치 및 리얼타임 서비스 등록
+# 7. NSSM 으로 리얼타임 서비스 등록 (PM2 불필요)
 # ════════════════════════════════════════════
-Title "7단계 — PM2 리얼타임 서비스 등록"
+Title "7단계 — 리얼타임 서버 Windows 서비스 등록 (NSSM)"
 
-# PM2 설치 확인
-$pm2Ok = $false
-try { & pm2 -v 2>&1 | Out-Null; $pm2Ok = $true } catch {}
-if (-not $pm2Ok) {
-    Info "PM2 전역 설치 중..."
-    & npm install -g pm2 2>&1 | Out-Null
-    & npm install -g pm2-windows-service 2>&1 | Out-Null
-    Ok "PM2 설치 완료"
-} else { Ok "PM2 이미 설치됨" }
+# node.exe 경로 탐색
+$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+$nodeCmdObj = Get-Command node -ErrorAction SilentlyContinue
+$nodeExe = if ($nodeCmdObj) { $nodeCmdObj.Source } else { $null }
+if (-not $nodeExe) {
+    $nodeExe = Find-NodeExeOnDisk
+}
+if (-not $nodeExe) { Fatal "node.exe 를 찾을 수 없습니다. Node.js 설치 후 재실행하세요." }
+Ok "node.exe 경로: $nodeExe"
 
-# PM2 ecosystem 파일 환경변수 업데이트 (실제 값으로 치환)
-$pm2Config = "$INSTALL_DIR\realtime\pm2.ecosystem.config.cjs"
-if (Test-Path $pm2Config) {
-    $cfg = Get-Content $pm2Config -Raw
-    $cfg = $cfg -replace '"CHANGE_ME_STRONG_PASSWORD"', "`"$DB_PASSWORD`""
-    $cfg = $cfg -replace '"CHANGE_ME_INTERNAL_SECRET"', "`"$REALTIME_TOKEN`""
-    $cfg = $cfg -replace '"192\.168\.11\.179"', "`"$DB_HOST`""
-    $cfg = $cfg -replace 'cwd: "C:/ECH/realtime"', "cwd: `"$($INSTALL_DIR.Replace('\','/') + '/realtime')`""
-    $cfg = $cfg -replace 'C:/ECH/logs', $INSTALL_DIR.Replace('\','/') + '/logs'
-    Set-Content $pm2Config $cfg -Encoding UTF8
-    Ok "PM2 설정 파일 업데이트"
+# 기존 서비스 제거
+$rtSvcName = "ECH-Realtime"
+$rtExisting = Get-Service $rtSvcName -ErrorAction SilentlyContinue
+if ($rtExisting) {
+    Stop-Service $rtSvcName -Force -ErrorAction SilentlyContinue
+    & "$nssmPath" remove $rtSvcName confirm | Out-Null
+    Warn "기존 서비스 '$rtSvcName' 제거"
 }
 
-# 기존 PM2 프로세스 정리
-Push-Location "$INSTALL_DIR\realtime"
-try {
-    & pm2 delete ech-realtime 2>&1 | Out-Null
-} catch {}
-& pm2 start pm2.ecosystem.config.cjs 2>&1 | Out-Null
-& pm2 save 2>&1 | Out-Null
-Ok "PM2 ech-realtime 시작 및 저장"
-Pop-Location
+# NSSM 서비스 등록
+& "$nssmPath" install $rtSvcName "$nodeExe" | Out-Null
+& "$nssmPath" set $rtSvcName AppParameters "src/server.js" | Out-Null
+& "$nssmPath" set $rtSvcName AppDirectory "$INSTALL_DIR\realtime" | Out-Null
+& "$nssmPath" set $rtSvcName AppStdout "$INSTALL_DIR\logs\realtime-out.log" | Out-Null
+& "$nssmPath" set $rtSvcName AppStderr "$INSTALL_DIR\logs\realtime-error.log" | Out-Null
+& "$nssmPath" set $rtSvcName AppRotateFiles 1 | Out-Null
+& "$nssmPath" set $rtSvcName AppRotateBytes 10485760 | Out-Null
+& "$nssmPath" set $rtSvcName Start SERVICE_AUTO_START | Out-Null
+& "$nssmPath" set $rtSvcName DisplayName "ECH Realtime (Socket.IO)" | Out-Null
 
-# Windows 서비스로 등록
-$pm2SvcExists = Get-Service "PM2" -ErrorAction SilentlyContinue
-if (-not $pm2SvcExists) {
-    try {
-        & pm2-service-install -n "PM2" 2>&1 | Out-Null
-        Start-Service "PM2" -ErrorAction SilentlyContinue
-        Ok "PM2 Windows 서비스 등록 완료"
-    } catch {
-        Warn "PM2 Windows 서비스 자동 등록 실패. 수동으로: pm2-service-install"
-    }
-} else {
-    Restart-Service "PM2" -ErrorAction SilentlyContinue
-    Ok "PM2 서비스 재시작"
+# 리얼타임 서버 환경변수 주입
+$rtVars = [ordered]@{
+    "DB_HOST"                 = $DB_HOST
+    "DB_PORT"                 = $DB_PORT
+    "DB_NAME"                 = $DB_NAME
+    "DB_USER"                 = $DB_USER
+    "DB_PASSWORD"             = $DB_PASSWORD
+    "SOCKET_PORT"             = "3001"
+    "REALTIME_INTERNAL_TOKEN" = $REALTIME_TOKEN
 }
+foreach ($k in $rtVars.Keys) {
+    & "$nssmPath" set $rtSvcName AppEnvironmentExtra "+$k=$($rtVars[$k])" | Out-Null
+}
+
+Start-Service $rtSvcName
+Start-Sleep -Seconds 3
+$rtSt = (Get-Service $rtSvcName).Status
+if ($rtSt -eq "Running") { Ok "ECH-Realtime 서비스 시작 완료" }
+else { Warn "서비스 상태: $rtSt — 로그 확인: $INSTALL_DIR\logs\realtime-error.log" }
 
 # ════════════════════════════════════════════
 # 8. 방화벽 설정
@@ -572,7 +574,7 @@ else { Warn "백엔드 응답 없음. 로그 확인: $INSTALL_DIR\logs\backend-e
 try {
     $r = Invoke-WebRequest -Uri "http://localhost:3001/health" -UseBasicParsing -TimeoutSec 5
     if ($r.StatusCode -eq 200) { Ok "리얼타임 응답 확인: http://localhost:3001/health" }
-} catch { Warn "리얼타임 응답 없음. pm2 list 로 상태 확인하세요." }
+} catch { Warn "리얼타임 응답 없음. 로그 확인: $INSTALL_DIR\logs\realtime-error.log" }
 
 # ── 완료 ─────────────────────────────────────────────────────
 Write-Host @"
@@ -594,8 +596,9 @@ Write-Host @"
     Start-Service ECH-Backend       # 백엔드 시작
     Stop-Service ECH-Backend        # 백엔드 중지
     Restart-Service ECH-Backend     # 백엔드 재시작
-    pm2 list                        # 리얼타임 상태
-    pm2 restart ech-realtime        # 리얼타임 재시작
+    Start-Service ECH-Realtime      # 리얼타임 시작
+    Stop-Service ECH-Realtime       # 리얼타임 중지
+    Restart-Service ECH-Realtime    # 리얼타임 재시작
 
 "@ -ForegroundColor Green
 
