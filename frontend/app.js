@@ -8891,20 +8891,27 @@ function renderOrgChartMembers(team) {
 
   grid.innerHTML = users.map(u => {
     const initial = (u.name ?? "?").charAt(0);
-    const badges  = [u.jobLevel, u.jobPosition, u.jobTitle]
+    const badges  = [u.jobLevel, u.jobTitle]
       .filter(Boolean)
       .map(b => `<span class="orgchart-badge">${escHtml(b)}</span>`)
       .join("");
-    return `<div class="orgchart-member-card">
+    return `<div class="orgchart-member-card" data-emp="${escHtml(u.employeeNo ?? "")}" title="프로필 보기">
       <div class="orgchart-member-avatar">${escHtml(initial)}</div>
       <div class="orgchart-member-info">
         <div class="orgchart-member-name">${escHtml(u.name ?? "-")}</div>
         <div class="orgchart-member-emp">${escHtml(u.employeeNo ?? "")}</div>
-        ${badges ? `<div class="orgchart-member-badges">${badges}</div>` : ""}
       </div>
+      ${badges ? `<div class="orgchart-member-badges">${badges}</div>` : ""}
     </div>`;
   }).join("");
 }
+
+document.getElementById("orgChartMemberGrid").addEventListener("click", (e) => {
+  const card = e.target.closest(".orgchart-member-card[data-emp]");
+  if (!card) return;
+  const emp = card.dataset.emp;
+  if (emp) openUserProfile(emp);
+});
 
 document.getElementById("orgChartTreeScroll").addEventListener("click", (e) => {
   // summary 클릭 시 details 토글은 브라우저가 처리하지만, 내부 버튼 클릭은 직접 처리
