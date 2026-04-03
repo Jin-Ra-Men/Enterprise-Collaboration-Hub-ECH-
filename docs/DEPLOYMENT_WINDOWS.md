@@ -392,3 +392,23 @@ WHERE setting_key = 'file.storage.base-dir';
 ```
 
 이후 `Restart-Service ECH-Backend` — 기동 로그에 `[ECH] file storage ready: C:\ECH\storage` 가 보이면 정상입니다.
+
+### UNC 공유(`\\192.168.11.179\ECHStorage` 등) 접근 확인
+
+**RDP로 웹 서버에 로그온한 관리자**가 PowerShell에서 아래가 성공해도, **NSSM 백엔드 서비스 계정**(기본 **Local System**)은 UNC에 접근하지 못하는 경우가 많습니다. 반드시 **백엔드와 동일 프로세스 권한**으로 검사하세요.
+
+1. **권장 — API 진단 (ADMIN JWT)**  
+   관리자로 웹에 로그인한 뒤 브라우저 개발자 도구 또는 `curl`로 호출:
+   ```http
+   GET /api/admin/storage/probe
+   Authorization: Bearer <관리자_액세스_토큰>
+   ```
+   응답 JSON의 `data.writable` 이 `true` 이고 `detail` 이 `"ok"` 이면, 실제 업로드와 동일하게 저장 루트에 임시 파일 쓰기·삭제까지 성공한 것입니다. `uncPath: true` 인데 `writable: false` 이면 공유 권한 또는 **서비스 실행 계정**을 `setup-web-server.ps1` 의 UNC 안내(동일 로컬 계정 `echsvc` 등)대로 맞춥니다.
+
+2. **참고 — 대화형 PowerShell만으로는 불충분**  
+   ```powershell
+   Test-Path \\192.168.11.179\ECHStorage
+   "probe" | Out-File \\192.168.11.179\ECHStorage\_ech_manual_probe.txt -Encoding utf8
+   Remove-Item \\192.168.11.179\ECHStorage\_ech_manual_probe.txt
+   ```
+   위는 **현재 로그온 사용자** 권한만 검증합니다. 백엔드 서비스 계정과 다를 수 있습니다.

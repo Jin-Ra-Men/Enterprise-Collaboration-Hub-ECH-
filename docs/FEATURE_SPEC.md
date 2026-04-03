@@ -326,6 +326,14 @@
 
 ---
 
+## 관리자 첨부 저장소 진단 (storage probe)
+- 목적: `file.storage.base-dir`(로컬·UNC)가 **백엔드 JVM** 기준으로 디렉터리 생성·임시 파일 쓰기·삭제 가능한지 확인. RDP 세션의 PowerShell 성공과 불일치(서비스 계정 ≠ 대화형 사용자)하는 UNC 문제를 줄이기 위함.
+- 사용자: `ADMIN`
+- 관련 API: `GET /api/admin/storage/probe` — 응답 `StorageProbeResponse`: `resolvedPath`, `writable`, `uncPath`, `detail`(`ok` 또는 예외 요약)
+- 테스트 기준: 관리자 토큰으로 호출 시 `writable=true`·`detail=ok`(테스트 프로파일은 임시 디렉터리 사용)
+
+---
+
 ## 관리자 버전 업그레이드 관리 (초안)
 - 목적: 관리자 페이지에서 신규 버전 배포와 롤백을 안전하게 수행
 - 사용자: `Admin`

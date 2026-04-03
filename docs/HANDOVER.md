@@ -49,7 +49,7 @@
   - Java는 `backend/`, 실시간은 `realtime/`(Express 없이 `http`+Socket.io), 데모 UI 소스는 `frontend/`(로컬에서는 `bootRun` 시 8080에서 위 3개 파일만 서빙, **`/**` 전체를 정적으로 열지 않음** — `/api/**` 가 리소스 핸들러에 먹히는 404 방지).
 - **운영·관리자**
   - 구성 요소: Java API 서버, Node 실시간 서버, PostgreSQL, (첨부는 외부 스토리지 연동 전제).
-  - **첨부 저장 경로**: DB `app_settings` 의 `file.storage.base-dir` 이 `FILE_STORAGE_DIR` 보다 우선한다. 업로드 전부 실패 시 해당 값·폴더 권한·기동 로그 `[ECH] file storage` 를 확인. 절차: `docs/DEPLOYMENT_WINDOWS.md`(트러블슈팅·SQL 예시).
+  - **첨부 저장 경로**: DB `app_settings` 의 `file.storage.base-dir` 이 `FILE_STORAGE_DIR` 보다 우선한다. 업로드 전부 실패 시 해당 값·폴더 권한·기동 로그 `[ECH] file storage` 를 확인. 절차: `docs/DEPLOYMENT_WINDOWS.md`(트러블슈팅·SQL 예시). UNC 사용 시 **백엔드 프로세스** 기준 쓰기 여부는 관리자 `GET /api/admin/storage/probe` 로 확인(대화형 PowerShell 성공과 불일치할 수 있음).
   - 가용성 확인: Backend `GET /api/health`, Realtime `GET /health`(DB 연계 여부 포함).
   - 인증·RBAC·감사·배포(WAR 업로드·롤백 등)는 로드맵 **Phase 3** 및 아래 **7)**에 예정 범위가 정리되어 있습니다.
   - 다중 서버로 Realtime을 늘릴 경우 Presence는 현재 메모리 기반이므로 공유 저장소(예: Redis) 검토가 필요합니다(아래 **6) Realtime 메모**).

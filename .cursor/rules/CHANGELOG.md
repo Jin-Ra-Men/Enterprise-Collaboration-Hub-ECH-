@@ -5,7 +5,9 @@
 ## 2026-04-03
 
 ### Added
+- **백엔드**: 관리자 `GET /api/admin/storage/probe` — 현재 `file.storage.base-dir` 에 대해 JVM 기준 쓰기·삭제 프로브(UNC·Local System 이슈 진단). 공통 로직 `FileStorageAccessProbe`
 - **백엔드**: 기동 시 첨부 저장 경로 쓰기 검사 `FileStorageStartupValidator` — 로그 `[ECH] file storage ready:` / `NOT writable`
+- **문서**: `DEPLOYMENT_WINDOWS`·`HANDOVER`·`FEATURE_SPEC`·`README` 에 프로브 API·UNC 검증 주의(대화형 PowerShell ≠ 서비스) 반영
 
 ### Changed
 - **백엔드**: `GlobalExceptionHandler` — `MaxUploadSizeExceededException` → 413 및 용량/Nginx 안내; 파일 IO 실패 메시지에 저장 경로·권한 힌트

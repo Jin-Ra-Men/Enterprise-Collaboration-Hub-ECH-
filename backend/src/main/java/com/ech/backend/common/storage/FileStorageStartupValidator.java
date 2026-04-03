@@ -1,10 +1,7 @@
 package com.ech.backend.common.storage;
 
 import com.ech.backend.api.settings.AppSettingsService;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -20,8 +17,6 @@ import org.springframework.stereotype.Component;
 public class FileStorageStartupValidator {
 
     private static final Logger log = LoggerFactory.getLogger(FileStorageStartupValidator.class);
-    private static final String WRITE_PROBE = ".ech-storage-write-probe";
-
     private final AppSettingsService appSettingsService;
 
     public FileStorageStartupValidator(AppSettingsService appSettingsService) {
@@ -35,20 +30,17 @@ public class FileStorageStartupValidator {
             log.error("[ECH] file storage dir is blank — channel file uploads will fail.");
             return;
         }
-        Path root = Paths.get(baseDir.trim()).toAbsolutePath().normalize();
-        try {
-            Files.createDirectories(root);
-            Path probe = root.resolve(WRITE_PROBE);
-            Files.writeString(probe, "ok");
-            Files.deleteIfExists(probe);
+        FileStorageAccessProbe.Result r = FileStorageAccessProbe.probe(baseDir);
+        Path root = r.resolvedAbsolutePath();
+        if (r.writable()) {
             log.info("[ECH] file storage ready: {}", root);
-        } catch (IOException e) {
+        } else {
             log.error(
-                    "[ECH] file storage NOT writable: {} — fix app_settings key "
-                            + "'file.storage.base-dir' or env FILE_STORAGE_DIR, and grant the backend "
-                            + "Windows service account write access to this folder. Error: {}",
+                    "[ECH] file storage NOT writable: {} — {}. For UNC shares, run the backend service "
+                            + "as a domain/local account that has share permissions, not Local System. "
+                            + "Admin: GET /api/admin/storage/probe",
                     root,
-                    e.getMessage()
+                    r.detail()
             );
         }
     }

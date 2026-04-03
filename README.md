@@ -177,6 +177,7 @@ graph LR
 ### 앱 기초설정 (app_settings)
 - 관리자 화면 **설정** 탭에서 목록 조회·값 수정·**신규 키 추가** (`POST /api/admin/settings`)
 - 기존 API: `GET /api/admin/settings`, `GET /api/admin/settings/{key}`, `PUT /api/admin/settings/{key}`
+- 첨부 저장 경로(특히 UNC)가 백엔드 서비스 계정으로 쓰기 가능한지: `GET /api/admin/storage/probe` (ADMIN JWT). 운영 절차: `docs/DEPLOYMENT_WINDOWS.md`
 
 ### 감사 이벤트 로그(Phase 3-3)
 - 채널·메시지·파일·업무·칸반 도메인의 주요 이벤트를 `audit_logs` 테이블에 기록
