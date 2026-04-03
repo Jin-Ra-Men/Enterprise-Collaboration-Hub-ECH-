@@ -5198,6 +5198,17 @@ function statusForKanbanColumnId(columnId) {
   return "OPEN";
 }
 
+/**
+ * Linked work-item row uses `workHubPendingWorkStatus` on save. If only the card column moves (DnD/select),
+ * the work item can stay stale (e.g. IN_PROGRESS) and overwrite user intent. Align pending work status to column.
+ */
+function syncPendingWorkItemStatusFromKanbanColumn(workItemId, columnId) {
+  const wi = Number(workItemId);
+  const col = Number(columnId);
+  if (!Number.isFinite(wi) || wi <= 0 || !Number.isFinite(col) || col <= 0) return;
+  workHubPendingWorkStatus.set(wi, statusForKanbanColumnId(col));
+}
+
 /** Persist saved-card column + order for the affected columns only (reduces pending scope). */
 function syncKanbanBoardPartial(boardEl, columnIds) {
   const idSet = new Set(columnIds.map(Number).filter((x) => x > 0));
@@ -5217,6 +5228,8 @@ function syncKanbanBoardPartial(boardEl, columnIds) {
       if (Number.isFinite(cid)) {
         workHubPendingCardColumn.set(cid, colId);
         workHubPendingCardSortOrder.set(cid, i);
+        const wi = Number(cardEl.dataset.workItemId || "");
+        syncPendingWorkItemStatusFromKanbanColumn(wi, colId);
       }
     });
   });
@@ -5245,7 +5258,9 @@ function syncKanbanDraftsOrderFromDom(boardEl) {
   workHubPendingNewKanbanCards = draftEntries
     .map(({ idx, colId }) => {
       const d = workHubPendingNewKanbanCards[idx];
-      return d ? { ...d, columnId: colId } : null;
+      if (!d) return null;
+      syncPendingWorkItemStatusFromKanbanColumn(d.workItemId, colId);
+      return { ...d, columnId: colId };
     })
     .filter(Boolean);
 }
@@ -6403,14 +6418,18 @@ function renderKanbanBoard(board) {
       if (!targetColumnId) return;
       if (isDraftLocal) {
         const idx = Number(raw.replace("draft-card-", ""));
-        if (!Number.isFinite(idx) || !workHubPendingNewKanbanCards[idx]) return;
-        workHubPendingNewKanbanCards[idx].columnId = targetColumnId;
+        const d = Number.isFinite(idx) ? workHubPendingNewKanbanCards[idx] : null;
+        if (!d) return;
+        d.columnId = targetColumnId;
+        syncPendingWorkItemStatusFromKanbanColumn(d.workItemId, targetColumnId);
       } else {
         const cid = Number(raw);
         if (!cid) return;
         workHubPendingCardColumn.set(cid, targetColumnId);
+        const wi = Number(sel.closest(".kanban-card-item")?.dataset.workItemId || "");
+        syncPendingWorkItemStatusFromKanbanColumn(wi, targetColumnId);
       }
-      void loadChannelKanbanBoard();
+      void Promise.all([loadChannelKanbanBoard(), loadChannelWorkItems()]);
     });
   });
   boardEl.querySelectorAll(".kanban-card-item").forEach((cardEl) => {
@@ -6459,7 +6478,7 @@ function renderKanbanBoard(board) {
       const cols = [...new Set([targetColId, sourceColId].filter((x) => x > 0))];
       syncKanbanBoardPartial(boardEl, cols);
       syncKanbanDraftsOrderFromDom(boardEl);
-      await loadChannelKanbanBoard();
+      await Promise.all([loadChannelKanbanBoard(), loadChannelWorkItems()]);
     });
   });
   ensureKanbanBoardAssigneeUiBound();
@@ -6633,11 +6652,18 @@ document.getElementById("btnSaveKanbanCardDetail")?.addEventListener("click", as
     d.description = description || null;
     d.columnId = columnId || d.columnId;
     d.assigneeEmployeeNos = [...new Set(workHubDetailKanbanAssignees)];
+    const wid = Number(d.workItemId || 0);
+    if (wid > 0 && d.columnId) syncPendingWorkItemStatusFromKanbanColumn(wid, Number(d.columnId));
   } else {
     const id = Number(meta.id);
     workHubPendingCardTitle.set(id, title);
     workHubPendingCardDescription.set(id, description || null);
-    if (columnId) workHubPendingCardColumn.set(id, columnId);
+    if (columnId) {
+      workHubPendingCardColumn.set(id, columnId);
+      const row = document.querySelector(`.kanban-card-item[data-kanban-card-id="${id}"]`);
+      const wi = Number(row?.dataset.workItemId || "");
+      syncPendingWorkItemStatusFromKanbanColumn(wi, columnId);
+    }
     const nextArr = workHubDetailKanbanAssignees.map(normKanbanEmpNo).filter(Boolean);
     const prevArr = getEffectiveKanbanCardAssignees(id);
     const addSet = new Set(workHubPendingCardAssigneeAdd.get(id) || []);
@@ -6660,7 +6686,7 @@ document.getElementById("btnSaveKanbanCardDetail")?.addEventListener("click", as
     else workHubPendingCardAssigneeRemove.delete(id);
   }
   closeModal("modalKanbanCardDetail");
-  await loadChannelKanbanBoard();
+  await Promise.all([loadChannelKanbanBoard(), loadChannelWorkItems()]);
 });
 
 document.getElementById("kanbanCardDetailAssigneeSearch")?.addEventListener("input", (e) => {

@@ -12,6 +12,7 @@
 - **내 업무 항목**: 비활성(`in_use=false`) 업무는 `GET .../sidebar/by-assigned-cards`에서 제외
 
 ### Fixed
+- **업무·칸반 허브**: 칸반 카드만 컬럼 이동(DnD/셀렉트)했을 때 연결 **업무 항목**의 pending 상태가 갱신되지 않아, **저장** 시 카드는 완료 컬럼·업무는 진행 중 등으로 엇갈리던 문제 — 이동한 컬럼에 맞춰 `workHubPendingWorkStatus` 동기화, DnD 후 업무 목록도 다시 렌더
 - **로그인 아이디 저장**: `.login-form label`·`input { width:100% }`가 체크박스까지 적용되어 클릭 영역이 과대·세로로 깨지던 문제 — `.login-form label.login-remember`(`inline-flex`·`width:fit-content`)·`input[type=checkbox]`로 재정의, 마크업 순서 `아이디 저장` + 체크박스
 
 ### Added
