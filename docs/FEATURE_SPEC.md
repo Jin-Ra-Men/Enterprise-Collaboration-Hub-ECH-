@@ -512,6 +512,7 @@
   - 드롭 직후에는 보드 **모든 컬럼**의 카드 순서·`columnId` pending을 DOM에서 다시 읽고(`syncKanbanBoardFromDomFull`), 카드 하단 컬럼 `<select>` 값을 카드가 실제로 들어 있는 컬럼(`data-column-id`)과 맞춘다 — `dragend`/`drop` 이벤트 순서 차이로 셀렉트만 어긋나는 현상 방지
   - `loadChannelKanbanBoard()`는 DnD·저장·셀렉트 변경 등으로 **동시에 여러 번** 호출될 수 있다. 채널별 **요청 세대(`kanbanBoardFetchGenByChannelId`)**를 두어, 늦게 완료된 **오래된 응답**은 `renderKanbanBoard`를 호출하지 않게 해 카드 컬럼과 행 `<select>`가 다시 어긋나는 간헐 현상을 막는다(동기 XHR로 바꿀 필요 없음)
   - **연속 DnD**에서는 두 번째 `drop`이 `requestAnimationFrame`으로 동기화를 미루는 동안 직전 `GET`이 끝나 세대가 아직 안 올라간 것처럼 보일 수 있어, 컬럼 `drop`과 컬럼 `<select>` 변경 시 **`loadChannelKanbanBoard` 호출 전(동기 구간)** 에 세대를 한 번 더 올려 진행 중인 조회를 즉시 무효화한다
+  - **DnD 전용**: 컬럼 간 드래그앤드롭으로 카드 노드가 이미 옮겨진 뒤에는 **`loadChannelKanbanBoard`를 호출하지 않는다**(업무 목록만 `loadChannelWorkItems`). 풀 보드 GET+`innerHTML` 재렌더는 연속 DnD·pending 타이밍과 맞물려 행 컬럼 `<select>`만 어긋나는 증상을 유발할 수 있어, 드롭 후 상태는 DOM 동기화(`syncKanbanBoardFromDomFull` 등)와 저장 시 서버 반영에 맡긴다. **셀렉트로 컬럼만 바꿀 때**는 카드 DOM 이동이 렌더에 의존하므로 기존처럼 `loadChannelKanbanBoard`를 호출한다
   - 드래그앤드롭 타깃은 **`.kanban-card-list`만**이 아니라 **`section.kanban-column` 전체**(`dragover`/`drop` on column, 리스트는 컬럼 높이를 채워 카드 아래 빈 영역에서도 수신). 컬럼에 점선 강조(`.kanban-column-drag-over`)
   - 카드 `<article>`에 **`data-render-column-id`**(렌더 버킷 컬럼 id)를 두어 행 하단 컬럼 `<select>` 표시값이 실제 칸과 일치하도록 함. 드래그 데이터는 **`application/x-ech-kanban-card`**(및 빈 `text/plain`)로 두어 검색 `input` 등에 실수로 놓을 때 문자열이 끼어드는 것을 방지하고, 업무 허브 캡처에서 해당 입력류 위 `drop`을 막음
 - 상태 전이/예외 케이스:

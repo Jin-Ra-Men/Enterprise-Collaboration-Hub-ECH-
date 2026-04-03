@@ -12,6 +12,7 @@
 - **내 업무 항목**: 비활성(`in_use=false`) 업무는 `GET .../sidebar/by-assigned-cards`에서 제외
 
 ### Fixed
+- **칸반 DnD 후 셀렉트 불일치**: 컬럼 `drop` 처리에서 **`loadChannelKanbanBoard`(풀 렌더) 호출 제거** — 드래그로 DOM 위치는 이미 반영되므로 `sync*`·`loadChannelWorkItems`만 수행해 연속 DnD 시 GET 재렌더 레이스를 제거; 렌더 시 행 `<select>` 기본값은 **`data-render-column-id` 우선**(`frontend/app.js`)
 - **칸반 연속 DnD**: 컬럼 `drop` 직후 **이중 `requestAnimationFrame` 대기 전**에 fetch 세대를 한 번 더 올려, 직전 드롭의 느린 GET 응답이 다음 드롭 DOM을 덮어쓰지 않게 함; 컬럼 `<select>` `change`에도 동일 선제 bump(`frontend/app.js`)
 - **칸반 보드 조회(간헐)**: `loadChannelKanbanBoard` 동시 호출 시 **늦게 도착한 이전 응답**이 `renderKanbanBoard`로 다시 그려져 카드 컬럼과 행 `<select>`가 불일치하던 문제 — 채널별 fetch **세대 번호**로 오래된 응답은 렌더 생략(`frontend/app.js`)
 - **칸반 DnD(간헐)**: 셀렉트 값을 **`closest(.kanban-column")`의 `data-column-id`를 최우선**으로 두고 매 렌더·`syncKanbanCardColumnSelectsFromDom`에서 `workHubPendingCardColumn`·연결 업무 상태와 `data-render-column-id`를 동기화; `syncKanbanBoardPartial`에서도 카드마다 `renderColumnId` 갱신; `drop` 직후 **이중 `requestAnimationFrame`** 후 DOM 동기화해 레이아웃 타이밍 레이스 완화

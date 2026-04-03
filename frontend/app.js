@@ -6539,11 +6539,18 @@ function renderKanbanBoard(board) {
       const cardId = Number(rawId);
       const card = effectiveSavedCards.find((c) => Number(c.id) === cardId);
       const article = sel.closest(".kanban-card-item");
+      const fromRender = Number(article?.dataset.renderColumnId || 0);
       const hostCol = Number(sel.closest(".kanban-column")?.dataset.columnId || 0);
       const pending = workHubPendingCardColumn.get(cardId);
       const baseCol = Number(card?.columnId || 0);
       const resolved =
-        hostCol > 0 ? hostCol : pending != null ? Number(pending) : baseCol;
+        fromRender > 0
+          ? fromRender
+          : hostCol > 0
+            ? hostCol
+            : pending != null
+              ? Number(pending)
+              : baseCol;
       sel.value = String(resolved);
       if (hostCol > 0 && Number.isFinite(cardId)) {
         workHubPendingCardColumn.set(cardId, hostCol);
@@ -6662,7 +6669,9 @@ function renderKanbanBoard(board) {
       syncKanbanBoardFromDomFull(boardEl);
       syncKanbanDraftsOrderFromDom(boardEl);
       syncKanbanCardColumnSelectsFromDom(boardEl);
-      await Promise.all([loadChannelKanbanBoard(), loadChannelWorkItems()]);
+      // Do not call `loadChannelKanbanBoard` here: DnD already moved the DOM. A full re-render from GET
+      // races with rapid consecutive drops and can rebuild `<select>` from stale server + pending timing.
+      await loadChannelWorkItems();
     });
   });
   ensureKanbanBoardAssigneeUiBound();
