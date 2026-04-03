@@ -4,6 +4,10 @@
 
 ## 2026-04-03
 
+### Fixed
+- **사용자 관리 좌측 패널 필터 수정**: 본부/회사 노드 선택 시 하위 팀 전체 인원이 표시되던 문제 수정 → 해당 노드에 직속 배정된 인원만 표시되도록 변경 (`renderAdminUserTable`, `countForOrg`)
+- **사용자 설정 부서 셀렉트박스 수정**: `getOrgGroupOptions()` 가 TEAM 타입만 반환해 본부/회사를 선택할 수 없던 문제 수정 → COMPANY(`[회사] `), DIVISION(`[본부] `), TEAM 순으로 통합 반환
+
 ### Added
 - **조직도 모달 기능 추가**
   - 사이드바 워크스페이스 헤더(ECH 영역) 우측에 조직도 버튼(`btn-workspace-tool`) 추가

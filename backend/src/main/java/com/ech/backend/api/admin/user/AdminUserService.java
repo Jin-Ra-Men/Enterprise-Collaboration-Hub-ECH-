@@ -21,10 +21,12 @@ import com.ech.backend.domain.org.OrgGroupRepository;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
 import com.ech.backend.domain.work.WorkItemRepository;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -223,9 +225,25 @@ public class AdminUserService {
         var toOption = (java.util.function.Function<OrgGroup, OrgGroupOptionResponse.OrgGroupOption>)
                 g -> new OrgGroupOptionResponse.OrgGroupOption(g.getGroupCode(), g.getDisplayName());
 
-        List<OrgGroupOptionResponse.OrgGroupOption> teams =
+        List<OrgGroupOptionResponse.OrgGroupOption> companies =
+                orgGroupRepository.findAllByGroupTypeAndIsActiveOrderByDisplayNameAsc("COMPANY", true)
+                        .stream()
+                        .map(g -> new OrgGroupOptionResponse.OrgGroupOption(
+                                g.getGroupCode(), "[회사] " + g.getDisplayName()))
+                        .toList();
+        List<OrgGroupOptionResponse.OrgGroupOption> divisions =
+                orgGroupRepository.findAllByGroupTypeAndIsActiveOrderByDisplayNameAsc("DIVISION", true)
+                        .stream()
+                        .map(g -> new OrgGroupOptionResponse.OrgGroupOption(
+                                g.getGroupCode(), "[본부] " + g.getDisplayName()))
+                        .toList();
+        List<OrgGroupOptionResponse.OrgGroupOption> teamsList =
                 orgGroupRepository.findAllByGroupTypeAndIsActiveOrderByDisplayNameAsc("TEAM", true)
                         .stream().map(toOption).toList();
+        List<OrgGroupOptionResponse.OrgGroupOption> teams = new ArrayList<>();
+        teams.addAll(companies);
+        teams.addAll(divisions);
+        teams.addAll(teamsList);
         List<OrgGroupOptionResponse.OrgGroupOption> jobLevels =
                 orgGroupRepository.findAllByGroupTypeAndIsActiveOrderByDisplayNameAsc("JOB_LEVEL", true)
                         .stream().map(toOption).toList();

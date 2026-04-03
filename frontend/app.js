@@ -7886,18 +7886,11 @@ function renderUserOrgPanel() {
   const activeUsers = (list) => list.filter(u => adminUserPendingChanges.get(u.employeeNo)?.op !== "delete");
 
   function countForOrg(orgCode) {
-    const org = orgMap.get(orgCode);
-    if (!org) return 0;
-    if (org.groupType === "TEAM") {
-      return activeUsers(allUsers).filter(u => {
-        const tc = adminUserPendingChanges.get(u.employeeNo)?.data?.teamGroupCode ?? u.teamGroupCode;
-        return tc === orgCode;
-      }).length;
-    }
-    const teamCodes = getAllDescendantTeamCodes(orgCode, structural);
+    if (!orgMap.has(orgCode)) return 0;
+    // 해당 노드에 직속 배정된 인원 수만 표시
     return activeUsers(allUsers).filter(u => {
       const tc = adminUserPendingChanges.get(u.employeeNo)?.data?.teamGroupCode ?? u.teamGroupCode;
-      return teamCodes.includes(tc);
+      return tc === orgCode;
     }).length;
   }
 
@@ -7998,18 +7991,11 @@ function renderAdminUserTable() {
     panelTitle = "미배정";
   } else {
     const org = adminUserOrgTree.find(g => g.groupCode === adminUserSelectedOrgCode);
-    if (org?.groupType === "TEAM") {
-      rows = allRows.filter(u => {
-        const tc = adminUserPendingChanges.get(u.employeeNo)?.data?.teamGroupCode ?? u.teamGroupCode;
-        return tc === adminUserSelectedOrgCode;
-      });
-    } else {
-      const teamCodes = getAllDescendantTeamCodes(adminUserSelectedOrgCode, structural);
-      rows = allRows.filter(u => {
-        const tc = adminUserPendingChanges.get(u.employeeNo)?.data?.teamGroupCode ?? u.teamGroupCode;
-        return teamCodes.includes(tc);
-      });
-    }
+    // 회사/본부/팀 모두 해당 노드에 직속 배정된 인원만 표시
+    rows = allRows.filter(u => {
+      const tc = adminUserPendingChanges.get(u.employeeNo)?.data?.teamGroupCode ?? u.teamGroupCode;
+      return tc === adminUserSelectedOrgCode;
+    });
     panelTitle = org?.displayName || adminUserSelectedOrgCode;
   }
 
