@@ -24,9 +24,10 @@
 ## 2) 로컬 실행 요약
 1. Realtime 실행: `cd realtime && npm install && npm run dev`
 2. Backend 실행: `cd backend && gradlew.bat bootRun` (Windows)
-3. 프론트 확인: **`http://localhost:8080/`** (백엔드가 `index.html` / `styles.css` / `app.js` 만 정적 제공). `file://` 로 `frontend/index.html` 을 열면 API·쿠키·CORS 이슈가 날 수 있음.
-   - UI 테마(검정/하양/파랑)는 로그인 후 사용자 영역의 톱니바퀴 팝업에서 변경하며, 서버 `PUT /api/auth/me/theme`로 `users.theme_preference`에 저장됩니다(로그아웃/재로그인 후에도 사용자별 유지). `localStorage ech_theme`는 초기 페인트(FoUC 완화)용 캐시로 함께 사용합니다.
-4. 환경 설정 상세: `docs/ENVIRONMENT_SETUP.md`
+3. **Windows 배치(선택)**: 저장소 루트 **`start-ech-dev.bat`** — `curl`로 `:8080/api/health`·`:3001/health` 확인 후 미기동 서비스만 새 콘솔에서 실행. 단독: `tools/start-ech-backend.bat`, `tools/start-ech-realtime.bat` (`docs/ENVIRONMENT_SETUP.md` 5-2절).
+4. 프론트 확인: **`http://localhost:8080/`** (백엔드가 `index.html` / `styles.css` / `app.js` 만 정적 제공). `file://` 로 `frontend/index.html` 을 열면 API·쿠키·CORS 이슈가 날 수 있음.
+   - UI 테마(검정/하양)는 로그인 후 사용자 영역의 톱니바퀴 팝업에서 변경하며, 서버 `PUT /api/auth/me/theme`로 `users.theme_preference`에 저장됩니다(로그아웃/재로그인 후에도 사용자별 유지). `localStorage ech_theme`는 초기 페인트(FoUC 완화)용 캐시로 함께 사용합니다.
+5. 환경 설정 상세: `docs/ENVIRONMENT_SETUP.md`
 
 ## 2-0-2-1) 초기 로그인 비밀번호(미설정 사용자)
 - DB `app_settings` 키 **`auth.initial-password-plaintext`**: 비밀번호 해시가 없는 사용자에게 **서버 기동 시 한 번** 적용되는 평문 값. 관리자 **설정** 화면에서 변경 가능.

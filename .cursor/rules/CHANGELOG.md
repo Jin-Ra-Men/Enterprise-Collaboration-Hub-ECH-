@@ -11,6 +11,7 @@
 - **내 업무 항목**: 비활성(`in_use=false`) 업무는 `GET .../sidebar/by-assigned-cards`에서 제외
 
 ### Added
+- **Windows 로컬 기동**: 루트 `start-ech-dev.bat`(헬스 확인 후 미기동 서버만 새 창에서 실행), `tools/start-ech-backend.bat`, `tools/start-ech-realtime.bat`; `README.md`·`docs/ENVIRONMENT_SETUP.md` 안내
 - **로그인**: 아이디 저장(`localStorage`)
 - **백엔드 설정**: `auth.initial-password-plaintext` — 비밀번호 미설정 사용자 기동 시 적용 평문(관리자 설정에서 변경, `DataInitializer`가 `initDefaultAppSettings` 이후 읽음)
 - **desktop(Electron) 자동 업데이트**: `electron-updater` 의존성, `build.publish`(GitHub), 패키지 실행 시 `checkForUpdatesAndNotify`·6시간 주기 재확인·다운로드 완료 OS 알림(`main.js`)

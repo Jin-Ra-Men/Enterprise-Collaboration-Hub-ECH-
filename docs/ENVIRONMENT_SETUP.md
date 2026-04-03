@@ -73,6 +73,11 @@ psql -h localhost -p 5432 -U ech_user -d ech -f docs/sql/backfill_org_groups_fro
 psql -h localhost -p 5432 -U ech_user -d ech -f docs/sql/backfill_org_group_members_from_users.sql
 ```
 
+## 5-2) Windows에서 배치로 서버 기동 (선택)
+- 프로젝트 루트 **`start-ech-dev.bat`**: `curl`로 백엔드(`:8080/api/health`)·실시간(`:3001/health`)을 확인하고, **안 떠 있는 쪽만** 새 `cmd` 창에서 기동합니다.
+- **`tools/start-ech-backend.bat`**, **`tools/start-ech-realtime.bat`**: 각각 단독 실행(해당 창을 닫으면 종료).
+- `curl`이 PATH에 없으면 `start-ech-dev.bat`는 오류 메시지 후 종료합니다. Windows 10 1803+에는 기본 포함됩니다.
+
 ## 6) 점검 체크리스트
 - Java 17 적용 확인 (`java -version`)
 - Backend wrapper 실행 확인 (`gradlew.bat`)

@@ -202,6 +202,11 @@ SPRING_PORT=8080
 SOCKET_PORT=3001
 ```
 
+### 1-1) Windows: CMD/PowerShell 입력 없이 기동 (배치)
+- 저장소 루트의 **`start-ech-dev.bat`** 을 더블클릭합니다. `curl`로 `http://localhost:8080/api/health`·`http://localhost:3001/health` 를 확인한 뒤, **응답이 없는 서버만** 새 콘솔 창에서 띄웁니다(이미 떠 있으면 건너뜀).
+- 개별 실행: `tools\start-ech-backend.bat`, `tools\start-ech-realtime.bat` (각 창을 닫으면 해당 프로세스 종료).
+- PowerShell에서 `npm`이 실행 정책으로 막힐 때는 배치가 **`npm.cmd`** 를 쓰므로 동일하게 동작하는 경우가 많습니다.
+
 ### 2) Realtime 서버 실행 (Node.js)
 ```bash
 cd realtime
