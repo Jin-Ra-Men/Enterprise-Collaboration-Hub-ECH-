@@ -8664,15 +8664,23 @@ function updateOrgParentDropdown(groupType, selectedParent) {
     options.map(g => `<option value="${escHtml(g.groupCode)}" ${g.groupCode === selectedParent ? "selected" : ""}>${escHtml(g.displayName)}</option>`).join("");
 }
 
+/** 조직 코드 기준으로 display name 경로를 조립 (미리보기 전용, / 구분자) */
+function buildDisplayPath(code, eff) {
+  if (!code) return "";
+  const org = eff.find(g => g.groupCode === code);
+  if (!org) return code;
+  const parentPart = org.memberOfGroupCode ? buildDisplayPath(org.memberOfGroupCode, eff) : "";
+  return parentPart ? parentPart + " / " + org.displayName : org.displayName;
+}
+
 function updateOrgPathPreview() {
   const displayName = document.getElementById("ogDisplayName").value.trim();
   const parentCode  = document.getElementById("ogParent").value;
   const eff  = buildEffectiveOrgList();
-  const parent = eff.find(g => g.groupCode === parentCode);
   let path = displayName || "(표시명 입력 후 확인)";
-  if (parent) {
-    const parentPath = parent.groupPath || parent.displayName;
-    path = parentPath + "/" + path;
+  if (parentCode) {
+    const parentDisplayPath = buildDisplayPath(parentCode, eff);
+    if (parentDisplayPath) path = parentDisplayPath + " / " + path;
   }
   document.getElementById("ogPathPreview").textContent = path;
 }
@@ -8712,21 +8720,19 @@ document.getElementById("btnOrgGroupEditConfirm").addEventListener("click", () =
     return;
   }
 
-  const parentPath = (() => {
-    const p = eff.find(g => g.groupCode === parentCode);
-    if (!p) return displayName;
-    return (p.groupPath || p.displayName) + "/" + displayName;
-  })();
+  // groupPath는 백엔드에서 코드 기반으로 재계산됨. pending 로컬 display 용으로만 displayName 경로 계산.
+  const displayParentPath = parentCode ? buildDisplayPath(parentCode, eff) : "";
+  const localDisplayPath  = displayParentPath ? displayParentPath + " / " + displayName : displayName;
 
-  const data = { groupType, groupCode, displayName, memberOfGroupCode: parentCode, sortOrder, isActive, groupPath: parentPath };
+  const data = { groupType, groupCode, displayName, memberOfGroupCode: parentCode, sortOrder, isActive, groupPath: localDisplayPath };
 
   if (isEdit) {
     const prev = orgPendingChanges.get(orgEditingCode);
     const op   = prev?.op === "create" ? "create" : "update";
     // 코드가 바뀐 경우: 원래 키로 pending 유지 (저장 시 URL = 원래 코드, body.groupCode = 새 코드)
     orgPendingChanges.set(orgEditingCode, { op, data });
-    // 표시명/경로가 바뀌면 자식의 경로도 재계산
-    updatePendingChildPaths(orgEditingCode, parentPath);
+    // 표시명이 바뀌면 자식의 표시 경로도 재계산
+    updatePendingChildPaths(orgEditingCode, localDisplayPath);
   } else {
     orgExpandedSet.add(groupCode); // 새 노드는 펼친 상태로
     orgPendingChanges.set(groupCode, { op: "create", data });
@@ -8736,17 +8742,18 @@ document.getElementById("btnOrgGroupEditConfirm").addEventListener("click", () =
   renderOrgManagement();
 });
 
-function updatePendingChildPaths(parentCode, parentPath) {
+/** pending 상태의 자식 그룹 display 경로 갱신 (미리보기 전용, 백엔드는 재계산) */
+function updatePendingChildPaths(parentCode, parentDisplayPath) {
   const eff = buildEffectiveOrgList();
   const kids = eff.filter(g => g.memberOfGroupCode === parentCode);
   for (const kid of kids) {
-    const newPath = parentPath + "/" + kid.displayName;
+    const newDisplayPath = parentDisplayPath + " / " + kid.displayName;
     const prev = orgPendingChanges.get(kid.groupCode);
     if (prev) {
-      prev.data = { ...prev.data, groupPath: newPath };
+      prev.data = { ...prev.data, groupPath: newDisplayPath };
     } else {
-      orgPendingChanges.set(kid.groupCode, { op: "update", data: { ...kid, groupPath: newPath } });
+      orgPendingChanges.set(kid.groupCode, { op: "update", data: { ...kid, groupPath: newDisplayPath } });
     }
-    updatePendingChildPaths(kid.groupCode, newPath);
+    updatePendingChildPaths(kid.groupCode, newDisplayPath);
   }
 }

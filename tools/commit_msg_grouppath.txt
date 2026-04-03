@@ -1,0 +1,8 @@
+feat: group_path 저장 형식을 코드;세미콜론 체인으로 변경
+
+- 변경 전: 코비젼/CS사업본부/CS영업팀 (displayName + /)
+- 변경 후: ORGROOT;ORG;TEAM_CODE (groupCode + ;)
+- AdminOrgService.computeGroupPath(): 코드 세미콜론 체인으로 재작성
+- AdminOrgService.updateDescendantPaths(): 동일하게 코드 기반 재계산
+- 프론트엔드 미리보기(ogPathPreview): buildDisplayPath() 헬퍼로
+  displayName + / 형태 유지 (실제 저장값과 별도)

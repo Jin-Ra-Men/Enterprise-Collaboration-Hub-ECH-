@@ -35,7 +35,7 @@ public class AdminOrgService {
             throw new IllegalArgumentException("이미 존재하는 그룹 코드입니다: " + code);
         }
         String parentCode = blank(req.memberOfGroupCode()) ? null : req.memberOfGroupCode().trim();
-        String path = computeGroupPath(req.displayName().trim(), parentCode);
+        String path = computeGroupPath(code, parentCode);
         OrgGroup group = new OrgGroup(
                 req.groupType().trim(), code, req.displayName().trim(), parentCode, path);
         if (req.sortOrder() != null) group.setSortOrder(req.sortOrder());
@@ -66,7 +66,7 @@ public class AdminOrgService {
 
         group.setDisplayName(newDisplayName);
         group.setMemberOfGroupCode(newParentCode);
-        String path = computeGroupPath(newDisplayName, newParentCode);
+        String path = computeGroupPath(group.getGroupCode(), newParentCode);
         group.setGroupPath(path);
         if (req.sortOrder() != null) group.setSortOrder(req.sortOrder());
         if (req.isActive() != null)  group.setIsActive(req.isActive());
@@ -99,24 +99,23 @@ public class AdminOrgService {
     }
 
     /**
-     * 부모 경로를 기반으로 group_path를 자동 계산한다.
-     * COMPANY: 표시명 자체
-     * DIVISION/TEAM: 부모의 groupPath + "/" + 표시명
-     * JOB_LEVEL/JOB_POSITION/JOB_TITLE: 표시명 자체 (계층 없음)
+     * group_path를 그룹 코드 세미콜론(;) 체인으로 계산한다.
+     * 예) 최상위: "ORGROOT"  /  2단계: "ORGROOT;ORG"  /  3단계: "ORGROOT;ORG;TEAM_CODE"
+     * JOB_LEVEL/JOB_POSITION/JOB_TITLE 같이 부모 없는 항목은 코드 단독.
      */
-    private String computeGroupPath(String displayName, String parentCode) {
-        if (blank(parentCode)) return displayName;
+    private String computeGroupPath(String groupCode, String parentCode) {
+        if (blank(parentCode)) return groupCode;
         OrgGroup parent = orgGroupRepository.findByGroupCode(parentCode).orElse(null);
-        if (parent == null) return displayName;
-        String parentPath = blank(parent.getGroupPath()) ? parent.getDisplayName() : parent.getGroupPath();
-        return parentPath + "/" + displayName;
+        if (parent == null) return groupCode;
+        String parentPath = blank(parent.getGroupPath()) ? parent.getGroupCode() : parent.getGroupPath();
+        return parentPath + ";" + groupCode;
     }
 
-    /** 이름 변경 시 모든 하위 그룹의 group_path를 재귀적으로 갱신한다. */
+    /** 코드·경로 변경 시 모든 하위 그룹의 group_path를 재귀적으로 갱신한다. */
     private void updateDescendantPaths(String parentCode, String parentPath) {
         List<OrgGroup> children = orgGroupRepository.findAllByMemberOfGroupCode(parentCode);
         for (OrgGroup child : children) {
-            String newPath = parentPath + "/" + child.getDisplayName();
+            String newPath = parentPath + ";" + child.getGroupCode();
             child.setGroupPath(newPath);
             orgGroupRepository.save(child);
             updateDescendantPaths(child.getGroupCode(), newPath);

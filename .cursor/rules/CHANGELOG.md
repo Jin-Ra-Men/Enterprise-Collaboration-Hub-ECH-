@@ -5,6 +5,12 @@
 ## 2026-04-03
 
 ### Changed
+- **조직 그룹 `group_path` 저장 형식 변경: 표시명+슬래시 → 코드+세미콜론**
+  - 변경 전: `코비젼/CS사업본부/CS영업팀` (display_name + `/`)
+  - 변경 후: `ORGROOT;ORG;TEAM_CODE` (group_code + `;`)
+  - `AdminOrgService.computeGroupPath()` — 그룹 코드 세미콜론 체인으로 변경
+  - `AdminOrgService.updateDescendantPaths()` — 코드 체인으로 재계산
+  - 프론트엔드 미리보기(`#ogPathPreview`)는 `buildDisplayPath()` 헬퍼로 display name `/` 표시 유지
 - **사용자 관리 UI: 좌우 분할 패널로 개편**
   - 좌측: 조직 트리 패널 (COMPANY > DIVISION > TEAM, 접기/펼치기, 조직별 인원 수 배지)
   - 조직 선택 시 우측 사용자 목록이 해당 조직 및 하위 팀으로 필터링
