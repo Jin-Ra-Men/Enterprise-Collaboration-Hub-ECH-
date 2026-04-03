@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { app, BrowserWindow, ipcMain, Menu, Notification } = require("electron");
+const { autoUpdater } = require("electron-updater");
 
 /** @type {BrowserWindow | null} */
 let mainWindow = null;
@@ -21,6 +22,33 @@ function createMainWindow() {
   const indexInDev = path.join(__dirname, "..", "frontend", "index.html");
   const indexPath = fs.existsSync(indexInPackage) ? indexInPackage : indexInDev;
   mainWindow.loadFile(indexPath);
+}
+
+function setupAutoUpdater() {
+  if (!app.isPackaged) return;
+  try {
+    autoUpdater.autoDownload = true;
+    autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.on("error", (err) => {
+      console.warn("[ECH] autoUpdater error:", err?.message || err);
+    });
+    autoUpdater.on("update-downloaded", () => {
+      try {
+        new Notification({
+          title: "ECH 업데이트",
+          body: "새 버전이 내려받아졌습니다. 앱을 종료하면 업데이트가 적용됩니다.",
+        }).show();
+      } catch {
+        /* ignore */
+      }
+    });
+    void autoUpdater.checkForUpdatesAndNotify();
+    setInterval(() => {
+      void autoUpdater.checkForUpdates();
+    }, 6 * 60 * 60 * 1000);
+  } catch (e) {
+    console.warn("[ECH] autoUpdater init failed:", e?.message || e);
+  }
 }
 
 ipcMain.on("os-notification-show", (event, payload) => {
@@ -57,6 +85,7 @@ app.whenReady().then(() => {
     Menu.setApplicationMenu(null);
   }
   createMainWindow();
+  setupAutoUpdater();
 });
 
 app.on("window-all-closed", () => {

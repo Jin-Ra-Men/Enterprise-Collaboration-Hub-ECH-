@@ -1,6 +1,6 @@
 {
   "name": "ech-desktop",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "private": true,
   "main": "main.js",
   "repository": {
@@ -11,7 +11,9 @@
     "start": "electron .",
     "build:win": "electron-builder --win nsis --publish never"
   },
-  "dependencies": {},
+  "dependencies": {
+    "electron-updater": "^6.8.3"
+  },
   "devDependencies": {
     "electron": ">=20.0.0",
     "electron-builder": "latest"
@@ -28,13 +30,21 @@
       {
         "from": "../frontend",
         "to": "frontend",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "asar": true,
     "win": {
       "target": "nsis"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Jin-Ra-Men",
+        "repo": "Enterprise-Collaboration-Hub-ECH-"
+      }
+    ]
   }
 }
-

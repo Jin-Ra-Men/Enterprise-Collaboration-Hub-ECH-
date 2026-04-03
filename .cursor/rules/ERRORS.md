@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-04-03 — electron-builder NSIS `makensis` 실패 (`Can't open output file`)
+
+- **에러 요약**: `makensis.exe process failed` / NSIS stderr `Can't open output file` — `dist\ECH Setup {version}.exe` 생성 단계 중단
+- **발생 위치(파일/명령/기능)**: `desktop` — `npm run build:win` (`electron-builder --win nsis`)
+- **원인**: 출력 경로의 설치 파일이 **다른 프로세스에 의해 잠금**되었거나(설치 프로그램/실행 중 EXE/백신 스캔), 동일 파일에 대한 쓰기 권한 부족 등으로 NSIS가 최종 출력 파일을 열지 못함
+- **해결/현재 상태**: ECH/이전 설치 마법사 종료, `desktop/dist`에서 해당 `ECH Setup *.exe` 삭제 후 재빌드, 필요 시 백신 예외·관리자 권한 터미널으로 재시도
+
+---
+
 ## 2026-04-02 — electron-builder NSIS 빌드 실패 (`main.js` 엔트리 누락)
 
 - **에러 요약**: `Application entry file "main.js" ... is corrupted: "main.js" was not found in this archive`

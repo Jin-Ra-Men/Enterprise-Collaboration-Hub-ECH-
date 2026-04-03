@@ -239,3 +239,4 @@ npm start
 
 - Electron으로 실행하면 브라우저 `Notification` 권한 요청 없이도 OS 알림을 띄우도록 구성되어 있습니다(Windows 알림센터 기준).
 - Windows 설치 파일(NSIS): `desktop`에서 `npm run build:win` → `desktop/dist/ECH Setup {version}.exe`(버전은 `desktop/package.json`의 `version`). Electron은 `file://`로 UI를 열므로 API/소켓은 기본 **`http://localhost:8080`**, **`http://localhost:3001`** 로 붙습니다(백엔드·Realtime을 로컬에서 띄워야 로그인 가능). 다른 호스트를 쓰려면 `index.html`의 `<meta name="ech-api-base">` / `<meta name="ech-realtime-url">` 또는 `localStorage` `ech_realtime_url` 로 지정합니다.
+- **자동 업데이트**: 패키지 실행 시 `electron-updater`가 GitHub Releases(`build.publish`의 owner/repo)를 조회합니다. 릴리즈 에셋에 **`latest.yml`**과 설치 파일(및 가능하면 **`*.exe.blockmap`**)을 함께 올려야 합니다. `tools/publish-electron-github-release.ps1`로 일괄 업로드할 수 있습니다(`GITHUB_TOKEN` 필요).

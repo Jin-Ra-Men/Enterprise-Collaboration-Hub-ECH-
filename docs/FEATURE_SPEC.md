@@ -845,3 +845,25 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 - 채널 운영 안정화:
   - 관리자 위임 시 `createdBy` 전환만 수행하고 멤버 레코드 재생성을 제거해 FK 제약 오류 회피
   - 채널 폐쇄는 멤버/읽음 상태 정리로 목록 비노출 처리(제약 오류 회피 우선)
+
+---
+
+## 데스크톱 (Electron) Windows 자동 업데이트
+- 목적: 설치형(NSIS) 클라이언트가 GitHub Releases의 동일 저장소에서 새 버전을 감지·내려받고, 종료 시 설치를 적용
+- 사용자: Windows에 ECH 데스크톱을 설치한 사용자
+- 관련 화면/경로: `desktop/main.js` — 패키지 실행(`app.isPackaged`) 시에만 `electron-updater` 초기화
+- 관련 API: GitHub Releases API(런타임) — `GET https://github.com/{owner}/{repo}/releases/latest` 계열로 메타 조회; 실제 파일은 릴리즈 에셋
+- 관련 Socket 이벤트: 해당 없음
+- 입력/출력:
+  - `desktop/package.json`의 `build.publish`에 `provider: github`, `owner`, `repo` 설정(메타 생성·업데이터 URL 결정에 사용)
+  - 빌드 산출물: `desktop/dist/latest.yml`, 설치 파일(`latest.yml`의 `path` 필드와 동일한 파일명), 권장 `*.exe.blockmap`
+  - 배포: 동일 Git 태그 릴리즈에 위 파일들을 **모두** 에셋으로 올림(`tools/publish-electron-github-release.ps1`가 `latest.yml`의 `path`(URL용 파일명)로 에셋 이름을 맞추고, 로컬에 공백 포함 `ECH Setup {version}.exe`만 있을 때는 그 파일을 읽어 동일 에셋 이름으로 업로드)
+- 상태 전이/예외 케이스:
+  - **exe만** 릴리즈에 있고 `latest.yml`이 없으면 업데이터가 새 버전을 찾지 못함(기존 동작)
+  - 개발 모드(`npm start`)에서는 업데이터 비활성화
+  - 코드 서명이 없으면 Windows SmartScreen 경고는 남을 수 있음(업데이터 자체와는 별개)
+- 권한/보안: Private 저장소면 사용자 환경에 GitHub 인증이 없어도 **공개 릴리즈 에셋**은 URL로 내려받기 가능; 비공개 배포면 별도 토큰/서버 검토 필요
+- 로그/감사 포인트: 업데이터 오류는 메인 프로세스 콘솔 `[ECH] autoUpdater error:` 로그
+- 테스트 기준:
+  - 이전 버전 설치 후 상위 버전 릴리즈에 `latest.yml`+설치파일(+blockmap) 업로드 → 앱 기동 또는 주기 점검(6시간) 후 다운로드·종료 시 적용 확인
+- 비고: `npm run build:win`은 `--publish never`로 업로드는 하지 않되, `publish` 설정이 있으면 `latest.yml` 등이 `dist`에 생성됨

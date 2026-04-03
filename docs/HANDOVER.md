@@ -28,6 +28,12 @@
    - UI 테마(검정/하양/파랑)는 로그인 후 사용자 영역의 톱니바퀴 팝업에서 변경하며, 서버 `PUT /api/auth/me/theme`로 `users.theme_preference`에 저장됩니다(로그아웃/재로그인 후에도 사용자별 유지). `localStorage ech_theme`는 초기 페인트(FoUC 완화)용 캐시로 함께 사용합니다.
 4. 환경 설정 상세: `docs/ENVIRONMENT_SETUP.md`
 
+## 2-0-2) 데스크톱(Electron) 배포·자동 업데이트
+- 빌드: `cd desktop && npm install && npm run build:win` → `desktop/dist/`에 NSIS 설치 파일, **`latest.yml`**, (생성 시) **`*.exe.blockmap`**
+- GitHub 릴리즈: **설치 파일만** 올리면 `electron-updater`가 메타를 못 읽어 자동 업데이트가 동작하지 않음. 동일 태그에 `latest.yml`과 blockmap까지 올릴 것
+- 업로드 스크립트: `powershell -File ./tools/publish-electron-github-release.ps1` (환경변수 `GITHUB_TOKEN`). 인자 생략 시 태그는 `package.json`의 `version`에 맞춘 `v{version}`
+- 첫 업데이터 포함 빌드는 사용자가 **한 번** 새 설치 파일로 수동 설치해야 할 수 있음
+
 ## 2-1) 개발자 / 운영·관리자 — 무엇부터 보면 되나
 - **개발자**
   - API·도메인 동작: `docs/FEATURE_SPEC.md`, 엔드포인트 목록은 아래 **6)**.

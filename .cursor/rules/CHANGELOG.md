@@ -4,7 +4,13 @@
 
 ## 2026-04-03
 
+### Added
+- **desktop(Electron) 자동 업데이트**: `electron-updater` 의존성, `build.publish`(GitHub), 패키지 실행 시 `checkForUpdatesAndNotify`·6시간 주기 재확인·다운로드 완료 OS 알림(`main.js`)
+- **릴리즈 업로드**: `tools/publish-electron-github-release.ps1`가 `latest.yml`에서 설치 파일명을 읽어 **설치 파일 + `latest.yml` + `.blockmap`(있을 때)** 을 동일 태그에 업로드; 기본 태그 `v{package.json version}`
+- **문서**: `README.md`(데스크톱 자동 업데이트), `docs/FEATURE_SPEC.md`, `docs/HANDOVER.md`에 배포·메타 요구사항 반영
+
 ### Changed
+- **desktop**: `version` `0.0.4`(업데이터·릴리즈 메타 반영 빌드용)
 - **desktop(Electron)**: `package.json`에 `repository` URL 추가, `build:win`을 `electron-builder --win nsis --publish never`로 변경해 빌드 말미 `publish.provider` null 오류로 실패하던 문제 방지
 - **GitHub Release**: `v0.0.1` 릴리즈에 Windows NSIS 설치 파일(`ECH Setup 0.0.1.exe`) 업로드
 
