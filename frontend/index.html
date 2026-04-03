@@ -125,6 +125,7 @@
             </span>
           </div>
           <ul class="sidebar-list">
+            <li class="sidebar-item" id="navOrgManagement" data-view="orgManagement">🏢 조직 관리</li>
             <li class="sidebar-item" id="navUserManagement" data-view="userManagement">👤 사용자 관리</li>
             <li class="sidebar-item" id="navReleases" data-view="releases">🚀 배포 관리</li>
             <li class="sidebar-item" id="navSettings" data-view="settings">⚙️ 설정</li>
@@ -306,6 +307,7 @@
               <button id="btnAdminUserReset" class="btn-secondary btn-sm-action">변경 취소</button>
             </div>
           </div>
+          <p class="admin-hint">우클릭으로 편집·삭제, 역할/상태 셀렉트는 직접 변경 후 [저장]</p>
           <div id="adminUserPendingBanner" class="admin-pending-banner hidden">
             변경사항 <strong id="adminUserPendingCount">0</strong>건이 저장 대기 중입니다. [저장] 버튼을 눌러 반영하세요.
           </div>
@@ -323,11 +325,48 @@
                   <th>역할</th>
                   <th>상태</th>
                   <th>등록일</th>
-                  <th>작업</th>
                 </tr>
               </thead>
               <tbody id="adminUserTableBody"></tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- 조직 관리 패널 (관리자) -->
+        <div id="viewOrgManagement" class="view-admin hidden">
+          <div class="admin-panel-header">
+            <h2>🏢 조직 관리</h2>
+            <button id="btnRefreshOrg" class="btn-refresh">새로고침</button>
+          </div>
+          <div class="org-tabs">
+            <button class="org-tab active" data-tab="structure">조직 구조</button>
+            <button class="org-tab" data-tab="joblevel">직급</button>
+            <button class="org-tab" data-tab="jobposition">직위</button>
+            <button class="org-tab" data-tab="jobtitle">직책</button>
+          </div>
+          <div id="orgTabStructure" class="org-tab-content">
+            <div class="org-tab-toolbar">
+              <button class="btn-primary btn-sm-action" data-action="org-add-root" data-type="COMPANY">+ 회사 추가</button>
+            </div>
+            <div id="orgTreeContainer" class="org-tree-container"></div>
+          </div>
+          <div id="orgTabJobLevel" class="org-tab-content hidden">
+            <div class="org-tab-toolbar">
+              <button class="btn-primary btn-sm-action" data-action="org-add-flat" data-type="JOB_LEVEL">+ 직급 추가</button>
+            </div>
+            <div id="orgJobLevelList" class="org-flat-list"></div>
+          </div>
+          <div id="orgTabJobPosition" class="org-tab-content hidden">
+            <div class="org-tab-toolbar">
+              <button class="btn-primary btn-sm-action" data-action="org-add-flat" data-type="JOB_POSITION">+ 직위 추가</button>
+            </div>
+            <div id="orgJobPositionList" class="org-flat-list"></div>
+          </div>
+          <div id="orgTabJobTitle" class="org-tab-content hidden">
+            <div class="org-tab-toolbar">
+              <button class="btn-primary btn-sm-action" data-action="org-add-flat" data-type="JOB_TITLE">+ 직책 추가</button>
+            </div>
+            <div id="orgJobTitleList" class="org-flat-list"></div>
           </div>
         </div>
 
@@ -360,6 +399,67 @@
       <button type="button" class="context-menu-item" id="btnSidebarCtxToggleNotify" role="menuitem">알림 끄기</button>
       <button type="button" class="context-menu-item" id="btnSidebarCtxQuickRailPin" role="menuitem">퀵 레일에 고정</button>
       <button type="button" class="context-menu-item" id="btnSidebarCtxLeave" role="menuitem">채팅방 나가기</button>
+    </div>
+
+    <!-- 사용자 관리 우클릭 컨텍스트 메뉴 -->
+    <div id="adminUserContextMenu" class="context-menu hidden" role="menu">
+      <button type="button" class="context-menu-item" data-action="ctx-edit" role="menuitem">✏️ 편집</button>
+      <button type="button" class="context-menu-item ctx-delete-btn" data-action="ctx-delete" role="menuitem">🗑 삭제</button>
+      <button type="button" class="context-menu-item hidden" data-action="ctx-restore" role="menuitem">↩ 복원</button>
+    </div>
+
+    <!-- 조직 그룹 추가/편집 모달 -->
+    <div id="modalOrgGroupEdit" class="modal-overlay hidden">
+      <div class="modal modal-medium">
+        <div class="modal-header">
+          <h3 id="orgGroupEditTitle">조직 그룹 추가</h3>
+          <button type="button" class="modal-close" data-modal="modalOrgGroupEdit">✕</button>
+        </div>
+        <div class="modal-body">
+          <p id="orgGroupEditError" class="login-error hidden"></p>
+          <div class="admin-user-edit-grid">
+            <div class="form-group">
+              <label for="ogType">유형 <span class="required">*</span></label>
+              <select id="ogType">
+                <option value="COMPANY">회사 (COMPANY)</option>
+                <option value="DIVISION">본부/부서 (DIVISION)</option>
+                <option value="TEAM">팀 (TEAM)</option>
+                <option value="JOB_LEVEL">직급 (JOB_LEVEL)</option>
+                <option value="JOB_POSITION">직위 (JOB_POSITION)</option>
+                <option value="JOB_TITLE">직책 (JOB_TITLE)</option>
+              </select>
+            </div>
+            <div class="form-group" id="ogParentRow">
+              <label for="ogParent">상위 조직</label>
+              <select id="ogParent"><option value="">(없음)</option></select>
+            </div>
+            <div class="form-group">
+              <label for="ogCode">그룹 코드 <span class="required">*</span> <small class="hint">(영문·숫자·하이픈, 최대 32자)</small></label>
+              <input id="ogCode" type="text" placeholder="예) TEAM-DEV-BACKEND" maxlength="32" />
+            </div>
+            <div class="form-group">
+              <label for="ogDisplayName">표시명 <span class="required">*</span></label>
+              <input id="ogDisplayName" type="text" placeholder="예) 백엔드 팀" maxlength="200" />
+            </div>
+            <div class="form-group">
+              <label for="ogSortOrder">정렬 순서</label>
+              <input id="ogSortOrder" type="number" value="0" min="0" />
+            </div>
+            <div class="form-group">
+              <label>활성 여부</label>
+              <label class="toggle-label"><input type="checkbox" id="ogIsActive" checked /><span>활성</span></label>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:8px">
+            <label>경로 미리보기 (자동)</label>
+            <div id="ogPathPreview" class="org-path-preview">-</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btnOrgGroupEditConfirm" class="btn-primary" data-edit-code="">저장</button>
+          <button type="button" class="btn-secondary" data-modal="modalOrgGroupEdit">취소</button>
+        </div>
+      </div>
     </div>
 
     <!-- 사용자 등록/편집 모달 -->

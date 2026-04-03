@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -48,4 +49,9 @@ public interface OrgGroupMemberRepository extends JpaRepository<OrgGroupMember, 
     List<OrgGroupMember> findAllByEmployeeNosWithGroupAndUser(
             @Param("employeeNos") Collection<String> employeeNos
     );
+
+    /** 조직 그룹 삭제 전 연관 멤버 일괄 삭제 */
+    @Modifying
+    @Query("DELETE FROM OrgGroupMember m WHERE m.group.groupCode = :groupCode")
+    void deleteAllByGroupCode(@Param("groupCode") String groupCode);
 }

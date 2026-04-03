@@ -69,14 +69,27 @@ public class OrgGroup {
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
+        this.updatedAt = OffsetDateTime.now();
     }
 
     public void setMemberOfGroupCode(String memberOfGroupCode) {
         this.memberOfGroupCode = memberOfGroupCode;
+        this.updatedAt = OffsetDateTime.now();
     }
 
     public void setGroupPath(String groupPath) {
         this.groupPath = groupPath;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void setSortOrder(int sortOrder) {
+        this.sortOrder = sortOrder;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void setIsActive(boolean isActive) {
+        this.isActive = isActive;
+        this.updatedAt = OffsetDateTime.now();
     }
 
     public Long getId() {

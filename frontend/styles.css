@@ -3894,6 +3894,149 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
 }
 .hint { font-size: 11px; color: var(--text-muted); font-weight: 400; }
 .required { color: #f87171; }
+.admin-hint { font-size: 12px; color: var(--text-muted); margin: -6px 0 10px; }
 @media (max-width: 600px) {
   .admin-user-edit-grid { grid-template-columns: 1fr; }
 }
+
+/* 인라인 셀렉트 (역할/상태) */
+.inline-select {
+  font-size: 12px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  cursor: pointer;
+  max-width: 90px;
+}
+.inline-select.status-select option[value="ACTIVE"]   { color: #4ade80; }
+.inline-select.status-select option[value="INACTIVE"] { color: #f87171; }
+.inline-select:focus { outline: none; border-color: var(--border-focus); }
+
+/* ============================================================
+ * 관리자 - 조직 관리
+ * ============================================================ */
+.org-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 18px;
+}
+.org-tab {
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+  transition: color .15s, border-color .15s;
+}
+.org-tab:hover  { color: var(--text-primary); background: var(--bg-sidebar-hover); }
+.org-tab.active { color: var(--accent-primary); border-bottom-color: var(--accent-primary); }
+
+.org-tab-content { min-height: 200px; }
+.org-tab-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+/* 트리 컨테이너 */
+.org-tree-container { padding-bottom: 24px; }
+
+/* 트리 노드 */
+.org-tree-node { margin-bottom: 2px; }
+
+.org-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  transition: background .12s;
+}
+.org-tree-row:hover { background: var(--bg-sidebar-hover); }
+
+.org-tree-bullet { font-size: 12px; color: var(--text-muted); width: 14px; flex-shrink: 0; }
+
+.org-type-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 7px;
+  border-radius: 10px; flex-shrink: 0; letter-spacing: .03em;
+}
+.ot-company   { background: rgba(167,139,250,.22); color: #c4b5fd; }
+.ot-division  { background: rgba(96,165,250,.18);  color: #93c5fd; }
+.ot-team      { background: rgba(52,211,153,.15);  color: #6ee7b7; }
+
+.org-display-name {
+  font-size: 13px; font-weight: 600; color: var(--text-primary);
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.org-code-small { font-family: monospace; font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.org-badge-inactive {
+  font-size: 10px; padding: 1px 6px; border-radius: 8px;
+  background: rgba(239,68,68,.12); color: #f87171; flex-shrink: 0;
+}
+.org-node-inactive .org-tree-row,
+.org-node-inactive .org-flat-item { opacity: .55; }
+
+.org-node-btns { display: flex; gap: 4px; flex-shrink: 0; margin-left: auto; }
+.btn-xs {
+  font-size: 11px; padding: 3px 8px; border-radius: 4px;
+  border: 1px solid var(--border-subtle); cursor: pointer;
+  background: var(--bg-input); color: var(--text-secondary);
+  transition: all .12s;
+}
+.btn-xs:hover { background: var(--bg-sidebar-hover); color: var(--text-primary); }
+.btn-xs.btn-secondary { border-color: var(--border-subtle); }
+.btn-xs.btn-danger    { border-color: rgba(239,68,68,.35); color: #f87171; }
+.btn-xs.btn-danger:hover { background: rgba(239,68,68,.12); }
+
+/* 플랫 목록 */
+.org-flat-list { display: flex; flex-direction: column; gap: 4px; }
+.org-flat-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-radius: 7px;
+  background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+}
+.org-sort-label { font-size: 11px; color: var(--text-muted); }
+.org-empty { color: var(--text-muted); font-size: 13px; padding: 16px 0; }
+
+/* 경로 미리보기 */
+.org-path-preview {
+  font-size: 12px; color: var(--accent-primary);
+  background: rgba(167,139,250,.08);
+  padding: 6px 10px; border-radius: 6px; word-break: break-all;
+}
+
+/* 사용자 관리 우클릭 컨텍스트 메뉴 */
+#adminUserContextMenu {
+  position: fixed; z-index: 9999;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  padding: 4px;
+  min-width: 140px;
+}
+#adminUserContextMenu .context-menu-item {
+  display: block; width: 100%; text-align: left;
+  padding: 8px 14px; font-size: 13px;
+  background: none; border: none; border-radius: 5px;
+  color: var(--text-primary); cursor: pointer;
+}
+#adminUserContextMenu .context-menu-item:hover { background: var(--bg-sidebar-hover); }
+#adminUserContextMenu .context-menu-item.ctx-delete-btn { color: #f87171; }
+#adminUserContextMenu .context-menu-item.ctx-delete-btn:hover { background: rgba(239,68,68,.1); }
+
+/* 조직 그룹 모달 */
+.toggle-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; cursor: pointer; color: var(--text-primary);
+}
+.toggle-label input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent-primary); }
