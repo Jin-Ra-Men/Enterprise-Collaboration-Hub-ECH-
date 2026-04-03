@@ -6557,6 +6557,8 @@ function renderKanbanBoard(board) {
       const raw = String(sel.dataset.cardId || "");
       const targetColumnId = Number(sel.value);
       if (!targetColumnId) return;
+      const bumpCid = getWorkHubChannelId();
+      if (bumpCid) bumpKanbanBoardFetchGeneration(bumpCid);
       if (isDraftLocal) {
         const idx = Number(raw.replace("draft-card-", ""));
         const d = Number.isFinite(idx) ? workHubPendingNewKanbanCards[idx] : null;
@@ -6652,6 +6654,10 @@ function renderKanbanBoard(board) {
       ev.stopPropagation();
       colEl.classList.remove("kanban-column-drag-over");
       boardEl.querySelectorAll(".kanban-drop-before").forEach((c) => c.classList.remove("kanban-drop-before"));
+      // Consecutive DnD: invalidate any in-flight board GET before rAF/sync — otherwise a slower
+      // response from the previous drop can render while DOM already reflects the next drop.
+      const preBumpCid = getWorkHubChannelId();
+      if (preBumpCid) bumpKanbanBoardFetchGeneration(preBumpCid);
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       syncKanbanBoardFromDomFull(boardEl);
       syncKanbanDraftsOrderFromDom(boardEl);
