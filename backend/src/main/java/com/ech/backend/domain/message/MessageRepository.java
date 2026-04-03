@@ -258,6 +258,17 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             nativeQuery = true)
     List<Long> findThreadRootIdsByChannelOrderByLastActivity(@Param("channelId") long channelId, @Param("lim") int lim);
 
+    /**
+     * 사용자 삭제: 이 사용자의 메시지를 parent로 참조하는 다른 사용자의 메시지 parent_message_id를 NULL로 초기화.
+     * messages.parent_message_id FK가 실제 DB에서 ON DELETE RESTRICT인 경우 대비.
+     */
+    @Modifying
+    @Query(value = """
+            UPDATE messages SET parent_message_id = NULL
+            WHERE parent_message_id IN (SELECT id FROM messages WHERE sender_id = :empNo)
+            """, nativeQuery = true)
+    void nullParentRefBySenderEmployeeNo(@Param("empNo") String employeeNo);
+
     /** 사용자 삭제: 해당 사용자가 발송한 메시지 전체 삭제 (채널 삭제 전 FK 해소) */
     @Modifying
     @Query(value = "DELETE FROM messages WHERE sender_id = :empNo", nativeQuery = true)

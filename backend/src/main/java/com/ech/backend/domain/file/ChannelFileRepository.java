@@ -32,7 +32,18 @@ public interface ChannelFileRepository extends JpaRepository<ChannelFile, Long> 
                                               @Param("employeeNo") String employeeNo,
                                               Pageable pageable);
 
-    /** 사용자 삭제: 해당 사용자가 업로드한 파일 메타데이터 삭제 (FK 해소) */
+    /**
+     * 사용자 삭제: 삭제될 채널(created_by = empNo)에 속한 파일 전체 삭제.
+     * channel_files.channel_id → channels.id FK에 ON DELETE CASCADE가 없는 경우 대비.
+     */
+    @Modifying
+    @Query(value = """
+            DELETE FROM channel_files
+            WHERE channel_id IN (SELECT id FROM channels WHERE created_by = :empNo)
+            """, nativeQuery = true)
+    void deleteByChannelCreatorEmployeeNo(@Param("empNo") String employeeNo);
+
+    /** 사용자 삭제: 해당 사용자가 업로드한 파일 메타데이터 삭제 (다른 채널 소속 포함) */
     @Modifying
     @Query(value = "DELETE FROM channel_files WHERE uploaded_by = :empNo", nativeQuery = true)
     void deleteByUploaderEmployeeNo(@Param("empNo") String employeeNo);

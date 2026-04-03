@@ -1,0 +1,17 @@
+fix: 사용자 삭제 FK 제약 위반 2차 수정
+
+실제 DB 에러 메시지로 확인된 추가 제약 3건 처리:
+
+1. kanban_cards.work_item_id -> work_items (RESTRICT)
+   - KanbanCardRepository.nullWorkItemRefByUserEmployeeNo()
+   - work_items 삭제 전 해당 참조를 NULL로 초기화
+
+2. messages.parent_message_id 자기참조 (RESTRICT)
+   - MessageRepository.nullParentRefBySenderEmployeeNo()
+   - 메시지 삭제 전 자식 메시지의 parent_message_id NULL 초기화
+
+3. channel_files.channel_id -> channels (CASCADE 없음)
+   - ChannelFileRepository.deleteByChannelCreatorEmployeeNo()
+   - 채널 삭제 전 해당 채널의 파일 전체 삭제
+
+AdminUserService.deleteUser() 11단계 삭제 순서로 정비

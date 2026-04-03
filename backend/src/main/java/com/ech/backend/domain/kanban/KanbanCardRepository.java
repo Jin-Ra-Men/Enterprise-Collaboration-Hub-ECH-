@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -54,4 +55,20 @@ public interface KanbanCardRepository extends JpaRepository<KanbanCard, Long> {
             ORDER BY c.updatedAt DESC
             """)
     List<KanbanCard> findAssignedChannelCards(@Param("employeeNo") String employeeNo, Pageable pageable);
+
+    /**
+     * 사용자 삭제: 삭제될 work_items를 참조하는 kanban_cards.work_item_id를 NULL로 초기화.
+     * kanban_cards.work_item_id → work_items.id FK에 ON DELETE 없는 경우 대비.
+     */
+    @Modifying
+    @Query(value = """
+            UPDATE kanban_cards SET work_item_id = NULL
+            WHERE work_item_id IN (
+                SELECT id FROM work_items WHERE created_by = :empNo
+                UNION
+                SELECT id FROM work_items
+                WHERE source_channel_id IN (SELECT id FROM channels WHERE created_by = :empNo)
+            )
+            """, nativeQuery = true)
+    void nullWorkItemRefByUserEmployeeNo(@Param("empNo") String employeeNo);
 }

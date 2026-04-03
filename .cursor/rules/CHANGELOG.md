@@ -5,6 +5,12 @@
 ## 2026-04-03
 
 ### Fixed
+- **사용자 삭제 연쇄 FK 오류 2차 수정 (실제 DB 제약 기반)**
+  - kanban_cards.work_item_id RESTRICT 대비: 삭제 전 NULL 초기화 추가
+  - messages.parent_message_id 자기참조 RESTRICT 대비: 자식 메시지 NULL 초기화 추가
+  - channel_files.channel_id CASCADE 없는 경우 대비: 채널 삭제 전 파일 전체 삭제 추가
+  - AdminUserService.deleteUser() 11단계 완전 삭제 순서로 정비
+  - KanbanCardRepository, MessageRepository, ChannelFileRepository 쿼리 추가
 - **DataIntegrityViolation 에러 응답에 실제 DB 원인 메시지 포함**
   - `GlobalExceptionHandler.handleDataIntegrity()` — PostgreSQL root cause 메시지 추출
   - 에러 응답: "DB 제약 위반 [원인: ...]" 으로 개선

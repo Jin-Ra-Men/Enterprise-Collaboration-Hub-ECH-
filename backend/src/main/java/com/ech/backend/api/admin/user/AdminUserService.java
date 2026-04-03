@@ -8,6 +8,7 @@ import com.ech.backend.domain.channel.ChannelRepository;
 import com.ech.backend.domain.file.ChannelFileRepository;
 import com.ech.backend.domain.kanban.KanbanBoardRepository;
 import com.ech.backend.domain.kanban.KanbanCardEventRepository;
+import com.ech.backend.domain.kanban.KanbanCardRepository;
 import com.ech.backend.domain.message.MessageRepository;
 import com.ech.backend.domain.org.OrgGroup;
 import com.ech.backend.domain.org.OrgGroupMember;
@@ -34,6 +35,7 @@ public class AdminUserService {
     private final OrgGroupMemberRepository orgGroupMemberRepository;
     private final PasswordEncoder passwordEncoder;
     private final KanbanCardEventRepository kanbanCardEventRepository;
+    private final KanbanCardRepository kanbanCardRepository;
     private final KanbanBoardRepository kanbanBoardRepository;
     private final WorkItemRepository workItemRepository;
     private final MessageRepository messageRepository;
@@ -46,6 +48,7 @@ public class AdminUserService {
             OrgGroupMemberRepository orgGroupMemberRepository,
             PasswordEncoder passwordEncoder,
             KanbanCardEventRepository kanbanCardEventRepository,
+            KanbanCardRepository kanbanCardRepository,
             KanbanBoardRepository kanbanBoardRepository,
             WorkItemRepository workItemRepository,
             MessageRepository messageRepository,
@@ -57,6 +60,7 @@ public class AdminUserService {
         this.orgGroupMemberRepository = orgGroupMemberRepository;
         this.passwordEncoder = passwordEncoder;
         this.kanbanCardEventRepository = kanbanCardEventRepository;
+        this.kanbanCardRepository = kanbanCardRepository;
         this.kanbanBoardRepository = kanbanBoardRepository;
         this.workItemRepository = workItemRepository;
         this.messageRepository = messageRepository;
@@ -139,16 +143,20 @@ public class AdminUserService {
 
     /**
      * 사용자 완전 삭제.
-     * users.employee_no를 참조하는 FK 중 ON DELETE CASCADE가 없는 테이블을 먼저 정리한 후 삭제한다.
+     * users.employee_no를 참조하는 FK(ON DELETE CASCADE 없는 것)를 순서대로 정리 후 삭제한다.
      *
      * 삭제 순서:
-     *  1) kanban_card_events  (actor_user_id FK, 캐스케이드 없음)
-     *  2) work_items          (created_by FK + 삭제될 채널의 source_channel_id FK, 캐스케이드 없음)
-     *  3) kanban_boards       (created_by FK → 컬럼→카드→담당자·이벤트 CASCADE)
-     *  4) messages            (sender_id FK, 캐스케이드 없음)
-     *  5) channel_files       (uploaded_by FK, 캐스케이드 없음)
-     *  6) channels            (created_by FK → 멤버·메시지·읽음상태·파일 CASCADE)
-     *  7) users               (org_group_members·channel_members 등 CASCADE로 자동 정리)
+     *  1) kanban_card_events    (actor_user_id → users, RESTRICT)
+     *  2) kanban_cards          work_item_id NULL 초기화 (→ work_items, RESTRICT)
+     *  3) work_items            source_channel 기준 (채널 삭제 전 처리)
+     *  4) work_items            created_by 기준
+     *  5) kanban_boards         created_by → users (CASCADE: 컬럼→카드→담당자·이벤트)
+     *  6) messages              parent_message_id NULL 초기화 (자기참조 RESTRICT 대비)
+     *  7) messages              sender_id → users, RESTRICT
+     *  8) channel_files         채널 삭제 전 해당 채널 소속 파일 전체 삭제 (channel_id FK, CASCADE 없는 경우)
+     *  9) channel_files         uploaded_by → users, RESTRICT (다른 채널 소속)
+     * 10) channels              created_by → users (CASCADE: 멤버·메시지·읽음상태·파일)
+     * 11) users                 (org_group_members·channel_members 등 CASCADE 자동 정리)
      */
     @Transactional
     public void deleteUser(String employeeNo) {
@@ -156,14 +164,26 @@ public class AdminUserService {
         userRepository.findByEmployeeNo(empNo)
                 .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다: " + empNo));
 
+        // 1. 칸반 카드 이벤트 (actor → users)
         kanbanCardEventRepository.deleteByActorEmployeeNo(empNo);
+        // 2. 칸반 카드의 work_item 참조 NULL 초기화 (work_items 삭제 전)
+        kanbanCardRepository.nullWorkItemRefByUserEmployeeNo(empNo);
+        // 3-4. work_items 삭제 (채널 기준 → 생성자 기준 순)
         workItemRepository.deleteBySourceChannelCreatorEmployeeNo(empNo);
         workItemRepository.deleteByCreatorEmployeeNo(empNo);
+        // 5. 칸반 보드 삭제 (CASCADE: 컬럼→카드→담당자·이벤트)
         kanbanBoardRepository.deleteByCreatorEmployeeNo(empNo);
+        // 6. 메시지 자기참조 NULL 초기화 (parent_message_id RESTRICT 대비)
+        messageRepository.nullParentRefBySenderEmployeeNo(empNo);
+        // 7. 메시지 삭제 (sender_id → users)
         messageRepository.deleteBySenderEmployeeNo(empNo);
+        // 8. 채널 소속 파일 삭제 (channel_id FK CASCADE 없는 경우)
+        channelFileRepository.deleteByChannelCreatorEmployeeNo(empNo);
+        // 9. 업로더 기준 파일 삭제 (다른 채널 소속)
         channelFileRepository.deleteByUploaderEmployeeNo(empNo);
+        // 10. 채널 삭제 (CASCADE: 멤버·메시지·읽음상태·파일)
         channelRepository.deleteByCreatorEmployeeNo(empNo);
-
+        // 11. 사용자 삭제 (org_group_members 등 CASCADE 자동 처리)
         userRepository.deleteByEmployeeNo(empNo);
     }
 
