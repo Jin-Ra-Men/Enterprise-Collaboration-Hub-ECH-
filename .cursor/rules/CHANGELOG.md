@@ -11,6 +11,7 @@
 ### Fixed
 - **Electron 설치형 흰 화면**: `electron-builder`가 프로젝트 밖 `../frontend/*` 경로를 asar에 넣지 않아 `app.asar`에 프론트가 비어 있었음 — `files`에 `from`/`to`로 `frontend/` 전체를 패키지에 포함하고, `main.js`에서 패키지 내 `frontend/index.html` 우선 로드
 - **Electron 기본 메뉴바**: Windows/Linux에서 `Menu.setApplicationMenu(null)`로 File/Edit/View 등 기본 메뉴 제거
+- **GitHub Release**: 데스크톱 버전 `0.0.2`, 태그 `v0.0.2`에 Windows NSIS 설치 파일 재배포(프론트 asar 포함·메뉴바 제거 반영)
 
 ## 2026-04-02
 
