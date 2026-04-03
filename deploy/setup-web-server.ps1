@@ -299,6 +299,16 @@ if (-not (Test-Path $jarSrc)) { Fatal "JAR 파일이 없습니다: $jarSrc`nbuil
 Copy-Item $jarSrc "$INSTALL_DIR\backend\ech-backend.jar" -Force
 Ok "백엔드 JAR 복사"
 
+# frontend 파일 복사 (백엔드 AppDirectory 기준 ../frontend = $INSTALL_DIR\frontend)
+$frontendSrc = Join-Path $scriptDir "frontend"
+if (Test-Path $frontendSrc) {
+    New-Item -ItemType Directory -Path "$INSTALL_DIR\frontend" -Force | Out-Null
+    Copy-Item "$frontendSrc\*" "$INSTALL_DIR\frontend\" -Force
+    Ok "프론트엔드 파일 복사 → $INSTALL_DIR\frontend"
+} else {
+    Warn "frontend 폴더 없음: $frontendSrc — build-package.ps1 을 다시 실행하세요."
+}
+
 # realtime (node_modules 포함 전체 복사)
 $realtimeSrc = Join-Path $scriptDir "realtime"
 if (-not (Test-Path $realtimeSrc)) { Fatal "realtime 폴더가 없습니다: $realtimeSrc" }

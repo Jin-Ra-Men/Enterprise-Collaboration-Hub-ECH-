@@ -84,6 +84,14 @@ foreach ($item in $realtimeSrc) {
 }
 Ok "realtime 소스 + node_modules 복사"
 
+# frontend 복사
+$frontend = Join-Path $root "frontend"
+New-Item -ItemType Directory -Path "$outDir\frontend" -Force | Out-Null
+Copy-Item "$frontend\index.html" "$outDir\frontend\" -Force
+Copy-Item "$frontend\styles.css" "$outDir\frontend\" -Force
+Copy-Item "$frontend\app.js"     "$outDir\frontend\" -Force
+Ok "프론트엔드 파일 복사 (index.html, styles.css, app.js)"
+
 # 설정 파일 복사
 Copy-Item "$deploy\env.prod"                      "$outDir\"
 Copy-Item "$deploy\pm2.ecosystem.config.cjs"      "$outDir\"
