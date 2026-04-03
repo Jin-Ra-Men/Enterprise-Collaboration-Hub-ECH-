@@ -26,7 +26,8 @@ function resolveApiBase() {
   if (meta) return meta.replace(/\/$/, "");
   try {
     const o = window.location?.origin;
-    if (o && o !== "null") return o;
+    // Electron `loadFile` → origin이 `file://` 또는 불투명 origin 문자열 `"null"` 인 경우가 있어 REST URL로 쓰면 fetch가 깨짐
+    if (o && o !== "null" && /^https?:\/\//i.test(o)) return o.replace(/\/$/, "");
   } catch {
     /* ignore */
   }
@@ -49,6 +50,9 @@ function resolveSocketUrl() {
   if (meta) return meta.replace(/\/$/, "");
   try {
     const { protocol, hostname } = window.location;
+    if (protocol === "file:" || protocol === "chrome:" || protocol === "app:") {
+      return "http://localhost:3001";
+    }
     const host = hostname || "localhost";
     const scheme = protocol === "https:" ? "https" : "http";
     return `${scheme}://${host}:3001`;

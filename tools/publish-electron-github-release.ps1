@@ -1,7 +1,7 @@
 # Create or update a GitHub Release and upload the Windows NSIS installer from desktop/dist.
 # Requires: GITHUB_TOKEN (repo releases write), desktop/dist/ECH Setup {version}.exe built.
 # Usage: powershell -File ./tools/publish-electron-github-release.ps1 [tag]
-# Example: powershell -File ./tools/publish-electron-github-release.ps1 v0.0.2
+# Example: powershell -File ./tools/publish-electron-github-release.ps1 v0.0.3
 
 $ErrorActionPreference = "Stop"
 
@@ -12,7 +12,7 @@ if ([string]::IsNullOrWhiteSpace($token)) {
 
 $owner = "Jin-Ra-Men"
 $repo = "Enterprise-Collaboration-Hub-ECH-"
-$tag = if ($args.Count -ge 1 -and -not [string]::IsNullOrWhiteSpace($args[0])) { $args[0].Trim() } else { "v0.0.2" }
+$tag = if ($args.Count -ge 1 -and -not [string]::IsNullOrWhiteSpace($args[0])) { $args[0].Trim() } else { "v0.0.3" }
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $pkgPath = Join-Path $repoRoot "desktop\package.json"

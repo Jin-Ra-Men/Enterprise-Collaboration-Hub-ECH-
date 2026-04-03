@@ -238,4 +238,4 @@ npm start
 ```
 
 - Electron으로 실행하면 브라우저 `Notification` 권한 요청 없이도 OS 알림을 띄우도록 구성되어 있습니다(Windows 알림센터 기준).
-- Windows 설치 파일(NSIS): `desktop`에서 `npm run build:win` → `desktop/dist/ECH Setup 0.0.2.exe`(버전은 `desktop/package.json`의 `version`). 패키지에는 상위 `frontend/` 전체가 `electron-builder` `files`의 `from`/`to`로 `app.asar` 안 `frontend/`에 포함되며, 설치형에서 흰 화면만 보이면 이 포함 여부·`main.js`의 `index.html` 경로를 확인합니다.
+- Windows 설치 파일(NSIS): `desktop`에서 `npm run build:win` → `desktop/dist/ECH Setup {version}.exe`(버전은 `desktop/package.json`의 `version`). Electron은 `file://`로 UI를 열므로 API/소켓은 기본 **`http://localhost:8080`**, **`http://localhost:3001`** 로 붙습니다(백엔드·Realtime을 로컬에서 띄워야 로그인 가능). 다른 호스트를 쓰려면 `index.html`의 `<meta name="ech-api-base">` / `<meta name="ech-realtime-url">` 또는 `localStorage` `ech_realtime_url` 로 지정합니다.
