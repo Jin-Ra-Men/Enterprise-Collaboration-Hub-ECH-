@@ -4368,48 +4368,51 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 16px 20px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-  align-content: start;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-/* 멤버 카드 */
+/* 멤버 카드 (세로 목록 row 형태) */
 .orgchart-member-card {
-  display: flex; align-items: flex-start; gap: 12px;
-  padding: 14px;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
-  border-radius: 10px;
-  transition: border-color .15s, box-shadow .15s;
+  border-radius: 8px;
+  transition: border-color .15s, background .15s;
   cursor: default;
 }
 .orgchart-member-card:hover {
   border-color: var(--border-focus);
-  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+  background: var(--bg-sidebar-hover);
 }
 .orgchart-member-avatar {
-  width: 40px; height: 40px; flex-shrink: 0;
+  width: 36px; height: 36px; flex-shrink: 0;
   border-radius: 50%;
   background: var(--sidebar-avatar-bg);
   color: var(--text-primary);
-  font-weight: 700; font-size: 16px;
+  font-weight: 700; font-size: 15px;
   display: flex; align-items: center; justify-content: center;
 }
-.orgchart-member-info { flex: 1; min-width: 0; }
+.orgchart-member-info {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 10px;
+}
 .orgchart-member-name {
   font-size: 14px; font-weight: 600;
   color: var(--text-primary);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 60px;
 }
 .orgchart-member-emp {
-  font-size: 11px; color: var(--text-muted);
-  margin-top: 2px;
+  font-size: 12px; color: var(--text-muted);
+  white-space: nowrap;
 }
 .orgchart-member-badges {
   display: flex; flex-wrap: wrap; gap: 4px;
-  margin-top: 6px;
+  margin-left: auto;
 }
 .orgchart-badge {
   font-size: 11px; font-weight: 500;
@@ -4417,6 +4420,7 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
   background: var(--bg-input);
   color: var(--text-secondary);
   border: 1px solid var(--border-subtle);
+  white-space: nowrap;
 }
 
 /* 힌트/빈 상태 */
