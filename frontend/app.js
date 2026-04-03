@@ -8757,3 +8757,138 @@ function updatePendingChildPaths(parentCode, parentDisplayPath) {
     updatePendingChildPaths(kid.groupCode, newDisplayPath);
   }
 }
+
+/* ==========================================================================
+ * 조직도 모달
+ * ========================================================================== */
+let orgChartData = null;
+
+document.getElementById("btnOrgChart").addEventListener("click", () => {
+  openModal("modalOrgChart");
+  loadOrgChart();
+});
+
+document.getElementById("btnOrgChartRefresh").addEventListener("click", () => {
+  orgChartData = null;
+  loadOrgChart();
+});
+
+async function loadOrgChart() {
+  const scroll = document.getElementById("orgChartTreeScroll");
+  const grid   = document.getElementById("orgChartMemberGrid");
+  const teamNameEl  = document.getElementById("orgChartTeamName");
+  const teamCountEl = document.getElementById("orgChartTeamCount");
+  if (scroll) scroll.innerHTML = '<p class="orgchart-hint">불러오는 중…</p>';
+  if (grid)   grid.innerHTML   = '<p class="orgchart-hint">좌측에서 팀을 선택하면 구성원이 표시됩니다.</p>';
+  if (teamNameEl)  teamNameEl.textContent  = "팀을 선택하세요";
+  if (teamCountEl) teamCountEl.textContent = "";
+
+  try {
+    const res  = await apiFetch("/api/user-directory/organization");
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error?.message || "조직도 조회 실패");
+    orgChartData = json.data;
+    renderOrgChartTree(orgChartData);
+  } catch (e) {
+    if (scroll) scroll.innerHTML = `<p class="orgchart-error">${escHtml(e.message || "오류가 발생했습니다.")}</p>`;
+  }
+}
+
+function renderOrgChartTree(data) {
+  const scroll = document.getElementById("orgChartTreeScroll");
+  if (!scroll) return;
+
+  const companies = data?.companies ?? [];
+  if (!companies.length) {
+    scroll.innerHTML = '<p class="orgchart-hint">등록된 조직이 없습니다.</p>';
+    return;
+  }
+
+  const parts = [];
+  for (const co of companies) {
+    parts.push(`<div class="orgchart-company-block">`);
+    parts.push(`<div class="orgchart-company-label">🏢 ${escHtml(co.name)}</div>`);
+    for (const div of (co.divisions ?? [])) {
+      const totalMembers = (div.teams ?? []).reduce((s, t) => s + (t.users?.length ?? 0), 0);
+      parts.push(`<details class="orgchart-div-details" open>`);
+      parts.push(`<summary>
+        <span class="orgchart-div-toggle">▶</span>
+        📂 ${escHtml(div.name)}
+        <span class="orgchart-node-count">${totalMembers}</span>
+      </summary>`);
+      parts.push(`<div class="orgchart-div-teams">`);
+      for (const team of (div.teams ?? [])) {
+        const cnt = team.users?.length ?? 0;
+        parts.push(`<button type="button"
+          class="orgchart-team-btn"
+          data-co="${escHtml(co.name)}"
+          data-div="${escHtml(div.name)}"
+          data-team="${escHtml(team.name)}">
+          👥 ${escHtml(team.name)}
+          <span class="orgchart-node-count">${cnt}</span>
+        </button>`);
+      }
+      parts.push(`</div></details>`);
+    }
+    parts.push(`</div>`);
+  }
+  scroll.innerHTML = parts.join("");
+}
+
+function renderOrgChartMembers(team) {
+  const grid        = document.getElementById("orgChartMemberGrid");
+  const teamNameEl  = document.getElementById("orgChartTeamName");
+  const teamCountEl = document.getElementById("orgChartTeamCount");
+  if (!grid) return;
+
+  if (teamNameEl)  teamNameEl.textContent  = team.name;
+  if (teamCountEl) teamCountEl.textContent = `${team.users?.length ?? 0}명`;
+
+  const users = team.users ?? [];
+  if (!users.length) {
+    grid.innerHTML = '<p class="orgchart-hint">팀 구성원이 없습니다.</p>';
+    return;
+  }
+
+  grid.innerHTML = users.map(u => {
+    const initial = (u.name ?? "?").charAt(0);
+    const badges  = [u.jobLevel, u.jobPosition, u.jobTitle]
+      .filter(Boolean)
+      .map(b => `<span class="orgchart-badge">${escHtml(b)}</span>`)
+      .join("");
+    return `<div class="orgchart-member-card">
+      <div class="orgchart-member-avatar">${escHtml(initial)}</div>
+      <div class="orgchart-member-info">
+        <div class="orgchart-member-name">${escHtml(u.name ?? "-")}</div>
+        <div class="orgchart-member-emp">${escHtml(u.employeeNo ?? "")}</div>
+        ${badges ? `<div class="orgchart-member-badges">${badges}</div>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+document.getElementById("orgChartTreeScroll").addEventListener("click", (e) => {
+  const btn = e.target.closest(".orgchart-team-btn");
+  if (!btn || !orgChartData) return;
+
+  const coName   = btn.dataset.co;
+  const divName  = btn.dataset.div;
+  const teamName = btn.dataset.team;
+
+  let found = null;
+  outer: for (const co of (orgChartData.companies ?? [])) {
+    if (co.name !== coName) continue;
+    for (const div of (co.divisions ?? [])) {
+      if (div.name !== divName) continue;
+      found = (div.teams ?? []).find(t => t.name === teamName) ?? null;
+      if (found) break outer;
+    }
+  }
+  if (!found) return;
+
+  document.querySelectorAll(".orgchart-team-btn.is-selected")
+    .forEach(el => el.classList.remove("is-selected"));
+  btn.classList.add("is-selected");
+
+  renderOrgChartMembers(found);
+});

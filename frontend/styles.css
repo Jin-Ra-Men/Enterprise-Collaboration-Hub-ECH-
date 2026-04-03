@@ -4193,3 +4193,206 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
   background: var(--bg-elevated);
   padding: 1px 8px; border-radius: 10px;
 }
+
+/* =========================================================
+ * 워크스페이스 헤더 조직도 버튼
+ * ========================================================= */
+.btn-workspace-tool {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  border: none; border-radius: 6px;
+  background: transparent;
+  color: var(--sidebar-text);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  flex-shrink: 0;
+}
+.btn-workspace-tool:hover {
+  background: var(--sidebar-item-hover-bg);
+  color: var(--sidebar-item-fg-strong);
+}
+.btn-workspace-tool svg { display: block; }
+
+/* =========================================================
+ * 조직도 모달
+ * ========================================================= */
+.modal-orgchart {
+  width: min(92vw, 1080px);
+  height: min(88vh, 780px);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+.orgchart-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+.orgchart-modal-header h3 { margin: 0; flex: 1; font-size: 16px; font-weight: 700; }
+.orgchart-refresh-btn { margin-right: 4px; }
+
+.orgchart-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 좌측 트리 패널 */
+.orgchart-tree-pane {
+  width: 280px;
+  min-width: 220px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.orgchart-tree-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 8px;
+}
+
+/* 트리 노드 공통 */
+.orgchart-company-block { margin-bottom: 16px; }
+.orgchart-company-label {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px;
+  font-size: 13px; font-weight: 700;
+  color: var(--text-primary);
+  border-radius: 6px;
+}
+.orgchart-div-details { margin-left: 8px; }
+.orgchart-div-details > summary {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px;
+  font-size: 12px; font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 6px;
+  list-style: none;
+  user-select: none;
+}
+.orgchart-div-details > summary::-webkit-details-marker { display: none; }
+.orgchart-div-details > summary:hover { background: var(--bg-sidebar-hover); }
+.orgchart-div-toggle {
+  font-size: 10px; color: var(--text-muted);
+  transition: transform .15s;
+  flex-shrink: 0;
+}
+.orgchart-div-details[open] > summary .orgchart-div-toggle { transform: rotate(90deg); }
+.orgchart-div-teams { padding-left: 8px; }
+
+.orgchart-team-btn {
+  display: flex; align-items: center; gap: 6px;
+  width: 100%; padding: 5px 10px;
+  background: transparent; border: none; border-radius: 6px;
+  font-size: 12px; color: var(--text-secondary);
+  cursor: pointer; text-align: left;
+  transition: background .12s, color .12s;
+}
+.orgchart-team-btn:hover { background: var(--bg-sidebar-hover); color: var(--text-primary); }
+.orgchart-team-btn.is-selected {
+  background: var(--sidebar-active-bg);
+  color: var(--sidebar-item-fg-strong);
+  font-weight: 600;
+}
+.orgchart-node-count {
+  margin-left: auto;
+  font-size: 11px; font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 1px 7px; border-radius: 10px;
+  flex-shrink: 0;
+}
+
+/* 우측 멤버 패널 */
+.orgchart-member-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.orgchart-member-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 20px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+.orgchart-member-team-name {
+  font-size: 15px; font-weight: 700;
+  color: var(--text-primary);
+}
+.orgchart-member-count {
+  font-size: 12px; font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  padding: 2px 10px; border-radius: 10px;
+}
+.orgchart-member-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+
+/* 멤버 카드 */
+.orgchart-member-card {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  transition: border-color .15s, box-shadow .15s;
+  cursor: default;
+}
+.orgchart-member-card:hover {
+  border-color: var(--border-focus);
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+.orgchart-member-avatar {
+  width: 40px; height: 40px; flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--sidebar-avatar-bg);
+  color: var(--text-primary);
+  font-weight: 700; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+}
+.orgchart-member-info { flex: 1; min-width: 0; }
+.orgchart-member-name {
+  font-size: 14px; font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.orgchart-member-emp {
+  font-size: 11px; color: var(--text-muted);
+  margin-top: 2px;
+}
+.orgchart-member-badges {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  margin-top: 6px;
+}
+.orgchart-badge {
+  font-size: 11px; font-weight: 500;
+  padding: 2px 7px; border-radius: 4px;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+/* 힌트/빈 상태 */
+.orgchart-hint {
+  padding: 16px; font-size: 13px;
+  color: var(--text-muted); text-align: center;
+}
+.orgchart-error {
+  padding: 16px; font-size: 13px;
+  color: #f87171; text-align: center;
+}

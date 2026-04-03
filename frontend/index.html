@@ -55,6 +55,13 @@
         <!-- 워크스페이스 헤더 (퀵 레일보다 위 전폭) -->
         <div class="sidebar-workspace">
           <span class="workspace-name">ECH</span>
+          <button id="btnOrgChart" class="btn-workspace-tool" title="조직도" aria-label="조직도 보기">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="2" y="7" width="6" height="5" rx="1"/><rect x="9" y="2" width="6" height="5" rx="1"/>
+              <rect x="16" y="7" width="6" height="5" rx="1"/>
+              <path d="M5 12v3h14v-3M12 7V5"/>
+            </svg>
+          </button>
         </div>
 
         <div class="sidebar-body">
@@ -402,6 +409,35 @@
 
       </main>
 
+    </div>
+
+    <!-- ===================== 조직도 모달 ===================== -->
+    <div id="modalOrgChart" class="modal-overlay hidden">
+      <div class="modal modal-orgchart">
+        <div class="modal-header orgchart-modal-header">
+          <h3>🏢 조직도</h3>
+          <button type="button" id="btnOrgChartRefresh" class="btn-refresh orgchart-refresh-btn">새로고침</button>
+          <button class="modal-close" data-modal="modalOrgChart" type="button">✕</button>
+        </div>
+        <div class="orgchart-body">
+          <!-- 좌측: 조직 트리 -->
+          <div class="orgchart-tree-pane" id="orgChartTreePane">
+            <div class="orgchart-tree-scroll" id="orgChartTreeScroll">
+              <p class="orgchart-hint">불러오는 중…</p>
+            </div>
+          </div>
+          <!-- 우측: 팀 멤버 -->
+          <div class="orgchart-member-pane" id="orgChartMemberPane">
+            <div class="orgchart-member-header" id="orgChartMemberHeader">
+              <span class="orgchart-member-team-name" id="orgChartTeamName">팀을 선택하세요</span>
+              <span class="orgchart-member-count" id="orgChartTeamCount"></span>
+            </div>
+            <div class="orgchart-member-grid" id="orgChartMemberGrid">
+              <p class="orgchart-hint">좌측에서 팀을 선택하면 구성원이 표시됩니다.</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 멘션 토스트: mainApp overflow:hidden 밖에 두어 잘리지 않도록 body 직계 -->

@@ -4,6 +4,14 @@
 
 ## 2026-04-03
 
+### Added
+- **조직도 모달 기능 추가**
+  - 사이드바 워크스페이스 헤더(ECH 영역) 우측에 조직도 버튼(`btn-workspace-tool`) 추가
+  - `modalOrgChart` 모달: 좌측 조직 트리(회사→본부→팀) + 우측 팀 멤버 카드 그리드 레이아웃
+  - `/api/user-directory/organization` API 활용, MEMBER 이상 접근 가능
+  - 팀 선택 시 멤버 카드(이름·사번·직급·직위·직책 배지) 표시, 새로고침 버튼 지원
+  - `styles.css`: `.btn-workspace-tool`, `.modal-orgchart`, `.orgchart-*` 스타일 추가
+
 ### Fixed
 - **사용자 삭제 연쇄 FK 오류 3차 수정 (실제 DB에 CASCADE 전무 대응)**
   - kanban_boards → kanban_columns RESTRICT: KanbanColumnRepository.deleteByBoardCreatorEmployeeNo() 추가
