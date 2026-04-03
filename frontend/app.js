@@ -5235,6 +5235,28 @@ function syncKanbanBoardPartial(boardEl, columnIds) {
   });
 }
 
+/** After DnD, reconcile every column from DOM so pending maps and row `<select>` match the column the card sits in. */
+function syncKanbanBoardFromDomFull(boardEl) {
+  if (!boardEl) return;
+  const ids = [...boardEl.querySelectorAll(".kanban-column")]
+    .map((c) => Number(c.dataset.columnId || 0))
+    .filter((x) => x > 0);
+  syncKanbanBoardPartial(boardEl, ids);
+}
+
+/** Keep per-card column dropdown in sync with the `.kanban-column` that contains the card (avoids stale <select> after DOM moves). */
+function syncKanbanCardColumnSelectsFromDom(boardEl) {
+  if (!boardEl) return;
+  boardEl.querySelectorAll(".kanban-card-item").forEach((cardEl) => {
+    const del = cardEl.querySelector(".kanban-card-delete-btn");
+    const sel = cardEl.querySelector(".kanban-card-column-select");
+    if (!del || !sel || del.dataset.isDraft === "1") return;
+    const colId = Number(cardEl.closest(".kanban-column")?.dataset.columnId || 0);
+    if (!colId) return;
+    sel.value = String(colId);
+  });
+}
+
 /** Rebuild draft queue order and column ids from full board DOM (draft-card-* indices). */
 function syncKanbanDraftsOrderFromDom(boardEl) {
   if (!boardEl || !workHubPendingNewKanbanCards.length) return;
@@ -6409,7 +6431,14 @@ function renderKanbanBoard(board) {
       const cardId = Number(rawId);
       const card = effectiveSavedCards.find((c) => Number(c.id) === cardId);
       const pending = workHubPendingCardColumn.get(cardId);
-      sel.value = String(Number(pending != null ? pending : card?.columnId));
+      const hostColId = Number(sel.closest(".kanban-column")?.dataset.columnId || 0);
+      const resolved =
+        pending != null
+          ? Number(pending)
+          : hostColId > 0
+            ? hostColId
+            : Number(card?.columnId || 0);
+      sel.value = String(resolved);
     }
     sel.addEventListener("change", () => {
       const isDraftLocal = sel.dataset.isDraft === "1";
@@ -6442,9 +6471,12 @@ function renderKanbanBoard(board) {
       cardEl.dataset.dragSourceColumnId = srcCol != null ? String(srcCol) : "";
     });
     cardEl.addEventListener("dragend", () => {
-      cardEl.classList.remove("kanban-card-dragging");
-      delete cardEl.dataset.dragSourceColumnId;
-      kanbanDnDSourceColumnId = null;
+      // Let `drop` run first in browsers that fire dragend early; avoids incomplete sync & stale column <select>.
+      setTimeout(() => {
+        cardEl.classList.remove("kanban-card-dragging");
+        delete cardEl.dataset.dragSourceColumnId;
+        kanbanDnDSourceColumnId = null;
+      }, 0);
     });
   });
   boardEl.querySelectorAll(".kanban-card-list").forEach((listEl) => {
@@ -6469,15 +6501,9 @@ function renderKanbanBoard(board) {
     listEl.addEventListener("drop", async (ev) => {
       ev.preventDefault();
       boardEl.querySelectorAll(".kanban-drop-before").forEach((c) => c.classList.remove("kanban-drop-before"));
-      const targetColId = Number(listEl.closest(".kanban-column")?.dataset.columnId || 0);
-      const dragging = boardEl.querySelector(".kanban-card-dragging");
-      const fromDrag = dragging && dragging.dataset.dragSourceColumnId
-        ? Number(dragging.dataset.dragSourceColumnId)
-        : NaN;
-      const sourceColId = Number.isFinite(fromDrag) && fromDrag > 0 ? fromDrag : Number(kanbanDnDSourceColumnId || 0);
-      const cols = [...new Set([targetColId, sourceColId].filter((x) => x > 0))];
-      syncKanbanBoardPartial(boardEl, cols);
+      syncKanbanBoardFromDomFull(boardEl);
       syncKanbanDraftsOrderFromDom(boardEl);
+      syncKanbanCardColumnSelectsFromDom(boardEl);
       await Promise.all([loadChannelKanbanBoard(), loadChannelWorkItems()]);
     });
   });
