@@ -5228,6 +5228,7 @@ function syncKanbanBoardPartial(boardEl, columnIds) {
       if (Number.isFinite(cid)) {
         workHubPendingCardColumn.set(cid, colId);
         workHubPendingCardSortOrder.set(cid, i);
+        cardEl.dataset.renderColumnId = String(colId);
         const wi = Number(cardEl.dataset.workItemId || "");
         syncPendingWorkItemStatusFromKanbanColumn(wi, colId);
       }
@@ -5337,9 +5338,14 @@ function syncKanbanCardColumnSelectsFromDom(boardEl) {
     if (!del || !sel || del.dataset.isDraft === "1") return;
     const colId = Number(cardEl.closest(".kanban-column")?.dataset.columnId || 0);
     if (!colId) return;
+    cardEl.dataset.renderColumnId = String(colId);
     sel.value = String(colId);
     const cid = Number(del.dataset.cardId || "");
-    if (Number.isFinite(cid)) workHubPendingCardColumn.set(cid, colId);
+    if (Number.isFinite(cid)) {
+      workHubPendingCardColumn.set(cid, colId);
+      const wi = Number(cardEl.dataset.workItemId || "");
+      syncPendingWorkItemStatusFromKanbanColumn(wi, colId);
+    }
   });
 }
 
@@ -6518,19 +6524,17 @@ function renderKanbanBoard(board) {
       const cardId = Number(rawId);
       const card = effectiveSavedCards.find((c) => Number(c.id) === cardId);
       const article = sel.closest(".kanban-card-item");
-      const renderCol = Number(article?.dataset.renderColumnId || 0);
+      const hostCol = Number(sel.closest(".kanban-column")?.dataset.columnId || 0);
       const pending = workHubPendingCardColumn.get(cardId);
-      const baseCol = pending != null ? Number(pending) : Number(card?.columnId || 0);
+      const baseCol = Number(card?.columnId || 0);
       const resolved =
-        renderCol > 0
-          ? renderCol
-          : baseCol;
+        hostCol > 0 ? hostCol : pending != null ? Number(pending) : baseCol;
       sel.value = String(resolved);
-      if (renderCol > 0 && baseCol > 0 && renderCol !== baseCol) {
-        // When visual bucket and base state diverge, trust the rendered column and repair pending state.
-        workHubPendingCardColumn.set(cardId, renderCol);
+      if (hostCol > 0 && Number.isFinite(cardId)) {
+        workHubPendingCardColumn.set(cardId, hostCol);
+        if (article) article.dataset.renderColumnId = String(hostCol);
         const wi = Number(article?.dataset.workItemId || "");
-        syncPendingWorkItemStatusFromKanbanColumn(wi, renderCol);
+        syncPendingWorkItemStatusFromKanbanColumn(wi, hostCol);
       }
     }
     sel.addEventListener("change", () => {
@@ -6633,6 +6637,7 @@ function renderKanbanBoard(board) {
       ev.stopPropagation();
       colEl.classList.remove("kanban-column-drag-over");
       boardEl.querySelectorAll(".kanban-drop-before").forEach((c) => c.classList.remove("kanban-drop-before"));
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       syncKanbanBoardFromDomFull(boardEl);
       syncKanbanDraftsOrderFromDom(boardEl);
       syncKanbanCardColumnSelectsFromDom(boardEl);

@@ -12,6 +12,7 @@
 - **내 업무 항목**: 비활성(`in_use=false`) 업무는 `GET .../sidebar/by-assigned-cards`에서 제외
 
 ### Fixed
+- **칸반 DnD(간헐)**: 셀렉트 값을 **`closest(.kanban-column")`의 `data-column-id`를 최우선**으로 두고 매 렌더·`syncKanbanCardColumnSelectsFromDom`에서 `workHubPendingCardColumn`·연결 업무 상태와 `data-render-column-id`를 동기화; `syncKanbanBoardPartial`에서도 카드마다 `renderColumnId` 갱신; `drop` 직후 **이중 `requestAnimationFrame`** 후 DOM 동기화해 레이아웃 타이밍 레이스 완화
 - **칸반 DnD 안정화(추가)**: 렌더 버킷 컬럼(`data-render-column-id`)과 base/pending 컬럼이 다를 때 렌더 컬럼을 기준으로 `workHubPendingCardColumn`·연결 업무 상태를 즉시 보정해, 카드가 `진행 중` 칼럼에 보여도 셀렉트가 `완료`로 남는 케이스를 추가 완화
 - **칸반 DnD 텍스트 유입 방지(보강)**: 모달 내부 가드 외에 문서 캡처 단계 글로벌 가드를 추가해, 카드 드래그 중 `input/textarea/select/contenteditable`에 드롭해도 텍스트가 입력되지 않게 차단
 - **칸반 DnD**: 카드가 옮겨진 컬럼과 행 **컬럼 `<select>`** 불일치 — 렌더 시 `data-render-column-id`(컬럼 버킷)를 두고 셀렉트 기본값을 그 id로 고정; `syncKanbanCardColumnSelectsFromDom`에서 pending도 `closest(.kanban-column)` 기준으로 갱신
