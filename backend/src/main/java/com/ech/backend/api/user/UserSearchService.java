@@ -71,98 +71,123 @@ public class UserSearchService {
             return new OrganizationTreeResponse(List.of());
         }
 
-        Map<String, List<OrgGroup>> teamsByDivisionCode = new HashMap<>();
-        List<OrgGroup> allTeams = new ArrayList<>();
+        // 회사/본부/팀 그룹 수집
+        Map<String, List<OrgGroup>> divisionsByCompanyCode  = new HashMap<>();
+        Map<String, List<OrgGroup>> teamsByDivisionCode     = new HashMap<>();
+        List<OrgGroup> allDivisions = new ArrayList<>();
+        List<OrgGroup> allTeams     = new ArrayList<>();
 
         for (OrgGroup company : companies) {
-            List<OrgGroup> divisions = orgGroupRepository.findAllByGroupTypeAndMemberOfGroupCodeAndIsActiveOrderByDisplayNameAsc(
-                    "DIVISION",
-                    company.getGroupCode(),
-                    true
-            );
+            List<OrgGroup> divisions = orgGroupRepository
+                    .findAllByGroupTypeAndMemberOfGroupCodeAndIsActiveOrderByDisplayNameAsc(
+                            "DIVISION", company.getGroupCode(), true);
+            divisionsByCompanyCode.put(company.getGroupCode(), divisions);
+            allDivisions.addAll(divisions);
+
             for (OrgGroup division : divisions) {
-                teamsByDivisionCode.putIfAbsent(division.getGroupCode(), new ArrayList<>());
-                List<OrgGroup> teams = orgGroupRepository.findAllByGroupTypeAndMemberOfGroupCodeAndIsActiveOrderByDisplayNameAsc(
-                        "TEAM",
-                        division.getGroupCode(),
-                        true
-                );
-                teamsByDivisionCode.get(division.getGroupCode()).addAll(teams);
+                List<OrgGroup> teams = orgGroupRepository
+                        .findAllByGroupTypeAndMemberOfGroupCodeAndIsActiveOrderByDisplayNameAsc(
+                                "TEAM", division.getGroupCode(), true);
+                teamsByDivisionCode.put(division.getGroupCode(), teams);
                 allTeams.addAll(teams);
             }
         }
 
-        List<String> teamCodes = allTeams.stream().map(OrgGroup::getGroupCode).toList();
-        List<OrgGroupMember> teamMembers = teamCodes.isEmpty()
+        // 팀 직속 멤버
+        List<String> teamCodes     = allTeams.stream().map(OrgGroup::getGroupCode).toList();
+        // 본부 직속 멤버 (TEAM 멤버십이 DIVISION 코드를 가리키는 경우)
+        List<String> divisionCodes = allDivisions.stream().map(OrgGroup::getGroupCode).toList();
+        // 회사 직속 멤버 (TEAM 멤버십이 COMPANY 코드를 가리키는 경우)
+        List<String> companyCodes  = companies.stream().map(OrgGroup::getGroupCode).toList();
+
+        List<String> allGroupCodes = new ArrayList<>();
+        allGroupCodes.addAll(teamCodes);
+        allGroupCodes.addAll(divisionCodes);
+        allGroupCodes.addAll(companyCodes);
+
+        List<OrgGroupMember> allMembers = allGroupCodes.isEmpty()
                 ? List.of()
-                : orgGroupMemberRepository.findMembersByMemberGroupTypeAndGroupCodes("TEAM", teamCodes);
+                : orgGroupMemberRepository.findMembersByMemberGroupTypeAndGroupCodes("TEAM", allGroupCodes);
 
-        Map<String, List<User>> usersByTeamCode = new HashMap<>();
-        Set<String> employeeNos = teamMembers.isEmpty()
+        Map<String, List<User>> usersByGroupCode = new HashMap<>();
+        Set<String> employeeNos = allMembers.isEmpty()
                 ? Set.of()
-                : teamMembers.stream().map(m -> m.getUser().getEmployeeNo()).collect(Collectors.toSet());
+                : allMembers.stream().map(m -> m.getUser().getEmployeeNo()).collect(Collectors.toSet());
 
-        for (OrgGroupMember m : teamMembers) {
-            String teamCode = m.getGroup().getGroupCode();
-            usersByTeamCode.computeIfAbsent(teamCode, k -> new ArrayList<>()).add(m.getUser());
+        for (OrgGroupMember m : allMembers) {
+            usersByGroupCode.computeIfAbsent(m.getGroup().getGroupCode(), k -> new ArrayList<>())
+                    .add(m.getUser());
         }
 
         Map<Long, String> jobLevelByUserId;
         Map<Long, String> jobPositionByUserId;
         Map<Long, String> jobTitleByUserId;
         if (employeeNos.isEmpty()) {
-            jobLevelByUserId = Map.of();
+            jobLevelByUserId    = Map.of();
             jobPositionByUserId = Map.of();
-            jobTitleByUserId = Map.of();
+            jobTitleByUserId    = Map.of();
         } else {
             jobLevelByUserId = toDisplayByUserId(
-                    orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos("JOB_LEVEL", employeeNos)
-            );
+                    orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos("JOB_LEVEL", employeeNos));
             jobPositionByUserId = toDisplayByUserId(
-                    orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos("JOB_POSITION", employeeNos)
-            );
+                    orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos("JOB_POSITION", employeeNos));
             jobTitleByUserId = toDisplayByUserId(
-                    orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos("JOB_TITLE", employeeNos)
-            );
+                    orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos("JOB_TITLE", employeeNos));
         }
 
         List<OrgCompanyResponse> companiesResponse = new ArrayList<>();
         for (OrgGroup company : companies) {
-            List<OrgGroup> divisions = orgGroupRepository.findAllByGroupTypeAndMemberOfGroupCodeAndIsActiveOrderByDisplayNameAsc(
-                    "DIVISION",
-                    company.getGroupCode(),
-                    true
-            );
+            List<OrgGroup> divisions = divisionsByCompanyCode.getOrDefault(company.getGroupCode(), List.of());
+
+            // 회사 직속 멤버 (TEAM 멤버십 → COMPANY 그룹)
+            List<UserSearchResponse> companyDirect = buildMemberList(
+                    usersByGroupCode.getOrDefault(company.getGroupCode(), List.of()),
+                    company.getDisplayName(), jobLevelByUserId, jobPositionByUserId, jobTitleByUserId);
 
             List<OrgDivisionResponse> divisionsResponse = new ArrayList<>();
             for (OrgGroup division : divisions) {
-                List<OrgGroup> teams = teamsByDivisionCode.getOrDefault(division.getGroupCode(), List.of());
-                teams = teams.stream()
+                List<OrgGroup> teams = teamsByDivisionCode.getOrDefault(division.getGroupCode(), List.of())
+                        .stream()
                         .sorted(Comparator.comparing(OrgGroup::getDisplayName, String.CASE_INSENSITIVE_ORDER))
                         .toList();
 
+                // 본부 직속 멤버 (TEAM 멤버십 → DIVISION 그룹)
+                List<UserSearchResponse> divisionDirect = buildMemberList(
+                        usersByGroupCode.getOrDefault(division.getGroupCode(), List.of()),
+                        division.getDisplayName(), jobLevelByUserId, jobPositionByUserId, jobTitleByUserId);
+
                 List<OrgTeamResponse> teamsResponse = teams.stream().map(team -> {
-                    List<User> users = usersByTeamCode.getOrDefault(team.getGroupCode(), List.of());
-                    List<UserSearchResponse> members = users.stream()
-                            .sorted(Comparator.comparing(User::getName, String.CASE_INSENSITIVE_ORDER))
-                            .map(u -> toTreeSearchResponse(
-                                    u,
-                                    team.getDisplayName(),
-                                    jobLevelByUserId.get(u.getId()),
-                                    jobPositionByUserId.get(u.getId()),
-                                    jobTitleByUserId.get(u.getId())
-                            ))
-                            .toList();
+                    List<UserSearchResponse> members = buildMemberList(
+                            usersByGroupCode.getOrDefault(team.getGroupCode(), List.of()),
+                            team.getDisplayName(), jobLevelByUserId, jobPositionByUserId, jobTitleByUserId);
                     return new OrgTeamResponse(team.getDisplayName(), members);
                 }).toList();
 
-                divisionsResponse.add(new OrgDivisionResponse(division.getDisplayName(), teamsResponse));
+                divisionsResponse.add(new OrgDivisionResponse(division.getDisplayName(), divisionDirect, teamsResponse));
             }
 
-            companiesResponse.add(new OrgCompanyResponse(company.getDisplayName(), divisionsResponse));
+            companiesResponse.add(new OrgCompanyResponse(company.getDisplayName(), companyDirect, divisionsResponse));
         }
 
         return new OrganizationTreeResponse(companiesResponse);
+    }
+
+    /** 사용자 목록 → UserSearchResponse 변환 + 이름 가나다 정렬 */
+    private List<UserSearchResponse> buildMemberList(
+            List<User> users,
+            String groupDisplayName,
+            Map<Long, String> jobLevelMap,
+            Map<Long, String> jobPositionMap,
+            Map<Long, String> jobTitleMap
+    ) {
+        return users.stream()
+                .sorted(Comparator.comparing(User::getName, String.CASE_INSENSITIVE_ORDER))
+                .map(u -> toTreeSearchResponse(
+                        u, groupDisplayName,
+                        jobLevelMap.get(u.getId()),
+                        jobPositionMap.get(u.getId()),
+                        jobTitleMap.get(u.getId())))
+                .toList();
     }
 
     private static Map<Long, String> toDisplayByUserId(List<OrgGroupMember> members) {

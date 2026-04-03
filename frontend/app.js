@@ -8806,21 +8806,37 @@ function renderOrgChartTree(data) {
 
   const parts = [];
   for (const co of companies) {
+    const coDirectCnt = co.directMembers?.length ?? 0;
+    const coTotalCnt  = coDirectCnt
+      + (co.divisions ?? []).reduce((s, d) =>
+          s + (d.directMembers?.length ?? 0) + (d.teams ?? []).reduce((ts, t) => ts + (t.users?.length ?? 0), 0), 0);
+
     parts.push(`<div class="orgchart-company-block">`);
-    parts.push(`<div class="orgchart-company-label">🏢 ${escHtml(co.name)}</div>`);
+    parts.push(`<button type="button" class="orgchart-company-label orgchart-node-btn"
+      data-node-type="company" data-co="${escHtml(co.name)}">
+      🏢 ${escHtml(co.name)}
+      ${coDirectCnt > 0 ? `<span class="orgchart-node-count orgchart-direct-badge" title="직속">${coDirectCnt}</span>` : ""}
+    </button>`);
+
     for (const div of (co.divisions ?? [])) {
-      const totalMembers = (div.teams ?? []).reduce((s, t) => s + (t.users?.length ?? 0), 0);
+      const divDirectCnt = div.directMembers?.length ?? 0;
+      const divTotalCnt  = divDirectCnt + (div.teams ?? []).reduce((s, t) => s + (t.users?.length ?? 0), 0);
       parts.push(`<details class="orgchart-div-details" open>`);
       parts.push(`<summary>
-        <span class="orgchart-div-toggle">▶</span>
-        📂 ${escHtml(div.name)}
-        <span class="orgchart-node-count">${totalMembers}</span>
+        <button type="button" class="orgchart-div-name-btn orgchart-node-btn"
+          data-node-type="division" data-co="${escHtml(co.name)}" data-div="${escHtml(div.name)}">
+          <span class="orgchart-div-toggle">▶</span>
+          📂 ${escHtml(div.name)}
+          ${divDirectCnt > 0 ? `<span class="orgchart-node-count orgchart-direct-badge" title="직속 ${divDirectCnt}명">직속 ${divDirectCnt}</span>` : ""}
+          <span class="orgchart-node-count">${divTotalCnt}</span>
+        </button>
       </summary>`);
       parts.push(`<div class="orgchart-div-teams">`);
       for (const team of (div.teams ?? [])) {
         const cnt = team.users?.length ?? 0;
         parts.push(`<button type="button"
-          class="orgchart-team-btn"
+          class="orgchart-team-btn orgchart-node-btn"
+          data-node-type="team"
           data-co="${escHtml(co.name)}"
           data-div="${escHtml(div.name)}"
           data-team="${escHtml(team.name)}">
@@ -8891,27 +8907,58 @@ function renderOrgChartMembers(team) {
 }
 
 document.getElementById("orgChartTreeScroll").addEventListener("click", (e) => {
-  const btn = e.target.closest(".orgchart-team-btn");
+  // summary 클릭 시 details 토글은 브라우저가 처리하지만, 내부 버튼 클릭은 직접 처리
+  const btn = e.target.closest(".orgchart-node-btn");
   if (!btn || !orgChartData) return;
 
+  // details > summary 안의 버튼: 클릭해도 details가 토글되지 않도록 막음
+  const summary = btn.closest("summary");
+  if (summary) e.preventDefault();
+
+  const nodeType = btn.dataset.nodeType;
   const coName   = btn.dataset.co;
   const divName  = btn.dataset.div;
   const teamName = btn.dataset.team;
 
-  let found = null;
-  outer: for (const co of (orgChartData.companies ?? [])) {
-    if (co.name !== coName) continue;
-    for (const div of (co.divisions ?? [])) {
-      if (div.name !== divName) continue;
-      found = (div.teams ?? []).find(t => t.name === teamName) ?? null;
-      if (found) break outer;
-    }
-  }
-  if (!found) return;
+  let nodeLabel   = "";
+  let nodeMembers = null;
 
-  document.querySelectorAll(".orgchart-team-btn.is-selected")
+  if (nodeType === "team") {
+    for (const co of (orgChartData.companies ?? [])) {
+      if (co.name !== coName) continue;
+      for (const div of (co.divisions ?? [])) {
+        if (div.name !== divName) continue;
+        const team = (div.teams ?? []).find(t => t.name === teamName);
+        if (team) { nodeLabel = team.name; nodeMembers = team.users ?? []; }
+        break;
+      }
+      if (nodeMembers) break;
+    }
+  } else if (nodeType === "division") {
+    for (const co of (orgChartData.companies ?? [])) {
+      if (co.name !== coName) continue;
+      const div = (co.divisions ?? []).find(d => d.name === divName);
+      if (div) {
+        nodeLabel   = div.name + " (직속)";
+        nodeMembers = div.directMembers ?? [];
+      }
+      break;
+    }
+    // details 토글 직접 처리
+    if (summary) {
+      const details = summary.closest("details");
+      if (details) details.open = !details.open;
+    }
+  } else if (nodeType === "company") {
+    const co = (orgChartData.companies ?? []).find(c => c.name === coName);
+    if (co) { nodeLabel = co.name + " (직속)"; nodeMembers = co.directMembers ?? []; }
+  }
+
+  if (nodeMembers === null) return;
+
+  document.querySelectorAll(".orgchart-node-btn.is-selected")
     .forEach(el => el.classList.remove("is-selected"));
   btn.classList.add("is-selected");
 
-  renderOrgChartMembers(found);
+  renderOrgChartMembers({ name: nodeLabel, users: nodeMembers });
 });

@@ -14,6 +14,10 @@
 - **조직도 모달 멤버 정렬 및 레이아웃 개선**
   - 팀장(직책) 최우선 → 부장→차장→과장→대리→사원→인턴→기타 직급 순 → 이름 가나다 순 정렬
   - flex `min-height: 0` 누락으로 모달 내용이 잘리던 문제 수정 (tree/member pane 전체)
+- **조직도 본부/회사 직속 멤버 지원**
+  - `OrgDivisionResponse`, `OrgCompanyResponse` DTO에 `directMembers` 필드 추가
+  - `UserSearchService.getOrganizationTree()`: TEAM 멤버십이 DIVISION/COMPANY 코드를 가리키는 사용자(본부장 등) 조회 로직 추가
+  - 프론트엔드: 본부·회사 노드를 클릭하면 직속 멤버 표시, 직속 인원 수 배지 표시
 
 ### Fixed
 - **사용자 삭제 연쇄 FK 오류 3차 수정 (실제 DB에 CASCADE 전무 대응)**
