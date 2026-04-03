@@ -7224,7 +7224,7 @@ function closeModal(id) {
   if (id === "modalWorkHub") clearWorkHubScopedChannel();
 }
 
-document.querySelectorAll(".modal-close, .btn-cancel").forEach(btn => {
+document.querySelectorAll(".modal-close, .btn-cancel, .btn-secondary[data-modal]").forEach(btn => {
   btn.addEventListener("click", () => {
     const modalId = btn.dataset.modal;
     if (modalId) closeModal(modalId);
