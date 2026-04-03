@@ -18,3 +18,7 @@ _tmp_commit_msg.txt
 fix_msg_utf8.txt
 commit-msg-*.txt
 msg-fix-org.txt
+
+# 로컬 배포 패키지 산출물 (deploy/build-package.ps1)
+deploy/ECH-deploy.zip
+deploy/package/

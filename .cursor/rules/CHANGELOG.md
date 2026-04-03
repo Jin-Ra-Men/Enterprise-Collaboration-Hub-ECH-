@@ -4,6 +4,10 @@
 
 ## 2026-04-03
 
+### Changed
+- **`.gitignore`**: `deploy/ECH-deploy.zip`, `deploy/package/` 제외 (로컬 빌드 산출물)
+- **데스크톱**: `package.json` 버전 `0.0.8` (릴리즈)
+
 ### Added
 - **관리자 기초설정(app_settings) 직접 추가**
   - `POST /api/admin/settings` (ADMIN): `CreateSettingRequest`(키·값·설명·updatedBy), 키는 `^[a-zA-Z0-9._-]+$`·최대 100자, 중복 키 거부
