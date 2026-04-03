@@ -16,6 +16,9 @@
 ### Fixed
 - **Electron 로그인 “서버에 연결할 수 없습니다”**: `file://` origin이 `API_BASE`로 잡혀 `fetch`가 실패하던 문제 — `http(s)` origin일 때만 페이지 origin 사용, 그 외(Electron 설치형 등)는 `localhost:8080` / `localhost:3001` 폴백
 
+### Changed
+- **GitHub Release**: 데스크톱 `0.0.3` / 태그 `v0.0.3` — Electron API 베이스(`file://`) 수정이 반영된 Windows NSIS 설치 파일 배포
+
 ## 2026-04-02
 
 ### Added
