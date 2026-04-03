@@ -4,6 +4,24 @@
 
 ## 2026-04-03
 
+### Added
+- **조직 관리 기능 구현** (관리자 전용)
+  - 사이드바 관리자 메뉴에 `🏢 조직 관리` 항목 추가
+  - `GET/POST/PUT/DELETE /api/admin/org-groups` API (`AdminOrgController`, `AdminOrgService`)
+  - `OrgGroupResponse`, `OrgGroupSaveRequest` DTO 신규 작성
+  - `OrgGroup` 엔티티에 `setSortOrder()`, `setIsActive()` setter 추가 + 기존 setter에 `updatedAt` 갱신
+  - `OrgGroupRepository`에 `findAllByOrderByGroupTypeAscSortOrderAscDisplayNameAsc()`, `findAllByMemberOfGroupCode()` 추가
+  - `OrgGroupMemberRepository`에 `deleteAllByGroupCode()` (JPQL `@Modifying`) 추가
+  - 프론트엔드 `viewOrgManagement`: 조직 구조(회사/본부/팀) 탭 트리뷰 + 직급/직위/직책 플랫 탭
+  - `modalOrgGroupEdit`: 유형·코드·표시명·상위조직·정렬순서·활성여부 + 경로 자동 미리보기
+  - `group_path` 자동 계산 및 하위 그룹 경로 연쇄 갱신 (`updateDescendantPaths`)
+  - 조직 삭제 시 자식 그룹 + OrgGroupMember 연쇄 삭제 (`deleteRecursive`)
+
+- **사용자 관리 UX 개선**
+  - 작업 버튼 컬럼 제거 → `역할`/`상태` 컬럼을 인라인 `<select>`로 교체 (변경 즉시 pending 반영)
+  - 우클릭 컨텍스트 메뉴(`#adminUserContextMenu`) 추가: 편집 / 삭제 / 복원
+  - `#adminUserContextMenu` 화면 경계 보정 로직 포함
+
 ### Changed
 - **칸반 DnD UX**: 전용 ⋮⋮ 핸들 제거 → 카드 **`article` 전체 드래그**(제목·본문 등), `input`/`select`/`button`/담당 검색 영역에서는 `dragstart` 취소. 드롭 말미 **`rebuildKanbanCardColumnSelectDom`** 로 컬럼 `<select>` 노드 교체 + **`change` 위임**(`ensureKanbanBoardColumnSelectChangeDelegated`)로 Chrome `<select>` 표시 불일치 완화(`frontend/app.js`, `frontend/styles.css`)
 - **로그인**: 아이디 저장 줄(`label.login-remember`) 가로 **가운데 정렬**(`display:flex`·`width:fit-content`·`margin:10px auto 0`)
