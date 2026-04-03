@@ -5344,6 +5344,28 @@ if (!window._echKanbanGlobalDropGuard) {
   );
 }
 
+/**
+ * After DnD, some browsers keep the previous `selectedIndex` on a moved `<select>`; assigning
+ * `sel.value` can also no-op if types/spaces differ. Force selection by option index.
+ */
+function applyKanbanColumnSelectToColumnId(sel, columnIdNum) {
+  if (!sel || !Number.isFinite(columnIdNum) || columnIdNum <= 0) return false;
+  const want = String(Number(columnIdNum));
+  const opts = sel.options;
+  for (let i = 0; i < opts.length; i++) {
+    if (String(opts[i].value) === want) {
+      sel.selectedIndex = i;
+      return true;
+    }
+  }
+  try {
+    sel.value = want;
+  } catch (_) {
+    /* ignore */
+  }
+  return String(sel.value) === want;
+}
+
 /** Keep per-card column dropdown in sync with the `.kanban-column` that contains the card (avoids stale <select> after DOM moves). */
 function syncKanbanCardColumnSelectsFromDom(boardEl) {
   if (!boardEl) return;
@@ -5351,10 +5373,12 @@ function syncKanbanCardColumnSelectsFromDom(boardEl) {
     const del = cardEl.querySelector(".kanban-card-delete-btn");
     const sel = cardEl.querySelector(".kanban-card-column-select");
     if (!del || !sel || del.dataset.isDraft === "1") return;
-    const colId = Number(cardEl.closest(".kanban-column")?.dataset.columnId || 0);
+    const colFromCard = Number(cardEl.closest(".kanban-column")?.dataset.columnId || 0);
+    const colFromSel = Number(sel.closest(".kanban-column")?.dataset.columnId || 0);
+    const colId = colFromCard > 0 ? colFromCard : colFromSel;
     if (!colId) return;
     cardEl.dataset.renderColumnId = String(colId);
-    sel.value = String(colId);
+    applyKanbanColumnSelectToColumnId(sel, colId);
     const cid = Number(del.dataset.cardId || "");
     if (Number.isFinite(cid)) {
       workHubPendingCardColumn.set(cid, colId);
@@ -6534,7 +6558,9 @@ function renderKanbanBoard(board) {
     if (isDraft) {
       const idx = Number(rawId.replace("draft-card-", ""));
       const d = Number.isFinite(idx) ? workHubPendingNewKanbanCards[idx] : null;
-      sel.value = String(Number(d?.columnId || activeWorkHubFirstColumnId));
+      const draftCol = Number(d?.columnId || activeWorkHubFirstColumnId);
+      if (draftCol > 0) applyKanbanColumnSelectToColumnId(sel, draftCol);
+      else sel.value = String(draftCol || "");
     } else {
       const cardId = Number(rawId);
       const card = effectiveSavedCards.find((c) => Number(c.id) === cardId);
@@ -6551,7 +6577,8 @@ function renderKanbanBoard(board) {
             : pending != null
               ? Number(pending)
               : baseCol;
-      sel.value = String(resolved);
+      if (Number(resolved) > 0) applyKanbanColumnSelectToColumnId(sel, Number(resolved));
+      else sel.value = String(resolved || "");
       if (hostCol > 0 && Number.isFinite(cardId)) {
         workHubPendingCardColumn.set(cardId, hostCol);
         if (article) article.dataset.renderColumnId = String(hostCol);
@@ -6666,6 +6693,12 @@ function renderKanbanBoard(board) {
       const preBumpCid = getWorkHubChannelId();
       if (preBumpCid) bumpKanbanBoardFetchGeneration(preBumpCid);
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      syncKanbanBoardFromDomFull(boardEl);
+      syncKanbanDraftsOrderFromDom(boardEl);
+      syncKanbanCardColumnSelectsFromDom(boardEl);
+      // DnD + dragend ordering: a later macrotask pass re-reads the tree so `<select>` matches the host column
+      // after the dragged node (and its controls) have fully settled.
+      await new Promise((r) => setTimeout(r, 0));
       syncKanbanBoardFromDomFull(boardEl);
       syncKanbanDraftsOrderFromDom(boardEl);
       syncKanbanCardColumnSelectsFromDom(boardEl);
