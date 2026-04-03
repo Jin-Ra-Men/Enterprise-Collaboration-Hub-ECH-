@@ -1,6 +1,7 @@
 package com.ech.backend.api.settings;
 
 import com.ech.backend.api.settings.dto.AppSettingResponse;
+import com.ech.backend.api.settings.dto.CreateSettingRequest;
 import com.ech.backend.api.settings.dto.UpdateSettingRequest;
 import com.ech.backend.domain.settings.AppSetting;
 import com.ech.backend.domain.settings.AppSettingKey;
@@ -57,6 +58,22 @@ public class AppSettingsService {
         return settingRepository.findByKey(key)
                 .map(this::toResponse)
                 .orElseThrow(() -> new IllegalArgumentException("설정을 찾을 수 없습니다: " + key));
+    }
+
+    @Transactional
+    public AppSettingResponse create(CreateSettingRequest request) {
+        String key = request.key().trim();
+        if (settingRepository.findByKey(key).isPresent()) {
+            throw new IllegalArgumentException("이미 존재하는 설정 키입니다: " + key);
+        }
+        Long updatedByUserId = request.updatedBy() == null
+                ? null
+                : userRepository.findByEmployeeNo(request.updatedBy().trim())
+                        .map(u -> u.getId())
+                        .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + request.updatedBy()));
+        AppSetting created = new AppSetting(key, request.value(), request.description(), updatedByUserId);
+        settingRepository.save(created);
+        return toResponse(created);
     }
 
     @Transactional

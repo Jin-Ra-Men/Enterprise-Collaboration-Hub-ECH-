@@ -40,6 +40,15 @@ public class AppSetting {
         this.description = description;
     }
 
+    /** 신규 행 삽입 시 수정자까지 기록 */
+    public AppSetting(String key, String value, String description, Long updatedBy) {
+        this.key = key;
+        this.value = value;
+        this.description = description;
+        this.updatedBy = updatedBy;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
     public Long getId() { return id; }
     public String getKey() { return key; }
     public String getValue() { return value; }

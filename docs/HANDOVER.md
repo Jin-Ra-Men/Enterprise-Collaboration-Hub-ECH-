@@ -31,6 +31,7 @@
 
 ## 2-0-2-1) 초기 로그인 비밀번호(미설정 사용자)
 - DB `app_settings` 키 **`auth.initial-password-plaintext`**: 비밀번호 해시가 없는 사용자에게 **서버 기동 시 한 번** 적용되는 평문 값. 관리자 **설정** 화면에서 변경 가능.
+- 동일 **설정** 화면에서 `POST /api/admin/settings`로 **신규 키**를 추가할 수 있음(영문·숫자·`.`·`-`·`_`, 최대 100자, 중복 불가). 앱이 읽는 키는 `AppSettingsService`·`AppSettingKey`와 맞출 것.
 - 이미 비밀번호가 있는 계정은 변경되지 않음. 값이 비어 있으면 `DataInitializer` 내장 기본(`Test1234!`)을 사용.
 
 ## 2-0-2) 데스크톱(Electron) 배포·자동 업데이트

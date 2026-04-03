@@ -311,6 +311,21 @@
 
 ---
 
+## 관리자 앱 기초설정 (app_settings)
+- 목적: `app_settings` 테이블에 전역 키-값을 관리자가 조회·수정하고, **새 행을 직접 추가**할 수 있게 함
+- 사용자: `ADMIN`
+- 관련 화면: 관리자 > **설정** (`viewSettings`) — 기존 목록 + 「기초설정 추가」 카드(설정 키·값·설명·추가 버튼)
+- 관련 API:
+  - `GET /api/admin/settings` — 전체 목록
+  - `GET /api/admin/settings/{key}` — 단건
+  - `PUT /api/admin/settings/{key}` — 값/설명 수정 (`UpdateSettingRequest`)
+  - `POST /api/admin/settings` — 신규 추가 (`CreateSettingRequest`: `key` 필수, `value`·`description`·`updatedBy` 선택)
+- 키 규칙: 영문·숫자·`.`·`-`·`_`만, 길이 1~100, DB `setting_key` 유니크와 동일하게 중복 시 400
+- 동작: 애플리케이션 코드가 `AppSettingsService.get()` 등으로 읽는 키만 런타임에 의미가 있음. 임의 키 추가는 향후 기능 플래그·연동 설정 등 확장용
+- 예외: 중복 키, 잘못된 키 형식(Bean Validation), 존재하지 않는 `updatedBy` 사번
+
+---
+
 ## 관리자 버전 업그레이드 관리 (초안)
 - 목적: 관리자 페이지에서 신규 버전 배포와 롤백을 안전하게 수행
 - 사용자: `Admin`

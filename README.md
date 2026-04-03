@@ -171,6 +171,10 @@ graph LR
 - 관리자 API: `GET/PUT /api/admin/retention-policies`, `POST /api/admin/retention-policies/trigger`
 - 서버 기동 시 기본 정책 자동 시드 (기본값: 비활성)
 
+### 앱 기초설정 (app_settings)
+- 관리자 화면 **설정** 탭에서 목록 조회·값 수정·**신규 키 추가** (`POST /api/admin/settings`)
+- 기존 API: `GET /api/admin/settings`, `GET /api/admin/settings/{key}`, `PUT /api/admin/settings/{key}`
+
 ### 감사 이벤트 로그(Phase 3-3)
 - 채널·메시지·파일·업무·칸반 도메인의 주요 이벤트를 `audit_logs` 테이블에 기록
 - 이벤트 유형(채널 생성/참여, 메시지 전송, 파일 업로드, 업무 생성, 칸반 변경 등)을 `AuditEventType` Enum으로 관리

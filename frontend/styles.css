@@ -1777,6 +1777,26 @@ html[data-theme="light"] .reply-composer-banner {
 
 /* 설정 */
 .settings-desc { font-size: 14px; color: var(--text-muted); margin-bottom: 16px; }
+.settings-add-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 16px 18px 18px;
+  margin-bottom: 20px;
+}
+.settings-add-title { font-size: 16px; margin: 0 0 8px; color: var(--text-primary); }
+.settings-add-hint { font-size: 13px; color: var(--text-muted); margin: 0 0 14px; line-height: 1.45; }
+.settings-add-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+  margin-bottom: 14px;
+}
+.settings-add-desc { grid-column: 1 / -1; }
+@media (max-width: 720px) {
+  .settings-add-grid { grid-template-columns: 1fr; }
+  .settings-add-desc { grid-column: auto; }
+}
 .setting-item {
   background: var(--bg-elevated);
   border-radius: 8px;

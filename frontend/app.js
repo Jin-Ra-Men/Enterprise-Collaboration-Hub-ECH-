@@ -7273,6 +7273,45 @@ document.getElementById("navSettings").addEventListener("click", () => {
 document.getElementById("refreshReleasesBtn").addEventListener("click", loadReleases);
 document.getElementById("refreshSettingsBtn").addEventListener("click", loadSettings);
 
+document.getElementById("btnAddSetting")?.addEventListener("click", async () => {
+  const keyEl = document.getElementById("newSettingKey");
+  const valEl = document.getElementById("newSettingValue");
+  const descEl = document.getElementById("newSettingDesc");
+  const key = keyEl?.value?.trim() || "";
+  if (!key) {
+    await uiAlert("설정 키를 입력하세요.");
+    return;
+  }
+  if (!/^[a-zA-Z0-9._-]+$/.test(key)) {
+    await uiAlert("키는 영문·숫자·점·하이픈·밑줄만 사용할 수 있습니다.");
+    return;
+  }
+  const body = {
+    key,
+    value: valEl?.value?.trim() ?? "",
+    description: descEl?.value?.trim() || null,
+    updatedBy: currentUser?.employeeNo || null,
+  };
+  try {
+    const r = await apiFetch("/api/admin/settings", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    const j = await r.json();
+    if (r.ok) {
+      await uiAlert(`설정 "${key}" 이(가) 추가되었습니다.`);
+      keyEl.value = "";
+      if (valEl) valEl.value = "";
+      if (descEl) descEl.value = "";
+      loadSettings();
+    } else {
+      await uiAlert(`추가 실패: ${j.error?.message || "오류"}`);
+    }
+  } catch {
+    await uiAlert("서버 연결 오류");
+  }
+});
+
 const STATUS_LABEL = { UPLOADED: "대기", ACTIVE: "운영중", PREVIOUS: "이전", DEPRECATED: "폐기" };
 const STATUS_CLASS = { UPLOADED: "st-uploaded", ACTIVE: "st-active", PREVIOUS: "st-prev", DEPRECATED: "st-dep" };
 const ACTION_LABEL = { ACTIVATED: "활성화", ROLLED_BACK: "롤백" };

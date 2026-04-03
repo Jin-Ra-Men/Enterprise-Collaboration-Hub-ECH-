@@ -4,6 +4,11 @@
 
 ## 2026-04-03
 
+### Added
+- **관리자 기초설정(app_settings) 직접 추가**
+  - `POST /api/admin/settings` (ADMIN): `CreateSettingRequest`(키·값·설명·updatedBy), 키는 `^[a-zA-Z0-9._-]+$`·최대 100자, 중복 키 거부
+  - 관리자 **설정** 화면에 「기초설정 추가」 카드(키/값/설명·추가 버튼) 및 스타일(`.settings-add-*`)
+
 ### Fixed
 - **조직도 본부 토글 UX 개선**: 본부 이름 클릭 시 접기/펼치기 동작 제거 → `▶` 화살표 버튼에서만 토글, `<details>/<summary>` 구조를 `div + data-expanded` 방식으로 교체
 - **조직도 노드 레이블 정리**: 본부/회사 직속 멤버 표시 시 헤더에서 `(직속)` 문자열 제거
