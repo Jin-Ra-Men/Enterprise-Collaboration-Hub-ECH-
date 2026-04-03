@@ -168,13 +168,12 @@ input, button, select, textarea { font: inherit; border: none; outline: none; ba
 .login-hint code { background: var(--bg-input); padding: 2px 6px; border-radius: 4px; color: var(--accent); }
 /* Must beat .login-form label { display:block } and .login-form input { width:100% } */
 .login-form label.login-remember {
-  display: inline-flex;
+  display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: flex-start;
   gap: 8px;
-  margin-top: 10px;
-  margin-bottom: 0;
+  margin: 10px auto 0;
   font-weight: 500;
   font-size: 13px;
   color: var(--text-secondary);
