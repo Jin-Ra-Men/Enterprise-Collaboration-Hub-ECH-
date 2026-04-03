@@ -15,6 +15,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -88,12 +89,33 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.fail("BAD_REQUEST", exception.getMessage()));
     }
 
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMaxUpload(
+            MaxUploadSizeExceededException exception,
+            HttpServletRequest request
+    ) {
+        safeLog("PAYLOAD_TOO_LARGE", exception, request);
+        return ResponseEntity
+                .status(HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(ApiResponse.fail(
+                        "PAYLOAD_TOO_LARGE",
+                        "업로드 크기가 서버 제한을 초과했습니다. "
+                                + "Spring: MAX_UPLOAD_SIZE / MAX_REQUEST_SIZE, "
+                                + "Nginx 사용 시 client_max_body_size 를 확인하세요."
+                ));
+    }
+
     @ExceptionHandler(IOException.class)
     public ResponseEntity<ApiResponse<Void>> handleIo(IOException exception, HttpServletRequest request) {
         safeLog("FILE_IO_ERROR", exception, request);
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.fail("FILE_IO_ERROR", "파일을 읽는 중 오류가 발생했습니다."));
+                .body(ApiResponse.fail(
+                        "FILE_IO_ERROR",
+                        "파일 저장 또는 읽기에 실패했습니다. "
+                                + "저장 경로(FILE_STORAGE_DIR / app_settings file.storage.base-dir)와 "
+                                + "백엔드 서비스 계정의 폴더 쓰기 권한을 확인하세요."
+                ));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

@@ -5,6 +5,14 @@
 ## 2026-04-03
 
 ### Added
+- **백엔드**: 기동 시 첨부 저장 경로 쓰기 검사 `FileStorageStartupValidator` — 로그 `[ECH] file storage ready:` / `NOT writable`
+
+### Changed
+- **백엔드**: `GlobalExceptionHandler` — `MaxUploadSizeExceededException` → 413 및 용량/Nginx 안내; 파일 IO 실패 메시지에 저장 경로·권한 힌트
+- **`docs/DEPLOYMENT_WINDOWS.md`**: `file.storage.base-dir` DB 우선·첨부 업로드 트러블슈팅·SQL 예시
+- **`docs/HANDOVER.md`**: 첨부 경로(`app_settings` 우선) 운영 메모
+
+### Added
 - **내부망 Electron 자동 업데이트**: Spring Boot `/desktop-updates/**` → `DesktopUpdateResourceConfig` (`{APP_RELEASES_DIR}/desktop` 또는 `DESKTOP_UPDATE_DIR`)
 - **desktop**: `ech-server.json`에 `serverUrl` 또는 `updateBaseUrl`이 있으면 `electron-updater`를 `generic` 피드로 전환(GitHub 불필요). NSIS 산출물명 `ECH-Setup-${version}.exe` (`artifactName`)
 

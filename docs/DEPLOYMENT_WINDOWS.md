@@ -158,6 +158,8 @@ Write-Host "완료. 새 터미널/서비스 재시작 후 적용됩니다."
 > **보안 주의**: `JWT_SECRET`, `DB_PASSWORD`, `REALTIME_INTERNAL_TOKEN` 은 반드시 추측 불가한 값으로 교체하세요.
 > - JWT_SECRET 생성: `[Convert]::ToBase64String((1..32|%{[byte](Get-Random -Max 256)}))`
 
+> **첨부파일 경로(중요)**: 실제 저장 위치는 **DB `app_settings` 의 `file.storage.base-dir` 값이 `FILE_STORAGE_DIR` 환경변수보다 우선**합니다. 서버를 **처음** 띄울 때 환경변수가 비어 있거나 개발 기본값(`D:/testStorage`)으로 시드되면, 나중에 `FILE_STORAGE_DIR` 만 `C:/ECH/storage` 로 바꿔도 **DB 예전 값 때문에 업로드가 계속 실패**할 수 있습니다. 조치: 관리자 **설정** 화면에서 `file.storage.base-dir` 을 운영 경로로 수정하거나, 아래 SQL로 갱신 후 백엔드 재시작을 권장합니다. 기동 로그에 `[ECH] file storage ready:` 또는 `NOT writable` 이 출력됩니다.
+
 ---
 
 ## 5단계 — 백엔드 Windows 서비스 등록 (NSSM)
@@ -373,5 +375,20 @@ Socket.IO 도 Nginx가 `/socket.io/` 경로로 프록시하므로 별도 포트 
 | 백엔드 기동 안 됨 | 환경변수 미적용 | 서비스 재시작 또는 `Get-ChildItem Env:` 로 확인 |
 | DB 연결 실패 | 5432 방화벽 또는 pg_hba.conf | DB 서버 방화벽·`pg_hba.conf` 확인 |
 | Socket.IO 연결 안 됨 | 3001 방화벽 또는 리얼타임 미기동 | `pm2 list`, 방화벽 규칙 확인 |
-| 파일 업로드 실패 | `FILE_STORAGE_DIR` 폴더 권한 | 서비스 계정에 폴더 쓰기 권한 부여 |
+| 파일 업로드 실패 | DB `file.storage.base-dir` 가 존재하지 않는 드라이브·경로(예: `D:/testStorage`) | `app_settings` 또는 관리자 설정에서 `C:/ECH/storage` 등 실제 경로로 수정 |
+| 파일 업로드 실패 | `C:\ECH\storage` 미생성 또는 NSSM **Local System** 에 쓰기 거부 | 폴더 생성 후 해당 폴더에 **Users** 또는 서비스 계정 **수정** 권한 부여 |
+| 파일 업로드 실패(413) | Nginx `client_max_body_size` 또는 Spring `MAX_UPLOAD_SIZE` | `deploy/nginx.conf` 의 `client_max_body_size` 와 `MAX_UPLOAD_SIZE`/`MAX_REQUEST_SIZE` 정합 |
+| 파일 업로드 실패 | UNC(네트워크 공유) 저장 + 서비스 계정이 공유에 접근 불가 | `setup-web-server.ps1` 안내처럼 동일 로컬 서비스 계정·공유 권한 구성 |
 | 로그인 후 토큰 오류 | `JWT_SECRET` 미설정 | 환경변수 `JWT_SECRET` 확인 및 서비스 재시작 |
+
+### 첨부 경로 긴급 수정 (SQL 예시)
+
+pgAdmin/psql 에서 (`C:/ECH/storage` 는 환경에 맞게 변경):
+
+```sql
+UPDATE app_settings
+SET setting_value = 'C:/ECH/storage', updated_at = NOW()
+WHERE setting_key = 'file.storage.base-dir';
+```
+
+이후 `Restart-Service ECH-Backend` — 기동 로그에 `[ECH] file storage ready: C:\ECH\storage` 가 보이면 정상입니다.
