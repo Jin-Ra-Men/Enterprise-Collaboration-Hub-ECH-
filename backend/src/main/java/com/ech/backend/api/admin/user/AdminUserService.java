@@ -4,11 +4,15 @@ import com.ech.backend.api.admin.user.dto.AdminUserListItemResponse;
 import com.ech.backend.api.admin.user.dto.AdminUserSaveRequest;
 import com.ech.backend.api.admin.user.dto.OrgGroupOptionResponse;
 import com.ech.backend.common.exception.NotFoundException;
+import com.ech.backend.domain.channel.ChannelMemberRepository;
+import com.ech.backend.domain.channel.ChannelReadStateRepository;
 import com.ech.backend.domain.channel.ChannelRepository;
 import com.ech.backend.domain.file.ChannelFileRepository;
 import com.ech.backend.domain.kanban.KanbanBoardRepository;
+import com.ech.backend.domain.kanban.KanbanCardAssigneeRepository;
 import com.ech.backend.domain.kanban.KanbanCardEventRepository;
 import com.ech.backend.domain.kanban.KanbanCardRepository;
+import com.ech.backend.domain.kanban.KanbanColumnRepository;
 import com.ech.backend.domain.message.MessageRepository;
 import com.ech.backend.domain.org.OrgGroup;
 import com.ech.backend.domain.org.OrgGroupMember;
@@ -35,10 +39,14 @@ public class AdminUserService {
     private final OrgGroupMemberRepository orgGroupMemberRepository;
     private final PasswordEncoder passwordEncoder;
     private final KanbanCardEventRepository kanbanCardEventRepository;
+    private final KanbanCardAssigneeRepository kanbanCardAssigneeRepository;
     private final KanbanCardRepository kanbanCardRepository;
+    private final KanbanColumnRepository kanbanColumnRepository;
     private final KanbanBoardRepository kanbanBoardRepository;
     private final WorkItemRepository workItemRepository;
     private final MessageRepository messageRepository;
+    private final ChannelReadStateRepository channelReadStateRepository;
+    private final ChannelMemberRepository channelMemberRepository;
     private final ChannelFileRepository channelFileRepository;
     private final ChannelRepository channelRepository;
 
@@ -48,10 +56,14 @@ public class AdminUserService {
             OrgGroupMemberRepository orgGroupMemberRepository,
             PasswordEncoder passwordEncoder,
             KanbanCardEventRepository kanbanCardEventRepository,
+            KanbanCardAssigneeRepository kanbanCardAssigneeRepository,
             KanbanCardRepository kanbanCardRepository,
+            KanbanColumnRepository kanbanColumnRepository,
             KanbanBoardRepository kanbanBoardRepository,
             WorkItemRepository workItemRepository,
             MessageRepository messageRepository,
+            ChannelReadStateRepository channelReadStateRepository,
+            ChannelMemberRepository channelMemberRepository,
             ChannelFileRepository channelFileRepository,
             ChannelRepository channelRepository
     ) {
@@ -60,10 +72,14 @@ public class AdminUserService {
         this.orgGroupMemberRepository = orgGroupMemberRepository;
         this.passwordEncoder = passwordEncoder;
         this.kanbanCardEventRepository = kanbanCardEventRepository;
+        this.kanbanCardAssigneeRepository = kanbanCardAssigneeRepository;
         this.kanbanCardRepository = kanbanCardRepository;
+        this.kanbanColumnRepository = kanbanColumnRepository;
         this.kanbanBoardRepository = kanbanBoardRepository;
         this.workItemRepository = workItemRepository;
         this.messageRepository = messageRepository;
+        this.channelReadStateRepository = channelReadStateRepository;
+        this.channelMemberRepository = channelMemberRepository;
         this.channelFileRepository = channelFileRepository;
         this.channelRepository = channelRepository;
     }
@@ -143,20 +159,32 @@ public class AdminUserService {
 
     /**
      * 사용자 완전 삭제.
-     * users.employee_no를 참조하는 FK(ON DELETE CASCADE 없는 것)를 순서대로 정리 후 삭제한다.
+     * 실제 DB에 CASCADE/SET NULL이 없으므로 FK 참조 순서에 맞게 모두 수동 처리한다.
      *
-     * 삭제 순서:
-     *  1) kanban_card_events    (actor_user_id → users, RESTRICT)
-     *  2) kanban_cards          work_item_id NULL 초기화 (→ work_items, RESTRICT)
-     *  3) work_items            source_channel 기준 (채널 삭제 전 처리)
-     *  4) work_items            created_by 기준
-     *  5) kanban_boards         created_by → users (CASCADE: 컬럼→카드→담당자·이벤트)
-     *  6) messages              parent_message_id NULL 초기화 (자기참조 RESTRICT 대비)
-     *  7) messages              sender_id → users, RESTRICT
-     *  8) channel_files         채널 삭제 전 해당 채널 소속 파일 전체 삭제 (channel_id FK, CASCADE 없는 경우)
-     *  9) channel_files         uploaded_by → users, RESTRICT (다른 채널 소속)
-     * 10) channels              created_by → users (CASCADE: 멤버·메시지·읽음상태·파일)
-     * 11) users                 (org_group_members·channel_members 등 CASCADE 자동 정리)
+     * [칸반 삭제 순서]
+     *  1) kanban_card_events    — actor = empNo + user's board 카드 이벤트
+     *  2) kanban_card_assignees — user = empNo + user's board 카드 담당자
+     *  3) kanban_cards.work_item_id NULL 초기화 (work_items 삭제 전)
+     *  4) work_items            — source_channel in user's channels
+     *  5) work_items            — created_by = empNo
+     *  6) kanban_cards          — user's board columns 소속
+     *  7) kanban_columns        — user's boards 소속
+     *  8) kanban_boards         — created_by = empNo
+     *
+     * [채널 삭제 순서]
+     *  9) channel_read_states.last_read_message_id NULL (sender + user's channels 기준)
+     * 10) messages.parent_message_id NULL           (user's channels 내 전체)
+     * 11) messages.parent_message_id NULL           (sender = empNo — 다른 채널)
+     * 12) messages                                  — user's channels 내 전체 삭제
+     * 13) messages                                  — sender = empNo (다른 채널)
+     * 14) channel_read_states                       — user's channels + user 기준
+     * 15) channel_members                           — user's channels + user 기준
+     * 16) channel_files                             — user's channels 소속
+     * 17) channel_files                             — uploaded_by = empNo
+     * 18) channels                                  — created_by = empNo
+     *
+     * [사용자 삭제]
+     * 19) users (org_group_members ON DELETE CASCADE 자동 처리)
      */
     @Transactional
     public void deleteUser(String employeeNo) {
@@ -164,26 +192,29 @@ public class AdminUserService {
         userRepository.findByEmployeeNo(empNo)
                 .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다: " + empNo));
 
-        // 1. 칸반 카드 이벤트 (actor → users)
-        kanbanCardEventRepository.deleteByActorEmployeeNo(empNo);
-        // 2. 칸반 카드의 work_item 참조 NULL 초기화 (work_items 삭제 전)
+        // ── Kanban ──────────────────────────────────────────────────────────
+        kanbanCardEventRepository.deleteAllRelatedToEmployeeNo(empNo);
+        kanbanCardAssigneeRepository.deleteAllRelatedToEmployeeNo(empNo);
         kanbanCardRepository.nullWorkItemRefByUserEmployeeNo(empNo);
-        // 3-4. work_items 삭제 (채널 기준 → 생성자 기준 순)
         workItemRepository.deleteBySourceChannelCreatorEmployeeNo(empNo);
         workItemRepository.deleteByCreatorEmployeeNo(empNo);
-        // 5. 칸반 보드 삭제 (CASCADE: 컬럼→카드→담당자·이벤트)
+        kanbanCardRepository.deleteByBoardCreatorEmployeeNo(empNo);
+        kanbanColumnRepository.deleteByBoardCreatorEmployeeNo(empNo);
         kanbanBoardRepository.deleteByCreatorEmployeeNo(empNo);
-        // 6. 메시지 자기참조 NULL 초기화 (parent_message_id RESTRICT 대비)
+
+        // ── Channel ─────────────────────────────────────────────────────────
+        channelReadStateRepository.nullLastReadRefByEmployeeNo(empNo);
+        messageRepository.nullParentRefByChannelCreatorEmployeeNo(empNo);
         messageRepository.nullParentRefBySenderEmployeeNo(empNo);
-        // 7. 메시지 삭제 (sender_id → users)
+        messageRepository.deleteByChannelCreatorEmployeeNo(empNo);
         messageRepository.deleteBySenderEmployeeNo(empNo);
-        // 8. 채널 소속 파일 삭제 (channel_id FK CASCADE 없는 경우)
+        channelReadStateRepository.deleteAllRelatedToEmployeeNo(empNo);
+        channelMemberRepository.deleteAllRelatedToEmployeeNo(empNo);
         channelFileRepository.deleteByChannelCreatorEmployeeNo(empNo);
-        // 9. 업로더 기준 파일 삭제 (다른 채널 소속)
         channelFileRepository.deleteByUploaderEmployeeNo(empNo);
-        // 10. 채널 삭제 (CASCADE: 멤버·메시지·읽음상태·파일)
         channelRepository.deleteByCreatorEmployeeNo(empNo);
-        // 11. 사용자 삭제 (org_group_members 등 CASCADE 자동 처리)
+
+        // ── User ─────────────────────────────────────────────────────────────
         userRepository.deleteByEmployeeNo(empNo);
     }
 

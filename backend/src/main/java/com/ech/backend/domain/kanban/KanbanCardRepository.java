@@ -71,4 +71,15 @@ public interface KanbanCardRepository extends JpaRepository<KanbanCard, Long> {
             )
             """, nativeQuery = true)
     void nullWorkItemRefByUserEmployeeNo(@Param("empNo") String employeeNo);
+
+    /** 사용자 삭제: 이 사용자가 만든 보드의 카드 전체 삭제 (kanban_columns 삭제 전 선행) */
+    @Modifying
+    @Query(value = """
+            DELETE FROM kanban_cards
+            WHERE column_id IN (
+                SELECT id FROM kanban_columns
+                WHERE board_id IN (SELECT id FROM kanban_boards WHERE created_by = :empNo)
+            )
+            """, nativeQuery = true)
+    void deleteByBoardCreatorEmployeeNo(@Param("empNo") String employeeNo);
 }

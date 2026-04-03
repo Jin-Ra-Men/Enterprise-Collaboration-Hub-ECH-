@@ -5,6 +5,18 @@
 ## 2026-04-03
 
 ### Fixed
+- **사용자 삭제 연쇄 FK 오류 3차 수정 (실제 DB에 CASCADE 전무 대응)**
+  - kanban_boards → kanban_columns RESTRICT: KanbanColumnRepository.deleteByBoardCreatorEmployeeNo() 추가
+  - kanban_cards → kanban_card_assignees RESTRICT: KanbanCardAssigneeRepository.deleteAllRelatedToEmployeeNo() 추가
+  - kanban_card_events (보드 소속 카드 이벤트): KanbanCardEventRepository.deleteAllRelatedToEmployeeNo()로 통합
+  - kanban_cards (보드 소속 카드): KanbanCardRepository.deleteByBoardCreatorEmployeeNo() 추가
+  - messages → channel_read_states RESTRICT: ChannelReadStateRepository.nullLastReadRefByEmployeeNo() 추가
+  - channels → channel_members RESTRICT: ChannelMemberRepository.deleteAllRelatedToEmployeeNo() 추가
+  - channels → channel_read_states RESTRICT: ChannelReadStateRepository.deleteAllRelatedToEmployeeNo() 추가
+  - messages (user's channels 전체): MessageRepository.nullParentRefByChannelCreatorEmployeeNo(), deleteByChannelCreatorEmployeeNo() 추가
+  - AdminUserService.deleteUser() 19단계 완전 수동 삭제 순서로 전면 개편
+  - 주입 의존성 추가: KanbanCardAssigneeRepository, KanbanColumnRepository, ChannelReadStateRepository, ChannelMemberRepository
+
 - **사용자 삭제 연쇄 FK 오류 2차 수정 (실제 DB 제약 기반)**
   - kanban_cards.work_item_id RESTRICT 대비: 삭제 전 NULL 초기화 추가
   - messages.parent_message_id 자기참조 RESTRICT 대비: 자식 메시지 NULL 초기화 추가

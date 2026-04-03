@@ -259,7 +259,18 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     List<Long> findThreadRootIdsByChannelOrderByLastActivity(@Param("channelId") long channelId, @Param("lim") int lim);
 
     /**
-     * 사용자 삭제: 이 사용자의 메시지를 parent로 참조하는 다른 사용자의 메시지 parent_message_id를 NULL로 초기화.
+     * 사용자 삭제: 이 사용자가 만든 채널 내 모든 메시지의 parent_message_id를 NULL로 초기화.
+     * 채널 메시지 삭제 전 자기 참조 FK(ON DELETE RESTRICT) 해소용.
+     */
+    @Modifying
+    @Query(value = """
+            UPDATE messages SET parent_message_id = NULL
+            WHERE channel_id IN (SELECT id FROM channels WHERE created_by = :empNo)
+            """, nativeQuery = true)
+    void nullParentRefByChannelCreatorEmployeeNo(@Param("empNo") String employeeNo);
+
+    /**
+     * 사용자 삭제: 이 사용자의 메시지를 parent로 참조하는 메시지의 parent_message_id를 NULL로 초기화.
      * messages.parent_message_id FK가 실제 DB에서 ON DELETE RESTRICT인 경우 대비.
      */
     @Modifying
@@ -269,7 +280,13 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
             """, nativeQuery = true)
     void nullParentRefBySenderEmployeeNo(@Param("empNo") String employeeNo);
 
-    /** 사용자 삭제: 해당 사용자가 발송한 메시지 전체 삭제 (채널 삭제 전 FK 해소) */
+    /** 사용자 삭제: 이 사용자가 만든 채널의 모든 메시지 삭제 (channels 삭제 전 FK 해소) */
+    @Modifying
+    @Query(value = "DELETE FROM messages WHERE channel_id IN (SELECT id FROM channels WHERE created_by = :empNo)",
+           nativeQuery = true)
+    void deleteByChannelCreatorEmployeeNo(@Param("empNo") String employeeNo);
+
+    /** 사용자 삭제: 해당 사용자가 발송한 메시지 전체 삭제 (다른 채널 소속 메시지 포함) */
     @Modifying
     @Query(value = "DELETE FROM messages WHERE sender_id = :empNo", nativeQuery = true)
     void deleteBySenderEmployeeNo(@Param("empNo") String employeeNo);
