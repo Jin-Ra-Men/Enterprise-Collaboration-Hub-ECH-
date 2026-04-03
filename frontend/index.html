@@ -13,7 +13,8 @@
         try {
           var t = localStorage.getItem("ech_theme");
           if (t === "light") document.documentElement.setAttribute("data-theme", "light");
-          else if (t === "dark") document.documentElement.setAttribute("data-theme", "dark");
+          else if (t === "dark") document.documentElement.removeAttribute("data-theme");
+          else document.documentElement.setAttribute("data-theme", "light");
         } catch (e) {}
       })();
     </script>
@@ -36,12 +37,11 @@
           <div class="form-group">
             <label for="loginPassword">비밀번호</label>
             <input id="loginPassword" type="password" placeholder="비밀번호 입력" autocomplete="current-password" required />
-            <label class="login-remember"><input type="checkbox" id="loginRememberId" /> 아이디 저장</label>
+            <label class="login-remember" for="loginRememberId"><input type="checkbox" id="loginRememberId" /> 아이디 저장</label>
           </div>
           <p id="loginError" class="login-error hidden"></p>
           <button type="submit" id="loginBtn" class="btn-login">로그인</button>
         </form>
-        <p class="login-hint">초기 비밀번호는 관리자 <strong>설정</strong> 화면의 <code>auth.initial-password-plaintext</code> 값과 동일합니다. (미설정 사용자에게만 기동 시 적용)</p>
       </div>
     </div>
 
@@ -59,7 +59,6 @@
 
         <div class="sidebar-body">
           <nav id="quickContainer" class="quick-rail" aria-label="최근 대화·미읽음 빠른 이동">
-            <button type="button" id="btnQuickRailPin" class="quick-rail-pin-btn" title="사이드바 접기 비활성화(고정)" aria-label="퀵 레일·사이드바 고정" aria-pressed="false">📌</button>
             <div class="quick-rail-scroll" id="quickRailScroll"></div>
           </nav>
           <div class="sidebar-main">
@@ -323,6 +322,7 @@
     </div>
     <div id="channelSidebarContextMenu" class="context-menu hidden" role="menu" aria-label="대화 목록 메뉴">
       <button type="button" class="context-menu-item" id="btnSidebarCtxToggleNotify" role="menuitem">알림 끄기</button>
+      <button type="button" class="context-menu-item" id="btnSidebarCtxQuickRailPin" role="menuitem">퀵 레일에 고정</button>
       <button type="button" class="context-menu-item" id="btnSidebarCtxLeave" role="menuitem">채팅방 나가기</button>
     </div>
 

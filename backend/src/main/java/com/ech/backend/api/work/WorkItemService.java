@@ -240,6 +240,7 @@ public class WorkItemService {
         List<WorkItem> raw = workItemRepository.findDistinctWithMyCardAssignment(emp);
         int size = Math.min(Math.max(limit, 1), 100);
         return raw.stream()
+                .filter(WorkItem::isInUse)
                 .sorted(Comparator.comparing(WorkItem::getUpdatedAt).reversed())
                 .limit(size)
                 .map(w -> new WorkItemSidebarResponse(

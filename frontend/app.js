@@ -75,8 +75,6 @@ const HARD_MAX_CHAT_DOM_NODES = 10000;
 const THEME_KEY  = "ech_theme";
 const VALID_THEMES = ["dark", "light"];
 const SIDEBAR_COLLAPSED_KEY = "ech_sidebar_collapsed";
-/** "1" 이면 사이드바 접기 비활성화(퀵 레일·목록 항상 펼침) */
-const SIDEBAR_QUICK_PIN_KEY = "ech_sidebar_quick_pinned";
 const LOGIN_REMEMBER_KEY = "ech_login_remember";
 const LOGIN_SAVED_ID_KEY = "ech_saved_login_id";
 /** 퀵 레일에 표시할 최대 대화 수(미읽음 우선 후 최근 순) */
@@ -111,11 +109,15 @@ function applyTheme(theme, { persistLocal = true } = {}) {
 }
 
 function initTheme() {
-  let saved = "dark";
+  let saved = null;
   try {
-    saved = localStorage.getItem(THEME_KEY) || "dark";
+    saved = localStorage.getItem(THEME_KEY);
   } catch (e) {
-    /* ignore */
+    saved = null;
+  }
+  if (saved === null || saved === "") {
+    applyTheme("light", { persistLocal: false });
+    return;
   }
   if (saved === "blue") {
     saved = "dark";
@@ -125,7 +127,7 @@ function initTheme() {
       /* ignore */
     }
   }
-  if (!VALID_THEMES.includes(saved)) saved = "dark";
+  if (!VALID_THEMES.includes(saved)) saved = "light";
   applyTheme(saved);
 }
 
@@ -277,7 +279,6 @@ let sidebarPresenceUiBound = false;
 /** 사이드바 섹션 토글·접기 버튼은 initEvents가 여러 번 호출돼도 한 번만 바인딩 */
 let sidebarSectionTogglesBound = false;
 let sidebarCollapseBound = false;
-let sidebarQuickRailPinBound = false;
 let mentionInboxUiBound = false;
 
 /* ── DOM 참조 ── */
@@ -1428,6 +1429,7 @@ function avatarInitials(name) {
 function showLogin() {
   loginPage.classList.remove("hidden");
   mainApp.classList.add("hidden");
+  applyTheme("light", { persistLocal: false });
   const idEl = document.getElementById("loginId");
   const pwEl = document.getElementById("loginPassword");
   const rememberEl = document.getElementById("loginRememberId");
@@ -1455,10 +1457,9 @@ function showMain(user) {
   mainApp.classList.remove("hidden");
   let preferredTheme = VALID_THEMES.includes(user?.themePreference)
     ? user.themePreference
-    : (localStorage.getItem(THEME_KEY) || "dark");
+    : (localStorage.getItem(THEME_KEY) || "light");
   if (preferredTheme === "blue") preferredTheme = "dark";
-  applyTheme(VALID_THEMES.includes(preferredTheme) ? preferredTheme : "dark");
-  applyQuickRailPinUi();
+  applyTheme(VALID_THEMES.includes(preferredTheme) ? preferredTheme : "light");
   applySidebarCollapsedState();
 
   sidebarUserName.textContent = `${user.name}`;
@@ -1777,53 +1778,7 @@ function setSidebarCollapsedUi(collapsed) {
   }
 }
 
-function isQuickRailPinned() {
-  try {
-    return localStorage.getItem(SIDEBAR_QUICK_PIN_KEY) === "1";
-  } catch (e) {
-    return false;
-  }
-}
-
-function applyQuickRailPinUi() {
-  if (!mainApp) return;
-  const pinned = isQuickRailPinned();
-  mainApp.classList.toggle("quick-rail-pinned", pinned);
-  const btn = document.getElementById("btnQuickRailPin");
-  if (btn) {
-    btn.setAttribute("aria-pressed", pinned ? "true" : "false");
-    btn.title = pinned ? "고정 해제 (사이드바 접기 허용)" : "사이드바 접기 비활성화(고정)";
-  }
-}
-
-function toggleQuickRailPinned() {
-  const next = !isQuickRailPinned();
-  try {
-    localStorage.setItem(SIDEBAR_QUICK_PIN_KEY, next ? "1" : "0");
-  } catch (e) {
-    /* ignore */
-  }
-  if (next) {
-    try {
-      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, "0");
-    } catch (e2) {
-      /* ignore */
-    }
-    setSidebarCollapsedUi(false);
-  }
-  applyQuickRailPinUi();
-}
-
 function applySidebarCollapsedState() {
-  if (isQuickRailPinned()) {
-    try {
-      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, "0");
-    } catch (e) {
-      /* ignore */
-    }
-    setSidebarCollapsedUi(false);
-    return;
-  }
   let collapsed = false;
   try {
     collapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
@@ -1834,7 +1789,6 @@ function applySidebarCollapsedState() {
 }
 
 function toggleSidebarCollapsed() {
-  if (isQuickRailPinned()) return;
   const next = !mainApp.classList.contains("sidebar-collapsed");
   try {
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
@@ -1858,16 +1812,68 @@ function compareQuickRailChannel(a, b) {
   return channelActivityTimeMs(b) - channelActivityTimeMs(a);
 }
 
+function quickRailPinsStorageKey() {
+  const emp = String(currentUser?.employeeNo || "").trim();
+  return emp ? `ech_quick_rail_pinned_${emp}` : null;
+}
+
+function readQuickRailPinnedChannelIds() {
+  const key = quickRailPinsStorageKey();
+  if (!key) return [];
+  try {
+    const raw = localStorage.getItem(key);
+    const arr = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(arr)) return [];
+    return arr.map(Number).filter((x) => Number.isFinite(x) && x > 0);
+  } catch {
+    return [];
+  }
+}
+
+function saveQuickRailPinnedChannelIds(ids) {
+  const key = quickRailPinsStorageKey();
+  if (!key) return;
+  try {
+    localStorage.setItem(key, JSON.stringify(ids));
+  } catch {
+    /* ignore */
+  }
+}
+
+function isQuickRailChannelPinned(cid) {
+  return readQuickRailPinnedChannelIds().includes(Number(cid));
+}
+
+function toggleQuickRailChannelPin(cid) {
+  const id = Number(cid);
+  if (!Number.isFinite(id) || id <= 0) return;
+  const order = readQuickRailPinnedChannelIds();
+  const idx = order.indexOf(id);
+  if (idx >= 0) {
+    saveQuickRailPinnedChannelIds(order.filter((x) => x !== id));
+  } else {
+    order.push(id);
+    saveQuickRailPinnedChannelIds(order);
+  }
+}
+
 /**
  * 퀵 레일(`#quickRailScroll`): 워크스페이스 아래·검색~목록과 같은 세로 구간.
- * 미읽음 대화를 최상단(배지), 그 아래 `lastMessageAt` 기준 최근 대화(최대 `QUICK_RAIL_MAX_ITEMS`).
+ * 우클릭으로 고정한 채널은 순서가 유지되고, 나머지는 미읽음·최근 순(최대 `QUICK_RAIL_MAX_ITEMS`).
  */
 function renderQuickUnreadList(channels) {
   const el = document.getElementById("quickRailScroll");
   if (!el) return;
   el.innerHTML = "";
-  const sorted = [...(channels || [])].sort(compareQuickRailChannel);
-  const picked = sorted.slice(0, QUICK_RAIL_MAX_ITEMS);
+  const list = [...(channels || [])];
+  const byId = new Map(list.map((ch) => [Number(ch.channelId), ch]));
+  const pinIds = readQuickRailPinnedChannelIds().filter((id) => byId.has(id));
+  const pinnedChannels = pinIds.map((id) => byId.get(id)).filter(Boolean);
+  const pinSet = new Set(pinIds);
+  const unpinned = list.filter((ch) => !pinSet.has(Number(ch.channelId)));
+  unpinned.sort(compareQuickRailChannel);
+  const merged = [...pinnedChannels, ...unpinned];
+  const picked = merged.slice(0, QUICK_RAIL_MAX_ITEMS);
   if (picked.length === 0) {
     const emptyHint = document.createElement("div");
     emptyHint.className = "quick-rail-empty";
@@ -1879,6 +1885,7 @@ function renderQuickUnreadList(channels) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "quick-rail-link channel-item";
+    if (isQuickRailChannelPinned(ch.channelId)) btn.classList.add("quick-rail-link-pinned");
     btn.dataset.channelId = String(ch.channelId);
     btn.dataset.channelType = ch.channelType;
     const displayName =
@@ -4003,12 +4010,20 @@ function syncSidebarCtxNotifyButtonLabel() {
   btn.textContent = muted ? "알림 켜기" : "알림 끄기";
 }
 
+function syncSidebarCtxQuickRailPinLabel() {
+  const btn = document.getElementById("btnSidebarCtxQuickRailPin");
+  if (!btn || sidebarCtxChannelId == null) return;
+  const pinned = isQuickRailChannelPinned(sidebarCtxChannelId);
+  btn.textContent = pinned ? "퀵 레일 고정 해제" : "퀵 레일에 고정";
+}
+
 function openChannelSidebarContextMenu(clientX, clientY, channelId, channelName, channelType) {
   if (!channelSidebarContextMenuEl) return;
   sidebarCtxChannelId = channelId;
   sidebarCtxChannelName = String(channelName || "");
   sidebarCtxChannelType = String(channelType || "PUBLIC");
   syncSidebarCtxNotifyButtonLabel();
+  syncSidebarCtxQuickRailPinLabel();
   hideMemberContextMenu();
   hideMessageContextMenu();
   const menuW = 220;
@@ -6732,6 +6747,10 @@ async function leaveChannelAsMember(channelId, channelDisplayName, channelType) 
     await uiAlert(json.error?.message || "채팅방 나가기에 실패했습니다.");
     return;
   }
+  const leftCid = Number(channelId);
+  if (Number.isFinite(leftCid)) {
+    saveQuickRailPinnedChannelIds(readQuickRailPinnedChannelIds().filter((x) => x !== leftCid));
+  }
   if (Number(channelId) === Number(activeChannelId)) {
     await clearActiveChannelAndReload();
   } else {
@@ -6769,6 +6788,16 @@ document.getElementById("btnSidebarCtxToggleNotify")?.addEventListener("click", 
   // Request OS notification permission once when enabling general notifications.
   if (!nextMuted) {
     await ensureOsNotificationPermissionFromUserGesture();
+  }
+});
+
+document.getElementById("btnSidebarCtxQuickRailPin")?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (sidebarCtxChannelId == null || !currentUser) return;
+  toggleQuickRailChannelPin(sidebarCtxChannelId);
+  closeChannelSidebarContextMenu();
+  if (Array.isArray(lastSidebarChannelsSnapshot) && lastSidebarChannelsSnapshot.length) {
+    renderQuickUnreadList(lastSidebarChannelsSnapshot);
   }
 });
 
@@ -7336,16 +7365,6 @@ function initEvents() {
       e.stopPropagation();
       toggleSidebarCollapsed();
     });
-  }
-
-  if (!sidebarQuickRailPinBound) {
-    sidebarQuickRailPinBound = true;
-    document.getElementById("btnQuickRailPin")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      toggleQuickRailPinned();
-    });
-    applyQuickRailPinUi();
   }
 
   if (!mentionInboxUiBound) {

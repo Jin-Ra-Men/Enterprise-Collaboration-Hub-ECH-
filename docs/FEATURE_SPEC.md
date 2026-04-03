@@ -152,7 +152,7 @@
 - 관련 API: `GET /api/channels` (`unreadCount`, **`lastMessageAt`**, `createdAt` 폴백 정렬)
 - 관련 Socket 이벤트: `message:new`, `channel:system` 등 기존 디바운스 채널 목록 갱신과 동일(약 400ms) — 갱신 시 퀵 레일도 동일 데이터로 재렌더
 - 입력/출력:
-  - 퀵 레일: 정렬 = (1) `unreadCount > 0` 우선 (2) 각 그룹 내 `lastMessageAt`(없으면 `createdAt`) 내림차순; 상위 최대 15개(`QUICK_RAIL_MAX_ITEMS`); 배지는 미읽음일 때만; `.quick-rail-link.channel-item`; 전체 이름은 `title`·`data-tooltip-title`·`aria-label`
+  - 퀵 레일: **고정**(`ech_quick_rail_pinned_{employeeNo}` JSON 배열 순서)에 포함된 채널은 항상 목록 앞쪽에 같은 순서로 배치. 나머지는 정렬 = (1) `unreadCount > 0` 우선 (2) 각 그룹 내 `lastMessageAt`(없으면 `createdAt`) 내림차순. 전체 슬롯 상한 최대 15개(`QUICK_RAIL_MAX_ITEMS`). 우클릭 메뉴 `퀵 레일에 고정` / `퀵 레일 고정 해제`. 배지는 미읽음일 때만; `.quick-rail-link.channel-item`·고정 시 `.quick-rail-link-pinned`; 전체 이름은 `title`·`data-tooltip-title`·`aria-label`
   - 채널 0개: `.quick-rail-empty` 문구
   - 접기: `localStorage` `ech_sidebar_collapsed` (`1`/`0`); `.sidebar-column` 너비 324px↔**64px**(퀵 레일만 표시·워크스페이스/검색·목록/프로필 숨김); 탭 화살표 `‹` / `›`
 - 상태 전이/예외 케이스:

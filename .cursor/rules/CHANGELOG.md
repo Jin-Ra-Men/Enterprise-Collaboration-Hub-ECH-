@@ -4,8 +4,14 @@
 
 ## 2026-04-03
 
+### Changed
+- **퀵 레일 고정**: 상단 📌(사이드바 접기 잠금) 제거 → 채널/DM/퀵 레일 항목 **우클릭** 메뉴 `퀵 레일에 고정`으로 순서 고정(새 메시지로 재정렬되지 않음, `localStorage` 사원별 저장). 채팅방 나가기 시 해당 ID는 고정 목록에서 제거
+- **로그인**: 초기 비밀번호 안내 문구 삭제, 아이디 저장 라벨/체크박스 정렬 수정, 저장소에 테마 값이 없을 때·로그인 화면은 **라이트** 기본(인라인 스크립트 + `initTheme`/`showLogin`)
+- **테마 팝업**: 옵션 2열 그리드·폭 정리로 빈 칸 제거
+- **내 업무 항목**: 비활성(`in_use=false`) 업무는 `GET .../sidebar/by-assigned-cards`에서 제외
+
 ### Added
-- **로그인**: 아이디 저장(`localStorage`), 퀵 레일 📌 **고정**(사이드바 접기 비활성화)
+- **로그인**: 아이디 저장(`localStorage`)
 - **백엔드 설정**: `auth.initial-password-plaintext` — 비밀번호 미설정 사용자 기동 시 적용 평문(관리자 설정에서 변경, `DataInitializer`가 `initDefaultAppSettings` 이후 읽음)
 - **desktop(Electron) 자동 업데이트**: `electron-updater` 의존성, `build.publish`(GitHub), 패키지 실행 시 `checkForUpdatesAndNotify`·6시간 주기 재확인·다운로드 완료 OS 알림(`main.js`)
 - **릴리즈 업로드**: `tools/publish-electron-github-release.ps1`가 `latest.yml`에서 설치 파일명을 읽어 **설치 파일 + `latest.yml` + `.blockmap`(있을 때)** 을 동일 태그에 업로드; 기본 태그 `v{package.json version}`
