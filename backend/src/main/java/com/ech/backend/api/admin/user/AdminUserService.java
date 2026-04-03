@@ -87,6 +87,16 @@ public class AdminUserService {
     public AdminUserListItemResponse updateUser(String employeeNo, AdminUserSaveRequest req) {
         User user = userRepository.findByEmployeeNo(employeeNo.trim())
                 .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다: " + employeeNo));
+
+        // 사원번호 변경 처리
+        String newEmpNo = req.employeeNo() != null ? req.employeeNo().trim() : employeeNo.trim();
+        if (!newEmpNo.equals(employeeNo.trim())) {
+            if (userRepository.findByEmployeeNo(newEmpNo).isPresent()) {
+                throw new IllegalArgumentException("이미 존재하는 사원번호입니다: " + newEmpNo);
+            }
+            user.setEmployeeNo(newEmpNo);
+        }
+
         user.setEmail(req.email().trim());
         user.setName(req.name().trim());
         user.setRole(req.role() != null && !req.role().isBlank() ? req.role() : "MEMBER");

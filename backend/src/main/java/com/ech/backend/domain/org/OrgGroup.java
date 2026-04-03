@@ -67,6 +67,11 @@ public class OrgGroup {
         this.isActive = true;
     }
 
+    public void setGroupCode(String groupCode) {
+        this.groupCode = groupCode;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
         this.updatedAt = OffsetDateTime.now();

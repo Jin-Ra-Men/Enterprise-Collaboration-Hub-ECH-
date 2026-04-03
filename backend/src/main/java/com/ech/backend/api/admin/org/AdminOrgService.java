@@ -49,6 +49,18 @@ public class AdminOrgService {
         OrgGroup group = orgGroupRepository.findByGroupCode(groupCode.trim())
                 .orElseThrow(() -> new NotFoundException("그룹을 찾을 수 없습니다: " + groupCode));
 
+        // 그룹코드 변경 처리
+        String newCode = blank(req.groupCode()) ? groupCode.trim() : req.groupCode().trim();
+        if (!newCode.equals(groupCode.trim())) {
+            if (orgGroupRepository.findByGroupCode(newCode).isPresent()) {
+                throw new IllegalArgumentException("이미 존재하는 그룹 코드입니다: " + newCode);
+            }
+            // FK 참조 먼저 갱신 (cascade update 미지원 환경 대응)
+            orgGroupMemberRepository.updateGroupCode(groupCode.trim(), newCode);
+            orgGroupRepository.updateMemberOfGroupCode(groupCode.trim(), newCode);
+            group.setGroupCode(newCode);
+        }
+
         String newDisplayName = req.displayName().trim();
         String newParentCode  = blank(req.memberOfGroupCode()) ? null : req.memberOfGroupCode().trim();
 

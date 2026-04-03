@@ -97,6 +97,11 @@ public class User {
         return updatedAt;
     }
 
+    public void setEmployeeNo(String employeeNo) {
+        this.employeeNo = employeeNo;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
     public void setEmail(String email) {
         this.email = email;
         this.updatedAt = OffsetDateTime.now();

@@ -3,6 +3,9 @@ package com.ech.backend.domain.org;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface OrgGroupRepository extends JpaRepository<OrgGroup, Long> {
 
@@ -23,5 +26,10 @@ public interface OrgGroupRepository extends JpaRepository<OrgGroup, Long> {
 
     /** 특정 부모 코드를 가진 자식 그룹 조회 (경로 재계산·삭제 연쇄에 사용) */
     List<OrgGroup> findAllByMemberOfGroupCode(String memberOfGroupCode);
+
+    /** 그룹코드 변경 시 자식 그룹의 member_of_group_code 일괄 갱신 */
+    @Modifying
+    @Query("UPDATE OrgGroup g SET g.memberOfGroupCode = :newCode WHERE g.memberOfGroupCode = :oldCode")
+    void updateMemberOfGroupCode(@Param("oldCode") String oldCode, @Param("newCode") String newCode);
 }
 

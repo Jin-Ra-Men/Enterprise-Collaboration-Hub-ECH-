@@ -8069,7 +8069,10 @@ function openAdminUserEditModal(employeeNo) {
   const isNew = !employeeNo;
   document.getElementById("adminUserEditTitle").textContent = isNew ? "새 사용자 등록" : "사용자 편집";
   const empNoInput = document.getElementById("auEmpNo");
-  empNoInput.disabled = !isNew;
+  empNoInput.disabled = false; // 편집 시에도 사원번호 수정 가능
+  // 변경 경고 초기화
+  document.getElementById("auEmpNoChangeWarn").classList.add("hidden");
+  empNoInput.dataset.originalEmpNo = employeeNo || "";
 
   // 폼 초기화
   document.getElementById("auEmpNo").value = "";
@@ -8234,42 +8237,60 @@ document.addEventListener("click", () => {
   document.getElementById("adminUserContextMenu")?.classList.add("hidden");
 });
 
-document.getElementById("btnAdminUserEditConfirm").addEventListener("click", () => {
-  const empNoEl = document.getElementById("auEmpNo");
-  const editEmp = document.getElementById("btnAdminUserEditConfirm").dataset.editEmp;
-  const isNew   = !editEmp;
+// 사원번호 입력 시 변경 경고 표시
+document.getElementById("auEmpNo").addEventListener("input", (e) => {
+  const original = e.target.dataset.originalEmpNo || "";
+  const warn = document.getElementById("auEmpNoChangeWarn");
+  if (warn) warn.classList.toggle("hidden", !original || e.target.value.trim() === original);
+});
 
-  const empNo   = empNoEl.value.trim();
-  const name    = document.getElementById("auName").value.trim();
-  const email   = document.getElementById("auEmail").value.trim();
-  const role    = document.getElementById("auRole").value;
-  const status  = document.getElementById("auStatus").value;
+document.getElementById("btnAdminUserEditConfirm").addEventListener("click", () => {
+  const empNoEl  = document.getElementById("auEmpNo");
+  const editEmp  = document.getElementById("btnAdminUserEditConfirm").dataset.editEmp;
+  const originalEmpNo = empNoEl.dataset.originalEmpNo || editEmp || "";
+  const isNew    = !editEmp;
+
+  const newEmpNo = empNoEl.value.trim();
+  const name     = document.getElementById("auName").value.trim();
+  const email    = document.getElementById("auEmail").value.trim();
+  const role     = document.getElementById("auRole").value;
+  const status   = document.getElementById("auStatus").value;
   const teamGroupCode         = document.getElementById("auTeam").value;
   const jobLevelGroupCode     = document.getElementById("auJobLevel").value;
   const jobPositionGroupCode  = document.getElementById("auJobPosition").value;
   const jobTitleGroupCode     = document.getElementById("auJobTitle").value;
 
   const errEl = document.getElementById("adminUserEditError");
-  if (!empNo) { errEl.textContent = "사원번호를 입력하세요."; errEl.classList.remove("hidden"); return; }
-  if (!name)  { errEl.textContent = "이름을 입력하세요.";     errEl.classList.remove("hidden"); return; }
-  if (!email) { errEl.textContent = "이메일을 입력하세요.";   errEl.classList.remove("hidden"); return; }
+  if (!newEmpNo) { errEl.textContent = "사원번호를 입력하세요."; errEl.classList.remove("hidden"); return; }
+  if (!name)     { errEl.textContent = "이름을 입력하세요.";     errEl.classList.remove("hidden"); return; }
+  if (!email)    { errEl.textContent = "이메일을 입력하세요.";   errEl.classList.remove("hidden"); return; }
   errEl.classList.add("hidden");
 
-  if (isNew && adminUserList.some(u => u.employeeNo === empNo) && adminUserPendingChanges.get(empNo)?.op !== "delete") {
+  // 신규: 중복 검사
+  if (isNew && adminUserList.some(u => u.employeeNo === newEmpNo) && adminUserPendingChanges.get(newEmpNo)?.op !== "delete") {
     errEl.textContent = "이미 존재하는 사원번호입니다."; errEl.classList.remove("hidden"); return;
+  }
+  // 편집: 새 사원번호가 다른 기존 사용자와 충돌하는지 검사
+  if (!isNew && newEmpNo !== originalEmpNo) {
+    const conflict = adminUserList.some(u => u.employeeNo === newEmpNo)
+                   || [...adminUserPendingChanges.values()].some(c => c.data?.employeeNo === newEmpNo && c.op !== "delete");
+    if (conflict) { errEl.textContent = "이미 존재하는 사원번호입니다."; errEl.classList.remove("hidden"); return; }
   }
 
   const data = {
-    employeeNo: empNo, name, email, role, status,
+    employeeNo: newEmpNo, name, email, role, status,
     teamGroupCode, jobLevelGroupCode, jobPositionGroupCode, jobTitleGroupCode,
     teamDisplayName:        resolveOrgDisplayName(teamGroupCode,        "TEAM"),
     jobLevelDisplayName:    resolveOrgDisplayName(jobLevelGroupCode,    "JOB_LEVEL"),
     jobPositionDisplayName: resolveOrgDisplayName(jobPositionGroupCode, "JOB_POSITION"),
     jobTitleDisplayName:    resolveOrgDisplayName(jobTitleGroupCode,    "JOB_TITLE"),
   };
-  adminUserPendingChanges.set(empNo, { op: isNew ? "create" : "update", data });
+
+  // 사원번호가 변경된 경우: 원래 키로 pending 저장 (저장 시 URL = 원래 사원번호, body.employeeNo = 새 사원번호)
+  const pendingKey = isNew ? newEmpNo : originalEmpNo;
+  adminUserPendingChanges.set(pendingKey, { op: isNew ? "create" : "update", data });
   closeModal("modalAdminUserEdit");
-  renderAdminUserTable();
+  renderAdminUserView();
 });
 
 document.getElementById("btnAdminUserSave").addEventListener("click", async () => {
@@ -8572,7 +8593,11 @@ function openOrgGroupModal(editCode, defaultType, defaultParent) {
 
   const codeEl    = document.getElementById("ogCode");
   codeEl.value    = existing ? existing.groupCode : "";
-  codeEl.readOnly = isEdit;
+  codeEl.readOnly = false; // 편집 시에도 코드 수정 가능
+  codeEl.dataset.originalCode = existing ? existing.groupCode : "";
+  // 변경 경고 초기화
+  const codeWarn = document.getElementById("ogCodeChangeWarn");
+  if (codeWarn) codeWarn.classList.add("hidden");
 
   document.getElementById("ogDisplayName").value = existing ? existing.displayName : "";
   document.getElementById("ogSortOrder").value   = existing ? existing.sortOrder   : 0;
@@ -8615,6 +8640,11 @@ document.getElementById("ogType").addEventListener("change", (e) => {
 });
 document.getElementById("ogParent").addEventListener("change", updateOrgPathPreview);
 document.getElementById("ogDisplayName").addEventListener("input", updateOrgPathPreview);
+document.getElementById("ogCode").addEventListener("input", (e) => {
+  const original = e.target.dataset.originalCode || "";
+  const warn = document.getElementById("ogCodeChangeWarn");
+  if (warn) warn.classList.toggle("hidden", !original || e.target.value.trim() === original);
+});
 
 document.getElementById("btnOrgGroupEditConfirm").addEventListener("click", () => {
   const isEdit      = !!document.getElementById("btnOrgGroupEditConfirm").dataset.editCode;
@@ -8629,18 +8659,17 @@ document.getElementById("btnOrgGroupEditConfirm").addEventListener("click", () =
   if (!groupCode)   { errEl.textContent = "그룹 코드를 입력하세요."; errEl.classList.remove("hidden"); return; }
   if (!displayName) { errEl.textContent = "표시명을 입력하세요.";    errEl.classList.remove("hidden"); return; }
 
-  // 코드 중복 검사 (신규 생성 시)
-  if (!isEdit) {
-    const eff = buildEffectiveOrgList();
-    if (eff.some(g => g.groupCode === groupCode && g._pending !== "delete")) {
-      errEl.textContent = "이미 존재하는 그룹 코드입니다.";
-      errEl.classList.remove("hidden");
-      return;
-    }
+  const eff = buildEffectiveOrgList();
+
+  // 코드 중복 검사: 자기 자신 제외 후 검사
+  const codeConflict = eff.some(g => g.groupCode === groupCode && g._pending !== "delete" && g.groupCode !== orgEditingCode);
+  if (codeConflict) {
+    errEl.textContent = "이미 존재하는 그룹 코드입니다.";
+    errEl.classList.remove("hidden");
+    return;
   }
 
   const parentPath = (() => {
-    const eff = buildEffectiveOrgList();
     const p = eff.find(g => g.groupCode === parentCode);
     if (!p) return displayName;
     return (p.groupPath || p.displayName) + "/" + displayName;
@@ -8651,8 +8680,9 @@ document.getElementById("btnOrgGroupEditConfirm").addEventListener("click", () =
   if (isEdit) {
     const prev = orgPendingChanges.get(orgEditingCode);
     const op   = prev?.op === "create" ? "create" : "update";
-    orgPendingChanges.set(orgEditingCode, { op, data: { ...data, groupCode: orgEditingCode } });
-    // 표시명이 바뀌면 자식의 경로도 재계산
+    // 코드가 바뀐 경우: 원래 키로 pending 유지 (저장 시 URL = 원래 코드, body.groupCode = 새 코드)
+    orgPendingChanges.set(orgEditingCode, { op, data });
+    // 표시명/경로가 바뀌면 자식의 경로도 재계산
     updatePendingChildPaths(orgEditingCode, parentPath);
   } else {
     orgExpandedSet.add(groupCode); // 새 노드는 펼친 상태로

@@ -1,0 +1,9 @@
+feat: 사원번호·그룹코드 수정 기능 추가
+
+- 사용자 편집 모달: 사원번호 필드 활성화, 변경 시 경고 표시
+- 조직 그룹 편집 모달: 그룹코드 필드 활성화, 변경 시 경고 표시
+- User.setEmployeeNo(), OrgGroup.setGroupCode() setter 추가
+- AdminUserService: 사원번호 변경 처리 및 중복 검사
+- AdminOrgService: 그룹코드 변경 시 FK 연쇄 갱신 처리
+  (org_group_members.group_code, 자식 org_groups.member_of_group_code)
+- pending 저장 시 원래 코드를 URL, 새 코드를 body로 전송

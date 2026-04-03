@@ -4,6 +4,18 @@
 
 ## 2026-04-03
 
+### Changed
+- **사원번호·그룹코드 수정 가능하도록 개선**
+  - `User.setEmployeeNo()` setter 추가 — 기존 `employeeNo` 불변 제약 해제
+  - `OrgGroup.setGroupCode()` setter 추가
+  - `OrgGroupRepository.updateMemberOfGroupCode()` — 코드 변경 시 자식 그룹 member_of_group_code 일괄 갱신
+  - `OrgGroupMemberRepository.updateGroupCode()` — 코드 변경 시 org_group_members.group_code 네이티브 갱신
+  - `AdminUserService.updateUser()` — 사원번호 변경 요청 처리 및 중복 검사
+  - `AdminOrgService.updateOrgGroup()` — 그룹코드 변경 요청 처리 및 FK 연쇄 갱신
+  - 프론트엔드: 사용자 편집 모달 사원번호 필드 활성화, 변경 시 경고 표시
+  - 프론트엔드: 조직 그룹 편집 모달 코드 필드 활성화, 변경 시 경고 표시
+  - 프론트엔드: pending 저장 시 원래 코드를 URL에, 새 코드를 body에 전송
+
 ### Added
 - **조직 관리 기능 구현** (관리자 전용)
   - 사이드바 관리자 메뉴에 `🏢 조직 관리` 항목 추가

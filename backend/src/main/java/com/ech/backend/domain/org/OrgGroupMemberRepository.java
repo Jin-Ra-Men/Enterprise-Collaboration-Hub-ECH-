@@ -54,4 +54,9 @@ public interface OrgGroupMemberRepository extends JpaRepository<OrgGroupMember, 
     @Modifying
     @Query("DELETE FROM OrgGroupMember m WHERE m.group.groupCode = :groupCode")
     void deleteAllByGroupCode(@Param("groupCode") String groupCode);
+
+    /** 그룹코드 변경 시 org_group_members.group_code 일괄 갱신 (네이티브) */
+    @Modifying
+    @Query(value = "UPDATE org_group_members SET group_code = :newCode WHERE group_code = :oldCode", nativeQuery = true)
+    void updateGroupCode(@Param("oldCode") String oldCode, @Param("newCode") String newCode);
 }
