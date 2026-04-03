@@ -4080,7 +4080,8 @@ function pushNewMessageToast(msg) {
   const myEmp = String(currentUser.employeeNo || "").trim();
   const sender = String(msg.senderId ?? msg.sender_id ?? "").trim();
   if (sender && myEmp && sender === myEmp) return;
-  if (activeChannelId != null && Number(activeChannelId) === cid) return; // 현재 채널은 목록에 안 띄움(이미 보는 중)
+  // 창이 포그라운드(보이는 상태)일 때만 현재 채널 억제 — 최소화/비활성이면 OS 알림 허용
+  if (activeChannelId != null && Number(activeChannelId) === cid && !isInBackgroundForOsNotification()) return;
   if (msg.messageId != null) {
     const mid = String(msg.messageId);
     if (shownNewMessageToastIds.has(mid)) return;
