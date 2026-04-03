@@ -69,7 +69,7 @@ $INSTALL_DIR    = Ask "설치 경로" "C:\ECH"
 
 Write-Host ""
 Info "설정 요약:"
-Info "  DB           : $DB_USER@$DB_HOST:$DB_PORT/$DB_NAME"
+Info "  DB           : ${DB_USER}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
 Info "  설치 경로    : $INSTALL_DIR"
 $yn = Ask "위 설정으로 진행하시겠습니까? (Y/n)" "Y"
 if ($yn.ToUpper() -ne "Y") { exit 0 }
@@ -259,7 +259,8 @@ if ($existing) {
 }
 
 # 자바 경로 탐색
-$javaExe = (Get-Command java -ErrorAction SilentlyContinue)?.Source
+$javaCmdObj = Get-Command java -ErrorAction SilentlyContinue
+$javaExe = if ($javaCmdObj) { $javaCmdObj.Source } else { $null }
 if (-not $javaExe) { Fatal "java.exe 를 찾을 수 없습니다. Java 17 설치를 확인하세요." }
 
 & "$nssmPath" install $svcName "$javaExe" | Out-Null
