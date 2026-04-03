@@ -10,6 +10,7 @@
 
 ### Fixed
 - **Electron 설치형 흰 화면**: `electron-builder`가 프로젝트 밖 `../frontend/*` 경로를 asar에 넣지 않아 `app.asar`에 프론트가 비어 있었음 — `files`에 `from`/`to`로 `frontend/` 전체를 패키지에 포함하고, `main.js`에서 패키지 내 `frontend/index.html` 우선 로드
+- **Electron 기본 메뉴바**: Windows/Linux에서 `Menu.setApplicationMenu(null)`로 File/Edit/View 등 기본 메뉴 제거
 
 ## 2026-04-02
 

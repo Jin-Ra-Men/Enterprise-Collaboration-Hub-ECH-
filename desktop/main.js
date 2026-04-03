@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { app, BrowserWindow, ipcMain, Notification } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, Notification } = require("electron");
 
 /** @type {BrowserWindow | null} */
 let mainWindow = null;
@@ -52,6 +52,10 @@ ipcMain.on("os-notification-show", (event, payload) => {
 });
 
 app.whenReady().then(() => {
+  // Remove default Electron in-window menu bar (File / Edit / View / …) on Windows/Linux.
+  if (process.platform !== "darwin") {
+    Menu.setApplicationMenu(null);
+  }
   createMainWindow();
 });
 
