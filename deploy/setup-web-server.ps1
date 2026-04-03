@@ -505,16 +505,26 @@ if ($rtExisting) {
     Warn "기존 서비스 '$rtSvcName' 제거"
 }
 
-# NSSM 서비스 등록
-& "$nssmPath" install $rtSvcName "$nodeExe" | Out-Null
-& "$nssmPath" set $rtSvcName AppParameters "src/server.js" | Out-Null
-& "$nssmPath" set $rtSvcName AppDirectory "$INSTALL_DIR\realtime" | Out-Null
+# server.js 존재 확인
+$serverJs = "$INSTALL_DIR\realtime\src\server.js"
+if (-not (Test-Path $serverJs)) { Fatal "server.js 를 찾을 수 없습니다: $serverJs" }
+
+# NSSM 서비스 등록 (경로는 반드시 백슬래시 절대경로)
+$nodeExeAbs  = $nodeExe.Replace('/', '\')
+$serverJsAbs = $serverJs.Replace('/', '\')
+$rtWorkDir   = "$INSTALL_DIR\realtime"
+
+& "$nssmPath" install $rtSvcName "$nodeExeAbs" | Out-Null
+& "$nssmPath" set $rtSvcName AppParameters "`"$serverJsAbs`"" | Out-Null
+& "$nssmPath" set $rtSvcName AppDirectory "$rtWorkDir" | Out-Null
 & "$nssmPath" set $rtSvcName AppStdout "$INSTALL_DIR\logs\realtime-out.log" | Out-Null
 & "$nssmPath" set $rtSvcName AppStderr "$INSTALL_DIR\logs\realtime-error.log" | Out-Null
 & "$nssmPath" set $rtSvcName AppRotateFiles 1 | Out-Null
 & "$nssmPath" set $rtSvcName AppRotateBytes 10485760 | Out-Null
 & "$nssmPath" set $rtSvcName Start SERVICE_AUTO_START | Out-Null
 & "$nssmPath" set $rtSvcName DisplayName "ECH Realtime (Socket.IO)" | Out-Null
+# 서비스 재시작 정책 (오류 시 자동 재시작)
+& "$nssmPath" set $rtSvcName AppRestartDelay 3000 | Out-Null
 
 # 리얼타임 서버 환경변수 주입
 $rtVars = [ordered]@{
@@ -529,12 +539,29 @@ $rtVars = [ordered]@{
 foreach ($k in $rtVars.Keys) {
     & "$nssmPath" set $rtSvcName AppEnvironmentExtra "+$k=$($rtVars[$k])" | Out-Null
 }
+Ok "ECH-Realtime 서비스 등록 완료"
+Info "  실행 파일 : $nodeExeAbs"
+Info "  스크립트  : $serverJsAbs"
+Info "  작업 디렉 : $rtWorkDir"
 
-Start-Service $rtSvcName
+# 서비스 시작 (실패 시 로그 자동 출력)
+try {
+    Start-Service $rtSvcName -ErrorAction Stop
+} catch {
+    Warn "서비스 시작 실패 — 아래 로그를 확인하세요:"
+    Start-Sleep -Seconds 2
+    $errLog = "$INSTALL_DIR\logs\realtime-error.log"
+    if (Test-Path $errLog) {
+        Get-Content $errLog -Tail 20 | ForEach-Object { Write-Host "    $_" -ForegroundColor Yellow }
+    } else {
+        Warn "로그 파일 없음: $errLog"
+        Warn "수동 확인: & `"$nodeExeAbs`" `"$serverJsAbs`"  (PowerShell 에서 직접 실행)"
+    }
+}
 Start-Sleep -Seconds 3
-$rtSt = (Get-Service $rtSvcName).Status
+$rtSt = (Get-Service $rtSvcName -ErrorAction SilentlyContinue).Status
 if ($rtSt -eq "Running") { Ok "ECH-Realtime 서비스 시작 완료" }
-else { Warn "서비스 상태: $rtSt — 로그 확인: $INSTALL_DIR\logs\realtime-error.log" }
+else { Warn "서비스 상태: $rtSt — 수동 진단: & `"$nodeExeAbs`" `"$serverJsAbs`"" }
 
 # ════════════════════════════════════════════
 # 8. 방화벽 설정
