@@ -4,9 +4,15 @@
 
 ## 2026-04-03
 
+### Added
+- **내부망 Electron 자동 업데이트**: Spring Boot `/desktop-updates/**` → `DesktopUpdateResourceConfig` (`{APP_RELEASES_DIR}/desktop` 또는 `DESKTOP_UPDATE_DIR`)
+- **desktop**: `ech-server.json`에 `serverUrl` 또는 `updateBaseUrl`이 있으면 `electron-updater`를 `generic` 피드로 전환(GitHub 불필요). NSIS 산출물명 `ECH-Setup-${version}.exe` (`artifactName`)
+
 ### Changed
 - **`.gitignore`**: `deploy/ECH-deploy.zip`, `deploy/package/` 제외 (로컬 빌드 산출물)
-- **데스크톱**: `package.json` 버전 `0.0.8` (릴리즈)
+- **데스크톱**: `package.json` 버전 `0.0.9` (릴리즈)
+- **`README.md`**: 내부망 데스크톱 자동 업데이트(`/desktop-updates`, `ech-server.json`) 안내 추가
+- **`docs/FEATURE_SPEC.md`**: Electron 내부망 generic 피드·백엔드 정적 경로 설명 추가
 
 ### Added
 - **관리자 기초설정(app_settings) 직접 추가**

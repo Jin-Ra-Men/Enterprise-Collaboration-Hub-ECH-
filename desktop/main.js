@@ -4,6 +4,22 @@ const path = require("path");
 const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, Notification } = require("electron");
 const { autoUpdater } = require("electron-updater");
 
+const DEFAULT_SERVER_URL = "http://ech.co.kr:8080";
+
+/** exe 옆 ech-server.json (선택): serverUrl, updateBaseUrl(자동업데이트 전용 베이스 URL) */
+function readEchServerJson() {
+  try {
+    const cfgPath = path.join(path.dirname(process.execPath), "ech-server.json");
+    if (fs.existsSync(cfgPath)) {
+      const raw = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
+      return raw && typeof raw === "object" ? raw : {};
+    }
+  } catch {
+    /* ignore */
+  }
+  return {};
+}
+
 /** @type {BrowserWindow | null} */
 let mainWindow = null;
 /** @type {Tray | null} */
@@ -64,16 +80,10 @@ function createMainWindow() {
     },
   });
 
-  // 서버 URL 결정: ech-server.json > 환경변수 > 기본값(ech.co.kr:8080)
-  // 배포 시 exe 옆에 ech-server.json {"serverUrl":"http://192.168.x.x:8080"} 으로 재정의 가능
-  let serverUrl = "http://ech.co.kr:8080";
-  try {
-    const cfgPath = path.join(path.dirname(process.execPath), "ech-server.json");
-    if (fs.existsSync(cfgPath)) {
-      const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
-      if (cfg && cfg.serverUrl) serverUrl = cfg.serverUrl.replace(/\/$/, "");
-    }
-  } catch { /* ignore */ }
+  const cfg = readEchServerJson();
+  const serverUrl = (cfg.serverUrl && String(cfg.serverUrl).trim())
+    ? String(cfg.serverUrl).trim().replace(/\/$/, "")
+    : DEFAULT_SERVER_URL;
 
   if (app.isPackaged) {
     // 운영: 서버에서 직접 index.html 로드 (origin = serverUrl → API/Socket URL 자동 결정)
@@ -96,6 +106,18 @@ function createMainWindow() {
 function setupAutoUpdater() {
   if (!app.isPackaged) return;
   try {
+    const cfg = readEchServerJson();
+    let genericBase = null;
+    if (cfg.updateBaseUrl && String(cfg.updateBaseUrl).trim()) {
+      genericBase = String(cfg.updateBaseUrl).trim().replace(/\/?$/, "/");
+    } else if (cfg.serverUrl && String(cfg.serverUrl).trim()) {
+      genericBase = `${String(cfg.serverUrl).trim().replace(/\/$/, "")}/desktop-updates/`;
+    }
+    if (genericBase) {
+      autoUpdater.setFeedURL({ provider: "generic", url: genericBase });
+    }
+    // ech-server.json 없음 → 빌드 시점 GitHub publish 설정(electron-updater 기본)
+
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
     autoUpdater.on("error", (err) => {

@@ -890,6 +890,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 - 테스트 기준:
   - 이전 버전 설치 후 상위 버전 릴리즈에 `latest.yml`+설치파일(+blockmap) 업로드 → 앱 기동 또는 주기 점검(6시간) 후 다운로드·종료 시 적용 확인
 - 비고: `npm run build:win`은 `--publish never`로 업로드는 하지 않되, `publish` 설정이 있으면 `latest.yml` 등이 `dist`에 생성됨
+- **내부망(인터넷/GitHub 불가)**: 설치 디렉터리의 `ech-server.json`에 `serverUrl`(예: `http://ech.co.kr:8080`) 또는 `updateBaseUrl`(예: `http://host:8080/desktop-updates/`)이 있으면 `electron-updater`가 `generic` 피드로 전환되어 **백엔드** `GET /desktop-updates/latest.yml` 및 동일 베이스 URL의 설치 파일을 사용한다. 서버에는 `{APP_RELEASES_DIR}/desktop`(또는 `DESKTOP_UPDATE_DIR`)에 `latest.yml`·`ECH-Setup-{version}.exe`를 배치하고, yml의 `path`와 실제 파일명을 일치시킨다. 상세: `docs/DEPLOYMENT_WINDOWS.md`, `DesktopUpdateResourceConfig`.
 
 ---
 

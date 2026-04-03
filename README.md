@@ -171,6 +171,9 @@ graph LR
 - 관리자 API: `GET/PUT /api/admin/retention-policies`, `POST /api/admin/retention-policies/trigger`
 - 서버 기동 시 기본 정책 자동 시드 (기본값: 비활성)
 
+### 데스크톱 자동 업데이트(내부망)
+- GitHub에 나갈 수 없는 PC는 `ech-server.json`의 `serverUrl`로 백엔드 `http://.../desktop-updates/latest.yml`을 사용하도록 설정됨. 서버에는 `releases/desktop`(또는 `DESKTOP_UPDATE_DIR`)에 `latest.yml`·`ECH-Setup-*.exe` 배포. 자세한 절차: `docs/DEPLOYMENT_WINDOWS.md`, `docs/HANDOVER.md`.
+
 ### 앱 기초설정 (app_settings)
 - 관리자 화면 **설정** 탭에서 목록 조회·값 수정·**신규 키 추가** (`POST /api/admin/settings`)
 - 기존 API: `GET /api/admin/settings`, `GET /api/admin/settings/{key}`, `PUT /api/admin/settings/{key}`

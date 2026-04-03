@@ -51,6 +51,8 @@ app:
   expose-error-detail: ${EXPOSE_ERROR_DETAIL:true}
   # 릴리즈 파일 저장 디렉토리 (운영 환경에서 절대 경로 지정 권장)
   releases-dir: ${APP_RELEASES_DIR:./releases}
+  # Electron 자동 업데이트 파일(latest.yml, ECH-Setup-*.exe). 비우면 {releases-dir}/desktop
+  desktop-update-dir: ${DESKTOP_UPDATE_DIR:}
   # 첨부파일 저장 기본 경로 (DB app_settings 에서 덮어쓸 수 있음)
   file-storage-dir: ${FILE_STORAGE_DIR:D:/testStorage}
   # Node 실시간 서버에 채널 시스템 메시지 등 브로드캐스트(내부 HTTP). REALTIME_INTERNAL_TOKEN 은 realtime/.env 과 동일하게 맞출 것.

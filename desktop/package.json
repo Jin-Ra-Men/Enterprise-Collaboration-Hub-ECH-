@@ -1,6 +1,6 @@
 {
   "name": "ech-desktop",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "private": true,
   "main": "main.js",
   "repository": {
@@ -42,7 +42,8 @@
     ],
     "asar": true,
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "artifactName": "ECH-Setup-${version}.${ext}"
     },
     "publish": [
       {
