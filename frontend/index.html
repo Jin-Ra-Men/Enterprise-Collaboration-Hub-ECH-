@@ -305,31 +305,43 @@
               <button id="btnAdminUserNew" class="btn-primary btn-sm-action">+ 새 사용자</button>
               <button id="btnAdminUserSave" class="btn-primary btn-sm-action">저장</button>
               <button id="btnAdminUserReset" class="btn-secondary btn-sm-action">변경 취소</button>
-              <button id="btnUserViewToggle" class="btn-secondary btn-sm-action">📋 목록 보기</button>
             </div>
           </div>
           <p class="admin-hint">우클릭으로 편집·삭제, 역할/상태/조직 셀렉트는 직접 변경 후 [저장]</p>
           <div id="adminUserPendingBanner" class="admin-pending-banner hidden">
             변경사항 <strong id="adminUserPendingCount">0</strong>건이 저장 대기 중입니다. [저장] 버튼을 눌러 반영하세요.
           </div>
-          <div class="admin-user-table-wrap">
-            <table class="data-table" id="adminUserTable">
-              <thead>
-                <tr>
-                  <th>사원번호(AD)</th>
-                  <th>이름</th>
-                  <th>이메일</th>
-                  <th>부서</th>
-                  <th>직급</th>
-                  <th>직위</th>
-                  <th>직책</th>
-                  <th>역할</th>
-                  <th>상태</th>
-                  <th>등록일</th>
-                </tr>
-              </thead>
-              <tbody id="adminUserTableBody"></tbody>
-            </table>
+          <!-- 좌우 분할: 조직 선택(좌) + 사용자 목록(우) -->
+          <div class="user-mgmt-split">
+            <div class="user-org-panel" id="userOrgPanel">
+              <div class="user-org-panel-header">조직 선택</div>
+              <div class="user-org-tree" id="userOrgTree"></div>
+            </div>
+            <div class="user-list-panel">
+              <div id="userListPanelHeader" class="user-list-panel-header">
+                <span id="userListPanelTitle">전체</span>
+                <span id="userListPanelCount" class="tree-count"></span>
+              </div>
+              <div class="admin-user-table-wrap">
+                <table class="data-table" id="adminUserTable">
+                  <thead>
+                    <tr>
+                      <th>사원번호(AD)</th>
+                      <th>이름</th>
+                      <th>이메일</th>
+                      <th>부서</th>
+                      <th>직급</th>
+                      <th>직위</th>
+                      <th>직책</th>
+                      <th>역할</th>
+                      <th>상태</th>
+                      <th>등록일</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminUserTableBody"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
 

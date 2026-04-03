@@ -7823,9 +7823,9 @@ document.addEventListener("visibilitychange", () => {
  * ========================================================================== */
 let adminUserList = [];          // 서버에서 로드한 원본 목록
 let adminUserOrgOptions = null;  // 조직 드롭다운 옵션 (teams/jobLevels/...)
-let adminUserOrgTree = [];       // 전체 조직 그룹 (트리뷰용)
-let userViewMode = "tree";       // "tree" | "flat"
-let userOrgExpanded = new Set(); // 펼쳐진 조직 노드 코드
+let adminUserOrgTree = [];       // 전체 조직 그룹
+let adminUserSelectedOrgCode = null;         // 좌측 패널에서 선택한 조직 코드 (null = 전체)
+let userOrgPanelExpanded = new Set();        // 좌측 패널 트리 펼침 상태
 /** employeeNo → { op: 'create'|'update'|'delete', data: {...} } */
 const adminUserPendingChanges = new Map();
 
@@ -7844,10 +7844,9 @@ async function loadAdminUserPage() {
     adminUserList       = usersJson.data || [];
     adminUserOrgOptions = orgJson.data  || { teams: [], jobLevels: [], jobPositions: [], jobTitles: [] };
     adminUserOrgTree    = treeJson.data || [];
-    // 처음 로드 시 모든 노드 펼침
-    if (userOrgExpanded.size === 0 || adminUserOrgTree.length > 0) {
-      userOrgExpanded = new Set([...adminUserOrgTree.map(g => g.groupCode), "__unassigned__"]);
-    }
+    // 처음 로드 시 모든 조직 노드 펼침
+    userOrgPanelExpanded = new Set(adminUserOrgTree.map(g => g.groupCode));
+    adminUserSelectedOrgCode = null;
     adminUserPendingChanges.clear();
     renderAdminUserView();
   } catch (e) {
@@ -7856,16 +7855,112 @@ async function loadAdminUserPage() {
 }
 
 function renderAdminUserView() {
-  if (userViewMode === "tree") renderAdminUserTreeView();
-  else renderAdminUserTable();
+  renderUserOrgPanel();
+  renderAdminUserTable();
 }
 
-// 보기 토글
-document.getElementById("btnUserViewToggle").addEventListener("click", () => {
-  userViewMode = userViewMode === "tree" ? "flat" : "tree";
-  document.getElementById("btnUserViewToggle").textContent =
-    userViewMode === "tree" ? "📋 목록 보기" : "🏢 조직별 보기";
-  renderAdminUserView();
+// ── 좌측 조직 선택 패널 렌더 ─────────────────────────────────────────────
+function getAllDescendantTeamCodes(orgCode, structural) {
+  const result = [];
+  function traverse(code) {
+    const kids = structural.filter(g => g.memberOfGroupCode === code);
+    for (const kid of kids) {
+      if (kid.groupType === "TEAM") result.push(kid.groupCode);
+      traverse(kid.groupCode);
+    }
+  }
+  traverse(orgCode);
+  return result;
+}
+
+function renderUserOrgPanel() {
+  const container = document.getElementById("userOrgTree");
+  if (!container) return;
+
+  const structural = adminUserOrgTree.filter(g => ["COMPANY","DIVISION","TEAM"].includes(g.groupType));
+  const orgMap  = new Map(structural.map(g => [g.groupCode, g]));
+  const getKids = (code) => structural.filter(g => g.memberOfGroupCode === code);
+  const roots   = structural.filter(g => g.groupType === "COMPANY" && (!g.memberOfGroupCode || !orgMap.has(g.memberOfGroupCode)));
+  const allUsers = buildEffectiveAdminUserList();
+
+  const activeUsers = (list) => list.filter(u => adminUserPendingChanges.get(u.employeeNo)?.op !== "delete");
+
+  function countForOrg(orgCode) {
+    const org = orgMap.get(orgCode);
+    if (!org) return 0;
+    if (org.groupType === "TEAM") {
+      return activeUsers(allUsers).filter(u => {
+        const tc = adminUserPendingChanges.get(u.employeeNo)?.data?.teamGroupCode ?? u.teamGroupCode;
+        return tc === orgCode;
+      }).length;
+    }
+    const teamCodes = getAllDescendantTeamCodes(orgCode, structural);
+    return activeUsers(allUsers).filter(u => {
+      const tc = adminUserPendingChanges.get(u.employeeNo)?.data?.teamGroupCode ?? u.teamGroupCode;
+      return teamCodes.includes(tc);
+    }).length;
+  }
+
+  const parts = [];
+  const totalCount = activeUsers(allUsers).length;
+  const allSel = adminUserSelectedOrgCode === null;
+  parts.push(`<div class="uorg-item${allSel ? " selected" : ""}" data-uorg-select="__all__">
+    <span class="uorg-label">📋 전체</span>
+    <span class="uorg-count">${totalCount}</span>
+  </div>`);
+
+  const TYPE_LABEL = { COMPANY:"회사", DIVISION:"본부", TEAM:"팀" };
+  const TYPE_CLS   = { COMPANY:"ot-company", DIVISION:"ot-division", TEAM:"ot-team" };
+
+  function renderNode(g, depth) {
+    const isExp  = userOrgPanelExpanded.has(g.groupCode);
+    const kids   = getKids(g.groupCode);
+    const count  = countForOrg(g.groupCode);
+    const isSel  = adminUserSelectedOrgCode === g.groupCode;
+    const indent = 10 + depth * 16;
+    parts.push(`<div class="uorg-item${isSel ? " selected" : ""}" data-uorg-select="${escHtml(g.groupCode)}" style="padding-left:${indent}px">
+      ${kids.length ? `<button class="uorg-toggle" data-uorg-toggle="${escHtml(g.groupCode)}">${isExp ? "▾" : "▸"}</button>` : `<span class="uorg-bullet">·</span>`}
+      <span class="org-type-badge ${TYPE_CLS[g.groupType] || ""} uorg-badge">${TYPE_LABEL[g.groupType] || g.groupType}</span>
+      <span class="uorg-label">${escHtml(g.displayName)}</span>
+      ${count > 0 ? `<span class="uorg-count">${count}</span>` : ""}
+    </div>`);
+    if (isExp) for (const kid of kids) renderNode(kid, depth + 1);
+  }
+
+  for (const root of roots) renderNode(root, 0);
+
+  const unassignedCount = activeUsers(allUsers).filter(u => {
+    const tc = adminUserPendingChanges.get(u.employeeNo)?.data?.teamGroupCode ?? u.teamGroupCode;
+    return !tc;
+  }).length;
+  if (unassignedCount > 0) {
+    const isSel = adminUserSelectedOrgCode === "__unassigned__";
+    parts.push(`<div class="uorg-item${isSel ? " selected" : ""}" data-uorg-select="__unassigned__" style="padding-left:10px">
+      <span class="uorg-bullet">·</span>
+      <span class="uorg-label">미배정</span>
+      <span class="uorg-count">${unassignedCount}</span>
+    </div>`);
+  }
+
+  container.innerHTML = parts.join("");
+}
+
+// 좌측 패널 클릭: 조직 선택 or 토글
+document.getElementById("userOrgTree").addEventListener("click", (e) => {
+  const toggleBtn = e.target.closest("[data-uorg-toggle]");
+  if (toggleBtn) {
+    const code = toggleBtn.dataset.uorgToggle;
+    if (userOrgPanelExpanded.has(code)) userOrgPanelExpanded.delete(code);
+    else userOrgPanelExpanded.add(code);
+    renderUserOrgPanel();
+    return;
+  }
+  const item = e.target.closest("[data-uorg-select]");
+  if (item) {
+    const code = item.dataset.uorgSelect;
+    adminUserSelectedOrgCode = code === "__all__" ? null : code;
+    renderAdminUserView();
+  }
 });
 
 /** org options 기반 인라인 셀렉트 HTML 생성 헬퍼 */
@@ -7886,7 +7981,45 @@ function buildOrgInlineSelect(field, empNo, currentCode, options, isDeleted) {
 function renderAdminUserTable() {
   const tbody = document.getElementById("adminUserTableBody");
   if (!tbody) return;
-  const rows = buildEffectiveAdminUserList();
+
+  const allRows = buildEffectiveAdminUserList();
+  const structural = adminUserOrgTree.filter(g => ["COMPANY","DIVISION","TEAM"].includes(g.groupType));
+
+  // 좌측 패널 선택에 따른 필터링
+  let rows;
+  let panelTitle = "전체";
+  if (adminUserSelectedOrgCode === null) {
+    rows = allRows;
+  } else if (adminUserSelectedOrgCode === "__unassigned__") {
+    rows = allRows.filter(u => {
+      const tc = adminUserPendingChanges.get(u.employeeNo)?.data?.teamGroupCode ?? u.teamGroupCode;
+      return !tc;
+    });
+    panelTitle = "미배정";
+  } else {
+    const org = adminUserOrgTree.find(g => g.groupCode === adminUserSelectedOrgCode);
+    if (org?.groupType === "TEAM") {
+      rows = allRows.filter(u => {
+        const tc = adminUserPendingChanges.get(u.employeeNo)?.data?.teamGroupCode ?? u.teamGroupCode;
+        return tc === adminUserSelectedOrgCode;
+      });
+    } else {
+      const teamCodes = getAllDescendantTeamCodes(adminUserSelectedOrgCode, structural);
+      rows = allRows.filter(u => {
+        const tc = adminUserPendingChanges.get(u.employeeNo)?.data?.teamGroupCode ?? u.teamGroupCode;
+        return teamCodes.includes(tc);
+      });
+    }
+    panelTitle = org?.displayName || adminUserSelectedOrgCode;
+  }
+
+  // 우측 패널 헤더 업데이트
+  const titleEl = document.getElementById("userListPanelTitle");
+  const countEl = document.getElementById("userListPanelCount");
+  const activeCount = rows.filter(u => adminUserPendingChanges.get(u.employeeNo)?.op !== "delete").length;
+  if (titleEl) titleEl.textContent = panelTitle;
+  if (countEl) countEl.textContent = `${activeCount}명`;
+
   const opts = adminUserOrgOptions || { teams: [], jobLevels: [], jobPositions: [], jobTitles: [] };
 
   if (!rows.length) {
@@ -7896,7 +8029,6 @@ function renderAdminUserTable() {
   }
 
   tbody.innerHTML = rows.map(row => renderUserRow(row, opts, 0)).join("");
-
   updateAdminUserPendingBanner();
 }
 
@@ -7975,95 +8107,6 @@ function renderUserRow(row, opts, indentPx) {
   </tr>`;
 }
 
-// ── 트리뷰 렌더 ──────────────────────────────────────────────────────────
-function renderAdminUserTreeView() {
-  const tbody = document.getElementById("adminUserTableBody");
-  if (!tbody) return;
-
-  const rows = buildEffectiveAdminUserList();
-  const opts = adminUserOrgOptions || { teams: [], jobLevels: [], jobPositions: [], jobTitles: [] };
-
-  // 사용자를 teamGroupCode 기준으로 묶기
-  const usersByTeam = new Map();
-  const unassigned  = [];
-  for (const user of rows) {
-    const eff = (adminUserPendingChanges.get(user.employeeNo)?.data ?? user);
-    const tc  = eff.teamGroupCode;
-    if (tc) {
-      if (!usersByTeam.has(tc)) usersByTeam.set(tc, []);
-      usersByTeam.get(tc).push(user);
-    } else {
-      unassigned.push(user);
-    }
-  }
-
-  const structural = adminUserOrgTree.filter(g => ["COMPANY","DIVISION","TEAM"].includes(g.groupType));
-  const orgMap     = new Map(structural.map(g => [g.groupCode, g]));
-  const getKids    = (code) => structural.filter(g => g.memberOfGroupCode === code);
-  const companies  = structural.filter(g => g.groupType === "COMPANY" && (!g.memberOfGroupCode || !orgMap.has(g.memberOfGroupCode)));
-  const COLSPAN    = 10;
-
-  const parts = [];
-  const TYPE_LABEL = { COMPANY:"회사", DIVISION:"본부/부서", TEAM:"팀" };
-  const TYPE_CLASS = { COMPANY:"ot-company", DIVISION:"ot-division", TEAM:"ot-team" };
-
-  function renderOrgRow(g, depth) {
-    const isExpanded = userOrgExpanded.has(g.groupCode);
-    const kids       = getKids(g.groupCode);
-    const teamUsers  = g.groupType === "TEAM" ? (usersByTeam.get(g.groupCode) || []) : [];
-    const hasContent = kids.length > 0 || teamUsers.length > 0;
-    const typeLabel  = TYPE_LABEL[g.groupType] || g.groupType;
-    const typeCls    = TYPE_CLASS[g.groupType] || "";
-    const indent     = 10 + depth * 20;
-    const count      = g.groupType === "TEAM" ? ` <span class="tree-count">${teamUsers.length}명</span>` : "";
-
-    parts.push(`<tr class="user-tree-group-row" data-ugroup="${escHtml(g.groupCode)}">
-      <td colspan="${COLSPAN}" class="user-tree-group-cell" style="padding-left:${indent}px">
-        ${hasContent ? `<button class="org-tree-toggle-btn user-tree-toggle" data-utoggle="${escHtml(g.groupCode)}">${isExpanded ? "▼" : "▶"}</button>` : `<span class="org-tree-bullet">·</span>`}
-        <span class="org-type-badge ${typeCls}">${typeLabel}</span>
-        <span class="user-tree-group-name">${escHtml(g.displayName)}</span>${count}
-      </td>
-    </tr>`);
-
-    if (isExpanded) {
-      for (const kid of kids) renderOrgRow(kid, depth + 1);
-      const userIndent = indent + 20;
-      for (const user of teamUsers) parts.push(renderUserRow(user, opts, userIndent));
-    }
-  }
-
-  for (const company of companies) renderOrgRow(company, 0);
-
-  // 미배정 사용자
-  if (unassigned.length > 0) {
-    const isExp = userOrgExpanded.has("__unassigned__");
-    parts.push(`<tr class="user-tree-group-row" data-ugroup="__unassigned__">
-      <td colspan="${COLSPAN}" class="user-tree-group-cell">
-        <button class="org-tree-toggle-btn user-tree-toggle" data-utoggle="__unassigned__">${isExp ? "▼" : "▶"}</button>
-        <span class="user-tree-group-name">⬜ 미배정</span>
-        <span class="tree-count">${unassigned.length}명</span>
-      </td>
-    </tr>`);
-    if (isExp) for (const user of unassigned) parts.push(renderUserRow(user, opts, 30));
-  }
-
-  if (!parts.length) {
-    parts.push(`<tr><td colspan="${COLSPAN}" style="text-align:center;color:var(--text-muted);padding:24px">등록된 사용자가 없습니다.</td></tr>`);
-  }
-
-  tbody.innerHTML = parts.join("");
-  updateAdminUserPendingBanner();
-}
-
-// ── 트리 노드 접기/펼치기 클릭 ────────────────────────────────────────────
-document.getElementById("adminUserTableBody").addEventListener("click", (e) => {
-  const toggleBtn = e.target.closest("[data-utoggle]");
-  if (!toggleBtn) return;
-  const code = toggleBtn.dataset.utoggle;
-  if (userOrgExpanded.has(code)) userOrgExpanded.delete(code);
-  else userOrgExpanded.add(code);
-  renderAdminUserView();
-});
 
 function openAdminUserEditModal(employeeNo) {
   const isNew = !employeeNo;

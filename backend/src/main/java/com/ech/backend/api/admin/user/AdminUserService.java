@@ -14,24 +14,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AdminUserService {
 
+    private static final String DEFAULT_PASSWORD = "Test1234!";
+
     private final UserRepository userRepository;
     private final OrgGroupRepository orgGroupRepository;
     private final OrgGroupMemberRepository orgGroupMemberRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public AdminUserService(
             UserRepository userRepository,
             OrgGroupRepository orgGroupRepository,
-            OrgGroupMemberRepository orgGroupMemberRepository
+            OrgGroupMemberRepository orgGroupMemberRepository,
+            PasswordEncoder passwordEncoder
     ) {
         this.userRepository = userRepository;
         this.orgGroupRepository = orgGroupRepository;
         this.orgGroupMemberRepository = orgGroupMemberRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional(readOnly = true)
@@ -78,6 +84,7 @@ public class AdminUserService {
         User user = new User(req.employeeNo().trim(), req.email().trim(), req.name().trim(),
                 req.role() != null && !req.role().isBlank() ? req.role() : "MEMBER");
         user.setStatus(req.status() != null && !req.status().isBlank() ? req.status() : "ACTIVE");
+        user.setPasswordHash(passwordEncoder.encode(DEFAULT_PASSWORD));
         userRepository.save(user);
         applyOrgAssignments(user, req);
         return toResponse(user);

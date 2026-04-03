@@ -5,6 +5,15 @@
 ## 2026-04-03
 
 ### Changed
+- **사용자 관리 UI: 좌우 분할 패널로 개편**
+  - 좌측: 조직 트리 패널 (COMPANY > DIVISION > TEAM, 접기/펼치기, 조직별 인원 수 배지)
+  - 조직 선택 시 우측 사용자 목록이 해당 조직 및 하위 팀으로 필터링
+  - 기존 트리/목록 토글 버튼 제거, 분할 패널로 대체
+  - `renderUserOrgPanel()`, `getAllDescendantTeamCodes()` 함수 추가
+  - `adminUserSelectedOrgCode` / `userOrgPanelExpanded` 상태 변수로 관리
+- **신규 사용자 등록 시 기본 비밀번호 `Test1234!` 자동 설정**
+  - `AdminUserService.createUser()` — `PasswordEncoder.encode("Test1234!")` 적용
+  - `PasswordEncoder` 인터페이스로 주입 (테스트 컨텍스트 호환)
 - **사원번호·그룹코드 수정 가능하도록 개선**
   - `User.setEmployeeNo()` setter 추가 — 기존 `employeeNo` 불변 제약 해제
   - `OrgGroup.setGroupCode()` setter 추가
