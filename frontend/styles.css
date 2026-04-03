@@ -4217,10 +4217,11 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
  * 조직도 모달
  * ========================================================= */
 .modal-orgchart {
-  width: min(92vw, 1080px);
-  /* 기본 max-height를 오버라이드해 충분한 높이 확보 */
-  max-height: min(90vh, 820px) !important;
-  height: min(88vh, 820px);
+  /* 기본 .modal의 max-width: 480px 오버라이드 */
+  width: min(94vw, 1200px) !important;
+  max-width: min(94vw, 1200px) !important;
+  max-height: min(92vh, 860px) !important;
+  height: min(92vh, 860px);
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -4247,8 +4248,8 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
 
 /* 좌측 트리 패널 */
 .orgchart-tree-pane {
-  width: 280px;
-  min-width: 220px;
+  width: 300px;
+  min-width: 240px;
   flex-shrink: 0;
   border-right: 1px solid var(--border-subtle);
   display: flex;
