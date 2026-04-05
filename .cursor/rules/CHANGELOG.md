@@ -2,6 +2,14 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-04-06
+
+### Changed
+- **프론트**: 구성원 추가 `+` 행(`.member-add-heading`) 가로 가운데 정렬·`btn-picker-plus` 글리프 정렬 보정
+- **프론트**: 조직도 팀 멤버 정렬 `sortOrgChartMembers` — 팀장(직책) → 직급 부장~인턴 → 동일 직급은 `createdAt` 오름차순
+- **백엔드**: `UserSearchResponse`·`UserRepository.searchUsers`·`UserSearchService` 에 `createdAt` 포함(조직도 정렬용)
+- **`docs/FEATURE_SPEC.md`**: 위 UX·API 반영
+
 ## 2026-04-03
 
 ### Added

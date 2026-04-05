@@ -807,7 +807,8 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - `GET /api/channels/{channelId}/files?employeeNo=...`
   - `GET /api/channels/{channelId}/files/{fileId}/download?employeeNo=...`
 - 입력/출력:
-  - **통합 피커**: 채널 생성·DM 생성·구성원 추가 모두 **동일한 `+` 버튼 기반 팝업**(`modalAddMemberPicker`)을 사용합니다. 팝업에서 좌측 조직도(회사>본부>팀) + 우측 검색/결과로 사용자 선택 후 상위 모달의 선택 태그에 반영됩니다.
+  - **통합 피커**: 채널 생성·DM 생성·구성원 추가 모두 **동일한 `+` 버튼 기반 팝업**(`modalAddMemberPicker`)을 사용합니다. 팝업에서 좌측 조직도(회사>본부>팀) + 우측 검색/결과로 사용자 선택 후 상위 모달의 선택 태그에 반영됩니다. 상위 모달의 「구성원 추가」행은 라벨과 `+` 버튼을 **가로 가운데 정렬**(`member-add-heading`).
+  - **사이드바 조직도 모달**(`modalOrgChart`): 팀 선택 시 카드 그리드 정렬 — 직책에 `팀장` 포함 시 최상단, 그다음 `jobLevel` 문자열 기준 부장→차장→과장→대리→사원→인턴, 동일 직급은 `UserSearchResponse.createdAt` 오름차순(API에 `createdAt` 포함).
   - 멤버 패널: `department`·`jobLevel`을 한 줄 요약, `jobPosition`·`jobTitle`은 값이 있을 때만 추가 표시
   - 멤버 패널: 개설자 사번(`createdByEmployeeNo`)과 일치하는 멤버에 `개설자` 배지 표시
   - 파일 업로드 성공 시: 일반 텍스트 메시지와 동일한 **메시지 행**(아바타·발신자·시간) 안에 첨부 인라인 표시 — **이미지**(`contentType` 또는 확장자 기준)는 썸네일 + 클릭 시 확대 모달(`modalImagePreview`) + 모달 내 다운로드, 그 외는 파일명·크기·다운로드 버튼 행

@@ -1,5 +1,7 @@
 package com.ech.backend.api.user.dto;
 
+import java.time.OffsetDateTime;
+
 public record UserSearchResponse(
         Long userId,
         String employeeNo,
@@ -11,6 +13,8 @@ public record UserSearchResponse(
         String jobPosition,
         String jobTitle,
         String role,
-        String status
+        String status,
+        /** 조직도 등 동일 직급 정렬(먼저 생성된 사용자 우선). */
+        OffsetDateTime createdAt
 ) {
 }

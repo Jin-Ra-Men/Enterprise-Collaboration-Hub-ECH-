@@ -229,7 +229,8 @@ public class UserSearchService {
                 jobPosition,
                 jobTitle,
                 user.getRole(),
-                user.getStatus()
+                user.getStatus(),
+                user.getCreatedAt()
         );
     }
 

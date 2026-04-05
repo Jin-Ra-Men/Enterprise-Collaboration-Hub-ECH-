@@ -22,7 +22,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
                 jpGroup.displayName,
                 jtGroup.displayName,
                 u.role,
-                u.status
+                u.status,
+                u.createdAt
             )
             FROM User u
             JOIN OrgGroupMember mTeam ON mTeam.user = u AND mTeam.memberGroupType = 'TEAM'
