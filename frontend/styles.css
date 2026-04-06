@@ -1850,7 +1850,6 @@ html[data-theme="light"] .reply-composer-banner {
 .member-add-heading {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 10px;
   margin-bottom: 6px;
 }
@@ -1859,7 +1858,6 @@ html[data-theme="light"] .reply-composer-banner {
   font-weight: 600;
   font-size: 13px;
   color: var(--text-secondary);
-  line-height: 32px;
 }
 .member-add-hint { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.45; }
 .btn-picker-plus {
@@ -1869,16 +1867,16 @@ html[data-theme="light"] .reply-composer-banner {
   border: 1px solid var(--border-subtle);
   background: var(--bg-input);
   color: var(--accent);
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 0;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   padding: 0;
   flex-shrink: 0;
   box-sizing: border-box;
+}
+.btn-picker-plus .btn-picker-plus-icon {
+  display: block;
+  pointer-events: none;
 }
 .btn-picker-plus:hover {
   border-color: var(--border-focus);
