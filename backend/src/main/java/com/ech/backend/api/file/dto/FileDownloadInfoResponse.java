@@ -10,6 +10,8 @@ public record FileDownloadInfoResponse(
         String contentType,
         long sizeBytes,
         String storageKey,
-        String downloadHint
+        String downloadHint,
+        boolean hasPreview,
+        Long previewSizeBytes
 ) {
 }

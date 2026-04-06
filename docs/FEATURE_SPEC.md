@@ -682,17 +682,20 @@
 - 목적: 실제 파일은 NAS/S3 등 외부 스토리지에 두고, 채널 단위로 메타데이터만 DB에 기록·조회
 - 사용자: 채널 멤버
 - 관련 화면/경로: 햄버거 메뉴 **첨부파일** / **이미지 모아보기** → `modalFileHub`(탭: 전체 파일·이미지). DM 포함 동일 `channelId` 기준. **전체 파일** 탭은 이미지(`contentType`/확장자 기준)를 제외한 첨부만 목록·다운로드; 이미지는 **이미지** 탭(썸네일 그리드·라이트박스)에만 표시. 이미지만 있을 때 전체 탭은 안내 문구(「이미지」 탭 안내)만 표시.
-- **대용량 이미지 다운로드(프론트)**: `contentType`/확장자로 이미지로 판별되고 크기가 **약 512KB 이상**이면 `modalImageDownloadChoice`에서 **원본 파일** vs **JPEG 압축본**(캔버스·최대 변 4096px) 선택. GIF·SVG는 압축 경로 미지원으로 선택 창 없이 원본만. 메타가 없으면 `download-info`로 보강.
+- **이미지 업로드**: multipart `file`=**원본(풀 해상도)**, 선택 `preview`=클라이언트 `maybeCompressImageForUpload` 결과(JPEG, 원본과 다를 때만) — 서버는 `preview_storage_key`·`preview_size_bytes`에 저장. 미리보기 없는 구버전 첨부는 기존과 동일(원본만).
+- **이미지 표시**: 인라인·파일 허브 썸네일은 `GET .../files/{fileId}/preview`(미리보기 있으면 그 파일, 없으면 원본). 라이트박스(크게 보기)는 `GET .../download?variant=original`.
+- **대용량 이미지 다운로드(프론트)**: 이미지이고 서버에 `hasPreview`·`preview_size_bytes`가 있으면 `modalImageDownloadChoice`에서 **원본** vs **미리보기(압축본)** — 각 버튼 옆에 `size_bytes` / `preview_size_bytes` 표시. 서버 미리보기가 없고 크기가 **약 512KB 이상**이면 **원본** vs **브라우저 JPEG 재인코딩**(GIF·SVG는 원본만). 메타가 없으면 `download-info`로 보강.
 - 관련 API:
   - `POST /api/channels/{channelId}/files` (메타데이터만 등록, 하위 호환)
-  - `POST /api/channels/{channelId}/files/upload?employeeNo=...` (multipart `file` — 디스크 저장 + DB 메타)
-  - `GET /api/channels/{channelId}/files?employeeNo=...` (최신순 최대 100건, 응답에 `uploaderName`, `uploadedByEmployeeNo` 포함)
-  - `GET /api/channels/{channelId}/files/{fileId}/download?employeeNo=...` (바이너리 스트림, `Authorization: Bearer` 필요)
-  - `GET /api/channels/{channelId}/files/{fileId}/download-info?employeeNo=...` (멤버 검증 후 스토리지 키·안내 문구)
+  - `POST /api/channels/{channelId}/files/upload?employeeNo=...` (multipart `file` 필수, 선택 `preview` — 각각 디스크 저장 + DB `storage_key` / `preview_storage_key`)
+  - `GET /api/channels/{channelId}/files?employeeNo=...` (최신순 최대 100건, 응답에 `uploaderName`, `uploadedByEmployeeNo`, `hasPreview`, `previewSizeBytes` 포함)
+  - `GET /api/channels/{channelId}/files/{fileId}/download?employeeNo=...&variant=original|preview` (바이너리, `preview`는 미리보기 키 없으면 404)
+  - `GET /api/channels/{channelId}/files/{fileId}/preview?employeeNo=...` (인라인·썸네일용: 미리보기 있으면 그 파일, 없으면 원본)
+  - `GET /api/channels/{channelId}/files/{fileId}/download-info?employeeNo=...` (멤버 검증, `hasPreview`, `previewSizeBytes` 등)
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:
   - 등록(메타만 API): `uploadedByEmployeeNo`, `originalFilename`, `contentType`, `sizeBytes`(1~512MiB), `storageKey`
-  - 업로드 후 `MessageService`가 `message_type=FILE` 메시지를 남기며, JSON 본문에 `kind`, `fileId`, `originalFilename`, `sizeBytes`, **`contentType`**(이미지 판별·프론트 인라인 표시용)을 포함한다.
+  - 업로드 후 `MessageService`가 `message_type=FILE` 메시지를 남기며, JSON 본문에 `kind`, `fileId`, `originalFilename`, `sizeBytes`, **`contentType`**, 선택 **`previewSizeBytes`**(서버 미리보기가 있을 때)를 포함한다.
   - 목록: 파일 id, `uploaderName`, 원본명, 타입, 크기, `storageKey`, 업로드 시각
   - 디스크 저장 경로(신규 업로드): `channels/{workspaceKey}_ch{channelId}_{채널명슬러그}/yyyy/mm/{uuid}_{원본파일명}` (기존 `channels/{channelId}/...` 키는 DB에 남아 있으면 다운로드 시 그 경로로 조회)
 - 상태 전이/예외 케이스:
@@ -904,7 +907,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 - 비고: `npm run build:win`은 `--publish never`로 업로드는 하지 않되, `publish` 설정이 있으면 `latest.yml` 등이 `dist`에 생성됨
 - **내부망(인터넷/GitHub 불가)**: 설치 디렉터리의 `ech-server.json`에 `serverUrl`(예: `http://ech.co.kr:8080`) 또는 `updateBaseUrl`(예: `http://host:8080/desktop-updates/`)이 있으면 `electron-updater`가 `generic` 피드로 전환되어 **백엔드** `GET /desktop-updates/latest.yml` 및 동일 베이스 URL의 설치 파일을 사용한다. 서버에는 `{APP_RELEASES_DIR}/desktop`(또는 `DESKTOP_UPDATE_DIR`)에 `latest.yml`·`ECH-Setup-{version}.exe`를 배치하고, yml의 `path`와 실제 파일명을 일치시킨다. 상세: `docs/DEPLOYMENT_WINDOWS.md`, `DesktopUpdateResourceConfig`.
 - **동료·운영자용 요약**: 동작 한눈에(비유·흐름·역할 표)는 `docs/DEPLOYMENT_WINDOWS.md`의 **「데스크톱 앱 자동 업데이트(내부망)」** 절 **「동작 개념」** 을 참고한다.
-- **대용량 이미지 다운로드 선택 모달**(`modalImageDownloadChoice`): **원본 파일** 옆 용량은 `channel_files.size_bytes`(서버 저장 크기) 기준. 업로드 시 `maybeCompressImageForUpload` 등으로 압축·리사이즈되면 로컬 원본(예: 파일명에 적힌 용량)과 다를 수 있음 — 모달 안내 문구로 구분. **압축본**은 클라이언트 JPEG 재인코딩이며 정확한 바이트는 저장 전까지 표기하지 않고 안내 문구로 처리.
+- **이미지 다운로드 선택 모달**(`modalImageDownloadChoice`): **원본** 옆 용량은 `channel_files.size_bytes`. 서버에 `preview_storage_key`가 있으면 **압축본(미리보기)** 옆에 `preview_size_bytes`를 표시하고 `GET .../download?variant=preview`로 내려받는다. 미리보기가 없는 구 첨부는 **압축본**이 브라우저 JPEG 재인코딩이며 용량은 실행 전까지 대략 안내만 한다.
 
 ---
 

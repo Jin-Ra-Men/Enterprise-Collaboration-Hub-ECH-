@@ -196,7 +196,8 @@ public class MessageService {
                 originalFilename,
                 sizeBytes,
                 contentType,
-                "FILE"
+                "FILE",
+                null
         );
     }
 
@@ -209,7 +210,8 @@ public class MessageService {
             String originalFilename,
             long sizeBytes,
             String contentType,
-            String messageType
+            String messageType,
+            Long previewSizeBytes
     ) {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new IllegalArgumentException("채널을 찾을 수 없습니다."));
@@ -226,6 +228,9 @@ public class MessageService {
             payload.put("originalFilename", originalFilename != null ? originalFilename : "");
             payload.put("sizeBytes", sizeBytes);
             payload.put("contentType", contentType != null && !contentType.isBlank() ? contentType : "");
+            if (previewSizeBytes != null && previewSizeBytes > 0) {
+                payload.put("previewSizeBytes", previewSizeBytes);
+            }
             body = OBJECT_MAPPER.writeValueAsString(payload);
         } catch (Exception e) {
             throw new IllegalStateException("파일 메시지 본문 직렬화 실패", e);

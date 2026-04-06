@@ -271,7 +271,7 @@
 - **프론트 결과 클릭 동작** (`frontend/app.js` `handleSearchResultClick`):
   - `MESSAGE`: `selectChannel(..., { targetMessageId })`로 채널 이동 + 메시지 포커스
   - `COMMENT`: 검색 응답의 `threadRootMessageId`가 있으면 채널 이동 후 `openThreadModal(threadRootMessageId, { targetCommentMessageId })`로 스레드 모달을 열고 대상 댓글/답글 위치(`thread-msg-{id}`)로 스크롤·강조. `threadRootMessageId`가 없으면 기존 채널 이동+메시지 포커스 폴백
-  - `FILE`: `download-info` 조회 후 이미지면 `modalImagePreview` 오픈(다운로드 버튼), 일반 파일은 `downloadChannelFile`로 즉시 다운로드
+  - `FILE`: `download-info` 조회 후 이미지면 원본 스트림 `blob:` URL로 `modalImagePreview` 오픈(다운로드 버튼은 `maybeDownloadChannelImageWithChoice`), 일반 파일은 `downloadChannelFile`로 즉시 다운로드
   - `CHANNEL`: 채널 카드 클릭과 동일하게 채널 진입
   - `WORK_ITEM`: `relatedChannelId`로 채널 전환 후 `업무 · 칸반` 모달 오픈, `data-work-item-id` 행 스크롤·강조
   - `KANBAN_CARD`: `relatedChannelId`가 있으면 동일하게 모달 오픈 후 `data-kanban-card-id` 카드 강조; 없으면(워크스페이스 전용 보드 등) 안내 토스트만
@@ -345,15 +345,15 @@
 - 프론트 `loadChannelKanbanBoard()`는 DnD/저장/셀렉트 등으로 중첩 호출될 수 있다. **`kanbanBoardFetchGenByChannelId`**로 채널별 요청 세대를 올리고, 완료 시점에 세대·현재 허브 채널이 맞을 때만 `renderKanbanBoard`를 호출해, 늦게 도착한 **이전 GET 응답**이 UI를 덮어쓰지 않게 한다. **연속 DnD**는 `drop` 직후 rAF 전에 세대를 한 번 더 올려(컬럼 `<select>` 변경도 동일), 직전 조회 응답이 다음 드롭 DOM을 덮는 레이스를 막는다. **컬럼 DnD `drop` 핸들러**에서는 카드가 이미 DOM에서 옮겨졌으므로 보드 GET/풀 렌더를 하지 않고 `sync*` + `loadChannelWorkItems`만 호출한다(셀렉트 변경·모달 오픈 등은 기존처럼 보드 조회). DnD 후 행 컬럼 `<select>`는 **`applyKanbanColumnSelectToColumnId`(`selectedIndex`)** 와 **`setTimeout(0)` 뒤 재 `sync*`** 로 호스트 컬럼과 맞춘다.
 
 ### 채널 파일 메타데이터 인수인계 메모
-- 바이너리는 외부 스토리지에 두고 `channel_files`에 메타만 저장합니다.
+- 바이너리는 외부 스토리지에 두고 `channel_files`에 메타만 저장합니다. **`preview_storage_key` / `preview_size_bytes`** 는 업로드 시 multipart `preview`가 있을 때 채워집니다(스키마: `docs/sql/migrate_channel_files_preview.sql`).
 - 목록 API는 최신순 최대 100건으로 제한됩니다.
-- `download-info`는 멤버 검증 후 `storageKey`와 안내 문구를 돌려주며, 실제 사전 서명 URL은 스토리지 연동 단계에서 확장합니다.
+- `download-info`는 멤버 검증 후 `hasPreview`, `previewSizeBytes` 등을 포함합니다. 다운로드는 `GET .../download?variant=original|preview`, 인라인·썸네일은 `GET .../preview`.
 
 ### 프론트엔드 데모 UI 메모
 - **스크롤·좌측 열**: `sidebar-column`은 `align-self:stretch`+내부 `flex:1 1 0%` 체인으로 메인 채팅 열과 **동일 높이**를 채움(`height:100%`만으로는 깨질 수 있음). `sidebar-main`(검색~관리자)만 세로 스크롤, 하단 **프로필** 고정. 퀵 레일은 `quick-rail-scroll`만 스크롤. **햄버거 채널 메뉴**는 `member-panel-scroll` 단일 스크롤.
 - 동료 **프로필 모달**(`modalUserProfile`): `GET /api/users/profile?employeeNo=`로 로드. 역할·계정 상태는 표시하지 않음. **직급**(`jobLevel`)은 항상 행(없으면 `-`), **직위**(`jobPosition`)·**직책**(`jobTitle`)은 값이 있을 때만 해당 행 표시. **DM 보내기**(`btnProfileDm`)는 `startDmWithUser`로 `POST /api/channels`에 `channelType: DM`, `dmPeerEmployeeNos: [상대 사번]`, 호환용 `createdByEmployeeNo` 등을 요청 본문에 포함해 호출하며 **실제 생성자는 JWT 사원번호**로 결정된다. 서버가 내부 이름·멤버십을 처리한 뒤 `selectChannel`로 전환(자기 자신이면 버튼 비활성). DB `channels.channel_type`은 `DM` 문자열로 저장됩니다.
 - **프레즌스**: `presence:set`/`presence:update`/스냅샷 키는 **사번 문자열**. 채팅·멤버 패널에서 `[data-presence-user]`에 사번을 두고 `refreshPresenceDots`가 갱신합니다. 로컬 UX: 좌측 하단 본인 상태 버튼(`#sidebarUserStatus`)으로 **온라인·자리비움** 전환(`AWAY`는 노란 점).
-- **이미지 첨부**: `contentType`이 이미지이거나 확장자가 이미지인 FILE 메시지는 채팅에 썸네일 표시, 클릭 시 `modalImagePreview`로 확대, **다운로드** 버튼은 기존 파일 다운로드 API 재사용(JWT `fetch` → `blob:` URL).
+- **이미지 첨부**: 썸네일·인라인은 `getAuthedPreviewBlobUrl` → `GET .../preview`; 라이트박스는 `getAuthedFullImageBlobUrl` → `variant=original`. **다운로드**는 `maybeDownloadChannelImageWithChoice`가 서버 미리보기 유무에 따라 원본/미리보기 또는 레거시 JPEG 재인코딩을 분기합니다.
 - **첨부·이미지 모아보기**: `GET /api/channels/{channelId}/files` 한 번 호출 후 `refreshChannelFileHubData`가 갱신. **전체 파일** 탭은 `filterNonImageFilesForHub`로 이미지 제외; **이미지** 탭만 `filterImageFilesForHub`·그리드. `btnOpenImageHub`는 이미지 탭으로 모달 오픈.
 - **스레드 모아보기**: `GET /api/channels/{channelId}/messages/threads?employeeNo=&limit=`(기본 50, 서버 상한 100). 댓글·답글 활동이 있는 원글만 최근 활동 순. `btnOpenThreadHub` → `modalThreadHub`, 행 클릭 시 `cacheRootMessageForThreadModal` 후 `openThreadModal`. 백엔드는 `MessageController`에서 `/{messageId:\\d+}` 등으로 리터럴 `threads`·`timeline`과 경로 충돌을 막는다.
 - **채팅 타임라인 페이지네이션**: `GET .../messages/timeline` 응답 `{ items, hasMoreOlder }`. `loadOlderTimelinePage`·`beforeMessageId`·`prependTimelineMessages`. DOM `trimMessages`는 하단 근처일 때만 앞줄 제거(`MAX_CHAT_DOM_NODES` 4000·`HARD_MAX` 10000). 로딩 줄 `#msgHistoryLoading`. 레포 `MessageRepository.findTimelineOlderThan`, `MessageTimelinePageResponse`.

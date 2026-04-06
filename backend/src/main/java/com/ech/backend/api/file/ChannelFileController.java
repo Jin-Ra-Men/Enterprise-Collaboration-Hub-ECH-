@@ -48,22 +48,35 @@ public class ChannelFileController {
             @PathVariable Long channelId,
             @RequestParam String employeeNo,
             @RequestParam MultipartFile file,
+            @RequestParam(value = "preview", required = false) MultipartFile preview,
             @RequestParam(required = false) Long parentMessageId,
             @RequestParam(required = false) String threadKind
     ) throws IOException {
-        return ApiResponse.success(channelFileService.uploadFile(channelId, employeeNo, file, parentMessageId, threadKind));
+        return ApiResponse.success(
+                channelFileService.uploadFile(channelId, employeeNo, file, preview, parentMessageId, threadKind));
     }
 
     /**
-     * 파일을 실제로 다운로드한다.
+     * 파일을 실제로 다운로드한다. {@code variant=original}(기본) | {@code variant=preview}(미리보기·압축본).
      */
     @GetMapping("/{fileId}/download")
     public ResponseEntity<Resource> download(
             @PathVariable Long channelId,
             @PathVariable Long fileId,
+            @RequestParam String employeeNo,
+            @RequestParam(required = false, defaultValue = "original") String variant
+    ) throws IOException {
+        return channelFileService.downloadFile(channelId, fileId, employeeNo, variant);
+    }
+
+    /** 썸네일·인라인 이미지(미리보기가 있으면 그 파일, 없으면 원본). */
+    @GetMapping("/{fileId}/preview")
+    public ResponseEntity<Resource> preview(
+            @PathVariable Long channelId,
+            @PathVariable Long fileId,
             @RequestParam String employeeNo
     ) throws IOException {
-        return channelFileService.downloadFile(channelId, fileId, employeeNo);
+        return channelFileService.servePreview(channelId, fileId, employeeNo);
     }
 
     /** 메타데이터만 등록 (하위 호환용). */

@@ -11,6 +11,8 @@ public record ChannelFileResponse(
         String contentType,
         long sizeBytes,
         String storageKey,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        boolean hasPreview,
+        Long previewSizeBytes
 ) {
 }

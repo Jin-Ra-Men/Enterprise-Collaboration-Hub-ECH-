@@ -90,15 +90,23 @@ public class ChannelFileService {
      * <p>저장 경로는 DB의 {@code file.storage.base-dir} 설정 값을 우선 사용하며,
      * 없을 경우 {@code application.yml}의 {@code app.file-storage-dir} 기본값을 사용한다.
      */
+    /**
+     * multipart {@code file}: 원본(풀), 선택 {@code preview}: 미리보기용 압축본(이미지 등).
+     * {@code preview}가 없으면 기존과 동일하게 원본만 저장한다.
+     */
     @Transactional
     public ChannelFileResponse uploadFile(
             Long channelId,
             String uploaderEmployeeNo,
             MultipartFile file,
+            MultipartFile preview,
             Long parentMessageId,
             String threadKind
     ) throws IOException {
         validateFileSize(file);
+        if (preview != null && !preview.isEmpty()) {
+            validateFileSize(preview);
+        }
 
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new IllegalArgumentException("채널을 찾을 수 없습니다."));
@@ -109,7 +117,6 @@ public class ChannelFileService {
         String originalName = sanitizeOriginalFilename(
                 file.getOriginalFilename() != null ? file.getOriginalFilename() : "file");
 
-        // 저장 경로: {basedir}/channels/{workspaceKey}_ch{id}_{slug}/{YYYY}/{MM}/
         String baseDir = appSettingsService.getFileStorageDir();
         LocalDate now = LocalDate.now();
         String channelFolder = buildChannelFolderSegment(channel);
@@ -118,21 +125,35 @@ public class ChannelFileService {
                 String.format("%02d", now.getMonthValue()));
         Files.createDirectories(dirPath);
 
-        // 파일명: {UUID}_{originalFilename} — 중복 방지
         String storedName = UUID.randomUUID().toString().replace("-", "") + "_" + originalName;
         Path targetPath = dirPath.resolve(storedName);
         Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
 
-        // storageKey: 베이스 디렉토리를 제외한 상대 경로
         String relativeKey = Paths.get("channels", channelFolder,
                 String.valueOf(now.getYear()),
                 String.format("%02d", now.getMonthValue()),
                 storedName).toString().replace('\\', '/');
 
+        String previewRelativeKey = null;
+        Long previewSizeBytes = null;
+        if (preview != null && !preview.isEmpty()) {
+            String pvStoredName = UUID.randomUUID().toString().replace("-", "") + "_preview_" + originalName;
+            Path pvPath = dirPath.resolve(pvStoredName);
+            Files.copy(preview.getInputStream(), pvPath, StandardCopyOption.REPLACE_EXISTING);
+            previewRelativeKey = Paths.get("channels", channelFolder,
+                    String.valueOf(now.getYear()),
+                    String.format("%02d", now.getMonthValue()),
+                    pvStoredName).toString().replace('\\', '/');
+            previewSizeBytes = preview.getSize();
+        }
+
         ChannelFile saved = channelFileRepository.save(new ChannelFile(
                 channel, uploader, originalName,
                 file.getContentType() != null ? file.getContentType() : "application/octet-stream",
-                file.getSize(), relativeKey
+                file.getSize(),
+                relativeKey,
+                previewRelativeKey,
+                previewSizeBytes
         ));
 
         auditLogService.safeRecord(
@@ -147,38 +168,52 @@ public class ChannelFileService {
     }
 
     /**
-     * 파일을 실제로 다운로드한다.
-     * 저장된 storageKey를 이용해 현재 설정된 basedir에서 파일을 찾는다.
+     * 파일 다운로드. {@code variant=original}(기본): 원본, {@code variant=preview}: 미리보기(압축본).
      */
     public ResponseEntity<Resource> downloadFile(Long channelId, Long fileId,
-                                                  String requesterEmployeeNo) throws IOException {
+                                                  String requesterEmployeeNo,
+                                                  String variant) throws IOException {
         requireChannelMember(channelId, requesterEmployeeNo);
         ChannelFile meta = channelFileRepository.findByIdAndChannel_Id(fileId, channelId)
                 .orElseThrow(() -> new IllegalArgumentException("파일을 찾을 수 없습니다."));
 
+        boolean wantPreview = "preview".equalsIgnoreCase(variant != null ? variant.trim() : "");
+        String storageKey = meta.getStorageKey();
+        String downloadFilename = meta.getOriginalFilename();
+        String contentTypeForResponse = meta.getContentType();
+
+        if (wantPreview) {
+            if (meta.getPreviewStorageKey() == null || meta.getPreviewStorageKey().isBlank()) {
+                throw new NotFoundException("미리보기 파일이 없습니다.");
+            }
+            storageKey = meta.getPreviewStorageKey();
+            contentTypeForResponse = "image/jpeg";
+            downloadFilename = previewDownloadFilename(meta.getOriginalFilename());
+        }
+
         String baseDir = appSettingsService.getFileStorageDir();
         Path basePath = Paths.get(baseDir).normalize().toAbsolutePath();
-        Path filePath = basePath.resolve(meta.getStorageKey().replace('/', File.separatorChar)).normalize();
+        Path filePath = basePath.resolve(storageKey.replace('/', File.separatorChar)).normalize();
 
         if (!filePath.startsWith(basePath)) {
             throw new IllegalArgumentException("잘못된 스토리지 경로입니다.");
         }
         if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
-            throw new NotFoundException("파일이 스토리지에 존재하지 않습니다: " + meta.getStorageKey());
+            throw new NotFoundException("파일이 스토리지에 존재하지 않습니다: " + storageKey);
         }
 
         Resource resource = new FileSystemResource(filePath);
-        String encodedName = URLEncoder.encode(meta.getOriginalFilename(), StandardCharsets.UTF_8)
+        String encodedName = URLEncoder.encode(downloadFilename, StandardCharsets.UTF_8)
                 .replace("+", "%20");
-        String asciiName = asciiContentDispositionFilename(meta.getOriginalFilename());
+        String asciiName = asciiContentDispositionFilename(downloadFilename);
 
-        MediaType mediaType = resolveDownloadMediaType(meta.getContentType());
+        MediaType mediaType = resolveDownloadMediaType(contentTypeForResponse);
 
         String workspaceKey = meta.getChannel().getWorkspaceKey();
         auditLogService.safeRecord(
                 AuditEventType.FILE_DOWNLOAD_INFO_ACCESSED,
                 resolveUserIdOrNull(requesterEmployeeNo), "FILE", fileId, workspaceKey,
-                "channelId=" + channelId + " fileId=" + fileId, null
+                "channelId=" + channelId + " fileId=" + fileId + " variant=" + variant, null
         );
 
         return ResponseEntity.ok()
@@ -186,6 +221,53 @@ public class ChannelFileService {
                         "attachment; filename=\"" + asciiName + "\"; filename*=UTF-8''" + encodedName)
                 .contentType(mediaType)
                 .body(resource);
+    }
+
+    /**
+     * 썸네일·인라인 표시용. 미리보기가 있으면 그 파일, 없으면 원본(기존 행 호환).
+     */
+    public ResponseEntity<Resource> servePreview(Long channelId, Long fileId,
+                                                  String requesterEmployeeNo) throws IOException {
+        requireChannelMember(channelId, requesterEmployeeNo);
+        ChannelFile meta = channelFileRepository.findByIdAndChannel_Id(fileId, channelId)
+                .orElseThrow(() -> new IllegalArgumentException("파일을 찾을 수 없습니다."));
+
+        String storageKey = (meta.getPreviewStorageKey() != null && !meta.getPreviewStorageKey().isBlank())
+                ? meta.getPreviewStorageKey()
+                : meta.getStorageKey();
+        String contentTypeForResponse = (meta.getPreviewStorageKey() != null
+                && !meta.getPreviewStorageKey().isBlank())
+                ? "image/jpeg"
+                : meta.getContentType();
+
+        String baseDir = appSettingsService.getFileStorageDir();
+        Path basePath = Paths.get(baseDir).normalize().toAbsolutePath();
+        Path filePath = basePath.resolve(storageKey.replace('/', File.separatorChar)).normalize();
+
+        if (!filePath.startsWith(basePath)) {
+            throw new IllegalArgumentException("잘못된 스토리지 경로입니다.");
+        }
+        if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
+            throw new NotFoundException("파일이 스토리지에 존재하지 않습니다: " + storageKey);
+        }
+
+        Resource resource = new FileSystemResource(filePath);
+        MediaType mediaType = resolveDownloadMediaType(contentTypeForResponse);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline")
+                .contentType(mediaType)
+                .body(resource);
+    }
+
+    private static String previewDownloadFilename(String original) {
+        if (original == null || original.isBlank()) {
+            return "preview.jpg";
+        }
+        int dot = original.lastIndexOf('.');
+        if (dot <= 0) {
+            return original + "_preview.jpg";
+        }
+        return original.substring(0, dot) + "_preview.jpg";
     }
 
     private static String asciiContentDispositionFilename(String original) {
@@ -226,10 +308,13 @@ public class ChannelFileService {
                 "channelId=" + channelId + " fileId=" + fileId, null
         );
         String baseDir = appSettingsService.getFileStorageDir();
+        boolean hasPreview = file.getPreviewStorageKey() != null && !file.getPreviewStorageKey().isBlank();
         return new FileDownloadInfoResponse(
                 file.getId(), file.getOriginalFilename(), file.getContentType(),
                 file.getSizeBytes(), file.getStorageKey(),
-                "저장 경로: " + baseDir + " | 상대 키: " + file.getStorageKey()
+                "저장 경로: " + baseDir + " | 상대 키: " + file.getStorageKey(),
+                hasPreview,
+                file.getPreviewSizeBytes()
         );
     }
 
@@ -251,7 +336,9 @@ public class ChannelFileService {
         ChannelFile saved = channelFileRepository.save(new ChannelFile(
                 channel, uploader, safeName,
                 request.contentType().trim(), request.sizeBytes(),
-                safeKey.length() > 1024 ? safeKey.substring(0, 1024) : safeKey
+                safeKey.length() > 1024 ? safeKey.substring(0, 1024) : safeKey,
+                null,
+                null
         ));
         auditLogService.safeRecord(
                 AuditEventType.FILE_UPLOADED,
@@ -283,7 +370,8 @@ public class ChannelFileService {
                     saved.getOriginalFilename(),
                     saved.getSizeBytes(),
                     saved.getContentType(),
-                    mt
+                    mt,
+                    saved.getPreviewSizeBytes()
             );
         } catch (Exception e) {
             log.warn("파일 첨부 메시지 기록 실패 (fileId={}): {}", saved.getId(), e.getMessage());
@@ -332,13 +420,16 @@ public class ChannelFileService {
     }
 
     private ChannelFileResponse toResponse(ChannelFile file) {
+        boolean hasPreview = file.getPreviewStorageKey() != null && !file.getPreviewStorageKey().isBlank();
         return new ChannelFileResponse(
                 file.getId(), file.getChannel().getId(),
                 file.getUploadedBy().getEmployeeNo(),
                 file.getUploadedBy().getName(),
                 file.getOriginalFilename(),
                 file.getContentType(), file.getSizeBytes(),
-                file.getStorageKey(), file.getCreatedAt()
+                file.getStorageKey(), file.getCreatedAt(),
+                hasPreview,
+                file.getPreviewSizeBytes()
         );
     }
 

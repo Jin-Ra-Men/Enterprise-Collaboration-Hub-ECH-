@@ -921,20 +921,28 @@ function renderFileHubImageGrid(channelId, files) {
       <div class="channel-image-thumb-meta">${escHtml(f.uploaderName || f.uploadedByEmployeeNo || "")} · ${escHtml(fmtDate(f.createdAt))}</div>`;
     const btn = cell.querySelector(".channel-image-thumb-btn");
     const ph = cell.querySelector(".channel-image-thumb-placeholder");
-    getAuthedImageBlobUrl(cid, f.id)
-      .then((url) => {
+    getAuthedPreviewBlobUrl(cid, f.id)
+      .then((thumbUrl) => {
         const im = document.createElement("img");
         im.className = "channel-image-thumb-img";
         im.alt = f.originalFilename || "첨부 이미지";
-        im.src = url;
+        im.src = thumbUrl;
         im.loading = "lazy";
         ph.replaceWith(im);
         btn.addEventListener("click", () => {
-          openImageLightbox(url, f.id, f.originalFilename, cid, {
-            sizeBytes: f.sizeBytes,
-            contentType: f.contentType,
-            originalFilename: f.originalFilename,
-          });
+          void (async () => {
+            try {
+              const fullUrl = await getAuthedFullImageBlobUrl(cid, f.id);
+              openImageLightbox(fullUrl, f.id, f.originalFilename, cid, {
+                sizeBytes: f.sizeBytes,
+                previewSizeBytes: f.previewSizeBytes,
+                contentType: f.contentType,
+                originalFilename: f.originalFilename,
+              });
+            } catch {
+              await uiAlert("이미지를 불러올 수 없습니다.");
+            }
+          })();
         });
       })
       .catch(() => {
@@ -994,6 +1002,7 @@ async function refreshChannelFileHubData(channelId) {
       li.querySelector(".btn-channel-file-dl").addEventListener("click", () => {
         void maybeDownloadChannelImageWithChoice(f.id, f.originalFilename, channelId, {
           sizeBytes: f.sizeBytes,
+          previewSizeBytes: f.previewSizeBytes,
           contentType: f.contentType,
           originalFilename: f.originalFilename,
         });
@@ -1006,12 +1015,13 @@ async function refreshChannelFileHubData(channelId) {
   }
 }
 
-async function downloadChannelFile(fileId, filename, channelId) {
+async function downloadChannelFile(fileId, filename, channelId, variant = "original") {
   const ch = channelId != null ? channelId : activeChannelId;
   if (!ch || !currentUser) return;
+  const v = variant === "preview" ? "preview" : "original";
   try {
     const res = await fetch(
-      `${API_BASE}/api/channels/${ch}/files/${fileId}/download?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
+      `${API_BASE}/api/channels/${ch}/files/${fileId}/download?employeeNo=${encodeURIComponent(currentUser.employeeNo)}&variant=${encodeURIComponent(v)}`,
       { headers: { Authorization: `Bearer ${getToken()}` } }
     );
     if (!res.ok) {
@@ -1030,7 +1040,11 @@ async function downloadChannelFile(fileId, filename, channelId) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = filename || "download";
+    const dlName =
+      v === "preview"
+        ? String(filename || "image").replace(/\.[^.]+$/, "") + "_preview.jpg"
+        : filename || "download";
+    a.download = dlName;
     a.click();
     URL.revokeObjectURL(url);
   } catch (e) {
@@ -1086,32 +1100,40 @@ function finishImageDownloadChoice(v) {
   document.getElementById("modalImageDownloadChoice")?.classList.add("hidden");
 }
 
-function openImageDownloadChoice({ filename, sizeBytes }) {
+/**
+ * @param {object} opts
+ * @param {string} opts.filename
+ * @param {number} opts.originalSizeBytes
+ * @param {number} [opts.previewSizeBytes] 서버 미리보기가 있을 때
+ * @param {boolean} [opts.hasServerPreview]
+ */
+function openImageDownloadChoice({ filename, originalSizeBytes, previewSizeBytes, hasServerPreview }) {
   return new Promise((resolve) => {
     imageDownloadChoiceResolve = resolve;
     const msgEl = document.getElementById("imageDownloadChoiceMessage");
     const fn = String(filename || "image");
-    const sz = Number(sizeBytes) || 0;
-    const sizeStr = sz > 0 ? fmtSize(sz) : "알 수 없음";
+    const origStr = fmtSizeOrUnknown(originalSizeBytes);
+    const prevStr =
+      hasServerPreview && previewSizeBytes != null && Number(previewSizeBytes) > 0
+        ? fmtSize(Number(previewSizeBytes))
+        : null;
     if (msgEl) {
+      const noteHtml = hasServerPreview && prevStr
+        ? `※ <strong>원본 파일</strong>은 서버에 저장된 풀 해상도입니다. <strong>압축본(미리보기)</strong>은 업로드 시 서버에 따로 저장된 JPEG입니다. 버튼 옆 용량은 각각의 저장 크기입니다.`
+        : `※ 서버에 미리보기가 없는 예전 첨부입니다. <strong>압축본</strong>은 브라우저에서 원본을 받아 JPEG로 다시 인코딩합니다(용량은 실행 후 확인).`;
       msgEl.innerHTML = [
         `<div class="image-download-choice-file">`,
         `<span class="image-download-choice-k">파일명</span>`,
         `<span class="image-download-choice-v">${escHtml(fn)}</span>`,
         `</div>`,
         `<p class="image-download-choice-hint">받을 방식을 선택하세요.</p>`,
-        `<p class="image-download-choice-note">`,
-        `※ <strong>표시 용량</strong>은 <strong>서버에 저장된 파일</strong> 크기입니다. `,
-        `파일명만 보고 용량을 짐작한 경우와 다를 수 있으며, 업로드 시 큰 이미지는 압축·리사이즈되어 저장될 수 있습니다. `,
-        `<strong>원본 파일</strong>은 그 저장본을 그대로 내려받습니다. `,
-        `<strong>압축본</strong>은 브라우저에서 JPEG로 다시 인코딩한 파일입니다.`,
-        `</p>`,
+        `<p class="image-download-choice-note">${noteHtml}</p>`,
       ].join("");
     }
     const origSizeEl = document.getElementById("imageDownloadOriginalSize");
     const compSizeEl = document.getElementById("imageDownloadCompressedSize");
-    if (origSizeEl) origSizeEl.textContent = sizeStr;
-    if (compSizeEl) compSizeEl.textContent = "JPEG 재인코딩 · 대개 용량 감소";
+    if (origSizeEl) origSizeEl.textContent = origStr;
+    if (compSizeEl) compSizeEl.textContent = prevStr || "JPEG 재인코딩(예상 감소)";
     imageDownloadChoiceEscHandler = (e) => {
       if (e.key === "Escape") closeModal("modalImageDownloadChoice");
     };
@@ -1125,7 +1147,7 @@ async function downloadChannelFileCompressedAsJpeg(fileId, filename, channelId) 
   if (!ch || !currentUser) return;
   try {
     const res = await fetch(
-      `${API_BASE}/api/channels/${ch}/files/${fileId}/download?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
+      `${API_BASE}/api/channels/${ch}/files/${fileId}/download?employeeNo=${encodeURIComponent(currentUser.employeeNo)}&variant=original`,
       { headers: { Authorization: `Bearer ${getToken()}` } }
     );
     if (!res.ok) {
@@ -1184,25 +1206,57 @@ async function maybeDownloadChannelImageWithChoice(fileId, filename, channelId, 
   const ch = channelId != null ? channelId : activeChannelId;
   const fn = filename || meta.originalFilename || "download";
   let sizeBytes = Number(meta.sizeBytes) || 0;
+  let previewSizeBytes = Number(meta.previewSizeBytes) || 0;
   let contentType = String(meta.contentType || "").trim();
-  if ((!sizeBytes || !contentType) && ch && fileId) {
-    const info = await fetchChannelFileDownloadInfo(ch, fileId);
+  let info = null;
+  if (ch && fileId) {
+    info = await fetchChannelFileDownloadInfo(ch, fileId);
     if (info) {
       if (!sizeBytes) sizeBytes = Number(info.sizeBytes) || 0;
+      if (!previewSizeBytes && info.previewSizeBytes != null) {
+        previewSizeBytes = Number(info.previewSizeBytes) || 0;
+      }
       if (!contentType) contentType = String(info.contentType || "").trim();
     }
   }
-  const eligible =
-    isImageContentType(contentType, fn) &&
-    sizeBytes >= LARGE_IMAGE_DOWNLOAD_BYTES &&
-    eligibleForCompressedImageDownload(contentType, fn);
-  if (!eligible) {
+  const hasServerPreview =
+    info?.hasPreview === true &&
+    previewSizeBytes > 0 &&
+    previewSizeBytes < sizeBytes;
+
+  if (!isImageContentType(contentType, fn)) {
     return downloadChannelFile(fileId, fn, ch);
   }
-  const choice = await openImageDownloadChoice({ filename: fn, sizeBytes });
-  if (choice === null) return;
-  if (choice === "original") return downloadChannelFile(fileId, fn, ch);
-  return downloadChannelFileCompressedAsJpeg(fileId, fn, ch);
+
+  if (hasServerPreview && eligibleForCompressedImageDownload(contentType, fn)) {
+    const choice = await openImageDownloadChoice({
+      filename: fn,
+      originalSizeBytes: sizeBytes,
+      previewSizeBytes,
+      hasServerPreview: true,
+    });
+    if (choice === null) return;
+    if (choice === "original") return downloadChannelFile(fileId, fn, ch, "original");
+    if (choice === "preview") return downloadChannelFile(fileId, fn, ch, "preview");
+    return;
+  }
+
+  const eligibleLegacy =
+    sizeBytes >= LARGE_IMAGE_DOWNLOAD_BYTES && eligibleForCompressedImageDownload(contentType, fn);
+  if (eligibleLegacy) {
+    const choice = await openImageDownloadChoice({
+      filename: fn,
+      originalSizeBytes: sizeBytes,
+      previewSizeBytes: null,
+      hasServerPreview: false,
+    });
+    if (choice === null) return;
+    if (choice === "original") return downloadChannelFile(fileId, fn, ch, "original");
+    if (choice === "preview") return downloadChannelFileCompressedAsJpeg(fileId, fn, ch);
+    return;
+  }
+
+  return downloadChannelFile(fileId, fn, ch, "original");
 }
 
 const ORG_EMBED_IDS = {
@@ -2788,8 +2842,14 @@ function tryParseFilePayload(msg) {
   return null;
 }
 
-async function getAuthedImageBlobUrl(channelId, fileId) {
-  const key = `${channelId}_${fileId}`;
+function fmtSizeOrUnknown(n) {
+  const v = Number(n) || 0;
+  return v > 0 ? fmtSize(v) : "알 수 없음";
+}
+
+/** 썸네일·인라인: 서버 `/preview`(미리보기 있으면 그 파일, 없으면 원본). */
+async function getAuthedPreviewBlobUrl(channelId, fileId) {
+  const key = `${channelId}_${fileId}_thumb`;
   if (imageAttachmentBlobUrls.has(key)) {
     return imageAttachmentBlobUrls.get(key);
   }
@@ -2797,7 +2857,29 @@ async function getAuthedImageBlobUrl(channelId, fileId) {
     throw new Error("Not signed in");
   }
   const res = await fetch(
-    `${API_BASE}/api/channels/${channelId}/files/${fileId}/download?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
+    `${API_BASE}/api/channels/${channelId}/files/${fileId}/preview?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
+    { headers: { Authorization: `Bearer ${getToken()}` } }
+  );
+  if (!res.ok) {
+    throw new Error("Image fetch failed");
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  imageAttachmentBlobUrls.set(key, url);
+  return url;
+}
+
+/** 라이트박스·클라이언트 재인코딩 소스: 항상 원본 스트림. */
+async function getAuthedFullImageBlobUrl(channelId, fileId) {
+  const key = `${channelId}_${fileId}_full`;
+  if (imageAttachmentBlobUrls.has(key)) {
+    return imageAttachmentBlobUrls.get(key);
+  }
+  if (!currentUser) {
+    throw new Error("Not signed in");
+  }
+  const res = await fetch(
+    `${API_BASE}/api/channels/${channelId}/files/${fileId}/download?employeeNo=${encodeURIComponent(currentUser.employeeNo)}&variant=original`,
     { headers: { Authorization: `Bearer ${getToken()}` } }
   );
   if (!res.ok) {
@@ -2842,6 +2924,7 @@ function createImageAttachmentRowFromMsg(msg, payload, { showAvatar, showTime })
     id: Number(payload.fileId),
     originalFilename: payload.originalFilename,
     sizeBytes: payload.sizeBytes,
+    previewSizeBytes: payload.previewSizeBytes,
     contentType: payload.contentType,
   };
   const timeHtml = showTime
@@ -2908,16 +2991,23 @@ function createImageAttachmentRowFromMsg(msg, payload, { showAvatar, showTime })
   const imgBtn = div.querySelector(".msg-inline-image-btn");
   const placeholder = div.querySelector(".msg-inline-image-placeholder");
 
-  getAuthedImageBlobUrl(channelId, fileMeta.id)
-    .then((url) => {
+  getAuthedPreviewBlobUrl(channelId, fileMeta.id)
+    .then((thumbUrl) => {
       const im = document.createElement("img");
       im.className = "msg-inline-image";
       im.alt = fileMeta.originalFilename || "첨부 이미지";
-      im.src = url;
+      im.src = thumbUrl;
       im.loading = "lazy";
       placeholder.replaceWith(im);
       imgBtn.addEventListener("click", () => {
-        openImageLightbox(url, fileMeta.id, fileMeta.originalFilename, channelId, fileMeta);
+        void (async () => {
+          try {
+            const fullUrl = await getAuthedFullImageBlobUrl(channelId, fileMeta.id);
+            openImageLightbox(fullUrl, fileMeta.id, fileMeta.originalFilename, channelId, fileMeta);
+          } catch {
+            await uiAlert("이미지를 불러올 수 없습니다.");
+          }
+        })();
       });
     })
     .catch(() => {
@@ -5044,7 +5134,12 @@ async function uploadFile(
     setFilePreviewUploadStatus(ctx, "업로드 중… 0%");
 
     const formData = new FormData();
-    formData.append("file", prepared);
+    formData.append("file", file, file.name || "upload");
+    if (prepared !== file) {
+      const pvName =
+        prepared instanceof File && prepared.name ? prepared.name : "preview.jpg";
+      formData.append("preview", prepared, pvName);
+    }
 
     const { ok, json } = await uploadFileWithProgress(uploadUrl, formData, token, (p) => {
       setFilePreviewUploadStatus(ctx, `업로드 중 ${Math.round(p * 100)}%`);
@@ -7618,7 +7713,7 @@ document.getElementById("btnImageDownloadOriginal")?.addEventListener("click", (
   finishImageDownloadChoice("original");
 });
 document.getElementById("btnImageDownloadCompressed")?.addEventListener("click", () => {
-  finishImageDownloadChoice("compressed");
+  finishImageDownloadChoice("preview");
 });
 document.getElementById("btnImageDownloadCancel")?.addEventListener("click", () => {
   finishImageDownloadChoice(null);
@@ -7978,9 +8073,10 @@ async function handleSearchResultClick(item) {
     const filename = info?.originalFilename || item.title || "download";
     if (isImageContentType(info?.contentType || "", filename)) {
       try {
-        const blobUrl = await getAuthedImageBlobUrl(contextId, id);
+        const blobUrl = await getAuthedFullImageBlobUrl(contextId, id);
         openImageLightbox(blobUrl, id, filename, contextId, {
           sizeBytes: info?.sizeBytes,
+          previewSizeBytes: info?.previewSizeBytes,
           contentType: info?.contentType,
           originalFilename: info?.originalFilename || filename,
         });

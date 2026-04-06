@@ -80,6 +80,8 @@ CREATE TABLE IF NOT EXISTS channel_files (
     content_type VARCHAR(255) NOT NULL,
     size_bytes BIGINT NOT NULL,
     storage_key VARCHAR(1024) NOT NULL,
+    preview_storage_key VARCHAR(1024),
+    preview_size_bytes BIGINT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
