@@ -8,6 +8,7 @@
 - **GitHub `v1.0.0`**: **운영 실제 배포** — 기능·코드 변경 없이 **1.0.0** 정식 버전 표기(Semantic Versioning). `v0.1.9`와 **동일 코드베이스**. `desktop/package.json`·`backend/build.gradle` **`1.0.0`**
 
 ### Fixed
+- **백엔드**: 스레드 **댓글 수**·스레드 모아보기·`GET .../messages/{rootId}/replies` — 타임라인 **답글(REPLY_*)**은 댓글로 집계·나열하지 않음(원글 자식만 `COMMENT_*`). 댓글 ID로 여는 `/replies`는 REPLY·중첩 댓글 포함
 - **프론트**: `message:new`가 **현재 채널**일 때만 처리하던 경로에서 **최소화·트레이·다른 창 포커스**여도 일반 메시지 OS/토스트가 안 뜨던 문제 — 백그라운드면 `pushNewMessageToast` 호출(내 멘션은 `pushMentionToast`와 중복 안 함)
 - **백엔드**: 스레드 댓글 수 집계 `aggregateThreadCommentsForRoots`가 **직접 부모 id**만 쓰면 루트와 불일치·중복 행 시 오류 가능 — **루트 메시지 id**로 합산, 동일 메시지 id 중복 제거
 

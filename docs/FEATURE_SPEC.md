@@ -706,7 +706,7 @@
 - 성능:
   - 목록은 페이지 크기 100으로 상한 고정(대량 조회로 인한 응답·직렬화 부담 완화)
   - 인라인·라이트박스용 `blob:` URL은 `app.js`의 `imageAttachmentBlobUrls`에 캐시해 **같은 채널 재입장·타임라인 갱신** 시 불필요한 재다운로드를 줄임(세션당 **약 120개** LRU, `clearSession` 시 전부 `revoke`)
-  - 스레드 **루트별 댓글 수**(`threadCommentCount`)는 `MessageService.aggregateThreadCommentsForRoots`에서 스레드 내 메시지의 **루트 id**로 합산(댓글 답글 포함·중복 id 제거)
+  - 스레드 **루트별 댓글 수**(`threadCommentCount`)는 `MessageService.aggregateThreadCommentsForRoots`에서 **COMMENT_*** 메시지만 루트 id로 합산(타임라인 **답글 REPLY_*** 제외·동일 id 중복 제거). `GET .../messages/{rootId}/replies`도 원글 부모일 때 COMMENT_*만 반환
 - 테스트 기준:
   - 멤버 등록/목록/다운로드 안내 성공, 비멤버 실패
 - 비고:

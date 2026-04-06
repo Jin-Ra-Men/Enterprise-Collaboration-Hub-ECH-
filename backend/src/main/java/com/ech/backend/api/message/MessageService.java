@@ -330,9 +330,28 @@ public class MessageService {
             throw new IllegalArgumentException("부모 메시지의 채널이 일치하지 않습니다.");
         }
 
+        boolean parentIsRoot = parent.getParentMessage() == null;
+
         if (legacyUserFkInspector.isLegacyMessageSenderReferencesUserPrimaryKey()) {
-            return jdbcTemplate.query(
-                    """
+            String sql =
+                    parentIsRoot
+                            ? """
+                            SELECT m.id AS message_id,
+                                   m.channel_id,
+                                   u.employee_no AS sender_id,
+                                   u.name AS sender_name,
+                                   m.parent_message_id,
+                                   m.body,
+                                   m.created_at,
+                                   m.message_type
+                            FROM messages m
+                            INNER JOIN users u ON u.id = m.sender_id
+                            WHERE m.parent_message_id = ?
+                              AND m.archived_at IS NULL
+                              AND UPPER(COALESCE(m.message_type, '')) LIKE 'COMMENT%'
+                            ORDER BY m.created_at ASC
+                            """
+                            : """
                             SELECT m.id AS message_id,
                                    m.channel_id,
                                    u.employee_no AS sender_id,
@@ -346,14 +365,21 @@ public class MessageService {
                             WHERE m.parent_message_id = ?
                               AND m.archived_at IS NULL
                             ORDER BY m.created_at ASC
-                            """,
-                    LEGACY_MESSAGE_ROW_MAPPER,
-                    parentMessageId
-            );
+                            """;
+            return jdbcTemplate.query(sql, LEGACY_MESSAGE_ROW_MAPPER, parentMessageId);
         }
         return messageRepository.findByParentMessageIdOrderByCreatedAtAsc(parentMessageId).stream()
+                .filter(
+                        m ->
+                                !parentIsRoot
+                                        || isCommentThreadMessageType(m.getMessageType()))
                 .map(this::toResponse)
                 .toList();
+    }
+
+    /** 스레드 모달·댓글 수: 타임라인 답글(REPLY_*)은 제외, 댓글(COMMENT_*)만 포함 */
+    private static boolean isCommentThreadMessageType(String messageType) {
+        return messageType != null && messageType.toUpperCase().startsWith("COMMENT");
     }
 
     /**
@@ -711,6 +737,9 @@ public class MessageService {
             }
             Long rootId = resolveThreadRootMessageId(cm);
             if (rootId == null || !rootIdSet.contains(rootId)) {
+                continue;
+            }
+            if (!isCommentThreadMessageType(cm.getMessageType())) {
                 continue;
             }
             map.computeIfAbsent(rootId, k -> new ThreadCommentAgg()).accept(cm);

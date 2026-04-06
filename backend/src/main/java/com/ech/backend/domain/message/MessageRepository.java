@@ -183,8 +183,8 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     List<Object[]> findLatestRootMessageTimeByChannelIds(@Param("channelIds") Collection<Long> channelIds);
 
     /**
-     * 원글 스레드 활동: 루트에 직접 달린 댓글(COMMENT_*), 루트에 직접 달린 답글(REPLY_*),
-     * 댓글에 달린 답글(REPLY_*, 부모의 부모가 루트)까지 포함 — 건수·최신 시각 집계용.
+     * 원글 스레드 활동(집계 시 COMMENT_*만 사용): 루트·댓글 하위의 댓글(COMMENT_*) 및 답글(REPLY_*).
+     * {@link com.ech.backend.api.message.MessageService#aggregateThreadCommentsForRoots}에서 REPLY는 제외한다.
      */
     @Query("""
             SELECT m FROM Message m
@@ -202,8 +202,8 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     List<Message> findThreadActivityUnderRoots(@Param("rootIds") Collection<Long> rootIds);
 
     /**
-     * 스레드 모아보기: 댓글(COMMENT_*)·답글(REPLY_*, 루트 직속 또는 댓글 하위)이 하나라도 있는
-     * 루트 메시지 id만, 마지막 스레드 활동 시각 기준 내림차순.
+     * 스레드 모아보기: 댓글(COMMENT_*)이 하나라도 있는 루트만.
+     * 타임라인 답글(REPLY_*)은 스레드 댓글이 아니므로 제외. 정렬은 COMMENT 최신 시각 기준.
      */
     @Query(
             value = """
@@ -219,17 +219,14 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
                           WHERE c.channel_id = r.channel_id
                             AND c.archived_at IS NULL
                             AND c.is_deleted = false
+                            AND UPPER(COALESCE(c.message_type, '')) LIKE 'COMMENT%'
                             AND (
-                                (c.parent_message_id = r.id
-                                  AND (UPPER(COALESCE(c.message_type, '')) LIKE 'COMMENT%'
-                                       OR UPPER(COALESCE(c.message_type, '')) LIKE 'REPLY%'))
-                                OR (
-                                  UPPER(COALESCE(c.message_type, '')) LIKE 'REPLY%'
-                                  AND EXISTS (
-                                      SELECT 1 FROM messages p
-                                      WHERE p.id = c.parent_message_id
-                                        AND p.parent_message_id = r.id
-                                  )
+                                c.parent_message_id = r.id
+                                OR EXISTS (
+                                    SELECT 1 FROM messages p
+                                    WHERE p.id = c.parent_message_id
+                                      AND p.parent_message_id = r.id
+                                      AND UPPER(COALESCE(p.message_type, '')) LIKE 'COMMENT%'
                                 )
                             )
                       )
@@ -239,17 +236,14 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
                         WHERE c2.channel_id = r.channel_id
                           AND c2.archived_at IS NULL
                           AND c2.is_deleted = false
+                          AND UPPER(COALESCE(c2.message_type, '')) LIKE 'COMMENT%'
                           AND (
-                              (c2.parent_message_id = r.id
-                                AND (UPPER(COALESCE(c2.message_type, '')) LIKE 'COMMENT%'
-                                     OR UPPER(COALESCE(c2.message_type, '')) LIKE 'REPLY%'))
-                              OR (
-                                  UPPER(COALESCE(c2.message_type, '')) LIKE 'REPLY%'
-                                  AND EXISTS (
-                                      SELECT 1 FROM messages p2
-                                      WHERE p2.id = c2.parent_message_id
-                                        AND p2.parent_message_id = r.id
-                                  )
+                              c2.parent_message_id = r.id
+                              OR EXISTS (
+                                  SELECT 1 FROM messages p2
+                                  WHERE p2.id = c2.parent_message_id
+                                    AND p2.parent_message_id = r.id
+                                    AND UPPER(COALESCE(p2.message_type, '')) LIKE 'COMMENT%'
                               )
                           )
                     ) DESC

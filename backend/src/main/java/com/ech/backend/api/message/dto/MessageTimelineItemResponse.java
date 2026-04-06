@@ -27,11 +27,11 @@ public record MessageTimelineItemResponse(
         /** REPLY 전용: 답장 대상(부모) 메시지 작성자 표시명 */
         String replyToSenderName,
 
-        /** ROOT 전용: 해당 원글에 달린 댓글(COMMENT_*) 개수. REPLY 행은 null. */
+        /** ROOT 전용: 해당 원글 스레드의 댓글(COMMENT_*만, 타임라인 답글 REPLY_* 제외) 개수. REPLY 행은 null. */
         Integer threadCommentCount,
-        /** ROOT 전용: 가장 최근 댓글 시각 */
+        /** ROOT 전용: 가장 최근 COMMENT 시각 */
         OffsetDateTime lastCommentAt,
-        /** ROOT 전용: 가장 최근 댓글 작성자 표시명 */
+        /** ROOT 전용: 가장 최근 COMMENT 작성자 표시명 */
         String lastCommentSenderName
 ) {
 }
