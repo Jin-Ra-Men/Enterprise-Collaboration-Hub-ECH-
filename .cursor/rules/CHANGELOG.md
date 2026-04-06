@@ -4,6 +4,9 @@
 
 ## 2026-04-06
 
+### Release
+- **GitHub `v0.1.3`**: Windows **`.ico` 임베드**로 설치본·작업 표시줄 아이콘이 ECH 브랜드로 표시되도록 정리(`icon.ico`·`prebuild:win`·`AppUserModelId`). `desktop/package.json`·`backend/build.gradle` **`0.1.3`**
+
 ### Fixed
 - **desktop**: Windows **프로그램·작업 표시줄 아이콘이 Electron 기본으로 보이던 문제** — `assets/icon.ico` 생성(`png-to-ico`·`prebuild:win`), `electron-builder` `win.icon`·런타임 `BrowserWindow`/`Tray`가 **`.ico` 우선** 사용, `app.setAppUserModelId` 추가
 
