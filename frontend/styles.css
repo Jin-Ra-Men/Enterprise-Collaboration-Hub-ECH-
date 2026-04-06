@@ -1847,6 +1847,18 @@ html[data-theme="light"] .reply-composer-banner {
 }
 .modal-overlay.modal-stacked { z-index: 1100; }
 
+/* Electron: 업데이트 안내 모달 */
+.modal-app-update-lead {
+  margin: 0;
+  line-height: 1.55;
+  font-size: 14px;
+}
+.muted-text {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 10px 0 0;
+}
+
 .member-add-heading {
   display: flex;
   align-items: center;

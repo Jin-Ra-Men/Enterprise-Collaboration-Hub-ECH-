@@ -24,5 +24,22 @@ contextBridge.exposeInMainWorld("electronAPI", {
       return Promise.resolve(null);
     }
   },
+  /** 자동 업데이트: 새 버전 다운로드 완료 시 메인에서 수신 */
+  onUpdateDownloaded: (handler) => {
+    if (typeof handler !== "function") return;
+    try {
+      ipcRenderer.on("ech-update-downloaded", (_, payload) => handler(payload || {}));
+    } catch {
+      /* ignore */
+    }
+  },
+  /** 확인 시 설치 후 재시작 */
+  installUpdateAndRestart: () => {
+    try {
+      return ipcRenderer.invoke("ech-install-update");
+    } catch {
+      return Promise.resolve(false);
+    }
+  },
 });
 

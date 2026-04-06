@@ -123,17 +123,23 @@ function setupAutoUpdater() {
     autoUpdater.on("error", (err) => {
       console.warn("[ECH] autoUpdater error:", err?.message || err);
     });
-    autoUpdater.on("update-downloaded", () => {
-      try {
-        new Notification({
-          title: "ECH 업데이트",
-          body: "새 버전이 내려받아졌습니다. 앱을 종료하면 업데이트가 적용됩니다.",
-        }).show();
-      } catch {
-        /* ignore */
+    autoUpdater.on("update-downloaded", (info) => {
+      const version = info?.version != null ? String(info.version) : "";
+      const notifyRenderer = () => {
+        try {
+          if (!mainWindow || mainWindow.isDestroyed()) return;
+          mainWindow.webContents.send("ech-update-downloaded", { version });
+        } catch {
+          /* ignore */
+        }
+      };
+      showMainWindow();
+      notifyRenderer();
+      if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents.isLoading()) {
+        mainWindow.webContents.once("did-finish-load", notifyRenderer);
       }
     });
-    void autoUpdater.checkForUpdatesAndNotify();
+    void autoUpdater.checkForUpdates();
     setInterval(() => {
       void autoUpdater.checkForUpdates();
     }, 6 * 60 * 60 * 1000);
@@ -156,6 +162,16 @@ ipcMain.handle("get-windows-username", () => {
   } catch {
     return null;
   }
+});
+
+ipcMain.handle("ech-install-update", () => {
+  try {
+    app.isQuitting = true;
+    autoUpdater.quitAndInstall(false, true);
+  } catch (e) {
+    console.warn("[ECH] quitAndInstall failed:", e?.message || e);
+  }
+  return true;
 });
 
 ipcMain.on("os-notification-show", (event, payload) => {

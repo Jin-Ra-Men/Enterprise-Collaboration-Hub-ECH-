@@ -1041,6 +1041,23 @@
       </div>
     </div>
 
+    <!-- Electron 데스크톱: 자동 업데이트 설치 안내 -->
+    <div id="modalAppUpdate" class="modal-overlay hidden">
+      <div class="modal modal-narrow">
+        <div class="modal-header">
+          <h3>업데이트</h3>
+        </div>
+        <div class="modal-body">
+          <p class="modal-app-update-lead">새 버전이 존재하여 업데이트가 필요합니다.</p>
+          <p id="modalAppUpdateVersion" class="muted-text"></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" id="btnAppUpdateLater" data-modal="modalAppUpdate">나중에</button>
+          <button type="button" class="btn-primary" id="btnAppUpdateNow">확인</button>
+        </div>
+      </div>
+    </div>
+
     <div id="modalThemePicker" class="modal-overlay hidden">
       <div class="modal modal-narrow">
         <div class="modal-header">

@@ -7232,9 +7232,31 @@ document.querySelectorAll(".modal-close, .btn-cancel, .btn-secondary[data-modal]
 });
 document.querySelectorAll(".modal-overlay").forEach(overlay => {
   overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) closeModal(overlay.id);
+    if (e.target === overlay) {
+      if (overlay.id === "modalAppUpdate") return;
+      closeModal(overlay.id);
+    }
   });
 });
+
+(function setupElectronAutoUpdateModal() {
+  const api = window.electronAPI;
+  if (!api || typeof api.onUpdateDownloaded !== "function") return;
+  api.onUpdateDownloaded((payload) => {
+    const verEl = document.getElementById("modalAppUpdateVersion");
+    if (verEl) {
+      const v = payload && payload.version != null ? String(payload.version).trim() : "";
+      verEl.textContent = v ? `설치 예정 버전: ${v}` : "";
+    }
+    openModal("modalAppUpdate");
+  });
+  const btnNow = document.getElementById("btnAppUpdateNow");
+  if (btnNow) {
+    btnNow.addEventListener("click", () => {
+      if (typeof api.installUpdateAndRestart === "function") void api.installUpdateAndRestart();
+    });
+  }
+})();
 
 document.addEventListener("click", async (e) => {
   const t = e.target.closest(".theme-option-btn");

@@ -881,7 +881,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 ---
 
 ## 데스크톱 (Electron) Windows 자동 업데이트
-- 목적: 설치형(NSIS) 클라이언트가 GitHub Releases의 동일 저장소에서 새 버전을 감지·내려받고, 종료 시 설치를 적용
+- 목적: 설치형(NSIS) 클라이언트가 GitHub Releases(또는 내부망 generic 피드)에서 새 버전을 감지·내려받고, **다운로드 완료 시 메인 창에 모달**(`modalAppUpdate`)로 안내 — **확인** 시 `quitAndInstall`로 즉시 설치·재시작. **나중에**는 모달만 닫고, 이후 트레이에서 종료 시 `autoInstallOnAppQuit`로 적용 가능
 - 사용자: Windows에 ECH 데스크톱을 설치한 사용자
 - 관련 화면/경로: `desktop/main.js` — 패키지 실행(`app.isPackaged`) 시에만 `electron-updater` 초기화
 - 관련 API: GitHub Releases API(런타임) — `GET https://github.com/{owner}/{repo}/releases/latest` 계열로 메타 조회; 실제 파일은 릴리즈 에셋
@@ -897,7 +897,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 - 권한/보안: Private 저장소면 사용자 환경에 GitHub 인증이 없어도 **공개 릴리즈 에셋**은 URL로 내려받기 가능; 비공개 배포면 별도 토큰/서버 검토 필요
 - 로그/감사 포인트: 업데이터 오류는 메인 프로세스 콘솔 `[ECH] autoUpdater error:` 로그
 - 테스트 기준:
-  - 이전 버전 설치 후 상위 버전 릴리즈에 `latest.yml`+설치파일(+blockmap) 업로드 → 앱 기동 또는 주기 점검(6시간) 후 다운로드·종료 시 적용 확인
+  - 이전 버전 설치 후 상위 버전 릴리즈에 `latest.yml`+설치파일(+blockmap) 업로드 → 앱 기동 또는 주기 점검(6시간) 후 다운로드 완료 시 모달 노출·확인 시 재기동 적용(또는 종료 시 적용)
 - 비고: `npm run build:win`은 `--publish never`로 업로드는 하지 않되, `publish` 설정이 있으면 `latest.yml` 등이 `dist`에 생성됨
 - **내부망(인터넷/GitHub 불가)**: 설치 디렉터리의 `ech-server.json`에 `serverUrl`(예: `http://ech.co.kr:8080`) 또는 `updateBaseUrl`(예: `http://host:8080/desktop-updates/`)이 있으면 `electron-updater`가 `generic` 피드로 전환되어 **백엔드** `GET /desktop-updates/latest.yml` 및 동일 베이스 URL의 설치 파일을 사용한다. 서버에는 `{APP_RELEASES_DIR}/desktop`(또는 `DESKTOP_UPDATE_DIR`)에 `latest.yml`·`ECH-Setup-{version}.exe`를 배치하고, yml의 `path`와 실제 파일명을 일치시킨다. 상세: `docs/DEPLOYMENT_WINDOWS.md`, `DesktopUpdateResourceConfig`.
 
