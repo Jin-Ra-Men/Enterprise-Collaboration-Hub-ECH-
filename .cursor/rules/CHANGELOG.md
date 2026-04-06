@@ -4,6 +4,9 @@
 
 ## 2026-04-06
 
+### Fixed
+- **프론트**: 구성원 추가 피커 우측 **선택 부서원** 목록 — 인원별 **카드형 칸** 복구(테두리·배경·간격). 기존 행 구분선이 라이트 테마에서 거의 보이지 않던 문제 보완
+
 ### Changed
 - **desktop**: NSIS **`perMachine: true`** — Windows에 **`%PROGRAMFILES%\ECH\`** 전역 설치(UAC). `ech-server.json`은 exe 옆 또는 **`%ProgramData%\ECH\ech-server.json`** 추가 지원(`readEchServerJson`)
 
