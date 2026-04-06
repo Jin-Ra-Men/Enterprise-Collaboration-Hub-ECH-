@@ -4,6 +4,9 @@
 
 ## 2026-04-06
 
+### Changed
+- **백엔드**: `build.gradle` 프로젝트 `version` `0.1.0`으로 상향, `bootJar` 산출물명 `ech-backend-{version}.jar` 고정(데스크톱 0.1.0과 맞춤)
+
 ### Added
 - **release**: GitHub **`v0.1.0`** — 데스크톱 마이너 첫 릴리즈(자동 업데이트·내부망 피드·UI 등 누적). `package.json` `0.1.0`
 - **desktop**: 자동 업데이트 다운로드 완료 시 메인 UI 모달(`modalAppUpdate`)·`preload` IPC(`onUpdateDownloaded`, `installUpdateAndRestart`)·`quitAndInstall` 즉시 재시작. `checkForUpdatesAndNotify` 제거(토스트 중복 방지)

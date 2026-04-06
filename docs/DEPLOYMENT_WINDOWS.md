@@ -19,7 +19,7 @@ WEB 서버로 복사할 파일을 먼저 빌드합니다.
 # 저장소 루트에서
 cd backend
 ./gradlew.bat bootJar
-# 결과물: backend/build/libs/ech-backend-*.jar
+# 결과물: backend/build/libs/ech-backend-{버전}.jar (버전은 backend/build.gradle 의 version)
 ```
 
 ---
