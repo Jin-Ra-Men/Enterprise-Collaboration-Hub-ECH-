@@ -5,7 +5,7 @@
 ## 2026-04-06
 
 ### Changed
-- **프론트**: 구성원 추가 `+` 버튼 — 텍스트 `+` 대신 SVG 십자로 박스 내부 시각 중심 정렬, `.member-add-heading` 행은 좌측 정렬 유지
+- **프론트**: 구성원 추가 `+` 버튼 — 텍스트 `+` 대신 SVG 십자(18px→14px·선 1.5)로 박스 내부 시각 중심 정렬, `.member-add-heading` 행은 좌측 정렬 유지
 - **프론트**: 조직도 팀 멤버 정렬 `sortOrgChartMembers` — 팀장(직책) → 직급 부장~인턴 → 동일 직급은 `createdAt` 오름차순
 - **백엔드**: `UserSearchResponse`·`UserRepository.searchUsers`·`UserSearchService` 에 `createdAt` 포함(조직도 정렬용)
 - **`docs/FEATURE_SPEC.md`**: 위 UX·API 반영
