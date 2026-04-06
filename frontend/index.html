@@ -622,6 +622,22 @@
       </div>
     </div>
 
+    <div id="modalImageDownloadChoice" class="modal-overlay hidden modal-stacked">
+      <div class="modal modal-narrow app-dialog-modal">
+        <div class="modal-header app-dialog-header">
+          <h3>이미지 다운로드</h3>
+        </div>
+        <div class="modal-body">
+          <p id="imageDownloadChoiceMessage" class="app-dialog-message image-download-choice-message"></p>
+        </div>
+        <div class="modal-footer modal-footer--stack">
+          <button type="button" class="btn-primary" id="btnImageDownloadOriginal">원본 파일</button>
+          <button type="button" class="btn-secondary" id="btnImageDownloadCompressed">압축본 (JPEG)</button>
+          <button type="button" class="btn-secondary" id="btnImageDownloadCancel">취소</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 스레드 모달(원글 + 댓글) -->
     <div id="modalThread" class="modal-overlay hidden">
       <div class="modal modal-wide modal-thread">

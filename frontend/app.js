@@ -161,6 +161,11 @@ let activeChannelCreatorEmployeeNo = null;
 let activeChannelMemberCount = 0;
 /** 현재 채널 멤버만 @자동완성 (전사 검색 대신). selectChannel 시 비움 → loadChannelMembers에서 채움 */
 let activeChannelMemberMentionList = [];
+/** DM 채팅 헤더: 본인 제외 멤버 사번(사이드바와 동일한 프레즌스 점 표시용) */
+let activeDmPeerEmployeeNos = [];
+/** `modalImageDownloadChoice` 닫기 시 Promise resolve */
+let imageDownloadChoiceResolve = null;
+let imageDownloadChoiceEscHandler = null;
 /** 현재 채널 멤버의 조직/직급 캐시(employeeNo -> 조직표시문구) */
 const activeChannelMemberOrgLineByEmployeeNo = new Map();
 /** 미확인 멘션 목록(사이드바 전용) */
@@ -739,7 +744,16 @@ function emitMyPresenceStatus(status) {
   refreshPresenceDots();
 }
 
-/** DM 줄 왼쪽: 상대 사번이 있으면 프레즌스 점, 없으면 기본 ● 아이콘 */
+/** DM 줄 왼쪽·채팅 헤더: 상대 사번이 있으면 프레즌스 점(없으면 기본 ●) */
+function updateChatHeaderDmPresence() {
+  const prefixEl = document.getElementById("chatChannelPrefix");
+  if (!prefixEl) return;
+  if (String(activeChannelType || "").toUpperCase() !== "DM") return;
+  prefixEl.className = "chat-channel-prefix chat-header-dm-prefix";
+  prefixEl.innerHTML = dmSidebarLeadingHtml(activeDmPeerEmployeeNos);
+  refreshPresenceDots();
+}
+
 function dmSidebarLeadingHtml(peerEmployeeNos) {
   const peers = Array.isArray(peerEmployeeNos)
     ? peerEmployeeNos.map((e) => String(e || "").trim()).filter(Boolean)
@@ -916,7 +930,11 @@ function renderFileHubImageGrid(channelId, files) {
         im.loading = "lazy";
         ph.replaceWith(im);
         btn.addEventListener("click", () => {
-          openImageLightbox(url, f.id, f.originalFilename, cid);
+          openImageLightbox(url, f.id, f.originalFilename, cid, {
+            sizeBytes: f.sizeBytes,
+            contentType: f.contentType,
+            originalFilename: f.originalFilename,
+          });
         });
       })
       .catch(() => {
@@ -974,7 +992,11 @@ async function refreshChannelFileHubData(channelId) {
         </span>
         <button type="button" class="btn-channel-file-dl" data-file-id="${f.id}">다운로드</button>`;
       li.querySelector(".btn-channel-file-dl").addEventListener("click", () => {
-        downloadChannelFile(f.id, f.originalFilename);
+        void maybeDownloadChannelImageWithChoice(f.id, f.originalFilename, channelId, {
+          sizeBytes: f.sizeBytes,
+          contentType: f.contentType,
+          originalFilename: f.originalFilename,
+        });
       });
       listEl.appendChild(li);
     });
@@ -1031,10 +1053,140 @@ async function fetchChannelFileDownloadInfo(channelId, fileId) {
   }
 }
 
+const INLINE_IMAGE_EXT = /\.(jpe?g|png|gif|webp|bmp|svg)$/i;
+
 function isImageContentType(contentType, filename) {
   const ct = String(contentType || "").trim().toLowerCase();
   if (ct.startsWith("image/")) return true;
   return INLINE_IMAGE_EXT.test(String(filename || ""));
+}
+
+/** 약 512KB 이상 이미지 다운로드 시 원본/압축 선택 */
+const LARGE_IMAGE_DOWNLOAD_BYTES = 512 * 1024;
+const DOWNLOAD_COMPRESS_MAX_EDGE = 4096;
+const DOWNLOAD_COMPRESS_JPEG_QUALITY = 0.85;
+
+function eligibleForCompressedImageDownload(contentType, filename) {
+  const ct = String(contentType || "").trim().toLowerCase();
+  if (ct.includes("gif") || /\.gif$/i.test(String(filename || ""))) return false;
+  if (ct.includes("svg") || /\.svg$/i.test(String(filename || ""))) return false;
+  return true;
+}
+
+function finishImageDownloadChoice(v) {
+  if (typeof imageDownloadChoiceResolve === "function") {
+    const r = imageDownloadChoiceResolve;
+    imageDownloadChoiceResolve = null;
+    r(v);
+  }
+  if (imageDownloadChoiceEscHandler) {
+    document.removeEventListener("keydown", imageDownloadChoiceEscHandler);
+    imageDownloadChoiceEscHandler = null;
+  }
+  document.getElementById("modalImageDownloadChoice")?.classList.add("hidden");
+}
+
+function openImageDownloadChoice({ filename, sizeBytes }) {
+  return new Promise((resolve) => {
+    imageDownloadChoiceResolve = resolve;
+    const msgEl = document.getElementById("imageDownloadChoiceMessage");
+    const fn = String(filename || "image");
+    const sz = Number(sizeBytes) || 0;
+    if (msgEl) {
+      msgEl.textContent =
+        `파일: ${fn}\n크기: ${fmtSize(sz)}\n\n원본을 받을지 압축본(JPEG)을 받을지 선택하세요.`;
+    }
+    imageDownloadChoiceEscHandler = (e) => {
+      if (e.key === "Escape") closeModal("modalImageDownloadChoice");
+    };
+    document.addEventListener("keydown", imageDownloadChoiceEscHandler);
+    openModal("modalImageDownloadChoice");
+  });
+}
+
+async function downloadChannelFileCompressedAsJpeg(fileId, filename, channelId) {
+  const ch = channelId != null ? channelId : activeChannelId;
+  if (!ch || !currentUser) return;
+  try {
+    const res = await fetch(
+      `${API_BASE}/api/channels/${ch}/files/${fileId}/download?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
+      { headers: { Authorization: `Bearer ${getToken()}` } }
+    );
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const msg = err.error?.message;
+      await uiAlert(msg || "다운로드에 실패했습니다.");
+      return;
+    }
+    const blob = await res.blob();
+    let bmp;
+    try {
+      bmp = await createImageBitmap(blob);
+    } catch {
+      await uiAlert("이미지를 디코딩할 수 없습니다. 원본 다운로드를 이용해 주세요.");
+      return;
+    }
+    const maxEdge = DOWNLOAD_COMPRESS_MAX_EDGE;
+    const w = bmp.width;
+    const h = bmp.height;
+    const scale = Math.min(1, maxEdge / Math.max(w, h));
+    const tw = Math.max(1, Math.round(w * scale));
+    const th = Math.max(1, Math.round(h * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = tw;
+    canvas.height = th;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      bmp.close();
+      await uiAlert("이미지를 처리할 수 없습니다.");
+      return;
+    }
+    ctx.drawImage(bmp, 0, 0, tw, th);
+    bmp.close();
+    const outBlob = await new Promise((resolve) => {
+      canvas.toBlob((b) => resolve(b), "image/jpeg", DOWNLOAD_COMPRESS_JPEG_QUALITY);
+    });
+    if (!outBlob) {
+      await uiAlert("압축본을 만들 수 없습니다.");
+      return;
+    }
+    const base = String(filename || "image").replace(/\.[^.]+$/, "") || "image";
+    const downloadName = `${base}.jpg`;
+    const url = URL.createObjectURL(outBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = downloadName;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error(e);
+    await uiAlert("압축본 저장 중 오류가 발생했습니다.");
+  }
+}
+
+async function maybeDownloadChannelImageWithChoice(fileId, filename, channelId, meta = {}) {
+  const ch = channelId != null ? channelId : activeChannelId;
+  const fn = filename || meta.originalFilename || "download";
+  let sizeBytes = Number(meta.sizeBytes) || 0;
+  let contentType = String(meta.contentType || "").trim();
+  if ((!sizeBytes || !contentType) && ch && fileId) {
+    const info = await fetchChannelFileDownloadInfo(ch, fileId);
+    if (info) {
+      if (!sizeBytes) sizeBytes = Number(info.sizeBytes) || 0;
+      if (!contentType) contentType = String(info.contentType || "").trim();
+    }
+  }
+  const eligible =
+    isImageContentType(contentType, fn) &&
+    sizeBytes >= LARGE_IMAGE_DOWNLOAD_BYTES &&
+    eligibleForCompressedImageDownload(contentType, fn);
+  if (!eligible) {
+    return downloadChannelFile(fileId, fn, ch);
+  }
+  const choice = await openImageDownloadChoice({ filename: fn, sizeBytes });
+  if (choice === null) return;
+  if (choice === "original") return downloadChannelFile(fileId, fn, ch);
+  return downloadChannelFileCompressedAsJpeg(fileId, fn, ch);
 }
 
 const ORG_EMBED_IDS = {
@@ -2035,9 +2187,19 @@ async function selectChannel(channelId, channelName, channelType, options = {}) 
     el.classList.toggle("active", Number(el.dataset.channelId) === channelId);
   });
 
-  // 헤더 업데이트
-  const prefix = channelType === "DM" ? "●" : (channelType === "PRIVATE" ? "🔒" : "#");
-  document.getElementById("chatChannelPrefix").textContent = prefix;
+  // 헤더 업데이트 (DM은 멤버 로드 후 `updateChatHeaderDmPresence`로 프레즌스 점 표시)
+  activeDmPeerEmployeeNos = [];
+  const prefixEl = document.getElementById("chatChannelPrefix");
+  if (prefixEl) {
+    if (String(channelType || "").toUpperCase() === "DM") {
+      prefixEl.className = "chat-channel-prefix chat-header-dm-prefix";
+      prefixEl.innerHTML = "";
+    } else {
+      prefixEl.className = "chat-channel-prefix";
+      const prefix = channelType === "PRIVATE" ? "🔒" : "#";
+      prefixEl.textContent = prefix;
+    }
+  }
   document.getElementById("chatChannelName").textContent   = channelName;
   document.getElementById("chatMemberCount").textContent   = "";
   document.getElementById("memberPanel").classList.add("hidden");
@@ -2231,7 +2393,12 @@ async function loadChannelMembers(channelId) {
   try {
     const res  = await apiFetch(`/api/channels/${channelId}`);
     const json = await res.json();
-    if (!res.ok) return;
+    if (Number(channelId) !== Number(activeChannelId)) return;
+    if (!res.ok) {
+      activeDmPeerEmployeeNos = [];
+      updateChatHeaderDmPresence();
+      return;
+    }
     const creatorEmp = String(json.data?.createdByEmployeeNo || "").trim();
     activeChannelCreatorEmployeeNo = creatorEmp || null;
     const members = json.data?.members || [];
@@ -2247,6 +2414,15 @@ async function loadChannelMembers(channelId) {
         name: String(m.name || "").trim(),
       }))
       .filter((m) => m.employeeNo && m.employeeNo !== myEmpMention);
+
+    if (String(activeChannelType || "").toUpperCase() === "DM") {
+      activeDmPeerEmployeeNos = members
+        .map((m) => String(m.employeeNo || "").trim())
+        .filter((emp) => emp && emp !== myEmpMention);
+    } else {
+      activeDmPeerEmployeeNos = [];
+    }
+    updateChatHeaderDmPresence();
 
     const listEl = document.getElementById("memberList");
     listEl.innerHTML = "";
@@ -2617,8 +2793,6 @@ async function getAuthedImageBlobUrl(channelId, fileId) {
   return url;
 }
 
-const INLINE_IMAGE_EXT = /\.(jpe?g|png|gif|webp|bmp|svg)$/i;
-
 function isImageFilePayload(payload) {
   if (!payload) return false;
   const ct = String(payload.contentType || "").trim().toLowerCase();
@@ -2626,7 +2800,7 @@ function isImageFilePayload(payload) {
   return INLINE_IMAGE_EXT.test(String(payload.originalFilename || ""));
 }
 
-function openImageLightbox(blobUrl, fileId, filename, channelId) {
+function openImageLightbox(blobUrl, fileId, filename, channelId, fileMeta = {}) {
   const img = document.getElementById("imagePreviewLarge");
   const cap = document.getElementById("imagePreviewCaption");
   const dl = document.getElementById("imagePreviewDownload");
@@ -2634,7 +2808,8 @@ function openImageLightbox(blobUrl, fileId, filename, channelId) {
   img.src = blobUrl;
   img.alt = filename || "image";
   cap.textContent = filename || "";
-  dl.onclick = () => downloadChannelFile(fileId, filename, channelId);
+  dl.onclick = () =>
+    void maybeDownloadChannelImageWithChoice(fileId, filename, channelId, fileMeta);
   openModal("modalImagePreview");
 }
 
@@ -2651,6 +2826,7 @@ function createImageAttachmentRowFromMsg(msg, payload, { showAvatar, showTime })
     id: Number(payload.fileId),
     originalFilename: payload.originalFilename,
     sizeBytes: payload.sizeBytes,
+    contentType: payload.contentType,
   };
   const timeHtml = showTime
     ? `<span class="msg-time">${escHtml(fmtTime(msg.createdAt))}</span>`
@@ -2710,7 +2886,7 @@ function createImageAttachmentRowFromMsg(msg, payload, { showAvatar, showTime })
 
   const dlBtn = div.querySelector(".btn-attach-dl");
   dlBtn.addEventListener("click", () => {
-    downloadChannelFile(fileMeta.id, fileMeta.originalFilename, channelId);
+    void maybeDownloadChannelImageWithChoice(fileMeta.id, fileMeta.originalFilename, channelId, fileMeta);
   });
 
   const imgBtn = div.querySelector(".msg-inline-image-btn");
@@ -2725,7 +2901,7 @@ function createImageAttachmentRowFromMsg(msg, payload, { showAvatar, showTime })
       im.loading = "lazy";
       placeholder.replaceWith(im);
       imgBtn.addEventListener("click", () => {
-        openImageLightbox(url, fileMeta.id, fileMeta.originalFilename, channelId);
+        openImageLightbox(url, fileMeta.id, fileMeta.originalFilename, channelId, fileMeta);
       });
     })
     .catch(() => {
@@ -2752,6 +2928,7 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
     id: Number(payload.fileId),
     originalFilename: payload.originalFilename,
     sizeBytes: payload.sizeBytes,
+    contentType: payload.contentType,
     uploadedByEmployeeNo: emp,
     uploaderName: senderName,
   };
@@ -2809,7 +2986,7 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
       </div>`;
   }
   div.querySelector(".btn-attach-dl").addEventListener("click", () => {
-    downloadChannelFile(fileMeta.id, fileMeta.originalFilename, channelId);
+    void maybeDownloadChannelImageWithChoice(fileMeta.id, fileMeta.originalFilename, channelId, fileMeta);
   });
   attachThreadCommentFooter(div, msg);
   return div;
@@ -7392,6 +7569,17 @@ document.getElementById("btnProfileDm").addEventListener("click", async () => {
 function openModal(id)  { document.getElementById(id)?.classList.remove("hidden"); }
 function closeModal(id) {
   document.getElementById(id)?.classList.add("hidden");
+  if (id === "modalImageDownloadChoice") {
+    if (typeof imageDownloadChoiceResolve === "function") {
+      const r = imageDownloadChoiceResolve;
+      imageDownloadChoiceResolve = null;
+      r(null);
+    }
+    if (imageDownloadChoiceEscHandler) {
+      document.removeEventListener("keydown", imageDownloadChoiceEscHandler);
+      imageDownloadChoiceEscHandler = null;
+    }
+  }
   if (id === "modalWorkHub") clearWorkHubScopedChannel();
 }
 
@@ -7408,6 +7596,16 @@ document.querySelectorAll(".modal-overlay").forEach(overlay => {
       closeModal(overlay.id);
     }
   });
+});
+
+document.getElementById("btnImageDownloadOriginal")?.addEventListener("click", () => {
+  finishImageDownloadChoice("original");
+});
+document.getElementById("btnImageDownloadCompressed")?.addEventListener("click", () => {
+  finishImageDownloadChoice("compressed");
+});
+document.getElementById("btnImageDownloadCancel")?.addEventListener("click", () => {
+  finishImageDownloadChoice(null);
 });
 
 (function setupElectronAutoUpdateModal() {
@@ -7765,7 +7963,11 @@ async function handleSearchResultClick(item) {
     if (isImageContentType(info?.contentType || "", filename)) {
       try {
         const blobUrl = await getAuthedImageBlobUrl(contextId, id);
-        openImageLightbox(blobUrl, id, filename, contextId);
+        openImageLightbox(blobUrl, id, filename, contextId, {
+          sizeBytes: info?.sizeBytes,
+          contentType: info?.contentType,
+          originalFilename: info?.originalFilename || filename,
+        });
       } catch {
         await uiAlert("이미지를 불러올 수 없습니다.");
       }

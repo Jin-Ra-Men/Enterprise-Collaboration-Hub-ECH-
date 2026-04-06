@@ -682,6 +682,7 @@
 - 목적: 실제 파일은 NAS/S3 등 외부 스토리지에 두고, 채널 단위로 메타데이터만 DB에 기록·조회
 - 사용자: 채널 멤버
 - 관련 화면/경로: 햄버거 메뉴 **첨부파일** / **이미지 모아보기** → `modalFileHub`(탭: 전체 파일·이미지). DM 포함 동일 `channelId` 기준. **전체 파일** 탭은 이미지(`contentType`/확장자 기준)를 제외한 첨부만 목록·다운로드; 이미지는 **이미지** 탭(썸네일 그리드·라이트박스)에만 표시. 이미지만 있을 때 전체 탭은 안내 문구(「이미지」 탭 안내)만 표시.
+- **대용량 이미지 다운로드(프론트)**: `contentType`/확장자로 이미지로 판별되고 크기가 **약 512KB 이상**이면 `modalImageDownloadChoice`에서 **원본 파일** vs **JPEG 압축본**(캔버스·최대 변 4096px) 선택. GIF·SVG는 압축 경로 미지원으로 선택 창 없이 원본만. 메타가 없으면 `download-info`로 보강.
 - 관련 API:
   - `POST /api/channels/{channelId}/files` (메타데이터만 등록, 하위 호환)
   - `POST /api/channels/{channelId}/files/upload?employeeNo=...` (multipart `file` — 디스크 저장 + DB 메타)
@@ -812,6 +813,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - 멤버 패널: `department`·`jobLevel`을 한 줄 요약, `jobPosition`·`jobTitle`은 값이 있을 때만 추가 표시
   - 멤버 패널: 개설자 사번(`createdByEmployeeNo`)과 일치하는 멤버에 `개설자` 배지 표시
   - 파일 업로드 성공 시: 일반 텍스트 메시지와 동일한 **메시지 행**(아바타·발신자·시간) 안에 첨부 인라인 표시 — **이미지**(`contentType` 또는 확장자 기준)는 썸네일 + 클릭 시 확대 모달(`modalImagePreview`) + 모달 내 다운로드, 그 외는 파일명·크기·다운로드 버튼 행
+  - **DM 채팅 헤더**: `#chatChannelPrefix`에 사이드바 DM 목록과 동일하게 `dmSidebarLeadingHtml` 기반 **프레즌스 점**(그룹 DM은 최대 3명 + `+N`). 멤버 API 로드 후 `updateChatHeaderDmPresence`로 갱신
   - **대용량 첨부·이미지(프론트)**: 미리보기는 큰 이미지를 다운스케일한 blob URL로 표시해 UI 멈춤을 줄임; 약 **2MB 초과** 이미지는 업로드 전 최대 변 길이 4096px·JPEG 재압축(애니 GIF는 원본 유지); 업로드는 `XMLHttpRequest`로 **진행률** 표시, 성공 후 타임라인·파일 허브 갱신은 병렬 처리(`buildImagePreviewObjectUrl`, `maybeCompressImageForUpload`, `uploadFileWithProgress`)
   - 채팅 패널(`#viewChat`) 포커스 상태에서 클립보드에 이미지가 있으면 **붙여넣기(Ctrl+V)** 로 로컬 파일 선택과 동일하게 첨부 미리보기에 올린 뒤 전송 버튼(또는 Enter)으로 업로드·`FILE` 메시지 생성(열린 모달·`modal-overlay` 포커스일 때는 기본 붙여넣기 유지)
   - **날짜 구분선**: 초기 목록(`renderMessages`)과 동일하게 로컬 날짜가 바뀔 때 pill 표시. **실시간**(`appendMessageRealtime`)은 마지막 DOM 형제가 시스템 메시지여도 뒤에서 마지막 채팅 행·이전 날짜 키를 찾아 구분선·같은 분 묶음을 맞춤; `channel:system`은 서버 `createdAt`이 있을 때 구분선 정합

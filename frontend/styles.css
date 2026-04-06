@@ -796,6 +796,17 @@ span.section-toggle-static { cursor: default; }
 }
 .chat-header-left { display: flex; align-items: center; gap: 8px; }
 .chat-channel-prefix { font-size: 18px; color: var(--text-muted); }
+.chat-header-dm-prefix {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  color: var(--text-primary);
+}
+.chat-header-dm-prefix .sidebar-dm-presence-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
 .chat-channel-name { font-size: 17px; font-weight: 700; color: var(--text-primary); }
 .chat-header-right { display: flex; align-items: center; gap: 12px; }
 .chat-member-count { font-size: 14px; color: var(--text-secondary); }
@@ -1935,6 +1946,18 @@ html[data-theme="light"] .reply-composer-banner {
   padding: 14px 20px;
   border-top: 1px solid var(--border-subtle);
   flex-shrink: 0;
+}
+.modal-footer.modal-footer--stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+.modal-footer.modal-footer--stack .btn-primary,
+.modal-footer.modal-footer--stack .btn-secondary {
+  width: 100%;
+  justify-content: center;
+}
+.image-download-choice-message {
+  white-space: pre-wrap;
 }
 
 /* ── 메시지 컨텍스트 메뉴(댓글/답글) ── */

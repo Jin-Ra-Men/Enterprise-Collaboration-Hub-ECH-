@@ -4,6 +4,13 @@
 
 ## 2026-04-06
 
+### Added
+- **프론트**: 대용량(약 512KB 이상) **이미지** 다운로드 시 `modalImageDownloadChoice`로 **원본** / **JPEG 압축본** 선택; GIF·SVG는 원본만
+- **프론트**: DM **채팅 헤더**(`#chatChannelPrefix`)를 사이드바와 동일한 **프레즌스 점** 표시(`updateChatHeaderDmPresence`·`dmSidebarLeadingHtml`)
+
+### Changed
+- **프론트**: `INLINE_IMAGE_EXT`를 `isImageContentType`보다 앞에 선언해 이미지 판별 시 참조 순서 정리
+
 ### Release
 - **GitHub `v0.1.5`**: 구성원 추가 **선택 부서원** 카드형 목록 UI·`v0.1.4` 이후 누적 반영. `desktop/package.json`·`backend/build.gradle` **`0.1.5`**
 
