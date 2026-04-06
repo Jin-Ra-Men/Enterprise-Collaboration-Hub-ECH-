@@ -4,6 +4,9 @@
 
 ## 2026-04-06
 
+### Added
+- **프론트**: 채팅 영역(`#viewChat`) **드래그 앤 드롭**으로 이미지·일반 파일 첨부, **파일 선택·클립보드 붙여넣기**로 **여러 파일 한 번에** 미리보기·순차 업로드; 스레드 댓글 입력도 다중 선택·다중 전송. `index.html` `multiple`, `app.js` `pendingFilesQueue`/`threadPendingFilesQueue`, `styles.css` `.view-chat--drag-over`
+
 ### Release
 - **GitHub `v1.1.0`**: 정식 마이너 릴리즈 — **이미지** 라이트박스(서버 미리보기 우선·원본 보기)·파일 허브 이미지 탭 지연 로드, **데스크톱** Windows 시작 시 실행(트레이·`setLoginItemSettings`), **프론트** 첨부 직후 「새 메시지」 구분선·동일 채널 알림(`document.hidden`) 수정, GitHub 릴리즈 Source code(zip) 안내 문서. `desktop/package.json`·`desktop/package-lock.json`·`backend/build.gradle` **`1.1.0`**. 태그 `v1.1.0` — GitHub 에셋 업로드: `cd desktop && npm run build:win` 후 `tools/publish-electron-github-release.ps1 v1.1.0`
 

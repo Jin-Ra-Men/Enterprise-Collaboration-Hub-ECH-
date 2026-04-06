@@ -63,6 +63,7 @@
 - **이미지 다운로드**: 약 **512KB 이상**·GIF/SVG 제외 시 원본 vs JPEG 압축 선택 모달; 압축은 브라우저에서 `GET .../download` blob → 캔버스(최대 변 4096px) 저장(서버 전용 압축 API 없음).
 - **데스크톱 GitHub 릴리즈 에셋 업로드**: 로컬에서 `cd desktop && npm run build:win` 후 `desktop/dist`에 `latest.yml`·`ECH-Setup-{version}.exe`·`.blockmap` 생성. `GITHUB_TOKEN`(repo releases 권한) 설정 뒤 `powershell -File ./tools/publish-electron-github-release.ps1 v1.1.0` — 태그·릴리즈 생성 및 에셋 업로드(`README.md` 자동 업데이트 절차 참고).
 - **이미지 크게 보기·모아보기 성능**: 서버 `preview_*`가 있으면 라이트박스는 먼저 `/preview`로 표시 후 **원본 보기** 선택 가능(`openChannelImageLightbox`). 파일 허브 이미지 탭 썸네일은 보이는 셀만 로드(IntersectionObserver).
+- **채팅 첨부(다중·DnD)**: 메인 채팅 `#viewChat`에 파일 **드래그 앤 드롭**, 첨부 `<input type="file" multiple>`(메인·스레드), 클립보드 이미지 **여러 장** 붙여넣기 → `pendingFilesQueue` / `threadPendingFilesQueue`로 미리보기 후 순차 업로드. 다른 모달이 열려 있으면 채팅 드롭은 처리하지 않음(`isModalOverlayBlockingChatDrop`).
 
 ## 3) 핵심 문서 위치
 - 요구사항: `docs/PROJECT_REQUIREMENTS.md`

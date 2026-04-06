@@ -176,9 +176,12 @@ let mySidebarWorkItems = [];
 let lastWorkSidebarSig = null;
 /** Last loaded channel work items for work hub (new card parent select + labels). */
 let lastChannelWorkItemsForHub = [];
-let pendingFile    = null;
+/** 메인 입력창 대기 첨부(다중 이미지·파일) */
+let pendingFilesQueue = [];
+let composerPendingSequence = 0;
 // 스레드(댓글) 모달 상태
-let threadPendingFile = null;
+let threadPendingFilesQueue = [];
+let threadPendingSequence = 0;
 let threadPendingFilePreviewUrl = null;
 let threadRootMessageId = null;
 // 스레드 모달 내부에서 렌더링 중인지 여부(메인용 댓글 요약 버튼 숨김용)
@@ -3447,6 +3450,7 @@ function clearReplyComposerTarget() {
 }
 
 function clearThreadFilePreview() {
+  threadPendingSequence++;
   if (threadPendingFilePreviewUrl) {
     try {
       URL.revokeObjectURL(threadPendingFilePreviewUrl);
@@ -3455,7 +3459,7 @@ function clearThreadFilePreview() {
     }
   }
   threadPendingFilePreviewUrl = null;
-  threadPendingFile = null;
+  threadPendingFilesQueue = [];
   if (threadFilePreviewThumbEl) {
     threadFilePreviewThumbEl.classList.add("hidden");
     threadFilePreviewThumbEl.removeAttribute("src");
@@ -3467,11 +3471,20 @@ function clearThreadFilePreview() {
 
 function setThreadComposerPendingFile(file) {
   if (!file) return;
-  threadPendingFile = file;
-  if (threadFilePreviewNameEl) threadFilePreviewNameEl.textContent = file.name || "첨부파일";
+  setThreadComposerPendingFiles([file]);
+}
+
+function setThreadComposerPendingFiles(files) {
+  const list = normalizePendingFileList(files);
+  if (list.length === 0) return;
+  threadPendingSequence++;
+  const mySeq = threadPendingSequence;
+  threadPendingFilesQueue = list;
+  if (threadFilePreviewNameEl) threadFilePreviewNameEl.textContent = formatPendingFilesLabel(list);
   setFilePreviewUploadStatus("thread", "");
-  const isImage = String(file.type || "").toLowerCase().startsWith("image/");
-  const fileRef = file;
+  const firstImage = list.find((f) => String(f.type || "").toLowerCase().startsWith("image/"));
+  const displayFile = firstImage || list[0];
+  const isImage = String(displayFile.type || "").toLowerCase().startsWith("image/");
   if (threadFilePreviewThumbEl && threadFilePreviewEl) {
     if (threadPendingFilePreviewUrl) {
       try {
@@ -3484,8 +3497,8 @@ function setThreadComposerPendingFile(file) {
     if (isImage) {
       threadFilePreviewThumbEl.classList.add("hidden");
       threadFilePreviewThumbEl.removeAttribute("src");
-      void buildImagePreviewObjectUrl(file).then((url) => {
-        if (threadPendingFile !== fileRef) {
+      void buildImagePreviewObjectUrl(displayFile).then((url) => {
+        if (mySeq !== threadPendingSequence) {
           try {
             URL.revokeObjectURL(url);
           } catch {
@@ -3681,14 +3694,20 @@ async function sendThreadComment() {
 
   try {
     // 댓글 파일이 있으면 먼저 업로드(텍스트가 있으면 모달은 즉시 리로드하지 않음)
-    if (threadPendingFile) {
-      const reloadMode = text ? "none" : "thread";
-      await uploadFile(threadPendingFile, {
-        parentMessageId: rootId,
-        threadKind: "COMMENT",
-        reloadMode,
-        progressContext: "thread",
-      });
+    if (threadPendingFilesQueue.length > 0) {
+      const n = threadPendingFilesQueue.length;
+      for (let i = 0; i < n; i++) {
+        const isLast = i === n - 1;
+        const reloadMode = text ? "none" : isLast ? "thread" : "none";
+        await uploadFile(threadPendingFilesQueue[i], {
+          parentMessageId: rootId,
+          threadKind: "COMMENT",
+          reloadMode,
+          progressContext: "thread",
+          batchIndex: i + 1,
+          batchTotal: n,
+        });
+      }
       clearThreadFilePreview();
       if (!text) {
         threadMessageInputEl.value = "";
@@ -3730,10 +3749,9 @@ if (replyComposerBannerCloseEl) {
 }
 if (threadFileInputEl) {
   threadFileInputEl.addEventListener("change", () => {
-    const file = threadFileInputEl.files?.[0] || null;
-    if (!file) return;
-    setThreadComposerPendingFile(file);
-    // 같은 파일을 다시 선택해도 change 이벤트가 뜨도록 초기화
+    const files = normalizePendingFileList(threadFileInputEl.files);
+    if (files.length === 0) return;
+    setThreadComposerPendingFiles(files);
     threadFileInputEl.value = "";
   });
 }
@@ -4892,12 +4910,18 @@ async function sendMessage() {
   if (replyComposerTargetMessageId != null) {
     const parentMessageId = replyComposerTargetMessageId;
 
-    if (pendingFile) {
-      await uploadFile(pendingFile, {
-        parentMessageId,
-        threadKind: "REPLY",
-        reloadMode: "timeline",
-      });
+    if (pendingFilesQueue.length > 0) {
+      const n = pendingFilesQueue.length;
+      for (let i = 0; i < n; i++) {
+        const isLast = i === n - 1;
+        await uploadFile(pendingFilesQueue[i], {
+          parentMessageId,
+          threadKind: "REPLY",
+          reloadMode: isLast ? "timeline" : "none",
+          batchIndex: i + 1,
+          batchTotal: n,
+        });
+      }
       clearFilePreview();
       if (!preparedText) {
         messageInputEl.value = "";
@@ -4931,11 +4955,23 @@ async function sendMessage() {
     return;
   }
 
-  // 파일이 있으면 파일 먼저 업로드
-  if (pendingFile) {
-    await uploadFile(pendingFile);
+  // 파일이 있으면 파일 먼저 업로드(다중 시 순차, 마지막만 타임라인 갱신)
+  if (pendingFilesQueue.length > 0) {
+    const n = pendingFilesQueue.length;
+    for (let i = 0; i < n; i++) {
+      const isLast = i === n - 1;
+      await uploadFile(pendingFilesQueue[i], {
+        reloadMode: isLast ? "timeline" : "none",
+        batchIndex: i + 1,
+        batchTotal: n,
+      });
+    }
     clearFilePreview();
-    if (!preparedText) { messageInputEl.value = ""; mentionDisplayToEmployeeNo.clear(); return; }
+    if (!preparedText) {
+      messageInputEl.value = "";
+      mentionDisplayToEmployeeNo.clear();
+      return;
+    }
   }
 
   if (!preparedText) return;
@@ -5116,8 +5152,37 @@ function uploadFileWithProgress(url, formData, token, onProgress) {
   });
 }
 
+function normalizePendingFileList(input) {
+  if (!input) return [];
+  if (Array.isArray(input)) return input.filter((f) => f && f instanceof File);
+  if (typeof FileList !== "undefined" && input instanceof FileList) return Array.from(input).filter(Boolean);
+  return [];
+}
+
+function formatPendingFilesLabel(files) {
+  if (!files || files.length === 0) return "";
+  if (files.length === 1) {
+    const f = files[0];
+    return `📎 ${f.name} (${fmtSize(f.size)})`;
+  }
+  const head = files
+    .slice(0, 3)
+    .map((f) => f.name)
+    .join(", ");
+  const more = files.length > 3 ? ` 외 ${files.length - 3}개` : "";
+  return `📎 ${files.length}개 파일: ${head}${more}`;
+}
+
 function setComposerPendingFile(file) {
   if (!file) return;
+  setComposerPendingFiles([file]);
+}
+
+function setComposerPendingFiles(files) {
+  const list = normalizePendingFileList(files);
+  if (list.length === 0) return;
+  composerPendingSequence++;
+  const mySeq = composerPendingSequence;
   if (pendingComposerPreviewUrl) {
     try {
       URL.revokeObjectURL(pendingComposerPreviewUrl);
@@ -5126,15 +5191,16 @@ function setComposerPendingFile(file) {
     }
     pendingComposerPreviewUrl = null;
   }
-  pendingFile = file;
+  pendingFilesQueue = list;
+  const firstImage = list.find((f) => String(f.type || "").toLowerCase().startsWith("image/"));
+  const displayFile = firstImage || list[0];
   const thumb = document.getElementById("filePreviewThumb");
-  const fileRef = file;
   if (thumb) {
-    if (file.type && file.type.startsWith("image/")) {
+    if (displayFile.type && displayFile.type.startsWith("image/")) {
       thumb.classList.add("hidden");
       thumb.removeAttribute("src");
-      void buildImagePreviewObjectUrl(file).then((url) => {
-        if (pendingFile !== fileRef) {
+      void buildImagePreviewObjectUrl(displayFile).then((url) => {
+        if (mySeq !== composerPendingSequence) {
           try {
             URL.revokeObjectURL(url);
           } catch {
@@ -5159,14 +5225,14 @@ function setComposerPendingFile(file) {
     }
   }
   document.getElementById("filePreview").classList.remove("hidden");
-  document.getElementById("filePreviewName").textContent = `📎 ${file.name} (${fmtSize(file.size)})`;
+  document.getElementById("filePreviewName").textContent = formatPendingFilesLabel(list);
   setFilePreviewUploadStatus("composer", "");
 }
 
 document.getElementById("fileInput").addEventListener("change", (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  setComposerPendingFile(file);
+  const files = normalizePendingFileList(e.target?.files);
+  if (files.length === 0) return;
+  setComposerPendingFiles(files);
   e.target.value = "";
 });
 
@@ -5182,56 +5248,101 @@ function handleChatImagePaste(e) {
   const dt = e.clipboardData;
   if (!dt) return;
 
-  let imageFile = null;
+  const imageFiles = [];
   const items = dt.items;
   if (items && items.length > 0) {
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
       if (it.kind === "file" && it.type && it.type.startsWith("image/")) {
         const f = it.getAsFile();
-        if (f && f.size > 0) {
-          imageFile = f;
-          break;
-        }
+        if (f && f.size > 0) imageFiles.push(f);
       }
     }
   }
-  if (!imageFile && dt.files && dt.files.length > 0) {
+  if (imageFiles.length === 0 && dt.files && dt.files.length > 0) {
     for (let i = 0; i < dt.files.length; i++) {
       const f = dt.files[i];
-      if (f.type && f.type.startsWith("image/")) {
-        imageFile = f;
-        break;
-      }
+      if (f.type && f.type.startsWith("image/")) imageFiles.push(f);
     }
   }
-  if (!imageFile) return;
+  if (imageFiles.length === 0) return;
 
   e.preventDefault();
-  const mime = imageFile.type || "image/png";
-  let ext = "png";
-  if (mime === "image/jpeg" || mime === "image/jpg") ext = "jpg";
-  else if (mime === "image/gif") ext = "gif";
-  else if (mime === "image/webp") ext = "webp";
-  else if (mime === "image/png") ext = "png";
+  const named = imageFiles.map((imageFile, idx) => {
+    const mime = imageFile.type || "image/png";
+    let ext = "png";
+    if (mime === "image/jpeg" || mime === "image/jpg") ext = "jpg";
+    else if (mime === "image/gif") ext = "gif";
+    else if (mime === "image/webp") ext = "webp";
+    else if (mime === "image/png") ext = "png";
 
-  const rawName = imageFile.name ? String(imageFile.name).trim() : "";
-  const generic =
-    !rawName || rawName === "image.png" || rawName.toLowerCase() === "image.jpeg" || rawName === "clipboard.png";
-  const name = generic ? `pasted-image-${Date.now()}.${ext}` : rawName;
-  const file =
-    generic || !imageFile.name ? new File([imageFile], name, { type: mime }) : imageFile;
-  setComposerPendingFile(file);
+    const rawName = imageFile.name ? String(imageFile.name).trim() : "";
+    const generic =
+      !rawName ||
+      rawName === "image.png" ||
+      rawName.toLowerCase() === "image.jpeg" ||
+      rawName === "clipboard.png";
+    const name = generic ? `pasted-image-${Date.now()}-${idx}.${ext}` : rawName;
+    return generic || !imageFile.name
+      ? new File([imageFile], name, { type: mime })
+      : imageFile;
+  });
+  setComposerPendingFiles(named);
 }
 
 const viewChatEl = document.getElementById("viewChat");
+
+function isModalOverlayBlockingChatDrop() {
+  try {
+    const open = document.querySelector(".modal-overlay:not(.hidden)");
+    return !!open;
+  } catch {
+    return false;
+  }
+}
+
 if (viewChatEl) {
   viewChatEl.addEventListener("paste", handleChatImagePaste, true);
+
+  viewChatEl.addEventListener("dragover", (e) => {
+    if (!activeChannelId || !currentUser) return;
+    if (isModalOverlayBlockingChatDrop()) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+    viewChatEl.classList.add("view-chat--drag-over");
+  });
+
+  viewChatEl.addEventListener("dragleave", (e) => {
+    if (!viewChatEl.contains(e.relatedTarget)) {
+      viewChatEl.classList.remove("view-chat--drag-over");
+    }
+  });
+
+  viewChatEl.addEventListener("drop", (e) => {
+    e.preventDefault();
+    viewChatEl.classList.remove("view-chat--drag-over");
+    if (!activeChannelId || !currentUser) return;
+    if (isModalOverlayBlockingChatDrop()) return;
+    const dt = e.dataTransfer;
+    if (!dt || !dt.files || dt.files.length === 0) return;
+    const files = normalizePendingFileList(dt.files);
+    if (files.length === 0) return;
+    setComposerPendingFiles(files);
+  });
+
+  document.addEventListener(
+    "dragend",
+    () => {
+      viewChatEl.classList.remove("view-chat--drag-over");
+    },
+    true
+  );
 }
 
 document.getElementById("btnClearFile").addEventListener("click", clearFilePreview);
 
 function clearFilePreview() {
+  composerPendingSequence++;
   if (pendingComposerPreviewUrl) {
     try {
       URL.revokeObjectURL(pendingComposerPreviewUrl);
@@ -5240,7 +5351,7 @@ function clearFilePreview() {
     }
     pendingComposerPreviewUrl = null;
   }
-  pendingFile = null;
+  pendingFilesQueue = [];
   const thumb = document.getElementById("filePreviewThumb");
   if (thumb) {
     thumb.classList.add("hidden");
@@ -5258,12 +5369,16 @@ async function uploadFile(
     threadKind = null,
     reloadMode = "timeline",
     progressContext = "composer",
+    batchIndex = 0,
+    batchTotal = 0,
   } = {}
 ) {
   if (!activeChannelId || !currentUser || !file) return;
 
   const ctx = progressContext === "thread" ? "thread" : "composer";
   const sendBtn = ctx === "thread" ? threadBtnSendEl : btnSendEl;
+  const batchPrefix =
+    Number(batchTotal) > 1 && Number(batchIndex) > 0 ? `[${batchIndex}/${batchTotal}] ` : "";
 
   const params = new URLSearchParams();
   params.set("employeeNo", String(currentUser.employeeNo));
@@ -5282,11 +5397,11 @@ async function uploadFile(
     const showPrep =
       String(file.type || "").toLowerCase().startsWith("image/") &&
       file.size >= UPLOAD_COMPRESS_MIN_BYTES;
-    setFilePreviewUploadStatus(ctx, showPrep ? "이미지 준비 중…" : "");
+    setFilePreviewUploadStatus(ctx, batchPrefix + (showPrep ? "이미지 준비 중…" : ""));
     await new Promise((r) => requestAnimationFrame(() => r()));
 
     const prepared = await maybeCompressImageForUpload(file);
-    setFilePreviewUploadStatus(ctx, "업로드 중… 0%");
+    setFilePreviewUploadStatus(ctx, batchPrefix + "업로드 중… 0%");
 
     const formData = new FormData();
     formData.append("file", file, file.name || "upload");
@@ -5297,7 +5412,7 @@ async function uploadFile(
     }
 
     const { ok, json } = await uploadFileWithProgress(uploadUrl, formData, token, (p) => {
-      setFilePreviewUploadStatus(ctx, `업로드 중 ${Math.round(p * 100)}%`);
+      setFilePreviewUploadStatus(ctx, batchPrefix + `업로드 중 ${Math.round(p * 100)}%`);
     });
 
     if (!ok) {

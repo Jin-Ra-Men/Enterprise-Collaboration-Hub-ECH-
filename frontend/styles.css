@@ -781,6 +781,11 @@ span.section-toggle-static { cursor: default; }
   flex-direction: column;
   overflow: hidden;
 }
+.view-chat.view-chat--drag-over {
+  outline: 2px dashed var(--accent, #7c3aed);
+  outline-offset: -2px;
+  background: rgba(124, 58, 237, 0.06);
+}
 
 /* 채널 헤더 */
 .chat-header {
