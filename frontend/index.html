@@ -269,8 +269,9 @@
               </button>
             </div>
             <div id="filePreview" class="file-preview hidden">
-              <img id="filePreviewThumb" class="file-preview-thumb hidden" alt="" />
+              <img id="filePreviewThumb" class="file-preview-thumb hidden" alt="" decoding="async" />
               <span id="filePreviewName"></span>
+              <span id="filePreviewUploadStatus" class="file-preview-upload-status" aria-live="polite"></span>
               <button id="btnClearFile" class="btn-clear-file">✕</button>
             </div>
           </div>
@@ -640,8 +641,9 @@
             <button id="threadBtnSend" type="button" class="composer-send-btn" title="전송">➤</button>
           </div>
           <div id="threadFilePreview" class="file-preview hidden">
-            <img id="threadFilePreviewThumb" class="file-preview-thumb hidden" alt="" />
+            <img id="threadFilePreviewThumb" class="file-preview-thumb hidden" alt="" decoding="async" />
             <span id="threadFilePreviewName"></span>
+            <span id="threadFilePreviewUploadStatus" class="file-preview-upload-status" aria-live="polite"></span>
             <button id="threadBtnClearFile" class="btn-clear-file" type="button">✕</button>
           </div>
         </div>

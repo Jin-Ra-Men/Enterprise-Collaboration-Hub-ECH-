@@ -323,7 +323,10 @@ const threadBtnSendEl = document.getElementById("threadBtnSend");
 const threadFilePreviewEl = document.getElementById("threadFilePreview");
 const threadFilePreviewThumbEl = document.getElementById("threadFilePreviewThumb");
 const threadFilePreviewNameEl = document.getElementById("threadFilePreviewName");
+const threadFilePreviewUploadStatusEl = document.getElementById("threadFilePreviewUploadStatus");
 const threadBtnClearFileEl = document.getElementById("threadBtnClearFile");
+const btnSendEl = document.getElementById("btnSend");
+const filePreviewUploadStatusEl = document.getElementById("filePreviewUploadStatus");
 const replyComposerBannerEl = document.getElementById("replyComposerBanner");
 const replyComposerBannerTitleEl = document.getElementById("replyComposerBannerTitle");
 const replyComposerBannerPreviewEl = document.getElementById("replyComposerBannerPreview");
@@ -3030,15 +3033,17 @@ function clearThreadFilePreview() {
   }
   if (threadFilePreviewEl) threadFilePreviewEl.classList.add("hidden");
   if (threadFilePreviewNameEl) threadFilePreviewNameEl.textContent = "";
+  setFilePreviewUploadStatus("thread", "");
 }
 
 function setThreadComposerPendingFile(file) {
   if (!file) return;
   threadPendingFile = file;
   if (threadFilePreviewNameEl) threadFilePreviewNameEl.textContent = file.name || "첨부파일";
+  setFilePreviewUploadStatus("thread", "");
   const isImage = String(file.type || "").toLowerCase().startsWith("image/");
+  const fileRef = file;
   if (threadFilePreviewThumbEl && threadFilePreviewEl) {
-    const url = URL.createObjectURL(file);
     if (threadPendingFilePreviewUrl) {
       try {
         URL.revokeObjectURL(threadPendingFilePreviewUrl);
@@ -3046,10 +3051,30 @@ function setThreadComposerPendingFile(file) {
         /* ignore */
       }
     }
-    threadPendingFilePreviewUrl = url;
+    threadPendingFilePreviewUrl = null;
     if (isImage) {
-      threadFilePreviewThumbEl.src = url;
-      threadFilePreviewThumbEl.classList.remove("hidden");
+      threadFilePreviewThumbEl.classList.add("hidden");
+      threadFilePreviewThumbEl.removeAttribute("src");
+      void buildImagePreviewObjectUrl(file).then((url) => {
+        if (threadPendingFile !== fileRef) {
+          try {
+            URL.revokeObjectURL(url);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+        if (threadPendingFilePreviewUrl) {
+          try {
+            URL.revokeObjectURL(threadPendingFilePreviewUrl);
+          } catch {
+            /* ignore */
+          }
+        }
+        threadPendingFilePreviewUrl = url;
+        threadFilePreviewThumbEl.src = url;
+        threadFilePreviewThumbEl.classList.remove("hidden");
+      });
     } else {
       threadFilePreviewThumbEl.src = "";
       threadFilePreviewThumbEl.classList.add("hidden");
@@ -3233,6 +3258,7 @@ async function sendThreadComment() {
         parentMessageId: rootId,
         threadKind: "COMMENT",
         reloadMode,
+        progressContext: "thread",
       });
       clearThreadFilePreview();
       if (!text) {
@@ -4494,7 +4520,7 @@ async function sendMessage() {
   mentionDisplayToEmployeeNo.clear();
 }
 
-document.getElementById("btnSend").addEventListener("click", sendMessage);
+btnSendEl?.addEventListener("click", sendMessage);
 messageInputEl.addEventListener("keydown", (e) => {
   if (isMentionSuggestOpen()) {
     if (e.key === "ArrowDown") {
@@ -4545,6 +4571,113 @@ document.getElementById("btnAttach").addEventListener("click", () => {
   document.getElementById("fileInput").click();
 });
 
+function setFilePreviewUploadStatus(context, text) {
+  const el = context === "thread" ? threadFilePreviewUploadStatusEl : filePreviewUploadStatusEl;
+  if (el) el.textContent = text || "";
+}
+
+const IMAGE_PREVIEW_MAX_EDGE = 1024;
+const IMAGE_PREVIEW_SMALL_BYTES = 256 * 1024;
+const UPLOAD_COMPRESS_MIN_BYTES = 2 * 1024 * 1024;
+const UPLOAD_MAX_EDGE = 4096;
+
+async function buildImagePreviewObjectUrl(file) {
+  if (!file || !String(file.type || "").toLowerCase().startsWith("image/")) {
+    return URL.createObjectURL(file);
+  }
+  if (file.size <= IMAGE_PREVIEW_SMALL_BYTES) {
+    return URL.createObjectURL(file);
+  }
+  try {
+    let bmp;
+    try {
+      bmp = await createImageBitmap(file, {
+        resizeWidth: IMAGE_PREVIEW_MAX_EDGE,
+        resizeHeight: IMAGE_PREVIEW_MAX_EDGE,
+      });
+    } catch {
+      bmp = await createImageBitmap(file);
+    }
+    const w = bmp.width;
+    const h = bmp.height;
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      bmp.close();
+      return URL.createObjectURL(file);
+    }
+    ctx.drawImage(bmp, 0, 0);
+    bmp.close();
+    const blob = await new Promise((resolve) => {
+      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.85);
+    });
+    if (!blob) return URL.createObjectURL(file);
+    return URL.createObjectURL(blob);
+  } catch {
+    return URL.createObjectURL(file);
+  }
+}
+
+async function maybeCompressImageForUpload(file) {
+  if (!file || !String(file.type || "").toLowerCase().startsWith("image/")) return file;
+  const mime = String(file.type).toLowerCase();
+  if (mime === "image/gif") return file;
+  if (file.size < UPLOAD_COMPRESS_MIN_BYTES) return file;
+
+  try {
+    const bmp = await createImageBitmap(file, {
+      resizeWidth: UPLOAD_MAX_EDGE,
+      resizeHeight: UPLOAD_MAX_EDGE,
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = bmp.width;
+    canvas.height = bmp.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      bmp.close();
+      return file;
+    }
+    ctx.drawImage(bmp, 0, 0);
+    bmp.close();
+    const blob = await new Promise((resolve) => {
+      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.82);
+    });
+    if (!blob || blob.size >= file.size * 0.92) return file;
+    const base = String(file.name || "image").replace(/\.[^.]+$/, "") || "image";
+    return new File([blob], `${base}.jpg`, { type: "image/jpeg" });
+  } catch {
+    return file;
+  }
+}
+
+function uploadFileWithProgress(url, formData, token, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && typeof onProgress === "function") onProgress(e.loaded / e.total);
+    };
+    xhr.onload = () => {
+      let json = {};
+      try {
+        json = JSON.parse(xhr.responseText || "{}");
+      } catch {
+        /* ignore */
+      }
+      resolve({
+        ok: xhr.status >= 200 && xhr.status < 300,
+        status: xhr.status,
+        json,
+      });
+    };
+    xhr.onerror = () => reject(new Error("network"));
+    xhr.send(formData);
+  });
+}
+
 function setComposerPendingFile(file) {
   if (!file) return;
   if (pendingComposerPreviewUrl) {
@@ -4557,11 +4690,31 @@ function setComposerPendingFile(file) {
   }
   pendingFile = file;
   const thumb = document.getElementById("filePreviewThumb");
+  const fileRef = file;
   if (thumb) {
     if (file.type && file.type.startsWith("image/")) {
-      pendingComposerPreviewUrl = URL.createObjectURL(file);
-      thumb.src = pendingComposerPreviewUrl;
-      thumb.classList.remove("hidden");
+      thumb.classList.add("hidden");
+      thumb.removeAttribute("src");
+      void buildImagePreviewObjectUrl(file).then((url) => {
+        if (pendingFile !== fileRef) {
+          try {
+            URL.revokeObjectURL(url);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+        if (pendingComposerPreviewUrl) {
+          try {
+            URL.revokeObjectURL(pendingComposerPreviewUrl);
+          } catch {
+            /* ignore */
+          }
+        }
+        pendingComposerPreviewUrl = url;
+        thumb.src = url;
+        thumb.classList.remove("hidden");
+      });
     } else {
       thumb.classList.add("hidden");
       thumb.removeAttribute("src");
@@ -4569,6 +4722,7 @@ function setComposerPendingFile(file) {
   }
   document.getElementById("filePreview").classList.remove("hidden");
   document.getElementById("filePreviewName").textContent = `📎 ${file.name} (${fmtSize(file.size)})`;
+  setFilePreviewUploadStatus("composer", "");
 }
 
 document.getElementById("fileInput").addEventListener("change", (e) => {
@@ -4656,15 +4810,22 @@ function clearFilePreview() {
   }
   document.getElementById("filePreview").classList.add("hidden");
   document.getElementById("filePreviewName").textContent = "";
+  setFilePreviewUploadStatus("composer", "");
 }
 
 async function uploadFile(
   file,
-  { parentMessageId = null, threadKind = null, reloadMode = "timeline" } = {}
+  {
+    parentMessageId = null,
+    threadKind = null,
+    reloadMode = "timeline",
+    progressContext = "composer",
+  } = {}
 ) {
   if (!activeChannelId || !currentUser || !file) return;
-  const formData = new FormData();
-  formData.append("file", file);
+
+  const ctx = progressContext === "thread" ? "thread" : "composer";
+  const sendBtn = ctx === "thread" ? threadBtnSendEl : btnSendEl;
 
   const params = new URLSearchParams();
   params.set("employeeNo", String(currentUser.employeeNo));
@@ -4675,17 +4836,28 @@ async function uploadFile(
     params.set("threadKind", String(threadKind).trim());
   }
 
+  const uploadUrl = `${API_BASE}/api/channels/${activeChannelId}/files/upload?${params.toString()}`;
+  const token = getToken();
+
   try {
-    const res = await fetch(
-      `${API_BASE}/api/channels/${activeChannelId}/files/upload?${params.toString()}`,
-      {
-        method: "POST",
-        headers: { Authorization: `Bearer ${getToken()}` },
-        body: formData,
-      }
-    );
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) {
+    if (sendBtn) sendBtn.disabled = true;
+    const showPrep =
+      String(file.type || "").toLowerCase().startsWith("image/") &&
+      file.size >= UPLOAD_COMPRESS_MIN_BYTES;
+    setFilePreviewUploadStatus(ctx, showPrep ? "이미지 준비 중…" : "");
+    await new Promise((r) => requestAnimationFrame(() => r()));
+
+    const prepared = await maybeCompressImageForUpload(file);
+    setFilePreviewUploadStatus(ctx, "업로드 중… 0%");
+
+    const formData = new FormData();
+    formData.append("file", prepared);
+
+    const { ok, json } = await uploadFileWithProgress(uploadUrl, formData, token, (p) => {
+      setFilePreviewUploadStatus(ctx, `업로드 중 ${Math.round(p * 100)}%`);
+    });
+
+    if (!ok) {
       appendSystemMsg(`파일 업로드 실패: ${json.error?.message || "오류"}`);
       return;
     }
@@ -4699,11 +4871,16 @@ async function uploadFile(
       return;
     }
 
-    // 기본: 메인 타임라인 + 파일 허브 갱신
-    await loadMessages(activeChannelId);
-    refreshChannelFileHubData(activeChannelId);
-  } catch {
+    await Promise.all([
+      loadMessages(activeChannelId),
+      refreshChannelFileHubData(activeChannelId),
+    ]);
+  } catch (e) {
+    console.warn(e);
     appendSystemMsg("파일 업로드 중 서버 오류");
+  } finally {
+    setFilePreviewUploadStatus(ctx, "");
+    if (sendBtn) sendBtn.disabled = false;
   }
 }
 

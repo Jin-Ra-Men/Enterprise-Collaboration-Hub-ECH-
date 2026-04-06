@@ -4,6 +4,9 @@
 
 ## 2026-04-06
 
+### Changed
+- **프론트**: 대용량 이미지·첨부 전송 개선 — 미리보기는 `createImageBitmap`+캔버스로 다운스케일(256KB 초과 이미지), 2MB 초과 이미지는 업로드 전 해상도·JPEG 압축, XHR로 **업로드 진행률** 표시, 타임라인·파일 허브 갱신 `Promise.all` 병렬화
+
 ### Release
 - **GitHub `v0.1.1`**: 데스크톱 UX 정비(아이콘 통일·단일 인스턴스·조직 정렬·사이드바 로그아웃 제거) 반영. `desktop/package.json`·`backend/build.gradle` **`0.1.1`**
 - **desktop `assets/icon.png`**: NSIS 빌드(`win.icon`) 요구 **최소 256×256** 충족을 위해 동일 디자인 업스케일(고품질 보간)
