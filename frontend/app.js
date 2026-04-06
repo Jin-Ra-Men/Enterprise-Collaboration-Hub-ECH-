@@ -353,6 +353,7 @@ function saveSession(token, user) {
 function clearSession() {
   sessionStorage.removeItem(TOKEN_KEY);
   sessionStorage.removeItem(USER_KEY);
+  revokeImageAttachmentBlobUrls();
 }
 
 function mentionInboxStorageKey() {
@@ -470,8 +471,9 @@ async function openUnreadMentionById(id) {
   });
 }
 
-/** 인증된 다운로드로 만든 이미지 blob URL (채널 전환·목록 갱신 시 revoke) */
+/** 인증된 다운로드로 만든 이미지 blob URL (채널 재입장 시 재사용 — 네트워크 재요청 방지) */
 const imageAttachmentBlobUrls = new Map();
+const MAX_CACHED_IMAGE_BLOBS = 120;
 
 function revokeImageAttachmentBlobUrls() {
   imageAttachmentBlobUrls.forEach((url) => {
@@ -482,6 +484,21 @@ function revokeImageAttachmentBlobUrls() {
     }
   });
   imageAttachmentBlobUrls.clear();
+}
+
+/** Map 삽입 순서 기준으로 오래된 blob부터 제거(장시간 다채널 탐색 시 메모리 상한) */
+function trimImageBlobCacheIfNeeded() {
+  while (imageAttachmentBlobUrls.size > MAX_CACHED_IMAGE_BLOBS) {
+    const firstKey = imageAttachmentBlobUrls.keys().next().value;
+    if (firstKey == null) break;
+    const url = imageAttachmentBlobUrls.get(firstKey);
+    try {
+      if (url) URL.revokeObjectURL(url);
+    } catch {
+      /* ignore */
+    }
+    imageAttachmentBlobUrls.delete(firstKey);
+  }
 }
 
 let pendingComposerPreviewUrl = null;
@@ -2244,7 +2261,6 @@ function renderMyWorkItemsSidebar(channels) {
  * 채널 선택 / 메시지 로드
  * ========================================================================== */
 async function selectChannel(channelId, channelName, channelType, options = {}) {
-  revokeImageAttachmentBlobUrls();
   closeModal("modalImagePreview");
   activeChannelId   = channelId;
   activeChannelType = channelType;
@@ -2341,7 +2357,6 @@ function syncSenderOrgLabelsInMessageList() {
 
 async function loadMessages(channelId, { preserveScroll = false } = {}) {
   if (!currentUser) return;
-  revokeImageAttachmentBlobUrls();
   chatTimelineHasMoreOlder = false;
   chatTimelineLoadingOlder = false;
   try {
@@ -2866,6 +2881,7 @@ async function getAuthedPreviewBlobUrl(channelId, fileId) {
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   imageAttachmentBlobUrls.set(key, url);
+  trimImageBlobCacheIfNeeded();
   return url;
 }
 
@@ -2888,6 +2904,7 @@ async function getAuthedFullImageBlobUrl(channelId, fileId) {
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   imageAttachmentBlobUrls.set(key, url);
+  trimImageBlobCacheIfNeeded();
   return url;
 }
 

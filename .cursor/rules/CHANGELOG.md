@@ -4,6 +4,9 @@
 
 ## 2026-04-06
 
+### Changed
+- **프론트**: 채팅 이미지 blob URL — `loadMessages`·채널 전환 시 **전부 revoke** 하지 않고 세션 캐시 재사용(같은 채널 재입장·새로고침 시 네트워크 재다운로드 감소). 메모리 상한 **약 120개** LRU로 정리, 로그아웃(`clearSession`) 시 전부 해제
+
 ### Release
 - **GitHub `v0.1.7`**: 이미지 **서버 미리보기**(`multipart preview`, `GET .../preview`, 다운로드 `variant=original|preview`)·원본/미리보기 **용량 표시**·`channel_files` `preview_*` 컬럼(마이그레이션 `docs/sql/migrate_channel_files_preview.sql`). `desktop/package.json`·`backend/build.gradle` **`0.1.7`**
 
