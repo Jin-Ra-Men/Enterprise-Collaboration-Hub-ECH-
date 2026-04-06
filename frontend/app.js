@@ -474,6 +474,8 @@ async function openUnreadMentionById(id) {
 /** 인증된 다운로드로 만든 이미지 blob URL (채널 재입장 시 재사용 — 네트워크 재요청 방지) */
 const imageAttachmentBlobUrls = new Map();
 const MAX_CACHED_IMAGE_BLOBS = 120;
+/** 이미지 모아보기 그리드: 스크롤 영역에 들어올 때만 썸네일 요청 */
+let fileHubImageGridObserver = null;
 
 function revokeImageAttachmentBlobUrls() {
   imageAttachmentBlobUrls.forEach((url) => {
@@ -913,12 +915,24 @@ function setFileHubTab(tab) {
   });
   if (allPane) allPane.classList.toggle("hidden", tab !== "all");
   if (imgPane) imgPane.classList.toggle("hidden", tab !== "images");
+  if (tab === "images" && fileHubImageGridObserver) {
+    requestAnimationFrame(() => {
+      document.querySelectorAll("#channelImageGrid .channel-image-grid-item").forEach((cell) => {
+        if (!cell.querySelector(".channel-image-thumb-placeholder")) return;
+        fileHubImageGridObserver.unobserve(cell);
+        fileHubImageGridObserver.observe(cell);
+      });
+    });
+  }
 }
 
 function renderFileHubImageGrid(channelId, files) {
   const grid = document.getElementById("channelImageGrid");
   const emptyImg = document.getElementById("channelImagesEmpty");
+  const scrollRoot = document.getElementById("fileHubPaneImages");
   if (!grid) return;
+  fileHubImageGridObserver?.disconnect();
+  fileHubImageGridObserver = null;
   grid.innerHTML = "";
   const imgs = filterImageFilesForHub(files);
   if (imgs.length === 0) {
@@ -927,44 +941,58 @@ function renderFileHubImageGrid(channelId, files) {
   }
   emptyImg?.classList.add("hidden");
   const cid = Number(channelId);
+  fileHubImageGridObserver = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const cell = entry.target;
+        const load = cell._loadHubThumb;
+        if (typeof load === "function") {
+          fileHubImageGridObserver?.unobserve(cell);
+          load();
+        }
+      });
+    },
+    { root: scrollRoot, rootMargin: "160px 0px", threshold: 0 }
+  );
   imgs.forEach((f) => {
     const cell = document.createElement("div");
     cell.className = "channel-image-grid-item";
     const safeName = escHtml(f.originalFilename || "이미지");
     cell.innerHTML = `
       <button type="button" class="channel-image-thumb-btn" title="크게 보기" aria-label="${safeName}">
-        <div class="channel-image-thumb-placeholder">불러오는 중…</div>
+        <div class="channel-image-thumb-placeholder">…</div>
       </button>
       <div class="channel-image-thumb-meta">${escHtml(f.uploaderName || f.uploadedByEmployeeNo || "")} · ${escHtml(fmtDate(f.createdAt))}</div>`;
     const btn = cell.querySelector(".channel-image-thumb-btn");
     const ph = cell.querySelector(".channel-image-thumb-placeholder");
-    getAuthedPreviewBlobUrl(cid, f.id)
-      .then((thumbUrl) => {
-        const im = document.createElement("img");
-        im.className = "channel-image-thumb-img";
-        im.alt = f.originalFilename || "첨부 이미지";
-        im.src = thumbUrl;
-        im.loading = "lazy";
-        ph.replaceWith(im);
-        btn.addEventListener("click", () => {
-          void (async () => {
-            try {
-              const fullUrl = await getAuthedFullImageBlobUrl(cid, f.id);
-              openImageLightbox(fullUrl, f.id, f.originalFilename, cid, {
-                sizeBytes: f.sizeBytes,
-                previewSizeBytes: f.previewSizeBytes,
-                contentType: f.contentType,
-                originalFilename: f.originalFilename,
-              });
-            } catch {
-              await uiAlert("이미지를 불러올 수 없습니다.");
-            }
-          })();
+    const fileMeta = {
+      id: f.id,
+      sizeBytes: f.sizeBytes,
+      previewSizeBytes: f.previewSizeBytes,
+      contentType: f.contentType,
+      originalFilename: f.originalFilename,
+      hasPreview: f.hasPreview,
+    };
+    cell._loadHubThumb = () => {
+      ph.textContent = "불러오는 중…";
+      getAuthedPreviewBlobUrl(cid, f.id)
+        .then((thumbUrl) => {
+          const im = document.createElement("img");
+          im.className = "channel-image-thumb-img";
+          im.alt = f.originalFilename || "첨부 이미지";
+          im.src = thumbUrl;
+          im.loading = "lazy";
+          ph.replaceWith(im);
+          btn.addEventListener("click", () => {
+            void openChannelImageLightbox(cid, f.id, f.originalFilename, fileMeta);
+          });
+        })
+        .catch(() => {
+          ph.textContent = "로드 실패";
         });
-      })
-      .catch(() => {
-        ph.textContent = "로드 실패";
-      });
+    };
+    fileHubImageGridObserver.observe(cell);
     grid.appendChild(cell);
   });
 }
@@ -1102,6 +1130,36 @@ function eligibleForCompressedImageDownload(contentType, filename) {
   if (ct.includes("gif") || /\.gif$/i.test(String(filename || ""))) return false;
   if (ct.includes("svg") || /\.svg$/i.test(String(filename || ""))) return false;
   return true;
+}
+
+/** 라이트박스: 서버에 미리보기가 있으면 원본 대신 JPEG 미리보기로 먼저 표시(대용량 디코딩 부담 감소) */
+function hasServerPreviewForLightbox(meta) {
+  if (!meta) return false;
+  if (meta.hasPreview === false) return false;
+  if (!eligibleForCompressedImageDownload(meta.contentType || "", meta.originalFilename)) return false;
+  const sizeBytes = Number(meta.sizeBytes) || 0;
+  const previewSizeBytes = Number(meta.previewSizeBytes) || 0;
+  return previewSizeBytes > 0 && sizeBytes > 0 && previewSizeBytes < sizeBytes;
+}
+
+async function enrichChannelFileMetaForLightbox(channelId, fileMeta) {
+  const id = Number(fileMeta?.id ?? fileMeta?.fileId);
+  if (!channelId || !id) return fileMeta;
+  const need =
+    fileMeta.hasPreview === undefined ||
+    fileMeta.previewSizeBytes == null ||
+    fileMeta.sizeBytes == null;
+  if (!need) return fileMeta;
+  const info = await fetchChannelFileDownloadInfo(channelId, id);
+  if (!info) return fileMeta;
+  return {
+    ...fileMeta,
+    sizeBytes: fileMeta.sizeBytes ?? info.sizeBytes,
+    previewSizeBytes: fileMeta.previewSizeBytes ?? info.previewSizeBytes,
+    contentType: fileMeta.contentType ?? info.contentType,
+    originalFilename: fileMeta.originalFilename ?? info.originalFilename,
+    hasPreview: fileMeta.hasPreview ?? info.hasPreview,
+  };
 }
 
 function finishImageDownloadChoice(v) {
@@ -2915,17 +2973,71 @@ function isImageFilePayload(payload) {
   return INLINE_IMAGE_EXT.test(String(payload.originalFilename || ""));
 }
 
-function openImageLightbox(blobUrl, fileId, filename, channelId, fileMeta = {}) {
+function openImageLightbox(blobUrl, fileId, filename, channelId, fileMeta = {}, opts = {}) {
+  const showsPreview = opts.showsPreview === true;
   const img = document.getElementById("imagePreviewLarge");
   const cap = document.getElementById("imagePreviewCaption");
   const dl = document.getElementById("imagePreviewDownload");
+  const loadOrig = document.getElementById("imagePreviewLoadOriginal");
   if (!img || !cap || !dl) return;
   img.src = blobUrl;
   img.alt = filename || "image";
   cap.textContent = filename || "";
   dl.onclick = () =>
     void maybeDownloadChannelImageWithChoice(fileId, filename, channelId, fileMeta);
+  if (loadOrig) {
+    if (showsPreview && channelId != null && fileId != null) {
+      loadOrig.classList.remove("hidden");
+      loadOrig.disabled = false;
+      loadOrig.onclick = () => {
+        void (async () => {
+          loadOrig.disabled = true;
+          try {
+            const fullUrl = await getAuthedFullImageBlobUrl(channelId, fileId);
+            img.src = fullUrl;
+            loadOrig.classList.add("hidden");
+          } catch {
+            await uiAlert("원본을 불러올 수 없습니다.");
+            loadOrig.disabled = false;
+          }
+        })();
+      };
+    } else {
+      loadOrig.classList.add("hidden");
+      loadOrig.onclick = null;
+    }
+  }
   openModal("modalImagePreview");
+}
+
+/**
+ * 채널 첨부 이미지 크게 보기: 서버 미리보기가 있으면 라이트박스에 먼저 표시(원본은 「원본 보기」).
+ */
+async function openChannelImageLightbox(channelId, fileId, filename, fileMeta = {}) {
+  const fid = Number(fileId);
+  const cid = Number(channelId);
+  if (!currentUser || !Number.isFinite(cid) || !Number.isFinite(fid)) return;
+  let meta = { ...fileMeta, id: fid };
+  meta = await enrichChannelFileMetaForLightbox(cid, meta);
+  const fn = filename || meta.originalFilename || "image";
+  let showPreview = hasServerPreviewForLightbox(meta);
+  let url;
+  if (showPreview) {
+    try {
+      url = await getAuthedPreviewBlobUrl(cid, fid);
+    } catch {
+      showPreview = false;
+    }
+  }
+  if (!showPreview) {
+    try {
+      url = await getAuthedFullImageBlobUrl(cid, fid);
+    } catch {
+      await uiAlert("이미지를 불러올 수 없습니다.");
+      return;
+    }
+  }
+  openImageLightbox(url, fid, fn, cid, meta, { showsPreview: showPreview });
 }
 
 function createImageAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) {
@@ -2943,6 +3055,7 @@ function createImageAttachmentRowFromMsg(msg, payload, { showAvatar, showTime })
     sizeBytes: payload.sizeBytes,
     previewSizeBytes: payload.previewSizeBytes,
     contentType: payload.contentType,
+    hasPreview: payload.hasPreview,
   };
   const timeHtml = showTime
     ? `<span class="msg-time">${escHtml(fmtTime(msg.createdAt))}</span>`
@@ -3017,14 +3130,7 @@ function createImageAttachmentRowFromMsg(msg, payload, { showAvatar, showTime })
       im.loading = "lazy";
       placeholder.replaceWith(im);
       imgBtn.addEventListener("click", () => {
-        void (async () => {
-          try {
-            const fullUrl = await getAuthedFullImageBlobUrl(channelId, fileMeta.id);
-            openImageLightbox(fullUrl, fileMeta.id, fileMeta.originalFilename, channelId, fileMeta);
-          } catch {
-            await uiAlert("이미지를 불러올 수 없습니다.");
-          }
-        })();
+        void openChannelImageLightbox(channelId, fileMeta.id, fileMeta.originalFilename, fileMeta);
       });
     })
     .catch(() => {
@@ -8100,12 +8206,12 @@ async function handleSearchResultClick(item) {
     const filename = info?.originalFilename || item.title || "download";
     if (isImageContentType(info?.contentType || "", filename)) {
       try {
-        const blobUrl = await getAuthedFullImageBlobUrl(contextId, id);
-        openImageLightbox(blobUrl, id, filename, contextId, {
+        await openChannelImageLightbox(contextId, id, filename, {
           sizeBytes: info?.sizeBytes,
           previewSizeBytes: info?.previewSizeBytes,
           contentType: info?.contentType,
           originalFilename: info?.originalFilename || filename,
+          hasPreview: info?.hasPreview,
         });
       } catch {
         await uiAlert("이미지를 불러올 수 없습니다.");

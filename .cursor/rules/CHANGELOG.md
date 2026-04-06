@@ -4,7 +4,11 @@
 
 ## 2026-04-06
 
+### Changed
+- **프론트**: 이미지 모아보기·인라인·검색 **크게 보기** — 서버 미리보기가 있으면 라이트박스에 먼저 `/preview`(JPEG) 표시, **원본 보기**로 `variant=original` 전환; 파일 허브 이미지 탭 썸네일은 스크롤 영역 진입 시에만 로드(IntersectionObserver)·탭 전환 시 재observe. `index.html` `imagePreviewLoadOriginal`, `styles.css` 모달 보조 버튼
+
 ### Docs
+- **`docs/FEATURE_SPEC.md`**, **`README.md`**, **`docs/HANDOVER.md`**: 이미지 라이트박스(미리보기 우선·원본 보기)·파일 허브 그리드 지연 로드
 - **GitHub 릴리즈**: **Source code (zip/tar.gz)** 는 GitHub가 태그 기준으로 **자동 생성**하는 항목이며, `publish-electron-github-release.ps1` 업로드 대상(설치 exe·`latest.yml`·blockmap)과 구분 — `docs/HANDOVER.md`, `docs/DEPLOYMENT_WINDOWS.md`, `README.md`, `tools/publish-electron-github-release.ps1` 주석
 
 ### Release

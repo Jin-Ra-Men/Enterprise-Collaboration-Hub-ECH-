@@ -683,7 +683,7 @@
 - 사용자: 채널 멤버
 - 관련 화면/경로: 햄버거 메뉴 **첨부파일** / **이미지 모아보기** → `modalFileHub`(탭: 전체 파일·이미지). DM 포함 동일 `channelId` 기준. **전체 파일** 탭은 이미지(`contentType`/확장자 기준)를 제외한 첨부만 목록·다운로드; 이미지는 **이미지** 탭(썸네일 그리드·라이트박스)에만 표시. 이미지만 있을 때 전체 탭은 안내 문구(「이미지」 탭 안내)만 표시.
 - **이미지 업로드**: multipart `file`=**원본(풀 해상도)**, 선택 `preview`=클라이언트 `maybeCompressImageForUpload` 결과(JPEG, 원본과 다를 때만) — 서버는 `preview_storage_key`·`preview_size_bytes`에 저장. 미리보기 없는 구버전 첨부는 기존과 동일(원본만).
-- **이미지 표시**: 인라인·파일 허브 썸네일은 `GET .../files/{fileId}/preview`(미리보기 있으면 그 파일, 없으면 원본). 라이트박스(크게 보기)는 `GET .../download?variant=original`.
+- **이미지 표시**: 인라인·파일 허브 썸네일은 `GET .../files/{fileId}/preview`(미리보기 있으면 그 파일, 없으면 원본). 라이트박스(크게 보기): 서버 미리보기가 있고 `preview_size_bytes` < `size_bytes`이며 GIF/SVG가 아니면 먼저 **동일 `/preview`** 로 표시(대용량 원본 디코딩·전송 부담 감소)하고, 모달 **원본 보기**로 `GET .../download?variant=original` 전환. 미리보기가 없으면 라이트박스도 처음부터 `variant=original`. 구현: `openChannelImageLightbox`·`modalImagePreview`의 **원본 보기** 버튼.
 - **대용량 이미지 다운로드(프론트)**: 이미지이고 서버에 `hasPreview`·`preview_size_bytes`가 있으면 `modalImageDownloadChoice`에서 **원본** vs **미리보기(압축본)** — 각 버튼 옆에 `size_bytes` / `preview_size_bytes` 표시. 서버 미리보기가 없고 크기가 **약 512KB 이상**이면 **원본** vs **브라우저 JPEG 재인코딩**(GIF·SVG는 원본만). 메타가 없으면 `download-info`로 보강.
 - 관련 API:
   - `POST /api/channels/{channelId}/files` (메타데이터만 등록, 하위 호환)
@@ -705,6 +705,7 @@
   - 멤버십만 검증; 요청 `employeeNo`와 JWT subject 정합은 RBAC 단계에서 보완
 - 성능:
   - 목록은 페이지 크기 100으로 상한 고정(대량 조회로 인한 응답·직렬화 부담 완화)
+  - 파일 허브 **이미지** 탭: 스크롤 패널에 **보이는 셀만** 썸네일 요청(IntersectionObserver, root=`#fileHubPaneImages`). 처음 **전체 파일** 탭만 연 경우 **이미지** 탭으로 바꿀 때 placeholder 셀을 재observe해 로드 누락 방지(`setFileHubTab`).
   - 인라인·라이트박스용 `blob:` URL은 `app.js`의 `imageAttachmentBlobUrls`에 캐시해 **같은 채널 재입장·타임라인 갱신** 시 불필요한 재다운로드를 줄임(세션당 **약 120개** LRU, `clearSession` 시 전부 `revoke`)
   - 스레드 **루트별 댓글 수**(`threadCommentCount`)는 `MessageService.aggregateThreadCommentsForRoots`에서 **COMMENT_*** 메시지만 루트 id로 합산(타임라인 **답글 REPLY_*** 제외·동일 id 중복 제거). `GET .../messages/{rootId}/replies`도 원글 부모일 때 COMMENT_*만 반환
 - 테스트 기준:

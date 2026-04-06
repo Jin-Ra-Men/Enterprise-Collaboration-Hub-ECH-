@@ -1312,6 +1312,13 @@ html[data-theme="light"] .msg-reply-to-card:hover {
   flex-wrap: wrap;
   justify-content: center;
 }
+.image-preview-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
 .image-preview-caption {
   font-size: 14px;
   color: rgba(255, 255, 255, 0.85);
@@ -1322,6 +1329,16 @@ html[data-theme="light"] .msg-reply-to-card:hover {
 }
 .modal-image-preview .btn-primary {
   flex-shrink: 0;
+}
+.modal-image-preview .btn-secondary {
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.modal-image-preview .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .msg-system {
