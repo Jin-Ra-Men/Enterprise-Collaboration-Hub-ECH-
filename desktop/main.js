@@ -6,6 +6,11 @@ const { autoUpdater } = require("electron-updater");
 
 const DEFAULT_SERVER_URL = "http://ech.co.kr:8080";
 
+/** 창 제목: 패키지 버전은 `app.getVersion()`(package.json / 빌드 산출물). */
+function getWindowTitle() {
+  return `ECH — Enterprise Collaboration Hub — v${app.getVersion()}`;
+}
+
 /** exe 옆 ech-server.json (선택): serverUrl, updateBaseUrl(자동업데이트 전용 베이스 URL) */
 function readEchServerJson() {
   try {
@@ -45,7 +50,7 @@ function createTray() {
   }
 
   tray = new Tray(icon);
-  tray.setToolTip("ECH");
+  tray.setToolTip(`ECH v${app.getVersion()}`);
 
   const contextMenu = Menu.buildFromTemplate([
     {
@@ -93,6 +98,14 @@ function createMainWindow() {
     const indexInDev = path.join(__dirname, "..", "frontend", "index.html");
     mainWindow.loadFile(indexInDev);
   }
+
+  mainWindow.webContents.on("did-finish-load", () => {
+    try {
+      mainWindow.setTitle(getWindowTitle());
+    } catch {
+      /* ignore */
+    }
+  });
 
   // X 버튼 → 트레이로 숨기기 (완전 종료 아님)
   mainWindow.on("close", (e) => {

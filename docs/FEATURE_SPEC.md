@@ -883,7 +883,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 ## 데스크톱 (Electron) Windows 자동 업데이트
 - 목적: 설치형(NSIS) 클라이언트가 GitHub Releases(또는 내부망 generic 피드)에서 새 버전을 감지·내려받고, **다운로드 완료 시 메인 창에 모달**(`modalAppUpdate`)로 안내 — **확인** 시 `quitAndInstall`로 즉시 설치·재시작. **나중에**는 모달만 닫고, 이후 트레이에서 종료 시 `autoInstallOnAppQuit`로 적용 가능
 - 사용자: Windows에 ECH 데스크톱을 설치한 사용자
-- 관련 화면/경로: `desktop/main.js` — 패키지 실행(`app.isPackaged`) 시에만 `electron-updater` 초기화
+- 관련 화면/경로: `desktop/main.js` — 메인 창 제목에 `app.getVersion()` 표시(`did-finish-load` 후 `setTitle`), 트레이 툴팁에도 `ECH v{version}`. 패키지 실행(`app.isPackaged`) 시에만 `electron-updater` 초기화
 - 관련 API: GitHub Releases API(런타임) — `GET https://github.com/{owner}/{repo}/releases/latest` 계열로 메타 조회; 실제 파일은 릴리즈 에셋
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:

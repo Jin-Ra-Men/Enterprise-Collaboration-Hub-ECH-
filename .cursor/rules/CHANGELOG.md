@@ -6,6 +6,7 @@
 
 ### Added
 - **desktop**: 자동 업데이트 다운로드 완료 시 메인 UI 모달(`modalAppUpdate`)·`preload` IPC(`onUpdateDownloaded`, `installUpdateAndRestart`)·`quitAndInstall` 즉시 재시작. `checkForUpdatesAndNotify` 제거(토스트 중복 방지), `package.json` `0.0.10`
+- **desktop**: 창 제목·트레이 툴팁에 앱 버전(`app.getVersion()`) 표시
 
 ### Changed
 - **프론트**: 구성원 추가 `+` 버튼 — 텍스트 `+` 대신 SVG 십자(18px→14px·선 1.5)로 박스 내부 시각 중심 정렬, `.member-add-heading` 행은 좌측 정렬 유지
