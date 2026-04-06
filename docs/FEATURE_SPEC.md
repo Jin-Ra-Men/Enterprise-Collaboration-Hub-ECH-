@@ -904,6 +904,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 - 비고: `npm run build:win`은 `--publish never`로 업로드는 하지 않되, `publish` 설정이 있으면 `latest.yml` 등이 `dist`에 생성됨
 - **내부망(인터넷/GitHub 불가)**: 설치 디렉터리의 `ech-server.json`에 `serverUrl`(예: `http://ech.co.kr:8080`) 또는 `updateBaseUrl`(예: `http://host:8080/desktop-updates/`)이 있으면 `electron-updater`가 `generic` 피드로 전환되어 **백엔드** `GET /desktop-updates/latest.yml` 및 동일 베이스 URL의 설치 파일을 사용한다. 서버에는 `{APP_RELEASES_DIR}/desktop`(또는 `DESKTOP_UPDATE_DIR`)에 `latest.yml`·`ECH-Setup-{version}.exe`를 배치하고, yml의 `path`와 실제 파일명을 일치시킨다. 상세: `docs/DEPLOYMENT_WINDOWS.md`, `DesktopUpdateResourceConfig`.
 - **동료·운영자용 요약**: 동작 한눈에(비유·흐름·역할 표)는 `docs/DEPLOYMENT_WINDOWS.md`의 **「데스크톱 앱 자동 업데이트(내부망)」** 절 **「동작 개념」** 을 참고한다.
+- **대용량 이미지 다운로드 선택 모달**(`modalImageDownloadChoice`): **원본 파일** 옆 용량은 `channel_files.size_bytes`(서버 저장 크기) 기준. 업로드 시 `maybeCompressImageForUpload` 등으로 압축·리사이즈되면 로컬 원본(예: 파일명에 적힌 용량)과 다를 수 있음 — 모달 안내 문구로 구분. **압축본**은 클라이언트 JPEG 재인코딩이며 정확한 바이트는 저장 전까지 표기하지 않고 안내 문구로 처리.
 
 ---
 

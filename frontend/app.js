@@ -1092,10 +1092,26 @@ function openImageDownloadChoice({ filename, sizeBytes }) {
     const msgEl = document.getElementById("imageDownloadChoiceMessage");
     const fn = String(filename || "image");
     const sz = Number(sizeBytes) || 0;
+    const sizeStr = sz > 0 ? fmtSize(sz) : "알 수 없음";
     if (msgEl) {
-      msgEl.textContent =
-        `파일: ${fn}\n크기: ${fmtSize(sz)}\n\n원본을 받을지 압축본(JPEG)을 받을지 선택하세요.`;
+      msgEl.innerHTML = [
+        `<div class="image-download-choice-file">`,
+        `<span class="image-download-choice-k">파일명</span>`,
+        `<span class="image-download-choice-v">${escHtml(fn)}</span>`,
+        `</div>`,
+        `<p class="image-download-choice-hint">받을 방식을 선택하세요.</p>`,
+        `<p class="image-download-choice-note">`,
+        `※ <strong>표시 용량</strong>은 <strong>서버에 저장된 파일</strong> 크기입니다. `,
+        `파일명만 보고 용량을 짐작한 경우와 다를 수 있으며, 업로드 시 큰 이미지는 압축·리사이즈되어 저장될 수 있습니다. `,
+        `<strong>원본 파일</strong>은 그 저장본을 그대로 내려받습니다. `,
+        `<strong>압축본</strong>은 브라우저에서 JPEG로 다시 인코딩한 파일입니다.`,
+        `</p>`,
+      ].join("");
     }
+    const origSizeEl = document.getElementById("imageDownloadOriginalSize");
+    const compSizeEl = document.getElementById("imageDownloadCompressedSize");
+    if (origSizeEl) origSizeEl.textContent = sizeStr;
+    if (compSizeEl) compSizeEl.textContent = "JPEG 재인코딩 · 대개 용량 감소";
     imageDownloadChoiceEscHandler = (e) => {
       if (e.key === "Escape") closeModal("modalImageDownloadChoice");
     };
