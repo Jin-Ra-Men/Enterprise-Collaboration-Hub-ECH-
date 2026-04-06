@@ -42,6 +42,7 @@
 - 첫 업데이터 포함 빌드는 사용자가 **한 번** 새 설치 파일로 수동 설치해야 할 수 있음
 - **내부망(PC가 GitHub 접속 불가)**: `electron-updater` 기본값은 GitHub Releases라 자동 업데이트가 동작하지 않는다. 대응: (1) 설치 프로그램 옆 `ech-server.json`에 `serverUrl`(또는 `updateBaseUrl`)을 내부 백엔드로 두면, 업데이트 메타는 `http://{백엔드}/desktop-updates/latest.yml` 에서 받는다. (2) WEB 서버에 `C:\ECH\releases\desktop\`(또는 `DESKTOP_UPDATE_DIR`)에 `latest.yml`과 `ECH-Setup-{version}.exe`를 배포한다. 백엔드는 `DesktopUpdateResourceConfig`로 해당 디렉터리를 `/desktop-updates/**` 로 노출한다.
 - **단일 인스턴스·아이콘**: `main.js`에서 `app.requestSingleInstanceLock()`으로 중복 실행을 막고, 재실행 시 기존 창 포커스. Windows는 EXE/작업 표시줄에 **`assets/icon.ico`** 임베드가 안정적이며, `prebuild:win`(`scripts/generate-icon-ico.mjs`)이 `icon.png`에서 ICO를 생성한다. 런타임은 Windows에서 `.ico`를 우선 로드하고 `app.setAppUserModelId('com.ech.desktop')`를 설정한다.
+- **Windows 시작 시 실행**: 설치본에서 트레이 **우클릭** → **Windows 시작 시 실행**(`app.setLoginItemSettings`). 개발 모드에서는 비활성. `preload`에 `getOpenAtLogin` / `setOpenAtLogin`(웹 UI 연동 선택).
 - **설치 경로(NSIS)**: `package.json` `build.nsis.perMachine: true` — 기본 **`%PROGRAMFILES%\ECH\`**. `ech-server.json`은 exe 옆 또는 **`%ProgramData%\ECH\ech-server.json`** (`readEchServerJson` 순서).
 
 ## 2-1) 개발자 / 운영·관리자 — 무엇부터 보면 되나

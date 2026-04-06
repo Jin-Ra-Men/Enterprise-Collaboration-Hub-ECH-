@@ -41,5 +41,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
       return Promise.resolve(false);
     }
   },
+  /** 부팅/로그인 시 자동 실행(설치본 전용). */
+  getOpenAtLogin: () => ipcRenderer.invoke("ech-get-open-at-login"),
+  setOpenAtLogin: (enabled) => ipcRenderer.invoke("ech-set-open-at-login", enabled),
 });
 

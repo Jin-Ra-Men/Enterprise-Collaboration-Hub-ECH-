@@ -85,17 +85,45 @@ function createTrayNativeImage(iconPath) {
   }
 }
 
-function createTray() {
-  const iconPath = resolveAppIconPath();
-  const icon = createTrayNativeImage(iconPath);
+function buildTrayMenu() {
+  let openAtLoginChecked = false;
+  try {
+    if (app.isPackaged) {
+      openAtLoginChecked = app.getLoginItemSettings().openAtLogin === true;
+    }
+  } catch {
+    /* ignore */
+  }
+  const platform = process.platform;
+  const startupLabel =
+    platform === "darwin"
+      ? "로그인 시 자동 실행"
+      : platform === "win32"
+        ? "Windows 시작 시 실행"
+        : "시작 시 자동 실행";
 
-  tray = new Tray(icon);
-  tray.setToolTip(`ECH v${app.getVersion()}`);
-
-  const contextMenu = Menu.buildFromTemplate([
+  return Menu.buildFromTemplate([
     {
       label: "열기",
       click: () => showMainWindow(),
+    },
+    { type: "separator" },
+    {
+      label: startupLabel,
+      type: "checkbox",
+      checked: openAtLoginChecked,
+      enabled: app.isPackaged,
+      click: (menuItem) => {
+        if (!app.isPackaged) return;
+        try {
+          app.setLoginItemSettings({
+            openAtLogin: menuItem.checked,
+            path: process.execPath,
+          });
+        } catch (e) {
+          console.warn("[ECH] setLoginItemSettings failed:", e?.message || e);
+        }
+      },
     },
     { type: "separator" },
     {
@@ -106,8 +134,19 @@ function createTray() {
       },
     },
   ]);
+}
 
-  tray.setContextMenu(contextMenu);
+function createTray() {
+  const iconPath = resolveAppIconPath();
+  const icon = createTrayNativeImage(iconPath);
+
+  tray = new Tray(icon);
+  tray.setToolTip(`ECH v${app.getVersion()}`);
+
+  tray.setContextMenu(buildTrayMenu());
+  tray.on("right-click", () => {
+    tray.setContextMenu(buildTrayMenu());
+  });
 
   // 트레이 아이콘 클릭(좌클릭) → 창 표시
   tray.on("click", () => showMainWindow());
@@ -227,6 +266,30 @@ ipcMain.handle("ech-install-update", () => {
     console.warn("[ECH] quitAndInstall failed:", e?.message || e);
   }
   return true;
+});
+
+/** 설치본(NSIS)에서만 의미 있음. 개발 모드(`electron .`)에서는 비활성. */
+ipcMain.handle("ech-get-open-at-login", () => {
+  try {
+    if (!app.isPackaged) return { openAtLogin: false, supported: false };
+    return { openAtLogin: app.getLoginItemSettings().openAtLogin === true, supported: true };
+  } catch {
+    return { openAtLogin: false, supported: app.isPackaged };
+  }
+});
+
+ipcMain.handle("ech-set-open-at-login", (_, enabled) => {
+  if (!app.isPackaged) return false;
+  try {
+    app.setLoginItemSettings({
+      openAtLogin: enabled === true,
+      path: process.execPath,
+    });
+    return true;
+  } catch (e) {
+    console.warn("[ECH] ech-set-open-at-login failed:", e?.message || e);
+    return false;
+  }
 });
 
 app.on("second-instance", () => {

@@ -105,6 +105,7 @@ New-Item -ItemType Directory -Force C:\ECH\releases\desktop
 - **`ech-server.json`**(선택, `serverUrl` / `updateBaseUrl`)은 앱이 아래 **먼저 존재하는 경로**를 읽습니다.
   1. `ECH.exe`와 같은 폴더 — 예: `C:\Program Files\ECH\ech-server.json` (일반 사용자는 수정이 어려울 수 있음)
   2. **`%ProgramData%\ECH\ech-server.json`** — 예: `C:\ProgramData\ECH\ech-server.json` (배포·그룹 정책으로 넣기에 적합)
+- **Windows 시작 시 자동 실행**: 사용자가 트레이 아이콘 **우클릭** → **Windows 시작 시 실행**을 켜면 Electron이 로그인 시 실행 목록에 등록한다. 조직 정책(GPO 등)으로 사용자 시작 프로그램이 제한되면 동작하지 않을 수 있다.
 
 ### 데스크톱 앱 자동 업데이트(내부망)
 

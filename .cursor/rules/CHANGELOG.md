@@ -4,6 +4,9 @@
 
 ## 2026-04-06
 
+### Added
+- **데스크톱(Electron)**: Windows 시작 시 자동 실행 — 트레이 우클릭 메뉴 체크박스, `app.setLoginItemSettings`; IPC `ech-get-open-at-login` / `ech-set-open-at-login`·`preload` 노출. `README.md`, `docs/FEATURE_SPEC.md`, `docs/HANDOVER.md`, `docs/DEPLOYMENT_WINDOWS.md`
+
 ### Changed
 - **프론트**: 이미지 모아보기·인라인·검색 **크게 보기** — 서버 미리보기가 있으면 라이트박스에 먼저 `/preview`(JPEG) 표시, **원본 보기**로 `variant=original` 전환; 파일 허브 이미지 탭 썸네일은 스크롤 영역 진입 시에만 로드(IntersectionObserver)·탭 전환 시 재observe. `index.html` `imagePreviewLoadOriginal`, `styles.css` 모달 보조 버튼
 

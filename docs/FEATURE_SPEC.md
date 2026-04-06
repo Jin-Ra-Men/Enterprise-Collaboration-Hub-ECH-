@@ -914,6 +914,15 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 ---
 
+## 데스크톱 (Electron) 부팅·로그인 시 자동 실행
+- 목적: Windows 로그인(또는 부팅 후 첫 로그인) 시 ECH 데스크톱을 자동 실행
+- 사용자: NSIS 설치본(`app.isPackaged`) 사용자. 개발 모드(`electron .`)에서는 등록 대상이 아니며 트레이 메뉴 항목이 비활성
+- 관련 경로: `desktop/main.js` — `app.setLoginItemSettings` / `getLoginItemSettings`, `path: process.execPath`. 트레이 **우클릭** 메뉴에 체크박스 — Windows 문구 **Windows 시작 시 실행**, macOS **로그인 시 자동 실행**, 그 외 **시작 시 자동 실행**. 메뉴를 열 때마다 `buildTrayMenu()`로 현재 OS 등록 상태를 반영
+- IPC(선택 UI 연동): `ech-get-open-at-login`, `ech-set-open-at-login` → `preload.js`의 `electronAPI.getOpenAtLogin` / `setOpenAtLogin`
+- 예외: 조직 GPO 등으로 **사용자 시작 프로그램**이 막히면 OS에 따라 등록이 실패하거나 무시될 수 있음. Windows **설정 → 앱 → 시작 프로그램**에서 동일 항목 확인 가능
+
+---
+
 ## AD 자동 로그인 (Phase 5-1, 2026-04-03)
 
 - 목적: AD 도메인 가입 사내 PC에서 Electron 앱 실행 시 별도 로그인 없이 자동 인증
