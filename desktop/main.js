@@ -46,15 +46,24 @@ function resolveAppIconPath() {
   return fs.existsSync(iconPath) ? iconPath : null;
 }
 
+/** Windows 트레이는 작은 규격이 안정적(미적용 시 기본 Electron 아이콘으로 보일 수 있음). */
+function createTrayNativeImage(iconPath) {
+  if (!iconPath) return nativeImage.createEmpty();
+  try {
+    const image = nativeImage.createFromPath(iconPath);
+    if (image.isEmpty()) return nativeImage.createEmpty();
+    if (process.platform === "win32") {
+      return image.resize({ width: 16, height: 16 });
+    }
+    return image;
+  } catch {
+    return nativeImage.createEmpty();
+  }
+}
+
 function createTray() {
   const iconPath = resolveAppIconPath();
-
-  let icon;
-  try {
-    icon = iconPath ? nativeImage.createFromPath(iconPath) : nativeImage.createEmpty();
-  } catch {
-    icon = nativeImage.createEmpty();
-  }
+  const icon = createTrayNativeImage(iconPath);
 
   tray = new Tray(icon);
   tray.setToolTip(`ECH v${app.getVersion()}`);

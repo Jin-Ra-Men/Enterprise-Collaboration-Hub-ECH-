@@ -11,6 +11,7 @@
 ### Changed
 - **백엔드**: `build.gradle` 프로젝트 `version` `0.1.0`으로 상향, `bootJar` 산출물명 `ech-backend-{version}.jar` 고정(데스크톱 0.1.0과 맞춤)
 - **desktop**: `assets/tray-icon.png` → `assets/icon.png` 통합, 트레이·창·NSIS 빌드(`win.icon`)에 동일 아이콘 사용
+- **desktop** `main.js`: Windows 트레이 이미지를 **16×16**으로 리사이즈 후 `Tray`에 설정(큰 PNG 그대로 쓸 때 기본 Electron 아이콘처럼 보이는 현상 완화)
 - **desktop**: `app.requestSingleInstanceLock()` — 이미 실행 중이면 두 번째 프로세스 종료, 재실행 시 기존 창 포커스(`second-instance`)
 - **프론트**: 조직 인원 정렬 `sortOrgDirectoryMembers` — 조직도 모달·구성원 추가 피커·관리자 사용자 표에 공통 적용(팀장 → 직급 → 이름 가나다). 사이드바 **로그아웃** 버튼 제거
 
