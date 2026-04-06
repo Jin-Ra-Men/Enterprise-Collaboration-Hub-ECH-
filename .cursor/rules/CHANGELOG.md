@@ -4,6 +4,9 @@
 
 ## 2026-04-06
 
+### Docs
+- **GitHub 릴리즈**: **Source code (zip/tar.gz)** 는 GitHub가 태그 기준으로 **자동 생성**하는 항목이며, `publish-electron-github-release.ps1` 업로드 대상(설치 exe·`latest.yml`·blockmap)과 구분 — `docs/HANDOVER.md`, `docs/DEPLOYMENT_WINDOWS.md`, `README.md`, `tools/publish-electron-github-release.ps1` 주석
+
 ### Release
 - **GitHub `v1.0.0`**: **운영 실제 배포** — 기능·코드 변경 없이 **1.0.0** 정식 버전 표기(Semantic Versioning). `v0.1.9`와 **동일 코드베이스**. `desktop/package.json`·`backend/build.gradle` **`1.0.0`**
 

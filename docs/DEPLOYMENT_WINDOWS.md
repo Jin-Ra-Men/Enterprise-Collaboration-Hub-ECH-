@@ -112,6 +112,7 @@ New-Item -ItemType Directory -Force C:\ECH\releases\desktop
 
 - **한 줄 요약**: 설치된 ECH 데스크톱 앱이 **주기적으로(또는 실행 시)** 사내 백엔드에 올려둔 **「최신 버전 안내」(`latest.yml`)** 과 **설치 파일(NSIS `.exe`)** 을 받아, 새 버전이 있으면 사용자에게 알리고 설치할 수 있게 하는 방식입니다. 인터넷의 GitHub Releases 대신 **회사망 안의 웹 서버(백엔드와 동일 호스트)** 가 그 역할을 합니다.
 - **비유**: 스마트폰 앱이 앱스토어에서 업데이트를 확인하는 것과 같고, **앱스토어 자리에 사내 서버**가 있다고 보면 됩니다. PC가 **외부 인터넷 없이** 내부망만 써도, **업데이트 URL만 사내 주소**로 잡혀 있으면 동일하게 동작합니다.
+- **GitHub Releases를 쓸 때**: 릴리즈 페이지에 **Source code (zip/tar.gz)** 가 **GitHub가 태그 기준으로 자동 생성**해 붙는 항목입니다. `tools/publish-electron-github-release.ps1`가 추가로 올리는 **설치 exe·`latest.yml`·blockmap**과는 별개이며, **공개 저장소**에서는 누구나 소스 아카이브를 받을 수 있습니다. **소스 비공개가 정책이면** Private 저장소 또는 **내부망 `/desktop-updates/`만** 사용하는 배포를 권장합니다.
 - **흐름**:
   1. 사용자 PC의 **ECH.exe**가 `ech-server.json`의 **`serverUrl`**(또는 `updateBaseUrl`)을 읽습니다.
   2. **`electron-updater`** 가 `{serverUrl}/desktop-updates/latest.yml` 을 요청해 **현재 배포된 버전·파일명**을 확인합니다.

@@ -37,6 +37,7 @@
 ## 2-0-2) 데스크톱(Electron) 배포·자동 업데이트
 - 빌드: `cd desktop && npm install && npm run build:win` → `desktop/dist/`에 NSIS 설치 파일, **`latest.yml`**, (생성 시) **`*.exe.blockmap`**
 - GitHub 릴리즈: **설치 파일만** 올리면 `electron-updater`가 메타를 못 읽어 자동 업데이트가 동작하지 않음. 동일 태그에 `latest.yml`과 blockmap까지 올릴 것
+- **GitHub 릴리즈에 보이는 “Source code (zip/tar.gz)”**: GitHub가 **태그 시점의 저장소 스냅샷**을 **자동으로 붙이는 항목**이며, `publish-electron-github-release.ps1`로 올리는 **설치 exe·`latest.yml`·blockmap**과는 별개입니다. 공개 저장소에서는 누구나 소스를 받을 수 있으므로 **민감하면 Private 저장소** 또는 **내부망 `desktop-updates/`만** 쓰는 배포를 권장합니다. **표준 GitHub 기능만으로는 비활성화·삭제가 어렵습니다.**
 - 업로드 스크립트: `powershell -File ./tools/publish-electron-github-release.ps1` (환경변수 `GITHUB_TOKEN`). 인자 생략 시 태그는 `package.json`의 `version`에 맞춘 `v{version}`
 - 첫 업데이터 포함 빌드는 사용자가 **한 번** 새 설치 파일로 수동 설치해야 할 수 있음
 - **내부망(PC가 GitHub 접속 불가)**: `electron-updater` 기본값은 GitHub Releases라 자동 업데이트가 동작하지 않는다. 대응: (1) 설치 프로그램 옆 `ech-server.json`에 `serverUrl`(또는 `updateBaseUrl`)을 내부 백엔드로 두면, 업데이트 메타는 `http://{백엔드}/desktop-updates/latest.yml` 에서 받는다. (2) WEB 서버에 `C:\ECH\releases\desktop\`(또는 `DESKTOP_UPDATE_DIR`)에 `latest.yml`과 `ECH-Setup-{version}.exe`를 배포한다. 백엔드는 `DesktopUpdateResourceConfig`로 해당 디렉터리를 `/desktop-updates/**` 로 노출한다.
