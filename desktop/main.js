@@ -22,16 +22,25 @@ function getWindowTitle() {
   return `ECH — Enterprise Collaboration Hub — v${app.getVersion()}`;
 }
 
-/** exe 옆 ech-server.json (선택): serverUrl, updateBaseUrl(자동업데이트 전용 베이스 URL) */
+/**
+ * 선택 설정: serverUrl, updateBaseUrl(자동업데이트 전용 베이스 URL)
+ * 1) ECH.exe와 같은 폴더의 ech-server.json
+ * 2) Program Files 설치 시 사용자가 쓰기 어려울 수 있어 %ProgramData%\ECH\ech-server.json 도 지원
+ */
 function readEchServerJson() {
-  try {
-    const cfgPath = path.join(path.dirname(process.execPath), "ech-server.json");
-    if (fs.existsSync(cfgPath)) {
-      const raw = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
-      return raw && typeof raw === "object" ? raw : {};
+  const candidates = [
+    path.join(path.dirname(process.execPath), "ech-server.json"),
+    path.join(process.env.PROGRAMDATA || "C:\\ProgramData", "ECH", "ech-server.json"),
+  ];
+  for (const cfgPath of candidates) {
+    try {
+      if (fs.existsSync(cfgPath)) {
+        const raw = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
+        if (raw && typeof raw === "object") return raw;
+      }
+    } catch {
+      /* ignore */
     }
-  } catch {
-    /* ignore */
   }
   return {};
 }

@@ -99,13 +99,20 @@ New-Item -ItemType Directory -Force C:\ECH\releases
 New-Item -ItemType Directory -Force C:\ECH\releases\desktop
 ```
 
+### ECH 데스크톱 설치 경로(Windows)
+
+- NSIS **`perMachine: true`** 로 **전역(All Users) 설치**이며, 기본 위치는 **`%PROGRAMFILES%\ECH\`** (예: `C:\Program Files\ECH\ECH.exe`) 입니다. 설치 시 **관리자(UAC) 승인**이 필요합니다.
+- **`ech-server.json`**(선택, `serverUrl` / `updateBaseUrl`)은 앱이 아래 **먼저 존재하는 경로**를 읽습니다.
+  1. `ECH.exe`와 같은 폴더 — 예: `C:\Program Files\ECH\ech-server.json` (일반 사용자는 수정이 어려울 수 있음)
+  2. **`%ProgramData%\ECH\ech-server.json`** — 예: `C:\ProgramData\ECH\ech-server.json` (배포·그룹 정책으로 넣기에 적합)
+
 ### 데스크톱 앱 자동 업데이트(내부망)
 
 클라이언트 PC가 **GitHub에 나갈 수 없으면** `electron-updater`가 릴리즈를 받지 못합니다. 이 경우 백엔드가 같은 호스트에서 업데이트 파일을 제공합니다.
 
 1. **백엔드**가 `GET http://{백엔드}:8080/desktop-updates/latest.yml` 및 동일 경로의 설치 파일(`ECH-Setup-x.x.x.exe`)을 제공합니다. 파일 실제 위치는 기본값 `{APP_RELEASES_DIR}/desktop`(예: `C:\ECH\releases\desktop`). 다른 경로를 쓰려면 환경변수 `DESKTOP_UPDATE_DIR`을 설정합니다.
 2. 새 버전 배포 시 `desktop/dist/`에서 **`latest.yml`**, **`ECH-Setup-{version}.exe`**, (있으면) **`.blockmap`** 을 위 `desktop` 폴더에 복사합니다. `latest.yml` 안의 `url`/`path`와 디스크上的 파일명이 일치해야 합니다.
-3. 사용자 PC의 **설치 폴더 옆 `ech-server.json`** 에 `serverUrl`(예: `http://ech.co.kr:8080`)이 있으면, 앱은 자동으로 `{serverUrl}/desktop-updates/` 를 업데이트 소스로 사용합니다. 업데이트 URL만 따로 쓰려면 `updateBaseUrl`을 지정합니다.
+3. 사용자 PC에 **`ech-server.json`** 으로 `serverUrl`(예: `http://ech.co.kr:8080`)을 알려주면, 앱은 자동으로 `{serverUrl}/desktop-updates/` 를 업데이트 소스로 사용합니다. 파일 위치는 위 **「ECH 데스크톱 설치 경로」** 절을 따릅니다. 업데이트 URL만 따로 쓰려면 `updateBaseUrl`을 지정합니다.
 4. `ech-server.json`이 없고 GitHub도 막혀 있으면 자동 업데이트는 계속 실패합니다 — 내부망에서는 반드시 `ech-server.json` + 위 파일 배포를 권장합니다.
 
 ### 3-2. 파일 복사

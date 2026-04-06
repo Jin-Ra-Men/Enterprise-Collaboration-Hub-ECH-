@@ -4,7 +4,11 @@
 
 ## 2026-04-06
 
+### Changed
+- **desktop**: NSIS **`perMachine: true`** — Windows에 **`%PROGRAMFILES%\ECH\`** 전역 설치(UAC). `ech-server.json`은 exe 옆 또는 **`%ProgramData%\ECH\ech-server.json`** 추가 지원(`readEchServerJson`)
+
 ### Release
+- **GitHub `v0.1.4`**: Program Files 설치·`ech-server.json` ProgramData 경로·문서 반영. `desktop/package.json`·`backend/build.gradle` **`0.1.4`**
 - **GitHub `v0.1.3`**: Windows **`.ico` 임베드**로 설치본·작업 표시줄 아이콘이 ECH 브랜드로 표시되도록 정리(`icon.ico`·`prebuild:win`·`AppUserModelId`). `desktop/package.json`·`backend/build.gradle` **`0.1.3`**
 
 ### Fixed
