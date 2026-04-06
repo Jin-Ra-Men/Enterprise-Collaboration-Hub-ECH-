@@ -12,6 +12,7 @@
 - **프론트**: `INLINE_IMAGE_EXT`를 `isImageContentType`보다 앞에 선언해 이미지 판별 시 참조 순서 정리
 
 ### Release
+- **GitHub `v0.1.6`**: DM 헤더 프레즌스 점·대용량 이미지 다운로드 원본/JPEG 선택·`v0.1.5` 이후 누적 반영. `desktop/package.json`·`backend/build.gradle` **`0.1.6`**
 - **GitHub `v0.1.5`**: 구성원 추가 **선택 부서원** 카드형 목록 UI·`v0.1.4` 이후 누적 반영. `desktop/package.json`·`backend/build.gradle` **`0.1.5`**
 
 ### Fixed
