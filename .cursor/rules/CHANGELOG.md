@@ -4,6 +4,9 @@
 
 ## 2026-04-06
 
+### Release
+- **GitHub `v0.1.7`**: 이미지 **서버 미리보기**(`multipart preview`, `GET .../preview`, 다운로드 `variant=original|preview`)·원본/미리보기 **용량 표시**·`channel_files` `preview_*` 컬럼(마이그레이션 `docs/sql/migrate_channel_files_preview.sql`). `desktop/package.json`·`backend/build.gradle` **`0.1.7`**
+
 ### Changed
 - **프론트·백엔드(연동 완료)**: 이미지 업로드 시 `file`=원본, 선택 `preview`=업로드 전 JPEG 압축본을 함께 전송해 서버에 **미리보기 스토리지** 저장; 인라인·썸네일은 `GET .../preview`, 라이트박스는 `variant=original` 스트림. 다운로드 모달은 서버 미리보기가 있으면 **원본/미리보기** 각각 `download-info` 기준 용량 표시, 없으면 기존처럼 클라이언트 JPEG 재인코딩 안내
 - **프론트**: `modalImageDownloadChoice` 두 번째 버튼 표시 문구를 **미리보기(압축)** 로 통일
