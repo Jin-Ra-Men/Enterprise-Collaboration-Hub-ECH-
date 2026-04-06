@@ -4,6 +4,10 @@
 
 ## 2026-04-06
 
+### Release
+- **GitHub `v0.1.1`**: 데스크톱 UX 정비(아이콘 통일·단일 인스턴스·조직 정렬·사이드바 로그아웃 제거) 반영. `desktop/package.json`·`backend/build.gradle` **`0.1.1`**
+- **desktop `assets/icon.png`**: NSIS 빌드(`win.icon`) 요구 **최소 256×256** 충족을 위해 동일 디자인 업스케일(고품질 보간)
+
 ### Changed
 - **백엔드**: `build.gradle` 프로젝트 `version` `0.1.0`으로 상향, `bootJar` 산출물명 `ech-backend-{version}.jar` 고정(데스크톱 0.1.0과 맞춤)
 - **desktop**: `assets/tray-icon.png` → `assets/icon.png` 통합, 트레이·창·NSIS 빌드(`win.icon`)에 동일 아이콘 사용
