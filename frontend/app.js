@@ -2029,6 +2029,24 @@ async function fetchLastReadMessageId(channelId) {
 }
 
 /**
+ * firstMsgEl 이후 DOM에 이어지는 채팅 행 중, 현재 사용자가 아닌 발신자가 하나라도 있는지.
+ * lastRead 조회가 읽음 갱신보다 앞서는 타이밍(첨부 직후 loadMessages 등)에서
+ * 내 메시지 위에만 "새 메시지" 선이 뜨는 것을 막는다.
+ */
+function hasChatMessageFromOtherAfter(firstMsgEl, myEmp) {
+  if (!firstMsgEl || !myEmp) return false;
+  let el = firstMsgEl;
+  while (el) {
+    if (el.classList?.contains("msg-row") && el.classList?.contains("msg-chat")) {
+      const sid = String(el.dataset.senderId || "").trim();
+      if (sid && sid !== myEmp) return true;
+    }
+    el = el.nextElementSibling;
+  }
+  return false;
+}
+
+/**
  * lastReadMid 이후에 새 메시지가 있을 경우 "새 메시지" 구분선을 삽입하고
  * 첫 번째 새 메시지 앞에 위치시킨 뒤 그 구분선을 반환한다.
  * 삽입하지 않은 경우 null을 반환한다.
@@ -2046,6 +2064,11 @@ function showNewMsgsDivider(lastReadMid) {
     firstNewEl = firstNewEl.nextElementSibling;
   }
   if (!firstNewEl) return null; // 새 메시지 없음(이미 최신까지 읽은 상태)
+
+  const myEmp = String(currentUser?.employeeNo || "").trim();
+  if (myEmp && !hasChatMessageFromOtherAfter(firstNewEl, myEmp)) {
+    return null;
+  }
 
   const div = document.createElement("div");
   div.className = "msg-system msg-read-anchor-divider";
@@ -4138,10 +4161,9 @@ function initSocket() {
       if (msg.messageId != null) {
         scheduleMarkChannelReadCaughtUp(activeChannelId);
       }
-      // 같은 채널을 보고 있어도 창이 최소화·트레이·다른 앱 포커스면 OS/토스트 알림이 필요함
-      // (pushNewMessageToast 내부에서 포그라운드 동일 채널만 억제)
+      // 같은 채널이어도 탭/창이 가려졌을 때만 일반 토스트(가시 상태면 생략 — 파일 선택창 등으로 포커스만 잃은 경우 포함)
       // 내 멘션은 위에서 maybeShowMentionToastFromMessage → pushMentionToast가 이미 처리 — 중복 알림 방지
-      if (isInBackgroundForOsNotification()) {
+      if (typeof document !== "undefined" && document.hidden) {
         const myEmp = String(currentUser.employeeNo || "").trim();
         const mentioned = extractMentionEmployeeNosFromTextClient(msg.text || "");
         if (!myEmp || !mentioned.includes(myEmp)) {
@@ -4516,8 +4538,8 @@ function pushNewMessageToast(msg) {
   const myEmp = String(currentUser.employeeNo || "").trim();
   const sender = String(msg.senderId ?? msg.sender_id ?? "").trim();
   if (sender && myEmp && sender === myEmp) return;
-  // 창이 포그라운드(보이는 상태)일 때만 현재 채널 억제 — 최소화/비활성이면 OS 알림 허용
-  if (activeChannelId != null && Number(activeChannelId) === cid && !isInBackgroundForOsNotification()) return;
+  // 동일 채널이고 탭/창이 보이는 동안에는 토스트 생략(파일 선택 대화상자 등으로 포커스만 잃은 경우는 document.hidden 이 false)
+  if (activeChannelId != null && Number(activeChannelId) === cid && typeof document !== "undefined" && !document.hidden) return;
   if (msg.messageId != null) {
     const mid = String(msg.messageId);
     if (shownNewMessageToastIds.has(mid)) return;

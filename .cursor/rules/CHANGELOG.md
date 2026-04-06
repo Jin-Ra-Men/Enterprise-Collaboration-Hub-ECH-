@@ -4,6 +4,9 @@
 
 ## 2026-04-06
 
+### Fixed
+- **프론트**: 첨부·이미지 업로드 직후 `loadMessages` 시 읽음 포인터보다 앞선 타이밍으로 **내 메시지 앞에만** 「새 메시지」 구분선이 뜨던 현상 — lastRead 이후 DOM에 **다른 사람 메시지가 없으면** 구분선 미삽입(`hasChatMessageFromOtherAfter`). 동일 채널 일반 알림은 `document.hidden` 기준으로 정리(파일 대화상자 포커스 이슈). `docs/FEATURE_SPEC.md` 읽음 포인터 비고
+
 ### Added
 - **데스크톱(Electron)**: Windows 시작 시 자동 실행 — 트레이 우클릭 메뉴 체크박스, `app.setLoginItemSettings`; IPC `ech-get-open-at-login` / `ech-set-open-at-login`·`preload` 노출. `README.md`, `docs/FEATURE_SPEC.md`, `docs/HANDOVER.md`, `docs/DEPLOYMENT_WINDOWS.md`
 
