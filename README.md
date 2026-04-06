@@ -172,7 +172,8 @@ graph LR
 - 서버 기동 시 기본 정책 자동 시드 (기본값: 비활성)
 
 ### 데스크톱 자동 업데이트(내부망)
-- GitHub에 나갈 수 없는 PC는 `ech-server.json`의 `serverUrl`로 백엔드 `http://.../desktop-updates/latest.yml`을 사용하도록 설정됨. 서버에는 `releases/desktop`(또는 `DESKTOP_UPDATE_DIR`)에 `latest.yml`·`ECH-Setup-*.exe` 배포. 자세한 절차: `docs/DEPLOYMENT_WINDOWS.md`, `docs/HANDOVER.md`.
+- GitHub에 나갈 수 없는 PC는 `ech-server.json`의 `serverUrl`로 백엔드 `http://.../desktop-updates/latest.yml`을 사용하도록 설정됨. 서버에는 `releases/desktop`(또는 `DESKTOP_UPDATE_DIR`)에 `latest.yml`·`ECH-Setup-*.exe` 배포.
+- **개념·흐름·역할 표**는 `docs/DEPLOYMENT_WINDOWS.md`의 **「데스크톱 앱 자동 업데이트(내부망)」** 절(동작 개념 / 운영 절차)을 참고. 운영 요약: `docs/HANDOVER.md`.
 
 ### 앱 기초설정 (app_settings)
 - 관리자 화면 **설정** 탭에서 목록 조회·값 수정·**신규 키 추가** (`POST /api/admin/settings`)
@@ -257,4 +258,4 @@ npm start
 - **설치 위치(Windows)**: NSIS **`perMachine`** 으로 **`%PROGRAMFILES%\ECH\`** 에 전역 설치(UAC). 선택 설정 `ech-server.json`은 `ECH.exe` 옆 또는 **`%ProgramData%\ECH\ech-server.json`** 에 둘 수 있음(자세한 절차: `docs/DEPLOYMENT_WINDOWS.md`).
 
 - Windows 설치 파일(NSIS): `desktop`에서 `npm run build:win` → `desktop/dist/ECH Setup {version}.exe`(버전은 `desktop/package.json`의 `version`). Electron은 `file://`로 UI를 열므로 API/소켓은 기본 **`http://localhost:8080`**, **`http://localhost:3001`** 로 붙습니다(백엔드·Realtime을 로컬에서 띄워야 로그인 가능). 다른 호스트를 쓰려면 `index.html`의 `<meta name="ech-api-base">` / `<meta name="ech-realtime-url">` 또는 `localStorage` `ech_realtime_url` 로 지정합니다.
-- **자동 업데이트**: 패키지 실행 시 `electron-updater`가 GitHub Releases(`build.publish`의 owner/repo)를 조회합니다. 릴리즈 에셋에 **`latest.yml`**과 설치 파일(및 가능하면 **`*.exe.blockmap`**)을 함께 올려야 합니다. `tools/publish-electron-github-release.ps1`로 일괄 업로드할 수 있습니다(`GITHUB_TOKEN` 필요). 새 버전 다운로드가 끝나면 **메인 창 모달**에서 안내 후 **확인** 시 설치·재시작합니다.
+- **자동 업데이트**: 패키지 실행 시 `electron-updater`가 GitHub Releases(`build.publish`의 owner/repo)를 조회합니다. 릴리즈 에셋에 **`latest.yml`**과 설치 파일(및 가능하면 **`*.exe.blockmap`**)을 함께 올려야 합니다. `tools/publish-electron-github-release.ps1`로 일괄 업로드할 수 있습니다(`GITHUB_TOKEN` 필요). 새 버전 다운로드가 끝나면 **메인 창 모달**에서 안내 후 **확인** 시 설치·재시작합니다. **내부망**에서는 GitHub 대신 사내 백엔드 `/desktop-updates/` 를 쓰는 방식이며, 설명·절차는 `docs/DEPLOYMENT_WINDOWS.md` **「데스크톱 앱 자동 업데이트(내부망)」** 를 본다.

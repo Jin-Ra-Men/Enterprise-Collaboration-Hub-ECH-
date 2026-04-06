@@ -4,6 +4,10 @@
 
 ## 2026-04-06
 
+### Docs
+- **`docs/DEPLOYMENT_WINDOWS.md`**: 내부망 **데스크톱 자동 업데이트** — 동료·운영자용 **동작 개념**(한 줄 요약·비유·흐름·Mermaid·역할 표) 및 기존 번호 목록을 **운영 절차**로 정리; `latest.yml`/`path` 오타(디스크上的→디스크의) 수정
+- **`README.md`**: 내부망 자동 업데이트 설명을 `DEPLOYMENT_WINDOWS.md` 해당 절로 안내
+
 ### Added
 - **프론트**: 대용량(약 512KB 이상) **이미지** 다운로드 시 `modalImageDownloadChoice`로 **원본** / **JPEG 압축본** 선택; GIF·SVG는 원본만
 - **프론트**: DM **채팅 헤더**(`#chatChannelPrefix`)를 사이드바와 동일한 **프레즌스 점** 표시(`updateChatHeaderDmPresence`·`dmSidebarLeadingHtml`)

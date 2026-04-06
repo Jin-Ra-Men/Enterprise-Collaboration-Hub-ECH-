@@ -108,10 +108,42 @@ New-Item -ItemType Directory -Force C:\ECH\releases\desktop
 
 ### 데스크톱 앱 자동 업데이트(내부망)
 
-클라이언트 PC가 **GitHub에 나갈 수 없으면** `electron-updater`가 릴리즈를 받지 못합니다. 이 경우 백엔드가 같은 호스트에서 업데이트 파일을 제공합니다.
+#### 동작 개념 (동료·운영자에게 설명할 때)
 
-1. **백엔드**가 `GET http://{백엔드}:8080/desktop-updates/latest.yml` 및 동일 경로의 설치 파일(`ECH-Setup-x.x.x.exe`)을 제공합니다. 파일 실제 위치는 기본값 `{APP_RELEASES_DIR}/desktop`(예: `C:\ECH\releases\desktop`). 다른 경로를 쓰려면 환경변수 `DESKTOP_UPDATE_DIR`을 설정합니다.
-2. 새 버전 배포 시 `desktop/dist/`에서 **`latest.yml`**, **`ECH-Setup-{version}.exe`**, (있으면) **`.blockmap`** 을 위 `desktop` 폴더에 복사합니다. `latest.yml` 안의 `url`/`path`와 디스크上的 파일명이 일치해야 합니다.
+- **한 줄 요약**: 설치된 ECH 데스크톱 앱이 **주기적으로(또는 실행 시)** 사내 백엔드에 올려둔 **「최신 버전 안내」(`latest.yml`)** 과 **설치 파일(NSIS `.exe`)** 을 받아, 새 버전이 있으면 사용자에게 알리고 설치할 수 있게 하는 방식입니다. 인터넷의 GitHub Releases 대신 **회사망 안의 웹 서버(백엔드와 동일 호스트)** 가 그 역할을 합니다.
+- **비유**: 스마트폰 앱이 앱스토어에서 업데이트를 확인하는 것과 같고, **앱스토어 자리에 사내 서버**가 있다고 보면 됩니다. PC가 **외부 인터넷 없이** 내부망만 써도, **업데이트 URL만 사내 주소**로 잡혀 있으면 동일하게 동작합니다.
+- **흐름**:
+  1. 사용자 PC의 **ECH.exe**가 `ech-server.json`의 **`serverUrl`**(또는 `updateBaseUrl`)을 읽습니다.
+  2. **`electron-updater`** 가 `{serverUrl}/desktop-updates/latest.yml` 을 요청해 **현재 배포된 버전·파일명**을 확인합니다.
+  3. 로컬 설치 버전보다 새 버전이면, 같은 경로 베이스에서 **설치 파일**을 내려받고, 다운로드 완료 후 앱에서 안내(모달) → 사용자가 확인하면 설치·재시작합니다.
+
+```mermaid
+flowchart LR
+  subgraph client [사용자 PC]
+    A[ECH 데스크톱]
+  end
+  subgraph server [사내 WEB 서버]
+    B["/desktop-updates/latest.yml"]
+    C["ECH-Setup-x.x.x.exe"]
+  end
+  A -->|주기적 조회| B
+  A -->|새 버전 시 다운로드| C
+```
+
+| 구성 요소 | 역할 |
+|---|---|
+| **ECH 데스크톱 (클라이언트)** | `electron-updater`로 메타·설치 파일 수신, 설치 안내 UI |
+| **`ech-server.json`** | `serverUrl` 등으로 **업데이트를 어디서 받을지** 지정 (없으면 기본은 GitHub — 내부망에서는 실패 가능) |
+| **`latest.yml`** | 버전·파일명·해시 등 메타데이터 (이 파일이 없으면 새 버전을 찾지 못함) |
+| **설치 파일** (`ECH-Setup-*.exe`) | `latest.yml`의 `path`/`url`과 **실제 파일명이 일치**해야 함 |
+| **백엔드 정적 경로** | `GET /desktop-updates/**` → 디스크의 `{APP_RELEASES_DIR}/desktop` 등 (`DesktopUpdateResourceConfig`) |
+
+#### 운영 절차 (배포 담당자)
+
+클라이언트 PC가 **GitHub에 나갈 수 없으면** `electron-updater`가 공개 릴리즈를 받지 못합니다. 이 경우 **백엔드가 같은 호스트에서** 업데이트 파일을 제공합니다.
+
+1. **백엔드**가 `GET http://{백엔드}:8080/desktop-updates/latest.yml` 및 동일 베이스 URL의 설치 파일(`ECH-Setup-x.x.x.exe`)을 제공합니다. 파일 실제 위치는 기본값 `{APP_RELEASES_DIR}/desktop`(예: `C:\ECH\releases\desktop`). 다른 경로를 쓰려면 환경변수 `DESKTOP_UPDATE_DIR`을 설정합니다.
+2. 새 버전 배포 시 `desktop/dist/`에서 **`latest.yml`**, **`ECH-Setup-{version}.exe`**, (있으면) **`.blockmap`** 을 위 `desktop` 폴더에 복사합니다. `latest.yml` 안의 `url`/`path`와 디스크의 파일명이 일치해야 합니다.
 3. 사용자 PC에 **`ech-server.json`** 으로 `serverUrl`(예: `http://ech.co.kr:8080`)을 알려주면, 앱은 자동으로 `{serverUrl}/desktop-updates/` 를 업데이트 소스로 사용합니다. 파일 위치는 위 **「ECH 데스크톱 설치 경로」** 절을 따릅니다. 업데이트 URL만 따로 쓰려면 `updateBaseUrl`을 지정합니다.
 4. `ech-server.json`이 없고 GitHub도 막혀 있으면 자동 업데이트는 계속 실패합니다 — 내부망에서는 반드시 `ech-server.json` + 위 파일 배포를 권장합니다.
 
