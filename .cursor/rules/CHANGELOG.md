@@ -4,6 +4,10 @@
 
 ## 2026-04-06
 
+### Fixed
+- **프론트**: `message:new`가 **현재 채널**일 때만 처리하던 경로에서 **최소화·트레이·다른 창 포커스**여도 일반 메시지 OS/토스트가 안 뜨던 문제 — 백그라운드면 `pushNewMessageToast` 호출(내 멘션은 `pushMentionToast`와 중복 안 함)
+- **백엔드**: 스레드 댓글 수 집계 `aggregateThreadCommentsForRoots`가 **직접 부모 id**만 쓰면 루트와 불일치·중복 행 시 오류 가능 — **루트 메시지 id**로 합산, 동일 메시지 id 중복 제거
+
 ### Changed
 - **프론트**: 채팅 이미지 blob URL — `loadMessages`·채널 전환 시 **전부 revoke** 하지 않고 세션 캐시 재사용(같은 채널 재입장·새로고침 시 네트워크 재다운로드 감소). 메모리 상한 **약 120개** LRU로 정리, 로그아웃(`clearSession`) 시 전부 해제
 

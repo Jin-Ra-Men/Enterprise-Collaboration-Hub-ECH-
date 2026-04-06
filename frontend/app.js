@@ -4032,6 +4032,16 @@ function initSocket() {
       if (msg.messageId != null) {
         scheduleMarkChannelReadCaughtUp(activeChannelId);
       }
+      // 같은 채널을 보고 있어도 창이 최소화·트레이·다른 앱 포커스면 OS/토스트 알림이 필요함
+      // (pushNewMessageToast 내부에서 포그라운드 동일 채널만 억제)
+      // 내 멘션은 위에서 maybeShowMentionToastFromMessage → pushMentionToast가 이미 처리 — 중복 알림 방지
+      if (isInBackgroundForOsNotification()) {
+        const myEmp = String(currentUser.employeeNo || "").trim();
+        const mentioned = extractMentionEmployeeNosFromTextClient(msg.text || "");
+        if (!myEmp || !mentioned.includes(myEmp)) {
+          pushNewMessageToast(msg);
+        }
+      }
     } else {
       pushNewMessageToast(msg);
       scheduleRefreshMyChannels();

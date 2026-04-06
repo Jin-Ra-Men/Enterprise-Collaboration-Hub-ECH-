@@ -25,9 +25,11 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -695,16 +697,37 @@ public class MessageService {
         if (rootIds.isEmpty()) {
             return Map.of();
         }
+        Set<Long> rootIdSet = new HashSet<>(rootIds);
         List<Message> comments = messageRepository.findThreadActivityUnderRoots(rootIds);
         Map<Long, ThreadCommentAgg> map = new HashMap<>();
+        Set<Long> seenIds = new HashSet<>();
         for (Message cm : comments) {
             if (cm.getParentMessage() == null) {
                 continue;
             }
-            Long rid = cm.getParentMessage().getId();
-            map.computeIfAbsent(rid, k -> new ThreadCommentAgg()).accept(cm);
+            Long mid = cm.getId();
+            if (mid != null && !seenIds.add(mid)) {
+                continue;
+            }
+            Long rootId = resolveThreadRootMessageId(cm);
+            if (rootId == null || !rootIdSet.contains(rootId)) {
+                continue;
+            }
+            map.computeIfAbsent(rootId, k -> new ThreadCommentAgg()).accept(cm);
         }
         return map;
+    }
+
+    /**
+     * 스레드 내 임의 메시지(댓글·답글)에서 타임라인에 보이는 루트 메시지 id를 구한다.
+     * 직접 부모만 쓰면 댓글에 달린 답글이 루트가 아닌 부모 id로 집계되어 루트 건수가 틀어질 수 있다.
+     */
+    private static Long resolveThreadRootMessageId(Message m) {
+        Message cur = m;
+        while (cur.getParentMessage() != null) {
+            cur = cur.getParentMessage();
+        }
+        return cur.getId();
     }
 
     private static final class ThreadCommentAgg {
