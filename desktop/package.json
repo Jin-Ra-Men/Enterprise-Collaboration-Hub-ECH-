@@ -8,6 +8,7 @@
     "url": "https://github.com/Jin-Ra-Men/Enterprise-Collaboration-Hub-ECH-.git"
   },
   "scripts": {
+    "prebuild:win": "node scripts/generate-icon-ico.mjs",
     "start": "electron .",
     "build:win": "electron-builder --win nsis --publish never"
   },
@@ -16,7 +17,8 @@
   },
   "devDependencies": {
     "electron": ">=20.0.0",
-    "electron-builder": "latest"
+    "electron-builder": "latest",
+    "png-to-ico": "^3.0.1"
   },
   "build": {
     "appId": "com.ech.desktop",
@@ -30,7 +32,9 @@
       {
         "from": "assets",
         "to": "assets",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "../frontend",
@@ -44,7 +48,7 @@
     "win": {
       "target": "nsis",
       "artifactName": "ECH-Setup-${version}.${ext}",
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.ico"
     },
     "publish": [
       {

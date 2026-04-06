@@ -8,6 +8,13 @@ const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 } else {
+if (process.platform === "win32") {
+  try {
+    app.setAppUserModelId("com.ech.desktop");
+  } catch {
+    /* ignore */
+  }
+}
 const DEFAULT_SERVER_URL = "http://ech.co.kr:8080";
 
 /** 창 제목: 패키지 버전은 `app.getVersion()`(package.json / 빌드 산출물). */
@@ -41,9 +48,17 @@ function showMainWindow() {
   mainWindow.focus();
 }
 
+/**
+ * Windows는 작업 표시줄/창 아이콘에 .ico가 가장 잘 맞고, PNG만 쓰면 Electron 기본 아이콘으로 남는 경우가 많다.
+ */
 function resolveAppIconPath() {
-  const iconPath = path.join(__dirname, "assets", "icon.png");
-  return fs.existsSync(iconPath) ? iconPath : null;
+  const base = path.join(__dirname, "assets");
+  if (process.platform === "win32") {
+    const ico = path.join(base, "icon.ico");
+    if (fs.existsSync(ico)) return ico;
+  }
+  const png = path.join(base, "icon.png");
+  return fs.existsSync(png) ? png : null;
 }
 
 /** Windows 트레이는 작은 규격이 안정적(미적용 시 기본 Electron 아이콘으로 보일 수 있음). */

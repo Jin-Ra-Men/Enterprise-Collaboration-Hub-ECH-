@@ -4,6 +4,9 @@
 
 ## 2026-04-06
 
+### Fixed
+- **desktop**: Windows **프로그램·작업 표시줄 아이콘이 Electron 기본으로 보이던 문제** — `assets/icon.ico` 생성(`png-to-ico`·`prebuild:win`), `electron-builder` `win.icon`·런타임 `BrowserWindow`/`Tray`가 **`.ico` 우선** 사용, `app.setAppUserModelId` 추가
+
 ### Release
 - **GitHub `v0.1.2`**: 프론트 대용량 첨부·이미지 전송 개선(미리보기 다운스케일·업로드 전 압축·진행률·갱신 병렬화) 및 `v0.1.1` 이후 누적 반영. `desktop/package.json`·`backend/build.gradle` **`0.1.2`**
 
