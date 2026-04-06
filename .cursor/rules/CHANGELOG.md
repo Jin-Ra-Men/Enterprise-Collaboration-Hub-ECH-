@@ -4,6 +4,9 @@
 
 ## 2026-04-06
 
+### Release
+- **GitHub `v1.1.0`**: 정식 마이너 릴리즈 — **이미지** 라이트박스(서버 미리보기 우선·원본 보기)·파일 허브 이미지 탭 지연 로드, **데스크톱** Windows 시작 시 실행(트레이·`setLoginItemSettings`), **프론트** 첨부 직후 「새 메시지」 구분선·동일 채널 알림(`document.hidden`) 수정, GitHub 릴리즈 Source code(zip) 안내 문서. `desktop/package.json`·`desktop/package-lock.json`·`backend/build.gradle` **`1.1.0`**. 태그 `v1.1.0` — GitHub 에셋 업로드: `cd desktop && npm run build:win` 후 `tools/publish-electron-github-release.ps1 v1.1.0`
+
 ### Fixed
 - **프론트**: 첨부·이미지 업로드 직후 `loadMessages` 시 읽음 포인터보다 앞선 타이밍으로 **내 메시지 앞에만** 「새 메시지」 구분선이 뜨던 현상 — lastRead 이후 DOM에 **다른 사람 메시지가 없으면** 구분선 미삽입(`hasChatMessageFromOtherAfter`). 동일 채널 일반 알림은 `document.hidden` 기준으로 정리(파일 대화상자 포커스 이슈). `docs/FEATURE_SPEC.md` 읽음 포인터 비고
 
