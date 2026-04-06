@@ -302,7 +302,6 @@ const mainApp        = document.getElementById("mainApp");
 const loginForm      = document.getElementById("loginForm");
 const loginErrorEl   = document.getElementById("loginError");
 const loginBtn       = document.getElementById("loginBtn");
-const logoutBtn      = document.getElementById("logoutBtn");
 const themeSettingsBtn = document.getElementById("themeSettingsBtn");
 const sidebarAvatar  = document.getElementById("sidebarAvatar");
 const sidebarUserName = document.getElementById("sidebarUserName");
@@ -1140,6 +1139,29 @@ async function loadOrganizationCompanyFiltersIntoSelect() {
   }
 }
 
+/**
+ * 조직 인원 목록 공통 정렬: 직책 "팀장" 최우선 → 직급(부장→차장→과장→대리→사원→인턴→기타) → 이름 가나다.
+ * user-directory 응답(jobLevel/jobTitle)과 관리자 사용자 목록(jobLevelDisplayName/jobTitleDisplayName) 모두 지원.
+ */
+function sortOrgDirectoryMembers(users) {
+  const JOB_LEVEL_ORDER = ["부장", "차장", "과장", "대리", "사원", "인턴"];
+  const levelRank = (level) => {
+    if (!level) return 999;
+    const idx = JOB_LEVEL_ORDER.findIndex((l) => String(level).includes(l));
+    return idx >= 0 ? idx : 998;
+  };
+  const jobLevelOf = (u) => u.jobLevel ?? u.jobLevelDisplayName ?? "";
+  const jobTitleOf = (u) => u.jobTitle ?? u.jobTitleDisplayName ?? "";
+  return [...users].sort((a, b) => {
+    const aIsLeader = String(jobTitleOf(a)).includes("팀장") ? 0 : 1;
+    const bIsLeader = String(jobTitleOf(b)).includes("팀장") ? 0 : 1;
+    if (aIsLeader !== bIsLeader) return aIsLeader - bIsLeader;
+    const rankDiff = levelRank(jobLevelOf(a)) - levelRank(jobLevelOf(b));
+    if (rankDiff !== 0) return rankDiff;
+    return String(a.name || "").localeCompare(String(b.name || ""), "ko-KR");
+  });
+}
+
 function renderOrgTreeLeft() {
   const treeEl = document.getElementById("orgTreeEmbedAdd");
   if (!treeEl) return;
@@ -1262,10 +1284,7 @@ function renderMemberListRight() {
     return;
   }
 
-  filtered
-    .slice()
-    .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "ko-KR"))
-    .forEach((u) => {
+  sortOrgDirectoryMembers(filtered).forEach((u) => {
       const emp = String(u.employeeNo || "").trim();
       const selected = isUserAlreadySelected(emp, orgPickerContext);
       const item = document.createElement("li");
@@ -1549,31 +1568,6 @@ loginForm.addEventListener("submit", async (e) => {
     loginBtn.disabled  = false;
     loginBtn.textContent = "로그인";
   }
-});
-
-logoutBtn.addEventListener("click", async () => {
-  if (!(await uiConfirm("로그아웃 하시겠습니까?"))) return;
-  if (socket) { socket.disconnect(); socket = null; }
-  closeSidebarPresenceMenu();
-  revokeImageAttachmentBlobUrls();
-  closeModal("modalImagePreview");
-  clearFilePreview();
-  activeChannelId = null;
-  activeChannelMemberMentionList = [];
-  mentionInboxItems = [];
-  renderMentionInboxList();
-  currentUser     = null;
-  clearSession();
-
-  // DOM 상태 완전 초기화 (다음 로그인 계정이 달라도 깨끗하게 시작)
-  channelListEl.innerHTML = "";
-  dmListEl.innerHTML      = "";
-  const quickRailScroll = document.getElementById("quickRailScroll");
-  if (quickRailScroll) quickRailScroll.innerHTML = "";
-  messagesEl.innerHTML    = "";
-  document.getElementById("adminSection").classList.add("hidden");
-  showView("viewWelcome");
-  showLogin();
 });
 
 themeSettingsBtn?.addEventListener("click", () => {
@@ -8076,7 +8070,8 @@ function renderAdminUserTable() {
     return;
   }
 
-  tbody.innerHTML = rows.map(row => renderUserRow(row, opts, 0)).join("");
+  const sortedRows = sortOrgDirectoryMembers(rows);
+  tbody.innerHTML = sortedRows.map(row => renderUserRow(row, opts, 0)).join("");
   updateAdminUserPendingBanner();
 }
 
@@ -8898,36 +8893,6 @@ function renderOrgChartTree(data) {
   scroll.innerHTML = parts.join("");
 }
 
-/**
- * 팀 구성원 정렬: 직책 "팀장" 최우선, 이후 직급 순(부장→차장→과장→대리→사원→인턴→기타),
- * 동일 직급이면 DB 생성 시각 오름차순(먼저 생성된 사용자가 위).
- */
-function sortOrgChartMembers(users) {
-  const JOB_LEVEL_ORDER = ["부장", "차장", "과장", "대리", "사원", "인턴"];
-  const levelRank = (level) => {
-    if (!level) return 999;
-    const idx = JOB_LEVEL_ORDER.findIndex((l) => String(level).includes(l));
-    return idx >= 0 ? idx : 998;
-  };
-  const createdKey = (u) => {
-    const raw = u.createdAt;
-    if (raw) {
-      const t = new Date(raw).getTime();
-      if (!Number.isNaN(t)) return t;
-    }
-    const id = Number(u.userId);
-    return Number.isFinite(id) ? id : 0;
-  };
-  return [...users].sort((a, b) => {
-    const aIsLeader = String(a.jobTitle ?? "").includes("팀장") ? 0 : 1;
-    const bIsLeader = String(b.jobTitle ?? "").includes("팀장") ? 0 : 1;
-    if (aIsLeader !== bIsLeader) return aIsLeader - bIsLeader;
-    const rankDiff = levelRank(a.jobLevel) - levelRank(b.jobLevel);
-    if (rankDiff !== 0) return rankDiff;
-    return createdKey(a) - createdKey(b);
-  });
-}
-
 function renderOrgChartMembers(team) {
   const grid        = document.getElementById("orgChartMemberGrid");
   const teamNameEl  = document.getElementById("orgChartTeamName");
@@ -8937,7 +8902,7 @@ function renderOrgChartMembers(team) {
   if (teamNameEl)  teamNameEl.textContent  = team.name;
   if (teamCountEl) teamCountEl.textContent = `${team.users?.length ?? 0}명`;
 
-  const users = sortOrgChartMembers(team.users ?? []);
+  const users = sortOrgDirectoryMembers(team.users ?? []);
   if (!users.length) {
     grid.innerHTML = '<p class="orgchart-hint">팀 구성원이 없습니다.</p>';
     return;

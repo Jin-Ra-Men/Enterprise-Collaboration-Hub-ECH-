@@ -808,7 +808,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - `GET /api/channels/{channelId}/files/{fileId}/download?employeeNo=...`
 - 입력/출력:
   - **통합 피커**: 채널 생성·DM 생성·구성원 추가 모두 **동일한 `+` 버튼 기반 팝업**(`modalAddMemberPicker`)을 사용합니다. 팝업에서 좌측 조직도(회사>본부>팀) + 우측 검색/결과로 사용자 선택 후 상위 모달의 선택 태그에 반영됩니다. 구성원 추가 `+`는 텍스트 대신 **SVG 십자**(`btn-picker-plus-icon`)로 그려 버튼 박스 안에 시각 중심을 맞춤.
-  - **사이드바 조직도 모달**(`modalOrgChart`): 팀 선택 시 카드 그리드 정렬 — 직책에 `팀장` 포함 시 최상단, 그다음 `jobLevel` 문자열 기준 부장→차장→과장→대리→사원→인턴, 동일 직급은 `UserSearchResponse.createdAt` 오름차순(API에 `createdAt` 포함).
+  - **사이드바 조직도 모달**(`modalOrgChart`)·**구성원 추가 피커**·**관리자 사용자 관리** 표 모두 동일 정렬: 직책에 `팀장` 포함 시 최상단 → `jobLevel`(또는 관리자 화면의 직급 표시명) 문자열 기준 부장→차장→과장→대리→사원→인턴→기타 → 동일 조건은 이름 가나다(`sortOrgDirectoryMembers`).
   - 멤버 패널: `department`·`jobLevel`을 한 줄 요약, `jobPosition`·`jobTitle`은 값이 있을 때만 추가 표시
   - 멤버 패널: 개설자 사번(`createdByEmployeeNo`)과 일치하는 멤버에 `개설자` 배지 표시
   - 파일 업로드 성공 시: 일반 텍스트 메시지와 동일한 **메시지 행**(아바타·발신자·시간) 안에 첨부 인라인 표시 — **이미지**(`contentType` 또는 확장자 기준)는 썸네일 + 클릭 시 확대 모달(`modalImagePreview`) + 모달 내 다운로드, 그 외는 파일명·크기·다운로드 버튼 행
@@ -818,7 +818,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - **테마 선택**: 로그인 사용자 영역의 톱니바퀴 버튼으로 팝업을 열어 `검정`(기본 다크·보라) / `하양`(라이트·인디고) / `파랑`(네이비·시안 액센트) 선택. 즉시 적용되며 `PUT /api/auth/me/theme`로 사용자별 DB(`users.theme_preference`)에 저장되어 로그아웃/재로그인 후에도 유지
 - 상태 전이/예외 케이스:
   - 중복 멤버 추가 시 서버 검증 메시지를 시스템 메시지로 노출
-  - 로그아웃 클릭 시 즉시 종료하지 않고 사용자 확인 후 처리
+  - 사이드바에는 별도 **로그아웃** 버튼이 없음(세션 종료는 브라우저/앱 탭·창 종료 또는 `localStorage`/쿠키 삭제 등 운영 정책에 따름)
 - 구현 파일:
   - `frontend/index.html`
   - `frontend/app.js`

@@ -4,6 +4,10 @@ const path = require("path");
 const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, Notification } = require("electron");
 const { autoUpdater } = require("electron-updater");
 
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
 const DEFAULT_SERVER_URL = "http://ech.co.kr:8080";
 
 /** 창 제목: 패키지 버전은 `app.getVersion()`(package.json / 빌드 산출물). */
@@ -37,14 +41,17 @@ function showMainWindow() {
   mainWindow.focus();
 }
 
+function resolveAppIconPath() {
+  const iconPath = path.join(__dirname, "assets", "icon.png");
+  return fs.existsSync(iconPath) ? iconPath : null;
+}
+
 function createTray() {
-  const iconInPackage = path.join(__dirname, "assets", "tray-icon.png");
-  const iconInDev     = path.join(__dirname, "assets", "tray-icon.png");
-  const iconPath      = fs.existsSync(iconInPackage) ? iconInPackage : iconInDev;
+  const iconPath = resolveAppIconPath();
 
   let icon;
   try {
-    icon = nativeImage.createFromPath(iconPath);
+    icon = iconPath ? nativeImage.createFromPath(iconPath) : nativeImage.createEmpty();
   } catch {
     icon = nativeImage.createEmpty();
   }
@@ -74,10 +81,12 @@ function createTray() {
 }
 
 function createMainWindow() {
+  const iconPath = resolveAppIconPath();
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     show: true,
+    ...(iconPath ? { icon: iconPath } : {}),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -187,6 +196,10 @@ ipcMain.handle("ech-install-update", () => {
   return true;
 });
 
+app.on("second-instance", () => {
+  showMainWindow();
+});
+
 ipcMain.on("os-notification-show", (event, payload) => {
   try {
     const tag = payload?.tag != null ? String(payload.tag) : "";
@@ -234,4 +247,6 @@ app.on("window-all-closed", () => {
 app.on("activate", () => {
   if (mainWindow == null) createMainWindow();
 });
+
+} // gotTheLock
 

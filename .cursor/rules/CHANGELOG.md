@@ -6,6 +6,9 @@
 
 ### Changed
 - **백엔드**: `build.gradle` 프로젝트 `version` `0.1.0`으로 상향, `bootJar` 산출물명 `ech-backend-{version}.jar` 고정(데스크톱 0.1.0과 맞춤)
+- **desktop**: `assets/tray-icon.png` → `assets/icon.png` 통합, 트레이·창·NSIS 빌드(`win.icon`)에 동일 아이콘 사용
+- **desktop**: `app.requestSingleInstanceLock()` — 이미 실행 중이면 두 번째 프로세스 종료, 재실행 시 기존 창 포커스(`second-instance`)
+- **프론트**: 조직 인원 정렬 `sortOrgDirectoryMembers` — 조직도 모달·구성원 추가 피커·관리자 사용자 표에 공통 적용(팀장 → 직급 → 이름 가나다). 사이드바 **로그아웃** 버튼 제거
 
 ### Added
 - **release**: GitHub **`v0.1.0`** — 데스크톱 마이너 첫 릴리즈(자동 업데이트·내부망 피드·UI 등 누적). `package.json` `0.1.0`
@@ -14,8 +17,7 @@
 
 ### Changed
 - **프론트**: 구성원 추가 `+` 버튼 — 텍스트 `+` 대신 SVG 십자(18px→14px·선 1.5)로 박스 내부 시각 중심 정렬, `.member-add-heading` 행은 좌측 정렬 유지
-- **프론트**: 조직도 팀 멤버 정렬 `sortOrgChartMembers` — 팀장(직책) → 직급 부장~인턴 → 동일 직급은 `createdAt` 오름차순
-- **백엔드**: `UserSearchResponse`·`UserRepository.searchUsers`·`UserSearchService` 에 `createdAt` 포함(조직도 정렬용)
+- **백엔드**: `UserSearchResponse`·`UserRepository.searchUsers`·`UserSearchService` 에 `createdAt` 포함(기타 기능용; 조직 목록 정렬은 프론트 `sortOrgDirectoryMembers` 기준으로 통일)
 - **`docs/FEATURE_SPEC.md`**: 위 UX·API 반영
 
 ## 2026-04-03

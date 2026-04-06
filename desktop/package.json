@@ -43,7 +43,8 @@
     "asar": true,
     "win": {
       "target": "nsis",
-      "artifactName": "ECH-Setup-${version}.${ext}"
+      "artifactName": "ECH-Setup-${version}.${ext}",
+      "icon": "assets/icon.png"
     },
     "publish": [
       {

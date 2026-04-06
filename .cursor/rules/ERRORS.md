@@ -132,7 +132,7 @@
 - **해결 1**: `server.js` broadcastPayload에 `Number()` 명시 변환 추가, `app.js` 비교에서 `Number(msg.channelId) === activeChannelId` 로 수정
 
 - **에러 요약 2**: 관리자 로그아웃 후 일반 사용자 로그인 시 관리자 탭 잔류 (새로고침 후 해소)
-- **발생 위치 2**: `frontend/app.js` — `logoutBtn` 이벤트 핸들러, `showMain()`
+- **발생 위치 2**: `frontend/app.js` — 로그아웃 시 DOM 초기화, `showMain()`
 - **원인 2**: 로그아웃 시 DOM 상태(adminSection)를 초기화하지 않아 다음 로그인 계정의 권한과 무관하게 이전 상태 유지
 - **해결 2**: 로그아웃 핸들러에서 `adminSection.classList.add("hidden")` 추가, `showMain()`에서도 항상 hidden 초기화 후 role 조건 적용
 
