@@ -59,7 +59,7 @@
 ## 3-0-3) 프론트 UX 메모 (2026-04-06)
 - **DM 채팅 헤더**: `#chatChannelPrefix`는 DM일 때 멤버 로드 후 상대(그룹 DM은 최대 3명 + `+N`) **프레즌스 점**을 사이드바 DM과 동일 규칙으로 표시(`frontend/app.js` `updateChatHeaderDmPresence`, `dmSidebarLeadingHtml`).
 - **이미지 다운로드**: 약 **512KB 이상**·GIF/SVG 제외 시 원본 vs JPEG 압축 선택 모달; 압축은 브라우저에서 `GET .../download` blob → 캔버스(최대 변 4096px) 저장(서버 전용 압축 API 없음).
-- **데스크톱 GitHub 릴리즈 에셋 업로드**: 로컬에서 `cd desktop && npm run build:win` 후 `desktop/dist`에 `latest.yml`·`ECH-Setup-{version}.exe`·`.blockmap` 생성. `GITHUB_TOKEN`(repo releases 권한) 설정 뒤 `powershell -File ./tools/publish-electron-github-release.ps1 v0.1.9` — 태그·릴리즈 생성 및 에셋 업로드(`README.md` 자동 업데이트 절차 참고).
+- **데스크톱 GitHub 릴리즈 에셋 업로드**: 로컬에서 `cd desktop && npm run build:win` 후 `desktop/dist`에 `latest.yml`·`ECH-Setup-{version}.exe`·`.blockmap` 생성. `GITHUB_TOKEN`(repo releases 권한) 설정 뒤 `powershell -File ./tools/publish-electron-github-release.ps1 v1.0.0` — 태그·릴리즈 생성 및 에셋 업로드(`README.md` 자동 업데이트 절차 참고).
 
 ## 3) 핵심 문서 위치
 - 요구사항: `docs/PROJECT_REQUIREMENTS.md`
