@@ -5,7 +5,8 @@
 ## 2026-04-06
 
 ### Added
-- **desktop**: 자동 업데이트 다운로드 완료 시 메인 UI 모달(`modalAppUpdate`)·`preload` IPC(`onUpdateDownloaded`, `installUpdateAndRestart`)·`quitAndInstall` 즉시 재시작. `checkForUpdatesAndNotify` 제거(토스트 중복 방지), `package.json` `0.0.10`
+- **desktop**: 자동 업데이트 다운로드 완료 시 메인 UI 모달(`modalAppUpdate`)·`preload` IPC(`onUpdateDownloaded`, `installUpdateAndRestart`)·`quitAndInstall` 즉시 재시작. `checkForUpdatesAndNotify` 제거(토스트 중복 방지)
+- **release**: GitHub `v0.0.11` — 데스크톱 자동 업데이트·창 제목 버전 표시 등 포함 (`package.json` `0.0.11`)
 - **desktop**: 창 제목·트레이 툴팁에 앱 버전(`app.getVersion()`) 표시
 
 ### Changed
