@@ -2,6 +2,11 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-04-09
+
+### Release
+- **GitHub `v1.1.3`**: 내 업무 사이드바 **채널 표시명**(DM)·업무 목록 **선택 강조**, 채팅 첨부 **ZIP 일괄**·**저장 후 열기**(Electron 저장 대화상자) 등 `0a3697e` 이후 반영. `desktop/package.json`·`desktop/package-lock.json`·`backend/build.gradle` **`1.1.3`**. 태그 `v1.1.3` — `cd backend && .\\gradlew.bat bootJar`, `cd desktop && npm run build:win` 후 `tools/publish-electron-github-release.ps1 v1.1.3`
+
 ## 2026-04-08
 
 ### Changed
