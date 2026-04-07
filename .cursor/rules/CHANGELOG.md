@@ -4,6 +4,9 @@
 
 ## 2026-04-06
 
+### Changed
+- **프론트(채팅)**: 첨부(이미지·문서 공통)를 **카드 리스트**로 표시 — 파일명·크기 + **저장** / **저장 후 열기** / **뷰어로 열기**(이미지는 라이트박스, 그 외는 새 탭 blob). **연속 FILE 메시지**(이미지+문서 혼합 가능, 같은 분·같은 발신자, 스레드 댓글 없음)는 `tryConsumeFileAttachmentGroup` → `createFileAttachmentGroupRowFromMsgs`로 묶고 **일괄저장**. `fetchChannelFileBlob` 등. `app.js`, `styles.css`, `docs/HANDOVER.md`
+
 ### Fixed
 - **프론트(업무·칸반)**: 비활성 업무 **완전 삭제** 확인(`uiConfirm`)이 업무 상세 모달 뒤에 가리던 문제 — `#modalAppDialog` z-index 상향. 업무 목록에서 **복원**·**완전 삭제**·예약 **취소** 가능, 복원/완전삭제 예약은 배지로 표시(`queueWorkItemRestore`/`queueWorkItemPurge` 공통화). `index.html` 안내, `styles.css` 배지·행 강조
 

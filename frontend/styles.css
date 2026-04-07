@@ -1069,15 +1069,14 @@ span.section-toggle-static { cursor: default; }
   justify-content: flex-end;
   flex-wrap: wrap;
 }
-.msg-row.msg-mine .msg-content-row.msg-attachment-image {
+.msg-row.msg-mine .msg-content-row.msg-attachment-list-wrap {
+  text-align: right;
+}
+.msg-row.msg-mine .msg-attachment-list-inner {
   align-items: flex-end;
 }
-.msg-row.msg-mine .msg-image-caption-row {
-  justify-content: flex-end;
-  flex-wrap: wrap;
-}
-.msg-row.msg-mine .msg-inline-image-btn {
-  margin-left: auto;
+.msg-row.msg-mine .msg-attach-card {
+  text-align: left;
 }
 .msg-row.msg-mine .msg-reply-to {
   width: 100%;
@@ -1262,55 +1261,102 @@ html[data-theme="light"] .msg-reply-to-card:hover {
 }
 .btn-attach-dl:hover { border-color: var(--border-focus); color: var(--accent-hover); }
 
-.msg-attachment-image {
+/* 채팅 첨부: 카드 리스트(아이콘·파일명·크기 + 저장/저장 후 열기/뷰어) */
+.msg-attachment-list-wrap {
+  width: 100%;
+  max-width: min(100%, 420px);
+}
+.msg-attachment-list-inner {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  gap: 8px;
+  align-items: stretch;
+}
+.msg-attachment-list-footer {
+  margin-top: 6px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
   gap: 8px;
 }
-.msg-image-caption-row {
+.msg-row.msg-other .msg-attachment-list-footer {
+  justify-content: flex-start;
+}
+.msg-attach-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 10px 12px;
+  text-align: left;
+}
+.msg-attach-card-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 10px;
+  gap: 6px 8px;
+  font-size: 14px;
+  line-height: 1.35;
 }
-.msg-inline-image-btn {
-  padding: 0;
-  border: none;
-  border-radius: 10px;
-  cursor: zoom-in;
-  overflow: hidden;
-  background: var(--bg-elevated);
-  max-width: 100%;
-  line-height: 0;
+.msg-attach-card-icon {
+  flex-shrink: 0;
+  line-height: 1;
 }
-.msg-inline-image-btn:focus-visible {
-  outline: 2px solid var(--border-focus);
-  outline-offset: 2px;
-}
-.msg-inline-image {
-  display: block;
-  max-height: 240px;
-  max-width: min(100%, 420px);
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  vertical-align: bottom;
-}
-.msg-inline-image-placeholder {
-  min-height: 120px;
-  min-width: 160px;
-  max-width: 320px;
-  padding: 12px;
-  box-sizing: border-box;
-  background: var(--bg-elevated);
-  border-radius: 8px;
+.msg-attach-card-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  font-size: 13px;
+  gap: 4px 6px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+.msg-attach-action {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font: inherit;
+  font-weight: 600;
+}
+.msg-attach-action:hover {
+  color: var(--accent);
+}
+.msg-attach-action-sep {
   color: var(--text-muted);
-  line-height: 1.4;
+  opacity: 0.55;
+  user-select: none;
+  font-weight: 400;
+}
+.msg-attachment-group-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.msg-attachment-group-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 6px;
+  justify-content: flex-end;
+}
+.msg-row.msg-other .msg-attachment-group-footer {
+  justify-content: flex-start;
+}
+.btn-attach-batch-dl {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-weight: 600;
+}
+.btn-attach-batch-dl:hover {
+  border-color: var(--border-focus);
+  color: var(--accent);
 }
 
 .modal-overlay.modal-image-preview {
