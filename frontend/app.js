@@ -1159,12 +1159,41 @@ async function openChannelFileBlobInNewTab(channelId, fileId, filename, variant 
 }
 
 async function saveChannelFileAndOpenInNewTab(channelId, fileId, filename, variant = "original") {
+  const fn = filename || "download";
   try {
     const blob = await fetchChannelFileBlob(channelId, fileId, variant);
+    const electronApi = typeof window !== "undefined" ? window.electronAPI : null;
+    if (electronApi && typeof electronApi.openTempFileWithDefaultApp === "function") {
+      const buf = await blob.arrayBuffer();
+      let osOpen = { ok: false };
+      try {
+        osOpen = await electronApi.openTempFileWithDefaultApp({ filename: fn, buffer: buf });
+      } catch (e) {
+        console.error(e);
+        osOpen = { ok: false, error: String(e?.message || e) };
+      }
+      const url = URL.createObjectURL(new Blob([buf]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fn;
+      a.click();
+      setTimeout(() => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch {
+          /* ignore */
+        }
+      }, 180000);
+      if (osOpen?.ok) return;
+      const w = window.open(url, "_blank", "noopener,noreferrer");
+      if (!w) await uiAlert("팝업이 차단되었습니다. 브라우저에서 팝업을 허용해 주세요.");
+      if (osOpen?.error) await uiAlert(`기본 앱으로 열지 못했습니다: ${osOpen.error}`);
+      return;
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = filename || "download";
+    a.download = fn;
     a.click();
     window.open(url, "_blank", "noopener,noreferrer");
     setTimeout(() => {

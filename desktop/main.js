@@ -1,7 +1,7 @@
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, Notification } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, Notification, shell } = require("electron");
 const { autoUpdater } = require("electron-updater");
 
 const gotTheLock = app.requestSingleInstanceLock();
@@ -289,6 +289,40 @@ ipcMain.handle("ech-set-open-at-login", (_, enabled) => {
   } catch (e) {
     console.warn("[ECH] ech-set-open-at-login failed:", e?.message || e);
     return false;
+  }
+});
+
+/**
+ * Renderer에서 내려받은 바이너리를 %TEMP%\\ech-open\\ 아래에 저장한 뒤 OS 기본 앱으로 연다(Windows: 메모장·Word 등 파일 연결).
+ * `shell.openPath`는 성공 시 빈 문자열, 실패 시 오류 문자열을 반환한다.
+ */
+function safeOpenBasename(name) {
+  const base = path.basename(String(name || "download"));
+  const cleaned = base.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").trim();
+  return cleaned || "download";
+}
+
+ipcMain.handle("ech-open-temp-file-default-app", async (_, payload) => {
+  try {
+    const filename = payload && typeof payload.filename === "string" ? payload.filename : "download";
+    const buf = payload?.buffer;
+    if (!buf || !(buf instanceof ArrayBuffer)) {
+      return { ok: false, error: "invalid buffer" };
+    }
+    const base = safeOpenBasename(filename);
+    const dir = path.join(os.tmpdir(), "ech-open");
+    await fs.promises.mkdir(dir, { recursive: true });
+    const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const fp = path.join(dir, `${unique}-${base}`);
+    await fs.promises.writeFile(fp, Buffer.from(buf));
+    const err = await shell.openPath(fp);
+    if (err) {
+      return { ok: false, error: err };
+    }
+    return { ok: true };
+  } catch (e) {
+    console.warn("[ECH] ech-open-temp-file-default-app failed:", e?.message || e);
+    return { ok: false, error: String(e?.message || e) };
   }
 });
 

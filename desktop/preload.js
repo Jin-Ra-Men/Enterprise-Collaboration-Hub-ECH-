@@ -44,5 +44,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
   /** 부팅/로그인 시 자동 실행(설치본 전용). */
   getOpenAtLogin: () => ipcRenderer.invoke("ech-get-open-at-login"),
   setOpenAtLogin: (enabled) => ipcRenderer.invoke("ech-set-open-at-login", enabled),
+  /**
+   * 임시 경로에 저장 후 OS 기본 앱으로 연다(데스크톱 전용).
+   * @param {{ filename: string, buffer: ArrayBuffer }} payload
+   * @returns {Promise<{ ok: boolean, error?: string }>}
+   */
+  openTempFileWithDefaultApp: (payload) => ipcRenderer.invoke("ech-open-temp-file-default-app", payload),
 });
 
