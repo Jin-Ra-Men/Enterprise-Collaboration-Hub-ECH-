@@ -4,6 +4,9 @@
 
 ## 2026-04-06
 
+### Release
+- **GitHub `v1.1.1`**: 데스크톱 **저장 후 열기** — Electron에서 임시 파일 저장 후 `shell.openPath`로 **OS 기본 앱** 연결(Windows 메모장·Office 등). 브라우저 전용은 기존처럼 blob 새 탭. `desktop/package.json`·`desktop/package-lock.json`·`backend/build.gradle` **`1.1.1`**. 태그 `v1.1.1` — `cd desktop && npm run build:win` 후 `tools/publish-electron-github-release.ps1 v1.1.1`
+
 ### Changed
 - **데스크톱(Electron)**: 채널 첨부 **저장 후 열기** 시 브라우저 탭 대신 **임시 파일 저장 후 `shell.openPath`로 OS 기본 앱** 연결(예: Windows `.txt` → 메모장·연결된 앱). IPC `ech-open-temp-file-default-app`, `preload` `openTempFileWithDefaultApp`. **브라우저 전용** 접속은 기존처럼 blob 새 탭. `desktop/main.js`, `desktop/preload.js`, `frontend/app.js`, `docs/FEATURE_SPEC.md`, `docs/HANDOVER.md`, `README.md`
 - **프론트(채팅)**: **본인 메시지**(`msg-mine`)의 **타임스탬프**를 본문·첨부 푸터에서 **말풍선 콘텐츠 왼쪽**에 배치(텍스트 `row-reverse`, 첨부 푸터 `flex-start`, 그룹 푸터 `row-reverse`). 답글 배너 스니펫: **단일 이미지 그리드 행**에서도 썸네일 `title` 폴백. `frontend/styles.css`, `frontend/app.js`, `docs/FEATURE_SPEC.md`, `docs/HANDOVER.md`
