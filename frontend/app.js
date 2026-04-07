@@ -205,6 +205,8 @@ let messageListScrollHandlerBound = false;
 let pendingScrollRestoreRatio = null;
 /** 채널별 저장된 마지막 읽은 위치 앵커 복원 시 render 단계 하단 고정 1회 생략 */
 let skipAutoScrollToBottomOnce = false;
+/** 채널 전환 시 유지: 입력 텍스트·답글 대상·대기 첨부 파일 */
+const composerDraftByChannelId = new Map();
 /** 열람 중 채널 실시간 읽음 처리 디바운스 */
 let markChannelCaughtUpTimer = null;
 let selectedMembers = [];     // 채널/DM 생성 시 선택된 사용자
@@ -357,6 +359,7 @@ function clearSession() {
   sessionStorage.removeItem(TOKEN_KEY);
   sessionStorage.removeItem(USER_KEY);
   revokeImageAttachmentBlobUrls();
+  composerDraftByChannelId.clear();
 }
 
 function mentionInboxStorageKey() {
@@ -637,7 +640,14 @@ function formatMessageWithMentions(text) {
     last = m.index + m[0].length;
   }
   parts.push(escHtml(s.slice(last)));
-  return parts.join("");
+  return parts.join("").replace(/\n/g, "<br>");
+}
+
+function isMessageFromMe(msg) {
+  if (!msg || !currentUser) return false;
+  const emp = String(msg.senderId ?? msg.sender_id ?? "").trim();
+  const me = String(currentUser.employeeNo || "").trim();
+  return emp !== "" && me !== "" && emp === me;
 }
 
 /** 채팅 메시지 옆 시각 — 24시간제 HH:mm (오전/오후 문구 없음) */
@@ -2341,16 +2351,82 @@ function renderMyWorkItemsSidebar(channels) {
   });
 }
 
+function saveComposerDraftForChannel(channelId) {
+  if (channelId == null || !messageInputEl) return;
+  const cid = String(channelId);
+  composerDraftByChannelId.set(cid, {
+    text: messageInputEl.value,
+    replyTargetMessageId: replyComposerTargetMessageId,
+    pendingFiles: pendingFilesQueue.slice(),
+  });
+}
+
+function restoreComposerDraftForChannel(channelId) {
+  if (!messageInputEl || channelId == null) return;
+  const cid = String(channelId);
+  const d = composerDraftByChannelId.get(cid);
+  messageInputEl.value = d?.text ?? "";
+  mentionDisplayToEmployeeNo.clear();
+  if (d?.replyTargetMessageId != null && Number.isFinite(Number(d.replyTargetMessageId))) {
+    setReplyComposerTarget(Number(d.replyTargetMessageId));
+  } else {
+    clearReplyComposerTarget();
+  }
+  if (d?.pendingFiles?.length) {
+    setComposerPendingFiles(d.pendingFiles);
+  } else {
+    clearFilePreview();
+  }
+  scheduleComposerInputHeight();
+}
+
+function scheduleComposerInputHeight() {
+  if (!messageInputEl || messageInputEl.tagName !== "TEXTAREA") return;
+  requestAnimationFrame(() => {
+    if (!messageInputEl || messageInputEl.tagName !== "TEXTAREA") return;
+    messageInputEl.style.height = "auto";
+    const max = 200;
+    messageInputEl.style.height = `${Math.min(messageInputEl.scrollHeight, max)}px`;
+  });
+}
+
+function scheduleThreadComposerInputHeight() {
+  const el = threadMessageInputEl;
+  if (!el || el.tagName !== "TEXTAREA") return;
+  requestAnimationFrame(() => {
+    if (!threadMessageInputEl || threadMessageInputEl.tagName !== "TEXTAREA") return;
+    threadMessageInputEl.style.height = "auto";
+    const max = 200;
+    threadMessageInputEl.style.height = `${Math.min(threadMessageInputEl.scrollHeight, max)}px`;
+  });
+}
+
 /* ==========================================================================
  * 채널 선택 / 메시지 로드
  * ========================================================================== */
 async function selectChannel(channelId, channelName, channelType, options = {}) {
   closeModal("modalImagePreview");
+  const prevChannelId = activeChannelId;
+  const switchingChannel =
+    prevChannelId == null || Number(prevChannelId) !== Number(channelId);
+  if (switchingChannel && prevChannelId != null) {
+    saveComposerDraftForChannel(prevChannelId);
+    clearFilePreview();
+  }
   activeChannelId   = channelId;
   activeChannelType = channelType;
   activeChannelCreatorEmployeeNo = null;
   activeChannelMemberCount = 0;
   activeChannelMemberMentionList = [];
+
+  if (switchingChannel) {
+    messageInputEl.value = "";
+    clearReplyComposerTarget();
+    mentionDisplayToEmployeeNo.clear();
+    if (prevChannelId == null) {
+      clearFilePreview();
+    }
+  }
 
   // 사이드바 active 표시
   document.querySelectorAll(".channel-item").forEach(el => {
@@ -2403,6 +2479,9 @@ async function selectChannel(channelId, channelName, channelType, options = {}) 
 
   refreshChannelFileHubData(channelId);
 
+  if (switchingChannel) {
+    restoreComposerDraftForChannel(channelId);
+  }
   messageInputEl.focus();
   syncHeaderNotifyButton();
 }
@@ -2820,7 +2899,10 @@ function snippetForReplyComposerBanner(messageId) {
     const sBtn = row.querySelector(".msg-sender");
     if (sBtn && sBtn.textContent) senderLabel = String(sBtn.textContent).trim() || senderLabel;
     const tEl = row.querySelector(".msg-text");
-    if (tEl && tEl.textContent) snippet = String(tEl.textContent).trim().slice(0, 160);
+    if (tEl) {
+      const raw = typeof tEl.innerText === "string" ? tEl.innerText : tEl.textContent;
+      if (raw) snippet = String(raw).replace(/\s+/g, " ").trim().slice(0, 160);
+    }
     if (!snippet) {
       const fn = row.querySelector(".msg-attach-name");
       if (fn && fn.textContent) snippet = "📎 " + String(fn.textContent).trim();
@@ -3069,8 +3151,7 @@ async function openChannelImageLightbox(channelId, fileId, filename, fileMeta = 
 function createImageAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) {
   const emp = String(msg.senderId ?? "").trim();
   const channelId = Number(msg.channelId) || activeChannelId;
-  const isMine =
-    currentUser && String(currentUser.employeeNo || "").trim() === emp;
+  const isMine = isMessageFromMe(msg);
   const senderName = msg.senderName || (emp ? `emp#${emp}` : "?");
   const pr = presenceByEmployeeNo.get(emp) || "OFFLINE";
   const prCl = presenceCssClass(pr);
@@ -3115,7 +3196,12 @@ function createImageAttachmentRowFromMsg(msg, payload, { showAvatar, showTime })
     ? `<span class="msg-sender-sub">${escHtml(senderOrgLine)}</span>`
     : "";
 
-  if (showAvatar) {
+  if (isMine) {
+    div.innerHTML = `
+      <div class="msg-body msg-body--mine">
+        ${imageBlock}
+      </div>`;
+  } else if (showAvatar) {
     const initials = avatarInitials(senderName);
     div.innerHTML = `
       <div class="msg-avatar-wrap">
@@ -3172,8 +3258,7 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
     return createImageAttachmentRowFromMsg(msg, payload, { showAvatar, showTime });
   }
   const emp = String(msg.senderId ?? "").trim();
-  const isMine =
-    currentUser && String(currentUser.employeeNo || "").trim() === emp;
+  const isMine = isMessageFromMe(msg);
   const senderName = msg.senderName || (emp ? `emp#${emp}` : "?");
   const pr = presenceByEmployeeNo.get(emp) || "OFFLINE";
   const prCl = presenceCssClass(pr);
@@ -3207,7 +3292,20 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
     ? `<span class="msg-sender-sub">${escHtml(senderOrgLine)}</span>`
     : "";
 
-  if (showAvatar) {
+  const fileRowInner = `
+        <div class="msg-content-row msg-attachment-inline">
+          <span class="msg-attach-icon" aria-hidden="true">📎</span>
+          <span class="msg-attach-name">${escHtml(fileMeta.originalFilename || "첨부파일")}</span>
+          <span class="msg-attach-meta">${fmtSize(fileMeta.sizeBytes || 0)}</span>
+          <button type="button" class="btn-attach-dl">다운로드</button>${timeHtml}
+        </div>`;
+
+  if (isMine) {
+    div.innerHTML = `
+      <div class="msg-body msg-body--mine">
+        ${fileRowInner}
+      </div>`;
+  } else if (showAvatar) {
     const initials = avatarInitials(senderName);
     div.innerHTML = `
       <div class="msg-avatar-wrap">
@@ -3221,23 +3319,13 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
             ${senderOrgHtml}
           </div>
         </div>
-        <div class="msg-content-row msg-attachment-inline">
-          <span class="msg-attach-icon" aria-hidden="true">📎</span>
-          <span class="msg-attach-name">${escHtml(fileMeta.originalFilename || "첨부파일")}</span>
-          <span class="msg-attach-meta">${fmtSize(fileMeta.sizeBytes || 0)}</span>
-          <button type="button" class="btn-attach-dl">다운로드</button>${timeHtml}
-        </div>
+        ${fileRowInner}
       </div>`;
   } else {
     div.innerHTML = `
       <div class="msg-spacer"></div>
       <div class="msg-body">
-        <div class="msg-content-row msg-attachment-inline">
-          <span class="msg-attach-icon" aria-hidden="true">📎</span>
-          <span class="msg-attach-name">${escHtml(fileMeta.originalFilename || "첨부파일")}</span>
-          <span class="msg-attach-meta">${fmtSize(fileMeta.sizeBytes || 0)}</span>
-          <button type="button" class="btn-attach-dl">다운로드</button>${timeHtml}
-        </div>
+        ${fileRowInner}
       </div>`;
   }
   div.querySelector(".btn-attach-dl").addEventListener("click", () => {
@@ -3267,8 +3355,7 @@ function createMessageRowElement(msg, { showAvatar, showTime }) {
   const senderOrgHtml = senderOrgLine
     ? `<span class="msg-sender-sub">${escHtml(senderOrgLine)}</span>`
     : "";
-  const isMine =
-    currentUser && String(currentUser.employeeNo || "").trim() === emp;
+  const isMine = isMessageFromMe(msg);
   const senderName = msg.senderName || (emp ? `emp#${emp}` : "?");
   const pr = presenceByEmployeeNo.get(emp) || "OFFLINE";
   const prCl = presenceCssClass(pr);
@@ -3289,7 +3376,14 @@ function createMessageRowElement(msg, { showAvatar, showTime }) {
     ? `<span class="msg-time">${escHtml(fmtTime(msg.createdAt))}</span>`
     : "";
 
-  if (showAvatar) {
+  if (isMine) {
+    div.innerHTML = `
+      <div class="msg-body msg-body--mine">
+        <div class="msg-content-row">
+          <span class="msg-text">${formatMessageWithMentions(msg.text)}</span>${timeHtml}
+        </div>
+      </div>`;
+  } else if (showAvatar) {
     const initials = avatarInitials(senderName);
     div.innerHTML = `
       <div class="msg-avatar-wrap">
@@ -3584,6 +3678,7 @@ async function openThreadModal(rootMessageId, { targetCommentMessageId = null } 
   // 댓글 모달 입력으로 전환하므로 답글 모드를 해제한다.
   if (replyComposerTargetMessageId != null) clearReplyComposerTarget();
   if (threadMessageInputEl) threadMessageInputEl.value = "";
+  scheduleThreadComposerInputHeight();
   clearThreadFilePreview();
   hideMessageContextMenu();
   openModal("modalThread");
@@ -3711,6 +3806,7 @@ async function sendThreadComment() {
       clearThreadFilePreview();
       if (!text) {
         threadMessageInputEl.value = "";
+        scheduleThreadComposerInputHeight();
         return;
       }
     }
@@ -3729,6 +3825,7 @@ async function sendThreadComment() {
 
     const createdId = json.data?.messageId ?? null;
     threadMessageInputEl.value = "";
+    scheduleThreadComposerInputHeight();
     await openThreadModal(rootId, { targetCommentMessageId: createdId });
     if (activeChannelId) await loadMessages(activeChannelId, { preserveScroll: true });
   } catch (e) {
@@ -3764,6 +3861,9 @@ if (threadMessageInputEl) {
       e.preventDefault();
       sendThreadComment();
     }
+  });
+  threadMessageInputEl.addEventListener("input", () => {
+    scheduleThreadComposerInputHeight();
   });
 }
 
@@ -4925,6 +5025,7 @@ async function sendMessage() {
       clearFilePreview();
       if (!preparedText) {
         messageInputEl.value = "";
+        scheduleComposerInputHeight();
         clearReplyComposerTarget();
         mentionDisplayToEmployeeNo.clear();
         return;
@@ -4945,6 +5046,7 @@ async function sendMessage() {
       if (!res.ok) throw new Error(json.error?.message || "답글 전송 실패");
 
       messageInputEl.value = "";
+      scheduleComposerInputHeight();
       clearReplyComposerTarget();
       mentionDisplayToEmployeeNo.clear();
       await loadMessages(activeChannelId);
@@ -4969,6 +5071,7 @@ async function sendMessage() {
     clearFilePreview();
     if (!preparedText) {
       messageInputEl.value = "";
+      scheduleComposerInputHeight();
       mentionDisplayToEmployeeNo.clear();
       return;
     }
@@ -4991,6 +5094,7 @@ async function sendMessage() {
     socketSendInFlight = false;
   }
   messageInputEl.value = "";
+  scheduleComposerInputHeight();
   mentionDisplayToEmployeeNo.clear();
 }
 
@@ -5032,6 +5136,7 @@ messageInputEl.addEventListener("keydown", (e) => {
   }
 });
 messageInputEl.addEventListener("input", () => {
+  scheduleComposerInputHeight();
   scheduleMentionSuggestUpdate();
 });
 messageInputEl.addEventListener("blur", () => {
@@ -7728,6 +7833,16 @@ document.getElementById("kanbanCardDetailAssigneeSearch")?.addEventListener("inp
 });
 
 async function clearActiveChannelAndReload() {
+  if (activeChannelId != null) {
+    saveComposerDraftForChannel(activeChannelId);
+    clearFilePreview();
+  }
+  if (messageInputEl) {
+    messageInputEl.value = "";
+    clearReplyComposerTarget();
+    mentionDisplayToEmployeeNo.clear();
+    scheduleComposerInputHeight();
+  }
   activeChannelId = null;
   activeChannelType = null;
   activeChannelCreatorEmployeeNo = null;

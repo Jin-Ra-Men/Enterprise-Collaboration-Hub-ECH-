@@ -822,6 +822,9 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - 파일 업로드 성공 시: 일반 텍스트 메시지와 동일한 **메시지 행**(아바타·발신자·시간) 안에 첨부 인라인 표시 — **이미지**(`contentType` 또는 확장자 기준)는 썸네일 + 클릭 시 확대 모달(`modalImagePreview`) + 모달 내 다운로드, 그 외는 파일명·크기·다운로드 버튼 행
   - **DM 채팅 헤더**: `#chatChannelPrefix`에 사이드바 DM 목록과 동일하게 `dmSidebarLeadingHtml` 기반 **프레즌스 점**(그룹 DM은 최대 3명 + `+N`). 멤버 API 로드 후 `updateChatHeaderDmPresence`로 갱신
   - **대용량 첨부·이미지(프론트)**: 미리보기는 큰 이미지를 다운스케일한 blob URL로 표시해 UI 멈춤을 줄임; 약 **2MB 초과** 이미지는 업로드 전 최대 변 길이 4096px·JPEG 재압축(애니 GIF는 원본 유지); 업로드는 `XMLHttpRequest`로 **진행률** 표시, 성공 후 타임라인·파일 허브 갱신은 병렬 처리(`buildImagePreviewObjectUrl`, `maybeCompressImageForUpload`, `uploadFileWithProgress`)
+  - **줄바꿈**: 메인·스레드 입력은 **`textarea`** — **Enter** 전송, **Shift+Enter** 개행; 서버에 저장된 본문의 줄바꿈은 타임라인에서 `<br>` 로 표시(`formatMessageWithMentions` 후 `\n` 치환)
+  - **본인 말풍선**: 발신자가 로그인 사용자와 같으면 **오른쪽 정렬**·**아바타·이름 행 숨김**(`msg-mine`·`msg-body--mine`), 텍스트·파일·이미지 첨부 행 공통
+  - **채널별 작성 중**: 다른 채널로 전환 시 현재 채널의 **입력 텍스트·답글 대상·대기 첨부 파일**을 `composerDraftByChannelId`에 저장하고, 돌아오면 복원; 로그아웃 시 맵 초기화
   - 채팅 패널(`#viewChat`) 포커스 상태에서 클립보드에 이미지가 있으면 **붙여넣기(Ctrl+V)** 로 로컬 파일 선택과 동일하게 첨부 미리보기에 올린 뒤 전송 버튼(또는 Enter)으로 업로드·`FILE` 메시지 생성(열린 모달·`modal-overlay` 포커스일 때는 기본 붙여넣기 유지). 클립보드에 **이미지가 여러 개**면 모두 큐에 넣어 순차 업로드
   - **드래그 앤 드롭**: 채팅 본문 영역(`#viewChat`)에 파일을 끌어다 놓으면 동일한 첨부 큐로 반영(다른 모달이 열려 있으면 드롭 무시). **첨부 버튼·`<input type="file" multiple>`** 으로도 여러 파일 선택 가능; 전송 시 파일별로 `FILE` 메시지가 순서대로 생성
   - **스레드 댓글**: 스레드 입력의 파일 input도 `multiple`이며, 선택한 파일을 큐에 두고 순차 업로드(메인 채팅과 동일한 업로드·갱신 패턴)

@@ -261,7 +261,7 @@
                 </svg>
               </button>
               <input type="file" id="fileInput" class="hidden" multiple />
-              <input id="messageInput" type="text" class="composer-input" placeholder="메시지 보내기… @이름 멘션 · 이미지 Ctrl+V · 드롭으로 첨부" autocomplete="off" />
+              <textarea id="messageInput" class="composer-input" rows="1" placeholder="메시지 보내기… Enter 전송 · Shift+Enter 줄바꿈 · @멘션 · Ctrl+V · 드롭 첨부" autocomplete="off"></textarea>
               <button class="composer-send-btn" id="btnSend" title="전송">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
@@ -659,7 +659,7 @@
           <div class="thread-composer-controls">
             <input id="threadFileInput" type="file" class="hidden" multiple />
             <button id="threadBtnAttach" type="button" class="composer-attach-btn" title="파일·이미지 첨부">📎</button>
-            <input id="threadMessageInput" type="text" class="composer-input" placeholder="댓글 입력… @이름 멘션(토큰) " autocomplete="off" />
+            <textarea id="threadMessageInput" class="composer-input" rows="1" placeholder="댓글 입력… Enter 전송 · Shift+Enter 줄바꿈 · @멘션" autocomplete="off"></textarea>
             <button id="threadBtnSend" type="button" class="composer-send-btn" title="전송">➤</button>
           </div>
           <div id="threadFilePreview" class="file-preview hidden">

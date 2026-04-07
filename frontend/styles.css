@@ -1045,6 +1045,51 @@ span.section-toggle-static { cursor: default; }
   border-radius: 6px;
   transition: background .1s;
 }
+.msg-row.msg-mine {
+  justify-content: flex-end;
+}
+.msg-row.msg-mine .msg-body--mine {
+  flex: 0 1 auto;
+  max-width: min(85%, 720px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+.msg-row.msg-mine .msg-body--mine .msg-meta {
+  display: none;
+}
+.msg-row.msg-mine .msg-content-row {
+  text-align: right;
+}
+.msg-row.msg-mine .msg-text {
+  text-align: right;
+}
+.msg-row.msg-mine .msg-content-row.msg-attachment-inline {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.msg-row.msg-mine .msg-content-row.msg-attachment-image {
+  align-items: flex-end;
+}
+.msg-row.msg-mine .msg-image-caption-row {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.msg-row.msg-mine .msg-inline-image-btn {
+  margin-left: auto;
+}
+.msg-row.msg-mine .msg-reply-to {
+  width: 100%;
+  max-width: min(85%, 720px);
+  align-self: stretch;
+  text-align: left;
+}
+.msg-row.msg-mine .msg-thread-summary {
+  align-self: stretch;
+  max-width: min(85%, 720px);
+  text-align: left;
+}
 .msg-row:hover { background: var(--bg-message-hover); }
 /* 연속 메시지: 아바타(36px) + flex gap(10px) 만큼만 비우면 본문 열이 첫 줄과 정렬됨. padding-left 추가 시 이중 들여쓰기 됨 */
 
@@ -1620,7 +1665,7 @@ html[data-theme="light"] .reply-composer-banner {
 }
 .composer-inner {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   border: 1px solid var(--border-subtle);
   border-radius: 10px;
   background: var(--bg-input);
@@ -1641,10 +1686,19 @@ html[data-theme="light"] .reply-composer-banner {
 
 .composer-input {
   flex: 1;
+  min-width: 0;
   padding: 10px 6px;
   font-size: 15px;
+  line-height: 1.45;
+  font-family: inherit;
   color: var(--text-primary);
   background: none;
+  border: none;
+  outline: none;
+  resize: none;
+  min-height: 44px;
+  max-height: 200px;
+  overflow-y: auto;
 }
 .composer-input::placeholder { color: var(--text-muted); }
 

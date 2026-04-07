@@ -4,6 +4,9 @@
 
 ## 2026-04-06
 
+### Changed
+- **프론트**: 메인·스레드 메시지 입력을 **`textarea`** 로 전환 — **Shift+Enter** 줄바꿈·**Enter** 전송, 타임라인 본문은 `formatMessageWithMentions` 후 `\n` → `<br>` 로 표시; **본인 메시지**는 **오른쪽 정렬**·아바타·발신자 행 미표시(`msg-mine`/`msg-body--mine`); **채널 전환 시** 입력·답글 대상·대기 첨부를 **채널별로 저장/복원**(`composerDraftByChannelId`, 로그아웃 시 `clear`). `index.html`, `app.js`, `styles.css`
+
 ### Added
 - **프론트**: 채팅 영역(`#viewChat`) **드래그 앤 드롭**으로 이미지·일반 파일 첨부, **파일 선택·클립보드 붙여넣기**로 **여러 파일 한 번에** 미리보기·순차 업로드; 스레드 댓글 입력도 다중 선택·다중 전송. `index.html` `multiple`, `app.js` `pendingFilesQueue`/`threadPendingFilesQueue`, `styles.css` `.view-chat--drag-over`
 
