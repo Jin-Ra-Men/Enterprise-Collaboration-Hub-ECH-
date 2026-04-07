@@ -1,7 +1,7 @@
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, Notification, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, Notification, shell, dialog } = require("electron");
 const { autoUpdater } = require("electron-updater");
 
 const gotTheLock = app.requestSingleInstanceLock();
@@ -322,6 +322,44 @@ ipcMain.handle("ech-open-temp-file-default-app", async (_, payload) => {
     return { ok: true };
   } catch (e) {
     console.warn("[ECH] ech-open-temp-file-default-app failed:", e?.message || e);
+    return { ok: false, error: String(e?.message || e) };
+  }
+});
+
+/**
+ * 「저장 후 열기」: 사용자가 저장 위치를 고른 뒤 디스크에 쓰고 OS 기본 앱으로 연다(임시 열기 없음).
+ */
+ipcMain.handle("ech-save-file-and-open-default-app", async (_, payload) => {
+  try {
+    const filename = payload && typeof payload.filename === "string" ? payload.filename : "download";
+    const buf = payload?.buffer;
+    if (!buf || !(buf instanceof ArrayBuffer)) {
+      return { ok: false, error: "invalid buffer" };
+    }
+    const win = mainWindow;
+    if (!win || win.isDestroyed()) {
+      return { ok: false, error: "no window" };
+    }
+    const base = safeOpenBasename(filename);
+    const { canceled, filePath } = await dialog.showSaveDialog(win, {
+      title: "파일 저장",
+      defaultPath: base,
+      buttonLabel: "저장",
+    });
+    if (canceled) {
+      return { ok: false, canceled: true };
+    }
+    if (!filePath) {
+      return { ok: false, error: "no path" };
+    }
+    await fs.promises.writeFile(filePath, Buffer.from(buf));
+    const err = await shell.openPath(filePath);
+    if (err) {
+      return { ok: false, error: err };
+    }
+    return { ok: true };
+  } catch (e) {
+    console.warn("[ECH] ech-save-file-and-open-default-app failed:", e?.message || e);
     return { ok: false, error: String(e?.message || e) };
   }
 });

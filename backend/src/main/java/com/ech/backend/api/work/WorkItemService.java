@@ -8,6 +8,7 @@ import com.ech.backend.api.work.dto.WorkItemResponse;
 import com.ech.backend.api.work.dto.WorkItemSidebarResponse;
 import com.ech.backend.domain.channel.Channel;
 import com.ech.backend.domain.channel.ChannelRepository;
+import com.ech.backend.domain.channel.ChannelType;
 import com.ech.backend.domain.audit.AuditEventType;
 import com.ech.backend.domain.channel.ChannelMemberRepository;
 import com.ech.backend.domain.message.Message;
@@ -232,6 +233,19 @@ public class WorkItemService {
         return s.length() > max ? s.substring(0, max) : s;
     }
 
+    /** DM은 내부명({@code _dm__...}) 대신 {@code description}(표시용 제목)을 우선한다. */
+    private static String channelDisplayNameForSidebar(Channel c) {
+        if (c == null) {
+            return "채널";
+        }
+        if (c.getChannelType() == ChannelType.DM
+                && c.getDescription() != null
+                && !c.getDescription().isBlank()) {
+            return c.getDescription().trim();
+        }
+        return c.getName() != null ? c.getName() : "채널";
+    }
+
     public List<WorkItemSidebarResponse> listWorkItemsWithMyCardAssignment(String employeeNo, int limit) {
         String emp = employeeNo == null ? "" : employeeNo.trim();
         if (emp.isBlank()) {
@@ -247,7 +261,7 @@ public class WorkItemService {
                         w.getId(),
                         w.getTitle(),
                         w.getSourceChannel().getId(),
-                        w.getSourceChannel().getName() == null ? "" : w.getSourceChannel().getName(),
+                        channelDisplayNameForSidebar(w.getSourceChannel()),
                         w.isInUse(),
                         w.getUpdatedAt()))
                 .toList();

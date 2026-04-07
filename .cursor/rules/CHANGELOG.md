@@ -2,6 +2,12 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-04-08
+
+### Changed
+- **프론트(업무·칸반)**: 사이드바 **내 업무 항목** 채널 표시 — DM 내부명(`_dm__...`) 대신 **표시용 이름**(`displayChannelLabelForWorkSidebar` + API). 모달 업무 목록 **선택 행 강조**(`channel-work-item--selected`). **백엔드** `GET /api/work-items/sidebar/by-assigned-cards`의 `channelName`은 DM일 때 `description` 우선. `frontend/app.js`, `frontend/styles.css`, `backend/.../WorkItemService.java`, `docs/FEATURE_SPEC.md`
+- **프론트(채팅 첨부)**: 이미지 **1장만**일 때 2열 그리드 빈 칸 제거(`grid-column: 1 / -1`). **일괄저장**은 **JSZip**으로 **ZIP 한 파일** 다운로드(CDN). **FILE 메시지 직후** 다음 줄은 **아바타 새 발화**(`shouldShowAvatarForMessage`·`appendMessageRealtime`). **저장 후 열기**: 브라우저는 다운로드 후 새 탭; **Electron**은 **저장 대화상자** 후 `shell.openPath`(`ech-save-file-and-open-default-app`). `frontend/app.js`, `frontend/index.html`, `frontend/styles.css`, `desktop/main.js`, `desktop/preload.js`, `docs/FEATURE_SPEC.md`, `docs/HANDOVER.md`
+
 ## 2026-04-07
 
 ### Release

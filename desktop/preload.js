@@ -50,5 +50,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @returns {Promise<{ ok: boolean, error?: string }>}
    */
   openTempFileWithDefaultApp: (payload) => ipcRenderer.invoke("ech-open-temp-file-default-app", payload),
+  /**
+   * 저장 대화상자로 경로 선택 → 디스크 저장 후 OS 기본 앱으로 연다(「저장 후 열기」).
+   * @param {{ filename: string, buffer: ArrayBuffer }} payload
+   * @returns {Promise<{ ok: boolean, canceled?: boolean, error?: string }>}
+   */
+  saveFileAndOpenWithDefaultApp: (payload) => ipcRenderer.invoke("ech-save-file-and-open-default-app", payload),
 });
 

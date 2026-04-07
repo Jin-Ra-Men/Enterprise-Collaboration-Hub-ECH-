@@ -1342,6 +1342,10 @@ html[data-theme="light"] .msg-reply-to-card:hover {
   gap: 6px;
   align-items: start;
 }
+/* 이미지 1장만 있을 때 2열 중 한 칸만 쓰여 오른쪽이 비지 않도록 전체 폭 사용 */
+.msg-attachment-image-grid > .msg-attach-image-cell:only-child {
+  grid-column: 1 / -1;
+}
 .msg-attach-image-thumb-btn {
   display: block;
   width: 100%;
@@ -2994,6 +2998,20 @@ html[data-theme="light"] .theme-option-btn.active {
   background: var(--bg-elevated);
   min-width: 0;
   overflow-wrap: anywhere;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+.channel-work-item--selected {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border-subtle));
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent) 38%, transparent),
+    0 2px 10px color-mix(in srgb, var(--accent) 18%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--bg-elevated));
+}
+html[data-theme="light"] .channel-work-item--selected {
+  background: color-mix(in srgb, var(--accent) 12%, #ffffff);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent),
+    0 2px 12px rgba(99, 102, 241, 0.18);
 }
 .channel-work-item-head {
   display: flex;

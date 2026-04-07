@@ -288,6 +288,8 @@ let workHubBoardId = null;
 let workHubColumns = [];
 /** When set, Work Hub loads/saves for this channel without switching the main chat view. */
 let workHubScopedChannelId = null;
+/** 업무·칸반 모달 내 업무 목록에서 강조할 행 (`data-work-item-id`와 동일 문자열). */
+let workHubSelectedListWorkItemKey = null;
 
 function getWorkHubChannelId() {
   const scoped = workHubScopedChannelId != null ? Number(workHubScopedChannelId) : null;
@@ -297,6 +299,7 @@ function getWorkHubChannelId() {
 
 function clearWorkHubScopedChannel() {
   workHubScopedChannelId = null;
+  workHubSelectedListWorkItemKey = null;
 }
 
 /** 좌측 하단 프레즌스 메뉴 이벤트(재로그인 시 중복 바인딩 방지) */
@@ -1111,16 +1114,66 @@ async function downloadChannelFile(fileId, filename, channelId, variant = "origi
   }
 }
 
-/** 여러 첨부를 순차로 원본 다운로드(일괄저장). */
+function uniqueZipEntryName(usedSet, originalName) {
+  const raw = String(originalName || "file").replace(/[/\\]/g, "_").trim() || "file";
+  if (!usedSet.has(raw)) {
+    usedSet.add(raw);
+    return raw;
+  }
+  const dot = raw.lastIndexOf(".");
+  const stem = dot > 0 ? raw.slice(0, dot) : raw;
+  const ext = dot > 0 ? raw.slice(dot) : "";
+  let i = 2;
+  let candidate;
+  do {
+    candidate = `${stem} (${i})${ext}`;
+    i += 1;
+  } while (usedSet.has(candidate));
+  usedSet.add(candidate);
+  return candidate;
+}
+
+/** 여러 첨부를 ZIP 한 번에 다운로드(일괄저장). JSZip 없으면 순차 다운로드로 폴백. */
 async function batchDownloadChannelImageFiles(channelId, metas) {
   const ch = channelId != null ? Number(channelId) : Number(activeChannelId);
   if (!Number.isFinite(ch) || !currentUser || !Array.isArray(metas) || metas.length === 0) return;
-  for (const m of metas) {
-    const fid = Number(m?.id ?? m?.fileId);
-    if (!Number.isFinite(fid)) continue;
-    const fn = m?.originalFilename || "download";
-    await downloadChannelFile(fid, fn, ch, "original");
-    await new Promise((r) => setTimeout(r, 120));
+  const JSZipCtor = typeof globalThis !== "undefined" ? globalThis.JSZip : undefined;
+  if (typeof JSZipCtor !== "function") {
+    for (const m of metas) {
+      const fid = Number(m?.id ?? m?.fileId);
+      if (!Number.isFinite(fid)) continue;
+      const fn = m?.originalFilename || "download";
+      await downloadChannelFile(fid, fn, ch, "original");
+      await new Promise((r) => setTimeout(r, 120));
+    }
+    return;
+  }
+  try {
+    const zip = new JSZipCtor();
+    const used = new Set();
+    for (const m of metas) {
+      const fid = Number(m?.id ?? m?.fileId);
+      if (!Number.isFinite(fid)) continue;
+      const blob = await fetchChannelFileBlob(ch, fid, "original");
+      const entryName = uniqueZipEntryName(used, m?.originalFilename || "file");
+      zip.file(entryName, blob);
+    }
+    const outBlob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+    const url = URL.createObjectURL(outBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `attachments-${ch}-${Date.now()}.zip`;
+    a.click();
+    setTimeout(() => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch {
+        /* ignore */
+      }
+    }, 180000);
+  } catch (e) {
+    console.error(e);
+    await uiAlert("ZIP 압축 중 오류가 발생했습니다.");
   }
 }
 
@@ -1163,31 +1216,18 @@ async function saveChannelFileAndOpenInNewTab(channelId, fileId, filename, varia
   try {
     const blob = await fetchChannelFileBlob(channelId, fileId, variant);
     const electronApi = typeof window !== "undefined" ? window.electronAPI : null;
-    if (electronApi && typeof electronApi.openTempFileWithDefaultApp === "function") {
+    if (electronApi && typeof electronApi.saveFileAndOpenWithDefaultApp === "function") {
       const buf = await blob.arrayBuffer();
-      let osOpen = { ok: false };
+      let result = { ok: false };
       try {
-        osOpen = await electronApi.openTempFileWithDefaultApp({ filename: fn, buffer: buf });
+        result = await electronApi.saveFileAndOpenWithDefaultApp({ filename: fn, buffer: buf });
       } catch (e) {
         console.error(e);
-        osOpen = { ok: false, error: String(e?.message || e) };
+        result = { ok: false, error: String(e?.message || e) };
       }
-      const url = URL.createObjectURL(new Blob([buf]));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fn;
-      a.click();
-      setTimeout(() => {
-        try {
-          URL.revokeObjectURL(url);
-        } catch {
-          /* ignore */
-        }
-      }, 180000);
-      if (osOpen?.ok) return;
-      const w = window.open(url, "_blank", "noopener,noreferrer");
-      if (!w) await uiAlert("팝업이 차단되었습니다. 브라우저에서 팝업을 허용해 주세요.");
-      if (osOpen?.error) await uiAlert(`기본 앱으로 열지 못했습니다: ${osOpen.error}`);
+      if (result?.canceled) return;
+      if (result?.ok) return;
+      if (result?.error) await uiAlert(`저장 후 열기에 실패했습니다: ${result.error}`);
       return;
     }
     const url = URL.createObjectURL(blob);
@@ -1195,7 +1235,13 @@ async function saveChannelFileAndOpenInNewTab(channelId, fileId, filename, varia
     a.href = url;
     a.download = fn;
     a.click();
-    window.open(url, "_blank", "noopener,noreferrer");
+    setTimeout(() => {
+      try {
+        window.open(url, "_blank", "noopener,noreferrer");
+      } catch {
+        /* ignore */
+      }
+    }, 350);
     setTimeout(() => {
       try {
         URL.revokeObjectURL(url);
@@ -2415,6 +2461,28 @@ function renderChannelList(channels) {
   refreshPresenceDots();
 }
 
+/**
+ * 사이드바·업무 목록에 보여줄 채널 라벨(DM은 표시용 description 우선, API가 내부명만 줄 때 보정).
+ */
+function displayChannelLabelForWorkSidebar(channels, channelId, apiChannelName) {
+  const cid = Number(channelId);
+  if (Number.isFinite(cid) && cid > 0 && Array.isArray(channels)) {
+    const ch = channels.find((c) => Number(c.channelId) === cid);
+    if (ch) {
+      const ct = String(ch.channelType || "").toUpperCase();
+      if (ct === "DM") {
+        const d = String(ch.description || "").trim();
+        if (d) return d;
+      }
+      const n = String(ch.name || "").trim();
+      if (n) return n;
+    }
+  }
+  const raw = String(apiChannelName || "").trim();
+  if (raw && !/^_/u.test(raw)) return raw;
+  return "다이렉트 메시지";
+}
+
 function renderMyWorkItemsSidebar(channels) {
   if (!myKanbanListEl) return;
   myKanbanListEl.innerHTML = "";
@@ -2426,21 +2494,23 @@ function renderMyWorkItemsSidebar(channels) {
   mySidebarWorkItems.forEach((row) => {
     const li = document.createElement("li");
     const inactive = row.inUse === false;
+    const channelLabel = displayChannelLabelForWorkSidebar(channels, row.channelId, row.channelName);
     li.className = inactive
       ? "sidebar-item assigned-kanban-item sidebar-work-item-inactive"
       : "sidebar-item assigned-kanban-item";
     li.dataset.workItemId = String(Number(row.workItemId ?? 0));
     li.dataset.channelId = String(Number(row.channelId ?? 0));
     li.dataset.channelType = channelTypeById.get(Number(row.channelId ?? 0)) || "PUBLIC";
-    li.dataset.channelName = String(row.channelName || "채널");
-    li.title = `${String(row.title || "(제목 없음)")} · ${String(row.channelName || "채널")}`;
+    li.dataset.channelName = channelLabel;
+    li.title = `${String(row.title || "(제목 없음)")} · ${channelLabel}`;
     li.innerHTML = `<span class="item-icon">📋</span><span class="item-label">${escHtml(String(row.title || "(제목 없음)"))}</span>
-      <span class="assigned-kanban-meta">${escHtml(String(row.channelName || "채널"))}</span>`;
+      <span class="assigned-kanban-meta">${escHtml(channelLabel)}</span>`;
     li.addEventListener("click", async () => {
       const cid = Number(row.channelId ?? 0);
       const wid = Number(row.workItemId ?? 0);
       if (!cid || !wid) return;
       workHubScopedChannelId = cid;
+      workHubSelectedListWorkItemKey = String(wid);
       clearWorkHubPendingMaps();
       clearPendingNewKanbanAssignees();
       try {
@@ -2448,6 +2518,7 @@ function renderMyWorkItemsSidebar(channels) {
         ensureWorkHubWorkListDeleteBound();
         openModal("modalWorkHub");
         setTimeout(() => {
+          applyWorkHubWorkListSelection();
           const rowEl = document.querySelector(`#channelWorkItemsList .channel-work-item[data-work-item-id="${wid}"]`);
           if (!rowEl) return;
           rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -3147,7 +3218,9 @@ function shouldShowAvatarForMessage(msgs, i) {
   const prevMt = String(prev.messageType || prev.message_type || "").toUpperCase();
   if (prevMt === "SYSTEM" || curMt === "SYSTEM") return true;
   if (dateKeyLocal(prev.createdAt) !== dateKeyLocal(cur.createdAt)) return true;
-  return String(prev.senderId) !== String(cur.senderId);
+  if (String(prev.senderId) !== String(cur.senderId)) return true;
+  if (tryParseFilePayload(prev)) return true;
+  return false;
 }
 
 /** API·소켓 메시지에서 파일 첨부 JSON 추출 */
@@ -4391,7 +4464,12 @@ function appendMessageRealtime(msg) {
   }
 
   const beforeAppendChat = adjacentPrevChat;
-  const showAvatar = !beforeAppendChat || beforeAppendChat.dataset.senderId !== sid;
+  const prevIsAttachment =
+    beforeAppendChat && beforeAppendChat.classList.contains("msg-has-attachment");
+  const showAvatar =
+    !beforeAppendChat ||
+    beforeAppendChat.dataset.senderId !== sid ||
+    prevIsAttachment;
   const row = createMessageRowElement(msg, { showAvatar, showTime: true });
   const mid = msg.messageId ?? msg.message_id;
   if (mid != null) row.id = `msg-${mid}`;
@@ -6408,6 +6486,19 @@ function removeDraftKanbanCardsForWorkItem(workItemId) {
   workHubPendingNewKanbanCards = workHubPendingNewKanbanCards.filter((d) => Number(d.workItemId) !== wi);
 }
 
+function applyWorkHubWorkListSelection() {
+  const listEl = document.getElementById("channelWorkItemsList");
+  if (!listEl || workHubSelectedListWorkItemKey == null) return;
+  const key = String(workHubSelectedListWorkItemKey);
+  listEl.querySelectorAll(".channel-work-item--selected").forEach((el) => el.classList.remove("channel-work-item--selected"));
+  const esc =
+    typeof CSS !== "undefined" && typeof CSS.escape === "function"
+      ? CSS.escape(key)
+      : key.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  const row = listEl.querySelector(`.channel-work-item[data-work-item-id="${esc}"]`);
+  if (row) row.classList.add("channel-work-item--selected");
+}
+
 function renderChannelWorkItems(items) {
   const listEl = document.getElementById("channelWorkItemsList");
   if (!listEl) return;
@@ -6443,9 +6534,7 @@ function renderChannelWorkItems(items) {
     li.className = inactive
       ? `channel-work-item channel-work-item-inactive${rowExtraClass}`
       : `channel-work-item${rowExtraClass}`;
-    if (!isDraft) {
-      li.setAttribute("data-work-item-id", String(id));
-    }
+    li.setAttribute("data-work-item-id", String(id));
     const baseTitle = !isDraft && workHubPendingWorkTitle.has(Number(id))
       ? workHubPendingWorkTitle.get(Number(id))
       : item.title;
@@ -6492,6 +6581,7 @@ function renderChannelWorkItems(items) {
     `;
     listEl.appendChild(li);
   });
+  applyWorkHubWorkListSelection();
   listEl.querySelectorAll(".work-item-status-select").forEach((sel) => {
     sel.addEventListener("change", () => {
       const isDraft = sel.dataset.isDraft === "1";
@@ -6559,6 +6649,9 @@ function ensureWorkHubWorkListDeleteBound() {
     ) {
       const rawId = String(row.querySelector(".work-item-delete-btn")?.dataset.workItemId || "");
       const isDraft = row.querySelector(".work-item-delete-btn")?.dataset.isDraft === "1";
+      workHubSelectedListWorkItemKey = isDraft ? rawId : String(Number(rawId));
+      listEl.querySelectorAll(".channel-work-item--selected").forEach((el) => el.classList.remove("channel-work-item--selected"));
+      row.classList.add("channel-work-item--selected");
       openWorkItemDetailModal(rawId, isDraft);
       return;
     }
