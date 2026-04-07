@@ -6203,6 +6203,8 @@ function queueWorkItemPurge(workItemId) {
   workHubPendingWorkStatus.delete(id);
   workHubPendingWorkTitle.delete(id);
   workHubPendingWorkDescription.delete(id);
+  clearPendingKanbanStateForWorkItem(id);
+  removeDraftKanbanCardsForWorkItem(id);
   void loadChannelWorkItems();
   void loadChannelKanbanBoard();
 }
@@ -6223,12 +6225,61 @@ function cancelWorkItemRestorePending(workItemId) {
   void loadChannelKanbanBoard();
 }
 
+/** 소프트 삭제 예정(저장 전) 취소 */
+function cancelWorkItemDeletePending(workItemId) {
+  const id = Number(workItemId);
+  if (!id) return;
+  workHubPendingWorkDeleteIds.delete(id);
+  void loadChannelWorkItems();
+}
+
+/** 칸반 카드 ID 수집: 서버 보드 컬럼 기준(workItem 연결) */
+function collectKanbanCardIdsForWorkItem(workItemId) {
+  const wi = Number(workItemId);
+  if (!Number.isFinite(wi) || wi <= 0) return [];
+  const ids = [];
+  for (const col of activeWorkHubColumns || []) {
+    const cards = Array.isArray(col?.cards) ? col.cards : [];
+    for (const c of cards) {
+      const cwi = Number(c.workItemId ?? c.work_item_id);
+      if (cwi !== wi) continue;
+      const cid = Number(c.id);
+      if (Number.isFinite(cid)) ids.push(cid);
+    }
+  }
+  return ids;
+}
+
+/** 완전 삭제 시 서버에서 카드가 사라지므로, 저장 시 PUT 대상에서 제거한다. */
+function clearPendingKanbanStateForCardIds(cardIds) {
+  if (!Array.isArray(cardIds) || !cardIds.length) return;
+  for (const raw of cardIds) {
+    const cid = Number(raw);
+    if (!Number.isFinite(cid)) continue;
+    workHubPendingCardColumn.delete(cid);
+    workHubPendingCardSortOrder.delete(cid);
+    workHubPendingCardTitle.delete(cid);
+    workHubPendingCardDescription.delete(cid);
+    workHubPendingCardDeleteIds.delete(cid);
+    workHubPendingCardAssigneeAdd.delete(cid);
+    workHubPendingCardAssigneeRemove.delete(cid);
+  }
+}
+
+function clearPendingKanbanStateForWorkItem(workItemId) {
+  clearPendingKanbanStateForCardIds(collectKanbanCardIdsForWorkItem(workItemId));
+}
+
+function removeDraftKanbanCardsForWorkItem(workItemId) {
+  const wi = Number(workItemId);
+  if (!Number.isFinite(wi)) return;
+  workHubPendingNewKanbanCards = workHubPendingNewKanbanCards.filter((d) => Number(d.workItemId) !== wi);
+}
+
 function renderChannelWorkItems(items) {
   const listEl = document.getElementById("channelWorkItemsList");
   if (!listEl) return;
-  const savedItems = Array.isArray(items)
-    ? items.filter((item) => !workHubPendingWorkDeleteIds.has(Number(item.id)))
-    : [];
+  const savedItems = Array.isArray(items) ? items : [];
   const draftItems = workHubPendingNewWorkItems.map((d, i) => ({
     id: `draft-${i}`,
     title: d.title,
@@ -6250,11 +6301,13 @@ function renderChannelWorkItems(items) {
     const idNum = !isDraft ? Number(item.id) : NaN;
     const pendingPurge = !isDraft && workHubPendingWorkPurgeIds.has(idNum);
     const pendingRestore = !isDraft && workHubPendingWorkRestoreIds.has(idNum);
+    const pendingDelete = !isDraft && workHubPendingWorkDeleteIds.has(idNum);
     const serverInactive = !isDraft && item.inUse === false;
     const inactive = !isDraft && !effectiveWorkItemInUseForUi(idNum);
     let rowExtraClass = "";
     if (pendingPurge) rowExtraClass = " channel-work-item--pending-purge";
     else if (pendingRestore) rowExtraClass = " channel-work-item--pending-restore";
+    else if (pendingDelete) rowExtraClass = " channel-work-item--pending-delete";
     li.className = inactive
       ? `channel-work-item channel-work-item-inactive${rowExtraClass}`
       : `channel-work-item${rowExtraClass}`;
@@ -6281,6 +6334,9 @@ function renderChannelWorkItems(items) {
       } else if (pendingRestore) {
         pendingStrip = `<div class="channel-work-item-pending-strip" role="status"><span class="work-pending-badge work-pending-badge--restore">복원 예정 · 저장 시 반영</span></div>`;
         hubActions = `<div class="channel-work-item-hub-actions"><button type="button" class="btn-secondary btn-sm work-item-hub-cancel-restore" data-work-item-id="${idAttr}">복원 취소</button></div>`;
+      } else if (pendingDelete) {
+        pendingStrip = `<div class="channel-work-item-pending-strip" role="status"><span class="work-pending-badge work-pending-badge--delete">삭제 예정 · 저장 시 반영</span></div>`;
+        hubActions = `<div class="channel-work-item-hub-actions"><button type="button" class="btn-secondary btn-sm work-item-hub-cancel-delete" data-work-item-id="${idAttr}">삭제 취소</button></div>`;
       } else if (serverInactive) {
         hubActions = `<div class="channel-work-item-hub-actions"><button type="button" class="btn-secondary btn-sm work-item-hub-restore" data-work-item-id="${idAttr}">복원</button><button type="button" class="btn-danger btn-sm work-item-hub-purge" data-work-item-id="${idAttr}">완전 삭제</button></div>`;
       }
@@ -6338,6 +6394,13 @@ function ensureWorkHubWorkListDeleteBound() {
       e.preventDefault();
       e.stopPropagation();
       cancelWorkItemRestorePending(cancelRestoreBtn.dataset.workItemId);
+      return;
+    }
+    const cancelDeleteBtn = e.target.closest(".work-item-hub-cancel-delete");
+    if (cancelDeleteBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      cancelWorkItemDeletePending(cancelDeleteBtn.dataset.workItemId);
       return;
     }
     const hubRestoreBtn = e.target.closest(".work-item-hub-restore");
@@ -6810,7 +6873,12 @@ async function flushWorkHubSave() {
     }
     workHubPendingWorkDeleteIds.clear();
 
-    for (const workItemId of [...workHubPendingWorkPurgeIds]) {
+    const purgeIdsSnapshot = [...workHubPendingWorkPurgeIds];
+    const cardIdsBeforePurgeByWork = new Map();
+    for (const wid of purgeIdsSnapshot) {
+      cardIdsBeforePurgeByWork.set(Number(wid), collectKanbanCardIdsForWorkItem(wid));
+    }
+    for (const workItemId of purgeIdsSnapshot) {
       const res = await apiFetch(
         `/api/work-items/${Number(workItemId)}?actorEmployeeNo=${encodeURIComponent(currentUser.employeeNo)}&hard=true`,
         { method: "DELETE" }
@@ -6819,6 +6887,11 @@ async function flushWorkHubSave() {
       if (!res.ok) {
         throw new Error(j.error?.message || `업무 완전 삭제에 실패했습니다. (${workItemId})`);
       }
+    }
+    for (const wid of purgeIdsSnapshot) {
+      const cids = cardIdsBeforePurgeByWork.get(Number(wid));
+      clearPendingKanbanStateForCardIds(Array.isArray(cids) ? cids : []);
+      removeDraftKanbanCardsForWorkItem(wid);
     }
     workHubPendingWorkPurgeIds.clear();
 
@@ -7090,7 +7163,11 @@ async function loadChannelWorkItems() {
 function populateKanbanNewCardWorkItemSelect() {
   const sel = document.getElementById("kanbanNewCardWorkItemSelect");
   if (!sel) return;
-  const list = lastChannelWorkItemsForHub.filter((w) => effectiveWorkItemInUseForUi(Number(w.id)));
+  const list = lastChannelWorkItemsForHub.filter((w) => {
+    const wid = Number(w.id);
+    if (workHubPendingWorkDeleteIds.has(wid)) return false;
+    return effectiveWorkItemInUseForUi(wid);
+  });
   sel.innerHTML =
     `<option value="">업무 항목 선택(필수)</option>` +
     list

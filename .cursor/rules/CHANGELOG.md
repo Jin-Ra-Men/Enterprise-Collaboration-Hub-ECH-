@@ -4,6 +4,9 @@
 
 ## 2026-04-06
 
+### Fixed
+- **프론트(업무·칸반)**: 업무 **소프트 삭제(✕)** 시 목록에서 즉시 제거되지 않고 **삭제 예정** 배지·삭제 취소 표시. **완전 삭제** 저장 시 서버에서 카드가 먼저 삭제되어 남은 `PUT /kanban/cards/{id}`가 실패하던 문제 — purge 직전·`queueWorkItemPurge` 시 해당 업무의 카드 ID를 pending 맵에서 제거. `app.js`, `styles.css`, `docs/FEATURE_SPEC.md`
+
 ### Changed
 - **프론트(채팅)**: 첨부(이미지·문서 공통)를 **카드 리스트**로 표시 — 파일명·크기 + **저장** / **저장 후 열기** / **뷰어로 열기**(이미지는 라이트박스, 그 외는 새 탭 blob). **연속 FILE 메시지**(이미지+문서 혼합 가능, 같은 분·같은 발신자, 스레드 댓글 없음)는 `tryConsumeFileAttachmentGroup` → `createFileAttachmentGroupRowFromMsgs`로 묶고 **일괄저장**. `fetchChannelFileBlob` 등. `app.js`, `styles.css`, `docs/HANDOVER.md`
 
