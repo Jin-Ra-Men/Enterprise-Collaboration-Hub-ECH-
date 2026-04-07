@@ -1062,6 +1062,19 @@ span.section-toggle-static { cursor: default; }
 .msg-row.msg-mine .msg-content-row {
   text-align: right;
 }
+/* 본인 텍스트: 시각을 말풍선(본문) 왼쪽에 배치 — DOM은 본문·시각 순, 시각적으로는 시각·본문 */
+.msg-row.msg-mine .msg-content-row:has(.msg-text) {
+  display: inline-flex;
+  flex-direction: row-reverse;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 8px;
+  max-width: 100%;
+  text-align: right;
+}
+.msg-row.msg-mine .msg-content-row:has(.msg-text) .msg-time {
+  margin-left: 0;
+}
 .msg-row.msg-mine .msg-text {
   text-align: right;
 }
@@ -1326,12 +1339,9 @@ html[data-theme="light"] .msg-reply-to-card:hover {
 .msg-attachment-list-footer {
   margin-top: 6px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   align-items: center;
   gap: 8px;
-}
-.msg-row.msg-other .msg-attachment-list-footer {
-  justify-content: flex-start;
 }
 .msg-attach-card {
   background: var(--bg-elevated);
@@ -1391,6 +1401,11 @@ html[data-theme="light"] .msg-reply-to-card:hover {
   gap: 8px 12px;
   margin-top: 6px;
   justify-content: flex-end;
+}
+/* 본인: DOM 순서 일괄저장·시각 → 시각이 버튼 왼쪽(말풍선 쪽), 묶음은 오른쪽 정렬 유지 */
+.msg-row.msg-mine .msg-attachment-group-footer {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
 }
 .msg-row.msg-other .msg-attachment-group-footer {
   justify-content: flex-start;

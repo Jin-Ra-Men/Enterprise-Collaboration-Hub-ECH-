@@ -824,7 +824,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - **DM 채팅 헤더**: `#chatChannelPrefix`에 사이드바 DM 목록과 동일하게 `dmSidebarLeadingHtml` 기반 **프레즌스 점**(그룹 DM은 최대 3명 + `+N`). 멤버 API 로드 후 `updateChatHeaderDmPresence`로 갱신
   - **대용량 첨부·이미지(프론트)**: 미리보기는 큰 이미지를 다운스케일한 blob URL로 표시해 UI 멈춤을 줄임; 약 **2MB 초과** 이미지는 업로드 전 최대 변 길이 4096px·JPEG 재압축(애니 GIF는 원본 유지); 업로드는 `XMLHttpRequest`로 **진행률** 표시, 성공 후 타임라인·파일 허브 갱신은 병렬 처리(`buildImagePreviewObjectUrl`, `maybeCompressImageForUpload`, `uploadFileWithProgress`)
   - **줄바꿈**: 메인·스레드 입력은 **`textarea`** — **Enter** 전송, **Shift+Enter** 개행; 서버에 저장된 본문의 줄바꿈은 타임라인에서 `<br>` 로 표시(`formatMessageWithMentions` 후 `\n` 치환)
-  - **본인 말풍선**: 발신자가 로그인 사용자와 같으면 **오른쪽 정렬**·**아바타·이름 행 숨김**(`msg-mine`·`msg-body--mine`), 텍스트·파일·이미지 첨부 행 공통
+  - **본인 말풍선**: 발신자가 로그인 사용자와 같으면 **오른쪽 정렬**·**아바타·이름 행 숨김**(`msg-mine`·`msg-body--mine`), 텍스트·파일·이미지 첨부 행 공통. **시각**은 본문·첨부 푸터에서 **말풍선(콘텐츠)의 왼쪽**에 오도록 배치(텍스트는 `inline-flex`+`row-reverse`, 첨부 푸터는 `flex-start`/그룹은 `row-reverse`)
   - **채널별 작성 중**: 다른 채널로 전환 시 현재 채널의 **입력 텍스트·답글 대상·대기 첨부 파일**을 `composerDraftByChannelId`에 저장하고, 돌아오면 복원; 로그아웃 시 맵 초기화
   - **「새 메시지」구분선**: 읽음 앵커 이후 미읽음이 있을 때 표시; 사용자가 입력창에 **내용을 입력**하거나 **메시지·파일 전송에 성공**하면 제거. 본인 전송 직후 타임라인 `loadMessages`는 `skipNewMsgsDivider`로 구분선을 다시 넣지 않음(파일 업로드 경로 `skipNewMsgsDividerAfterReload`)
   - 채팅 패널(`#viewChat`) 포커스 상태에서 클립보드에 이미지가 있으면 **붙여넣기(Ctrl+V)** 로 로컬 파일 선택과 동일하게 첨부 미리보기에 올린 뒤 전송 버튼(또는 Enter)으로 업로드·`FILE` 메시지 생성(열린 모달·`modal-overlay` 포커스일 때는 기본 붙여넣기 유지). 클립보드에 **이미지가 여러 개**면 모두 큐에 넣어 순차 업로드

@@ -3027,6 +3027,10 @@ function snippetForReplyComposerBanner(messageId) {
       const tBtn = row.querySelector(`.msg-attach-group-item[data-message-id="${id}"] .msg-attach-image-thumb-btn`);
       if (tBtn && tBtn.title) snippet = "📎 " + String(tBtn.title).trim();
     }
+    if (!snippet) {
+      const tBtn = row.querySelector(".msg-attach-image-thumb-btn");
+      if (tBtn && tBtn.title) snippet = "📎 " + String(tBtn.title).trim();
+    }
   } else {
     const cached = timelineRootMessageById.get(id);
     if (cached) {

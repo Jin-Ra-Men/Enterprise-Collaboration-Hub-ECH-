@@ -5,6 +5,7 @@
 ## 2026-04-06
 
 ### Changed
+- **프론트(채팅)**: **본인 메시지**(`msg-mine`)의 **타임스탬프**를 본문·첨부 푸터에서 **말풍선 콘텐츠 왼쪽**에 배치(텍스트 `row-reverse`, 첨부 푸터 `flex-start`, 그룹 푸터 `row-reverse`). 답글 배너 스니펫: **단일 이미지 그리드 행**에서도 썸네일 `title` 폴백. `frontend/styles.css`, `frontend/app.js`, `docs/FEATURE_SPEC.md`, `docs/HANDOVER.md`
 - **프론트(채팅 첨부)**: 다중 **이미지**는 한 메시지 묶음에서 **2열 그리드** 썸네일(줄당 2개 후 개행), 클릭 시 **라이트박스**에서 다운로드; **뷰어로 열기** 제거. 다중 **비이미지**는 한 말풍선에 **세로 카드**(저장·저장 후 열기만). 답글 배너 스니펫은 이미지 썸네일 `title` 폴백. `app.js`, `styles.css`, `docs/FEATURE_SPEC.md`, `README.md`, `docs/HANDOVER.md`
 
 ### Fixed
