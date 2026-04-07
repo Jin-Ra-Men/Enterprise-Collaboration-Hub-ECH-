@@ -1929,6 +1929,10 @@ html[data-theme="light"] .reply-composer-banner {
   z-index: 1000;
 }
 .modal-overlay.modal-stacked { z-index: 1100; }
+/* 공통 확인/알림 — 업무 상세 등 중첩 모달보다 위에 표시 */
+#modalAppDialog.modal-overlay {
+  z-index: 1350;
+}
 
 /* Electron: 업데이트 안내 모달 */
 .modal-app-update-lead {
@@ -3027,6 +3031,68 @@ html[data-theme="light"] .theme-option-btn.active {
 }
 .channel-work-item-inactive .channel-work-item-title {
   text-decoration: line-through;
+}
+.channel-work-item--pending-purge {
+  border-color: rgba(239, 68, 68, 0.55);
+  background: color-mix(in srgb, #ef4444 10%, var(--bg-elevated));
+  box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.2);
+}
+.channel-work-item--pending-restore {
+  border-color: rgba(34, 197, 94, 0.45);
+  background: color-mix(in srgb, #22c55e 9%, var(--bg-elevated));
+  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.18);
+}
+.channel-work-item-pending-strip {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.work-pending-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  letter-spacing: -0.02em;
+}
+.work-pending-badge--purge {
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.55);
+  border: 1px solid rgba(248, 113, 113, 0.45);
+}
+.work-pending-badge--restore {
+  color: #bbf7d0;
+  background: rgba(22, 101, 52, 0.5);
+  border: 1px solid rgba(74, 222, 128, 0.4);
+}
+html[data-theme="light"] .work-pending-badge--purge {
+  color: #7f1d1d;
+  background: rgba(254, 226, 226, 0.95);
+  border-color: rgba(248, 113, 113, 0.65);
+}
+html[data-theme="light"] .work-pending-badge--restore {
+  color: #14532d;
+  background: rgba(220, 252, 231, 0.95);
+  border-color: rgba(74, 222, 128, 0.55);
+}
+.channel-work-item-hub-actions {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.channel-work-item-hub-actions .btn-sm {
+  font-size: 12px;
+  padding: 5px 10px;
+}
+.channel-work-item--pending-purge .work-item-status-select,
+.channel-work-item--pending-purge .work-item-delete-btn {
+  opacity: 0.45;
+  pointer-events: none;
 }
 .sidebar-work-item-inactive .item-label {
   text-decoration: line-through;

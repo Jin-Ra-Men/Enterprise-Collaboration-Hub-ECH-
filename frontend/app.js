@@ -5912,14 +5912,50 @@ function effectiveWorkItemInUseForUi(workItemId) {
   return w ? w.inUse !== false : true;
 }
 
+function queueWorkItemRestore(workItemId) {
+  const id = Number(workItemId);
+  if (!id) return;
+  workHubPendingWorkRestoreIds.add(id);
+  workHubPendingWorkPurgeIds.delete(id);
+  workHubPendingWorkDeleteIds.delete(id);
+  void loadChannelWorkItems();
+  void loadChannelKanbanBoard();
+}
+
+function queueWorkItemPurge(workItemId) {
+  const id = Number(workItemId);
+  if (!id) return;
+  workHubPendingWorkPurgeIds.add(id);
+  workHubPendingWorkRestoreIds.delete(id);
+  workHubPendingWorkDeleteIds.delete(id);
+  workHubPendingWorkStatus.delete(id);
+  workHubPendingWorkTitle.delete(id);
+  workHubPendingWorkDescription.delete(id);
+  void loadChannelWorkItems();
+  void loadChannelKanbanBoard();
+}
+
+function cancelWorkItemPurgePending(workItemId) {
+  const id = Number(workItemId);
+  if (!id) return;
+  workHubPendingWorkPurgeIds.delete(id);
+  void loadChannelWorkItems();
+  void loadChannelKanbanBoard();
+}
+
+function cancelWorkItemRestorePending(workItemId) {
+  const id = Number(workItemId);
+  if (!id) return;
+  workHubPendingWorkRestoreIds.delete(id);
+  void loadChannelWorkItems();
+  void loadChannelKanbanBoard();
+}
+
 function renderChannelWorkItems(items) {
   const listEl = document.getElementById("channelWorkItemsList");
   if (!listEl) return;
   const savedItems = Array.isArray(items)
-    ? items.filter(
-        (item) =>
-          !workHubPendingWorkDeleteIds.has(Number(item.id)) && !workHubPendingWorkPurgeIds.has(Number(item.id))
-      )
+    ? items.filter((item) => !workHubPendingWorkDeleteIds.has(Number(item.id)))
     : [];
   const draftItems = workHubPendingNewWorkItems.map((d, i) => ({
     id: `draft-${i}`,
@@ -5938,9 +5974,18 @@ function renderChannelWorkItems(items) {
   visibleItems.forEach((item) => {
     const li = document.createElement("li");
     const isDraft = item._isDraft === true;
-    const inactive = !isDraft && !effectiveWorkItemInUseForUi(Number(item.id));
-    li.className = inactive ? "channel-work-item channel-work-item-inactive" : "channel-work-item";
     const id = isDraft ? String(item.id) : Number(item.id);
+    const idNum = !isDraft ? Number(item.id) : NaN;
+    const pendingPurge = !isDraft && workHubPendingWorkPurgeIds.has(idNum);
+    const pendingRestore = !isDraft && workHubPendingWorkRestoreIds.has(idNum);
+    const serverInactive = !isDraft && item.inUse === false;
+    const inactive = !isDraft && !effectiveWorkItemInUseForUi(idNum);
+    let rowExtraClass = "";
+    if (pendingPurge) rowExtraClass = " channel-work-item--pending-purge";
+    else if (pendingRestore) rowExtraClass = " channel-work-item--pending-restore";
+    li.className = inactive
+      ? `channel-work-item channel-work-item-inactive${rowExtraClass}`
+      : `channel-work-item${rowExtraClass}`;
     if (!isDraft) {
       li.setAttribute("data-work-item-id", String(id));
     }
@@ -5953,6 +5998,22 @@ function renderChannelWorkItems(items) {
     const base = normalizeWorkStatusLabel(item.status);
     const pending = !isDraft ? workHubPendingWorkStatus.get(id) : null;
     const status = pending != null ? normalizeWorkStatusLabel(pending) : base;
+
+    let pendingStrip = "";
+    let hubActions = "";
+    if (!isDraft) {
+      const idAttr = escHtml(String(id));
+      if (pendingPurge) {
+        pendingStrip = `<div class="channel-work-item-pending-strip" role="status"><span class="work-pending-badge work-pending-badge--purge">완전 삭제 예정 · 저장 시 반영</span></div>`;
+        hubActions = `<div class="channel-work-item-hub-actions"><button type="button" class="btn-secondary btn-sm work-item-hub-cancel-purge" data-work-item-id="${idAttr}">완전 삭제 취소</button></div>`;
+      } else if (pendingRestore) {
+        pendingStrip = `<div class="channel-work-item-pending-strip" role="status"><span class="work-pending-badge work-pending-badge--restore">복원 예정 · 저장 시 반영</span></div>`;
+        hubActions = `<div class="channel-work-item-hub-actions"><button type="button" class="btn-secondary btn-sm work-item-hub-cancel-restore" data-work-item-id="${idAttr}">복원 취소</button></div>`;
+      } else if (serverInactive) {
+        hubActions = `<div class="channel-work-item-hub-actions"><button type="button" class="btn-secondary btn-sm work-item-hub-restore" data-work-item-id="${idAttr}">복원</button><button type="button" class="btn-danger btn-sm work-item-hub-purge" data-work-item-id="${idAttr}">완전 삭제</button></div>`;
+      }
+    }
+
     li.innerHTML = `
       <div class="channel-work-item-head">
         <strong class="channel-work-item-title">${escHtml(baseTitle || "(제목 없음)")}</strong>
@@ -5966,6 +6027,8 @@ function renderChannelWorkItems(items) {
         </div>
       </div>
       <div class="channel-work-item-meta">${escHtml(baseDesc || "설명 없음")}</div>
+      ${pendingStrip}
+      ${hubActions}
     `;
     listEl.appendChild(li);
   });
@@ -5991,8 +6054,42 @@ function ensureWorkHubWorkListDeleteBound() {
   if (!listEl || workHubWorkListDeleteBound) return;
   workHubWorkListDeleteBound = true;
   listEl.addEventListener("click", async (e) => {
+    const cancelPurgeBtn = e.target.closest(".work-item-hub-cancel-purge");
+    if (cancelPurgeBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      cancelWorkItemPurgePending(cancelPurgeBtn.dataset.workItemId);
+      return;
+    }
+    const cancelRestoreBtn = e.target.closest(".work-item-hub-cancel-restore");
+    if (cancelRestoreBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      cancelWorkItemRestorePending(cancelRestoreBtn.dataset.workItemId);
+      return;
+    }
+    const hubRestoreBtn = e.target.closest(".work-item-hub-restore");
+    if (hubRestoreBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      queueWorkItemRestore(hubRestoreBtn.dataset.workItemId);
+      return;
+    }
+    const hubPurgeBtn = e.target.closest(".work-item-hub-purge");
+    if (hubPurgeBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!(await uiConfirm("연결된 칸반 카드까지 모두 삭제합니다. 저장 시 서버에 반영됩니다. 계속할까요?"))) return;
+      queueWorkItemPurge(hubPurgeBtn.dataset.workItemId);
+      return;
+    }
     const row = e.target.closest(".channel-work-item");
-    if (row && !e.target.closest(".work-item-status-select") && !e.target.closest(".work-item-delete-btn")) {
+    if (
+      row &&
+      !e.target.closest(".work-item-status-select") &&
+      !e.target.closest(".work-item-delete-btn") &&
+      !e.target.closest(".channel-work-item-hub-actions")
+    ) {
       const rawId = String(row.querySelector(".work-item-delete-btn")?.dataset.workItemId || "");
       const isDraft = row.querySelector(".work-item-delete-btn")?.dataset.isDraft === "1";
       openWorkItemDetailModal(rawId, isDraft);
@@ -7767,13 +7864,9 @@ document.getElementById("btnWorkItemRestore")?.addEventListener("click", async (
   if (!meta || meta.isDraft || !currentUser) return;
   const id = Number(meta.id);
   if (!id) return;
-  workHubPendingWorkRestoreIds.add(id);
-  workHubPendingWorkPurgeIds.delete(id);
-  workHubPendingWorkDeleteIds.delete(id);
+  queueWorkItemRestore(id);
   closeModal("modalWorkItemDetail");
   document.getElementById("workItemDetailInactiveActions")?.classList.add("hidden");
-  await loadChannelWorkItems();
-  void loadChannelKanbanBoard();
 });
 
 document.getElementById("btnWorkItemPurge")?.addEventListener("click", async () => {
@@ -7782,16 +7875,9 @@ document.getElementById("btnWorkItemPurge")?.addEventListener("click", async () 
   const id = Number(meta.id);
   if (!id) return;
   if (!(await uiConfirm("연결된 칸반 카드까지 모두 삭제합니다. 저장 시 서버에 반영됩니다. 계속할까요?"))) return;
-  workHubPendingWorkPurgeIds.add(id);
-  workHubPendingWorkRestoreIds.delete(id);
-  workHubPendingWorkDeleteIds.delete(id);
-  workHubPendingWorkStatus.delete(id);
-  workHubPendingWorkTitle.delete(id);
-  workHubPendingWorkDescription.delete(id);
+  queueWorkItemPurge(id);
   closeModal("modalWorkItemDetail");
   document.getElementById("workItemDetailInactiveActions")?.classList.add("hidden");
-  await loadChannelWorkItems();
-  void loadChannelKanbanBoard();
 });
 
 document.getElementById("btnSaveKanbanCardDetail")?.addEventListener("click", async () => {

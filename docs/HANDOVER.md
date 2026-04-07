@@ -66,6 +66,7 @@
 - **채팅 첨부(다중·DnD)**: 메인 채팅 `#viewChat`에 파일 **드래그 앤 드롭**, 첨부 `<input type="file" multiple>`(메인·스레드), 클립보드 이미지 **여러 장** 붙여넣기 → `pendingFilesQueue` / `threadPendingFilesQueue`로 미리보기 후 순차 업로드. 다른 모달이 열려 있으면 채팅 드롭은 처리하지 않음(`isModalOverlayBlockingChatDrop`).
 - **채팅 입력·말풍선**: `#messageInput`·`#threadMessageInput`은 **`textarea`** — Enter 전송·Shift+Enter 개행, 타임라인은 `\n`→`<br>`; 본인 메시지는 `msg-mine` 오른쪽·아바타 생략; 채널 전환 시 `composerDraftByChannelId`로 미전송 입력·답글 대상·대기 첨부 복원, 로그아웃 시 `clearSession`에서 맵 비움.
 - **「새 메시지」구분선**: 입력·전송 시 `clearChatReadAnchorUi`; 본인 전송 후 `loadMessages`는 `skipNewMsgsDivider`/`uploadFile` `skipNewMsgsDividerAfterReload`로 재삽입 방지.
+- **업무·칸반**: 비활성 업무 복원/완전 삭제는 **저장 시** `flushWorkHubSave`에서만 API — 목록·상세 공통 `queueWorkItemRestore`/`queueWorkItemPurge`. 확인창 `#modalAppDialog`는 `z-index: 1350`으로 중첩 모달 위.
 
 ## 3) 핵심 문서 위치
 - 요구사항: `docs/PROJECT_REQUIREMENTS.md`

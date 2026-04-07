@@ -881,7 +881,7 @@
         <div class="modal-body work-hub-body">
           <div class="work-hub-panel">
             <h4>업무 항목</h4>
-            <p class="work-hub-hint">신규 입력·목록에서 상태 변경 후 <strong>저장</strong>을 누르면 서버에 반영됩니다.</p>
+            <p class="work-hub-hint">신규 입력·목록에서 상태 변경 후 <strong>저장</strong>을 누르면 서버에 반영됩니다. 비활성 업무의 <strong>복원</strong>·<strong>완전 삭제</strong>도 목록(또는 상세)에서 선택한 뒤 <strong>저장</strong> 시에만 서버에 반영되며, 예약된 항목은 배지로 표시됩니다.</p>
             <div class="work-hub-panel-body">
               <form id="workItemCreateForm" class="work-item-create-form" onsubmit="return false;">
                 <input id="workItemTitleInput" type="text" maxlength="500" placeholder="새 업무 제목" />
@@ -960,7 +960,7 @@
             </select>
           </div>
           <div id="workItemDetailInactiveActions" class="work-item-inactive-actions hidden">
-            <p class="muted work-item-inactive-hint">비활성 처리된 업무입니다. <strong>복원</strong>·<strong>완전 삭제</strong>는 하단 <strong>저장</strong> 시 서버에 반영됩니다.</p>
+            <p class="muted work-item-inactive-hint">비활성 처리된 업무입니다. <strong>복원</strong>·<strong>완전 삭제</strong> 선택은 즉시 서버로 가지 않으며, 상위 <strong>업무·칸반</strong> 창의 <strong>저장</strong>을 누를 때 함께 반영됩니다. 목록에서도 동일하게 선택할 수 있습니다.</p>
             <button type="button" class="btn-secondary btn-sm" id="btnWorkItemRestore">복원</button>
             <button type="button" class="btn-danger btn-sm" id="btnWorkItemPurge">완전 삭제</button>
           </div>

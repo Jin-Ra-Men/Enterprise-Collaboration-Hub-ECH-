@@ -4,6 +4,9 @@
 
 ## 2026-04-06
 
+### Fixed
+- **프론트(업무·칸반)**: 비활성 업무 **완전 삭제** 확인(`uiConfirm`)이 업무 상세 모달 뒤에 가리던 문제 — `#modalAppDialog` z-index 상향. 업무 목록에서 **복원**·**완전 삭제**·예약 **취소** 가능, 복원/완전삭제 예약은 배지로 표시(`queueWorkItemRestore`/`queueWorkItemPurge` 공통화). `index.html` 안내, `styles.css` 배지·행 강조
+
 ### Changed
 - **프론트**: 메인·스레드 메시지 입력을 **`textarea`** 로 전환 — **Shift+Enter** 줄바꿈·**Enter** 전송, 타임라인 본문은 `formatMessageWithMentions` 후 `\n` → `<br>` 로 표시; **본인 메시지**는 **오른쪽 정렬**·아바타·발신자 행 미표시(`msg-mine`/`msg-body--mine`); **채널 전환 시** 입력·답글 대상·대기 첨부를 **채널별로 저장/복원**(`composerDraftByChannelId`, 로그아웃 시 `clear`). `index.html`, `app.js`, `styles.css`
 - **프론트**: 「새 메시지」구분선(`msg-read-anchor-divider`) — 입력창에 **글자를 입력**하거나 **전송 성공** 시 제거(`clearChatReadAnchorUi`); 본인 전송으로 인한 `loadMessages`/`uploadFile` 갱신 시 구분선 **재삽입 생략**(`loadMessages` `skipNewMsgsDivider`, `uploadFile` `skipNewMsgsDividerAfterReload`). `README.md`
