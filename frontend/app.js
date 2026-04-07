@@ -2366,6 +2366,9 @@ function restoreComposerDraftForChannel(channelId) {
   const cid = String(channelId);
   const d = composerDraftByChannelId.get(cid);
   messageInputEl.value = d?.text ?? "";
+  if (messageInputEl.value.trim()) {
+    clearChatReadAnchorUi();
+  }
   mentionDisplayToEmployeeNo.clear();
   if (d?.replyTargetMessageId != null && Number.isFinite(Number(d.replyTargetMessageId))) {
     setReplyComposerTarget(Number(d.replyTargetMessageId));
@@ -2518,7 +2521,7 @@ function syncSenderOrgLabelsInMessageList() {
   });
 }
 
-async function loadMessages(channelId, { preserveScroll = false } = {}) {
+async function loadMessages(channelId, { preserveScroll = false, skipNewMsgsDivider = false } = {}) {
   if (!currentUser) return;
   chatTimelineHasMoreOlder = false;
   chatTimelineLoadingOlder = false;
@@ -2608,7 +2611,9 @@ async function loadMessages(channelId, { preserveScroll = false } = {}) {
     }
 
     if (!preserveScroll && msgs.length > 0) {
-      showNewMsgsDivider(lastReadMidFromServer);
+      if (!skipNewMsgsDivider) {
+        showNewMsgsDivider(lastReadMidFromServer);
+      }
       requestAnimationFrame(() => {
         if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
       });
@@ -3801,6 +3806,7 @@ async function sendThreadComment() {
           progressContext: "thread",
           batchIndex: i + 1,
           batchTotal: n,
+          skipNewMsgsDividerAfterReload: true,
         });
       }
       clearThreadFilePreview();
@@ -5020,6 +5026,7 @@ async function sendMessage() {
           reloadMode: isLast ? "timeline" : "none",
           batchIndex: i + 1,
           batchTotal: n,
+          skipNewMsgsDividerAfterReload: true,
         });
       }
       clearFilePreview();
@@ -5028,6 +5035,7 @@ async function sendMessage() {
         scheduleComposerInputHeight();
         clearReplyComposerTarget();
         mentionDisplayToEmployeeNo.clear();
+        clearChatReadAnchorUi();
         return;
       }
     }
@@ -5045,11 +5053,12 @@ async function sendMessage() {
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error?.message || "답글 전송 실패");
 
+      clearChatReadAnchorUi();
       messageInputEl.value = "";
       scheduleComposerInputHeight();
       clearReplyComposerTarget();
       mentionDisplayToEmployeeNo.clear();
-      await loadMessages(activeChannelId);
+      await loadMessages(activeChannelId, { skipNewMsgsDivider: true });
     } catch (e) {
       appendSystemMsg("답글 전송 실패: " + (e?.message || "오류"));
       console.error(e);
@@ -5066,6 +5075,7 @@ async function sendMessage() {
         reloadMode: isLast ? "timeline" : "none",
         batchIndex: i + 1,
         batchTotal: n,
+        skipNewMsgsDividerAfterReload: true,
       });
     }
     clearFilePreview();
@@ -5073,6 +5083,7 @@ async function sendMessage() {
       messageInputEl.value = "";
       scheduleComposerInputHeight();
       mentionDisplayToEmployeeNo.clear();
+      clearChatReadAnchorUi();
       return;
     }
   }
@@ -5093,6 +5104,7 @@ async function sendMessage() {
   } finally {
     socketSendInFlight = false;
   }
+  clearChatReadAnchorUi();
   messageInputEl.value = "";
   scheduleComposerInputHeight();
   mentionDisplayToEmployeeNo.clear();
@@ -5136,6 +5148,9 @@ messageInputEl.addEventListener("keydown", (e) => {
   }
 });
 messageInputEl.addEventListener("input", () => {
+  if (messageInputEl.value.trim()) {
+    clearChatReadAnchorUi();
+  }
   scheduleComposerInputHeight();
   scheduleMentionSuggestUpdate();
 });
@@ -5476,6 +5491,8 @@ async function uploadFile(
     progressContext = "composer",
     batchIndex = 0,
     batchTotal = 0,
+    /** 본인 전송 직후 타임라인 갱신 시 「새 메시지」 구분선을 다시 넣지 않음 */
+    skipNewMsgsDividerAfterReload = false,
   } = {}
 ) {
   if (!activeChannelId || !currentUser || !file) return;
@@ -5530,12 +5547,16 @@ async function uploadFile(
       if (threadRootMessageId != null) {
         await openThreadModal(threadRootMessageId, { targetCommentMessageId: null });
       }
-      if (activeChannelId) await loadMessages(activeChannelId);
+      if (activeChannelId) {
+        await loadMessages(activeChannelId, {
+          skipNewMsgsDivider: skipNewMsgsDividerAfterReload,
+        });
+      }
       return;
     }
 
     await Promise.all([
-      loadMessages(activeChannelId),
+      loadMessages(activeChannelId, { skipNewMsgsDivider: skipNewMsgsDividerAfterReload }),
       refreshChannelFileHubData(activeChannelId),
     ]);
   } catch (e) {
