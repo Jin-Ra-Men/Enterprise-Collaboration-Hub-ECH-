@@ -3023,6 +3023,10 @@ function snippetForReplyComposerBanner(messageId) {
       const nameEl = row.querySelector(`.msg-attach-group-item[data-message-id="${id}"] .msg-attach-name`);
       if (nameEl && nameEl.textContent) snippet = "📎 " + String(nameEl.textContent).trim();
     }
+    if (!snippet) {
+      const tBtn = row.querySelector(`.msg-attach-group-item[data-message-id="${id}"] .msg-attach-image-thumb-btn`);
+      if (tBtn && tBtn.title) snippet = "📎 " + String(tBtn.title).trim();
+    }
   } else {
     const cached = timelineRootMessageById.get(id);
     if (cached) {
@@ -3311,6 +3315,7 @@ async function openChannelImageLightbox(channelId, fileId, filename, fileMeta = 
   openImageLightbox(url, fid, fn, cid, meta, { showsPreview: showPreview });
 }
 
+/** 비이미지 첨부: 파일명·크기 + 저장 / 저장 후 열기 (이미지는 그리드+라이트박스로 분리) */
 function buildAttachmentCardHtml(fileMeta, { messageId, rootId }) {
   const fn = String(fileMeta.originalFilename || "파일");
   const icon = attachmentIconEmoji(fn, fileMeta.contentType);
@@ -3328,8 +3333,6 @@ function buildAttachmentCardHtml(fileMeta, { messageId, rootId }) {
           <button type="button" class="msg-attach-action" data-action="save">저장</button>
           <span class="msg-attach-action-sep" aria-hidden="true">|</span>
           <button type="button" class="msg-attach-action" data-action="save-open">저장 후 열기</button>
-          <span class="msg-attach-action-sep" aria-hidden="true">|</span>
-          <button type="button" class="msg-attach-action" data-action="viewer">뷰어로 열기</button>
         </div>
       </div>`;
 }
@@ -3339,10 +3342,8 @@ function wireAttachmentCardActions(cardEl, fileMeta, channelId) {
   const uid = Number(fileMeta.id);
   if (!Number.isFinite(uid)) return;
   const fn = fileMeta.originalFilename || "download";
-  const isImg = isImageFilePayload(fileMeta);
   const saveBtn = cardEl.querySelector('[data-action="save"]');
   const saveOpenBtn = cardEl.querySelector('[data-action="save-open"]');
-  const viewerBtn = cardEl.querySelector('[data-action="viewer"]');
   if (saveBtn) {
     saveBtn.addEventListener("click", () => {
       void maybeDownloadChannelImageWithChoice(uid, fn, channelId, fileMeta);
@@ -3353,12 +3354,76 @@ function wireAttachmentCardActions(cardEl, fileMeta, channelId) {
       void saveChannelFileAndOpenInNewTab(channelId, uid, fn, "original");
     });
   }
-  if (viewerBtn) {
-    viewerBtn.addEventListener("click", () => {
-      if (isImg) void openChannelImageLightbox(channelId, uid, fn, fileMeta);
-      else void openChannelFileBlobInNewTab(channelId, uid, fn, "original");
-    });
+}
+
+function partitionAttachmentMessages(msgs) {
+  const images = [];
+  const files = [];
+  for (const m of msgs) {
+    const p = tryParseFilePayload(m);
+    if (!p) continue;
+    const meta = {
+      id: Number(p.fileId),
+      originalFilename: p.originalFilename,
+      sizeBytes: p.sizeBytes,
+      previewSizeBytes: p.previewSizeBytes,
+      contentType: p.contentType,
+      hasPreview: p.hasPreview,
+    };
+    if (isImageFilePayload(p)) images.push({ msg: m, meta });
+    else files.push({ msg: m, meta });
   }
+  return { images, files };
+}
+
+function buildImageGridHtml(imageEntries) {
+  return imageEntries
+    .map(({ msg, meta }) => {
+      const mid2 = msg.messageId ?? msg.message_id;
+      const pid = msg.parentMessageId ?? msg.parent_message_id;
+      const rootForItem =
+        pid != null && pid !== "" && String(pid).trim() !== ""
+          ? String(pid).trim()
+          : mid2 != null
+            ? String(mid2)
+            : "";
+      const fn = meta.originalFilename || "이미지";
+      return `
+      <div class="msg-attach-group-item msg-attach-image-cell" ${mid2 != null ? `data-message-id="${escHtml(String(mid2))}"` : ""} ${rootForItem ? `data-root-message-id="${escHtml(rootForItem)}"` : ""}>
+        <button type="button" class="msg-attach-image-thumb-btn" title="${escHtml(fn)}" aria-label="이미지 크게 보기">
+          <span class="msg-image-thumb-placeholder">불러오는 중…</span>
+        </button>
+      </div>`;
+    })
+    .join("");
+}
+
+function wireImageGridThumbs(scopeEl, imageEntries, channelId) {
+  if (!scopeEl || !imageEntries.length) return;
+  const cells = scopeEl.querySelectorAll(".msg-attach-image-cell");
+  cells.forEach((cellEl, idx) => {
+    const entry = imageEntries[idx];
+    if (!entry?.meta || !Number.isFinite(entry.meta.id)) return;
+    const { meta } = entry;
+    const btn = cellEl.querySelector(".msg-attach-image-thumb-btn");
+    const ph = cellEl.querySelector(".msg-image-thumb-placeholder");
+    if (!btn || !ph) return;
+    getAuthedPreviewBlobUrl(channelId, meta.id)
+      .then((url) => {
+        const img = document.createElement("img");
+        img.className = "msg-attach-image-thumb-img";
+        img.alt = meta.originalFilename || "";
+        img.src = url;
+        img.loading = "lazy";
+        ph.replaceWith(img);
+        btn.addEventListener("click", () => {
+          void openChannelImageLightbox(channelId, meta.id, meta.originalFilename, meta);
+        });
+      })
+      .catch(() => {
+        ph.textContent = "불러오기 실패";
+      });
+  });
 }
 
 function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) {
@@ -3385,12 +3450,26 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
   const mid = msg.messageId ?? msg.message_id;
   const pid = msg.parentMessageId ?? msg.parent_message_id;
   const rootForCard = pid == null || pid === "" ? mid : pid;
-  const cardHtml = buildAttachmentCardHtml(fileMeta, { messageId: mid, rootId: rootForCard });
-  const listBlock = `
+  const isImg = isImageFilePayload(payload);
+  let listBlock;
+  if (isImg) {
+    const imageEntries = [{ msg, meta: fileMeta }];
+    const gridInner = buildImageGridHtml(imageEntries);
+    listBlock = `
+        <div class="msg-content-row msg-attachment-list-wrap">
+          <div class="msg-attachment-image-bundle">
+            <div class="msg-attachment-image-grid">${gridInner}</div>
+          </div>
+          <div class="msg-attachment-list-footer">${timeHtml}</div>
+        </div>`;
+  } else {
+    const cardHtml = buildAttachmentCardHtml(fileMeta, { messageId: mid, rootId: rootForCard });
+    listBlock = `
         <div class="msg-content-row msg-attachment-list-wrap">
           <div class="msg-attachment-list-inner">${cardHtml}</div>
           <div class="msg-attachment-list-footer">${timeHtml}</div>
         </div>`;
+  }
 
   const div = document.createElement("div");
   div.className = `msg-row msg-chat ${isMine ? "msg-mine" : "msg-other"} msg-has-attachment${showAvatar ? "" : " msg-continued"}`;
@@ -3436,8 +3515,13 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
       </div>`;
   }
 
-  const card = div.querySelector(".msg-attach-card");
-  wireAttachmentCardActions(card, fileMeta, channelId);
+  if (isImg) {
+    const bundle = div.querySelector(".msg-attachment-image-bundle");
+    wireImageGridThumbs(bundle, [{ msg, meta: fileMeta }], channelId);
+  } else {
+    const card = div.querySelector(".msg-attach-card");
+    wireAttachmentCardActions(card, fileMeta, channelId);
+  }
   attachThreadCommentFooter(div, msg);
   return div;
 }
@@ -3474,18 +3558,28 @@ function createFileAttachmentGroupRowFromMsgs(msgs, { showAvatar, showTime }) {
     };
   });
 
-  const itemsHtml = msgs
-    .map((m, idx) => {
-      const mid2 = m.messageId ?? m.message_id;
-      const pid = m.parentMessageId ?? m.parent_message_id;
-      const rootForCard = pid == null || pid === "" ? mid2 : pid;
-      return buildAttachmentCardHtml(fileMetas[idx], { messageId: mid2, rootId: rootForCard });
-    })
-    .join("");
+  const { images: imageEntries, files: fileEntries } = partitionAttachmentMessages(msgs);
+  const bodyParts = [];
+  if (imageEntries.length) {
+    bodyParts.push(
+      `<div class="msg-attachment-image-bundle"><div class="msg-attachment-image-grid">${buildImageGridHtml(imageEntries)}</div></div>`
+    );
+  }
+  if (fileEntries.length) {
+    const fileCardsHtml = fileEntries
+      .map(({ msg: m, meta }) => {
+        const mid2 = m.messageId ?? m.message_id;
+        const pid = m.parentMessageId ?? m.parent_message_id;
+        const rootForCard = pid == null || pid === "" ? mid2 : pid;
+        return buildAttachmentCardHtml(meta, { messageId: mid2, rootId: rootForCard });
+      })
+      .join("");
+    bodyParts.push(`<div class="msg-attachment-group-cards">${fileCardsHtml}</div>`);
+  }
 
   const stripHtml = `
         <div class="msg-content-row msg-attachment-list-wrap msg-attachment-group-wrap">
-          <div class="msg-attachment-group-cards">${itemsHtml}</div>
+          ${bodyParts.join("")}
           <div class="msg-attachment-group-footer">
             <button type="button" class="btn-attach-batch-dl">일괄저장</button>
             ${timeHtml}
@@ -3551,8 +3645,13 @@ function createFileAttachmentGroupRowFromMsgs(msgs, { showAvatar, showTime }) {
     });
   }
 
-  div.querySelectorAll(".msg-attach-card").forEach((card, idx) => {
-    wireAttachmentCardActions(card, fileMetas[idx], channelId);
+  const bundle = div.querySelector(".msg-attachment-image-bundle");
+  if (bundle && imageEntries.length) {
+    wireImageGridThumbs(bundle, imageEntries, channelId);
+  }
+  div.querySelectorAll(".msg-attachment-group-cards .msg-attach-card").forEach((card, idx) => {
+    const meta = fileEntries[idx]?.meta;
+    if (meta) wireAttachmentCardActions(card, meta, channelId);
   });
 
   attachThreadCommentFooter(div, first);

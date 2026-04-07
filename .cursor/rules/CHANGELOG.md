@@ -4,6 +4,9 @@
 
 ## 2026-04-06
 
+### Changed
+- **프론트(채팅 첨부)**: 다중 **이미지**는 한 메시지 묶음에서 **2열 그리드** 썸네일(줄당 2개 후 개행), 클릭 시 **라이트박스**에서 다운로드; **뷰어로 열기** 제거. 다중 **비이미지**는 한 말풍선에 **세로 카드**(저장·저장 후 열기만). 답글 배너 스니펫은 이미지 썸네일 `title` 폴백. `app.js`, `styles.css`, `docs/FEATURE_SPEC.md`, `README.md`, `docs/HANDOVER.md`
+
 ### Fixed
 - **프론트(업무·칸반)**: 업무 **소프트 삭제(✕)** 시 목록에서 즉시 제거되지 않고 **삭제 예정** 배지·삭제 취소 표시. **완전 삭제** 저장 시 서버에서 카드가 먼저 삭제되어 남은 `PUT /kanban/cards/{id}`가 실패하던 문제 — purge 직전·`queueWorkItemPurge` 시 해당 업무의 카드 ID를 pending 맵에서 제거. `app.js`, `styles.css`, `docs/FEATURE_SPEC.md`
 
