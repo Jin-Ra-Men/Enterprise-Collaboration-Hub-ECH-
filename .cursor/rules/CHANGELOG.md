@@ -4,6 +4,9 @@
 
 ## 2026-04-07
 
+### Release
+- **GitHub `v1.1.2`**: 채팅 **텍스트 말풍선**·**행 간격** 가독성 개선(위 `Changed` 항목). `desktop/package.json`·`desktop/package-lock.json`·`backend/build.gradle` **`1.1.2`**. 태그 `v1.1.2` — `cd desktop && npm run build:win` 후 `tools/publish-electron-github-release.ps1 v1.1.2`
+
 ### Changed
 - **프론트(채팅 가독성)**: 텍스트 메시지에 **말풍선**(배경·테두리·모서리 반경·가벼운 그림자), 상대/본인 색 구분(`--msg-bubble-other-*` / `--msg-bubble-mine-*`, 라이트/다크 테마). **본인** 본문은 말풍선 안 **좌측 정렬**, 시각은 말풍선 옆 하단 정렬; **상대**는 flex로 본문·시각 분리. `msg-chat` 행 **세로 간격** 확대. `frontend/styles.css`, `docs/FEATURE_SPEC.md`
 
