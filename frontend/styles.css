@@ -43,6 +43,10 @@
   --sidebar-search-placeholder: rgba(255,255,255,.5);
   --layout-header-height: 58px;
   --layout-footer-height: 64px;
+  --msg-bubble-other-bg: rgba(255, 255, 255, 0.07);
+  --msg-bubble-other-border: rgba(255, 255, 255, 0.1);
+  --msg-bubble-mine-bg: rgba(124, 58, 237, 0.26);
+  --msg-bubble-mine-border: rgba(167, 139, 250, 0.35);
 }
 
 html[data-theme="light"] {
@@ -82,6 +86,10 @@ html[data-theme="light"] {
   --workspace-btn-fg: #334155;
   --sidebar-search-input-fg: #0f172a;
   --sidebar-search-placeholder: rgba(15, 23, 42, 0.45);
+  --msg-bubble-other-bg: #ffffff;
+  --msg-bubble-other-border: rgba(15, 23, 42, 0.1);
+  --msg-bubble-mine-bg: #e0e7ff;
+  --msg-bubble-mine-border: rgba(99, 102, 241, 0.28);
 }
 
 /* ── 리셋 / 기본 ── */
@@ -1040,10 +1048,13 @@ span.section-toggle-static { cursor: default; }
 .msg-row {
   display: flex;
   gap: 10px;
-  padding: 2px 0;
+  padding: 3px 0;
   margin-bottom: 2px;
   border-radius: 6px;
   transition: background .1s;
+}
+.msg-row.msg-chat {
+  margin-bottom: 8px;
 }
 .msg-row.msg-mine {
   justify-content: flex-end;
@@ -1062,21 +1073,63 @@ span.section-toggle-static { cursor: default; }
 .msg-row.msg-mine .msg-content-row {
   text-align: right;
 }
-/* 본인 텍스트: 시각을 말풍선(본문) 왼쪽에 배치 — DOM은 본문·시각 순, 시각적으로는 시각·본문 */
+/* 본인 텍스트: 시각을 말풍선 왼쪽 — 본문은 말풍선 박스 안에서 좌측 정렬(Slack/Teams 스타일) */
 .msg-row.msg-mine .msg-content-row:has(.msg-text) {
   display: inline-flex;
   flex-direction: row-reverse;
-  align-items: baseline;
+  align-items: flex-end;
   justify-content: flex-start;
-  gap: 8px;
+  gap: 10px;
   max-width: 100%;
   text-align: right;
 }
 .msg-row.msg-mine .msg-content-row:has(.msg-text) .msg-time {
   margin-left: 0;
+  padding-bottom: 6px;
+  flex-shrink: 0;
 }
 .msg-row.msg-mine .msg-text {
-  text-align: right;
+  text-align: left;
+}
+/* 상대 텍스트: 본문·시각을 한 줄에서 말풍선과 분리 */
+.msg-row.msg-other .msg-content-row:has(.msg-text) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 10px;
+}
+.msg-row.msg-other .msg-content-row:has(.msg-text) .msg-time {
+  margin-left: 0;
+  padding-bottom: 4px;
+  flex-shrink: 0;
+}
+/* 텍스트 말풍선(공통) */
+.msg-row.msg-chat .msg-content-row:has(.msg-text) .msg-text {
+  display: inline-block;
+  max-width: min(100%, 560px);
+  padding: 10px 14px;
+  line-height: 1.5;
+  vertical-align: bottom;
+  box-sizing: border-box;
+  word-break: break-word;
+}
+.msg-row.msg-other .msg-content-row:has(.msg-text) .msg-text {
+  background: var(--msg-bubble-other-bg);
+  border: 1px solid var(--msg-bubble-other-border);
+  border-radius: 14px 14px 14px 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14);
+}
+html[data-theme="light"] .msg-row.msg-other .msg-content-row:has(.msg-text) .msg-text {
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+.msg-row.msg-mine .msg-content-row:has(.msg-text) .msg-text {
+  background: var(--msg-bubble-mine-bg);
+  border: 1px solid var(--msg-bubble-mine-border);
+  border-radius: 14px 14px 4px 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+html[data-theme="light"] .msg-row.msg-mine .msg-content-row:has(.msg-text) .msg-text {
+  box-shadow: 0 1px 3px rgba(99, 102, 241, 0.12);
 }
 .msg-row.msg-mine .msg-content-row.msg-attachment-inline {
   justify-content: flex-end;
