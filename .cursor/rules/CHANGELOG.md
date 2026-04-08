@@ -4,6 +4,10 @@
 
 ## 2026-04-09
 
+### Changed
+- **문서(README)**: 제품 소개용 `README.md`에 이모지·강조·표·섹션 확장 — 기능을 영역별로 세분화해 가독성·인상 강화, 기술 스택 요약 표 추가. 세부 API는 `docs/DEVELOPER_README.md`로 안내 유지.
+- **문서**: 루트 `README.md`를 제품·기능 소개 중심으로 정리하고, 기존 개발자·API·실행 안내 전체는 `docs/DEVELOPER_README.md`로 이전. `docs/FEATURE_SPEC.md`에 문서 역할 안내 문구 추가. `.cursor/rules/core-rules.mdc`, `docs/PROJECT_REQUIREMENTS.md`, `docs/HANDOVER.md`에 README·DEVELOPER_README 역할 구분 반영.
+
 ### Release
 - **GitHub `v1.1.3`**: 내 업무 사이드바 **채널 표시명**(DM)·업무 목록 **선택 강조**, 채팅 첨부 **ZIP 일괄**·**저장 후 열기**(Electron 저장 대화상자) 등 `0a3697e` 이후 반영. `desktop/package.json`·`desktop/package-lock.json`·`backend/build.gradle` **`1.1.3`**. 태그 `v1.1.3` — `cd backend && .\\gradlew.bat bootJar`, `cd desktop && npm run build:win` 후 `tools/publish-electron-github-release.ps1 v1.1.3`
 

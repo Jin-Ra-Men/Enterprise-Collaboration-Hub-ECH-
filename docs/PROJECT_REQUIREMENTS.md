@@ -114,7 +114,7 @@ ECH는 Slack, Flow, Teams를 모티브로 한 사내 협업 플랫폼이며, 구
 - IA/UX/기능 용어는 Slack, Flow, Teams 모티브에 맞게 일관성 있게 설계
 - 로드맵 완료 항목은 `docs/ROADMAP.md`에서 체크박스(`[v]`)로 표시
 - 개발 완료 후 기능명세서(`docs/FEATURE_SPEC.md`)와 인수인계서(`docs/HANDOVER.md`)를 반드시 상세 업데이트
-- 새 기능 추가 시 `README.md`의 해당 섹션도 함께 업데이트
+- 새 기능 추가 시 `README.md`(제품 개요·주요 기능) 및 필요 시 `docs/DEVELOPER_README.md`(기술·API·실행)의 해당 섹션도 함께 업데이트
 - 본 문서와 다른 방향의 구현이 필요하면 먼저 문서 업데이트 후 진행
 
 ## 9) 완료 기준(Definition of Done)

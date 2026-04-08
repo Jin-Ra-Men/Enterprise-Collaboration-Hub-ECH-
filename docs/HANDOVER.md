@@ -61,7 +61,7 @@
 ## 3-0-3) 프론트 UX 메모 (2026-04-06)
 - **DM 채팅 헤더**: `#chatChannelPrefix`는 DM일 때 멤버 로드 후 상대(그룹 DM은 최대 3명 + `+N`) **프레즌스 점**을 사이드바 DM과 동일 규칙으로 표시(`frontend/app.js` `updateChatHeaderDmPresence`, `dmSidebarLeadingHtml`).
 - **이미지 다운로드**: 약 **512KB 이상**·GIF/SVG 제외 시 원본 vs JPEG 압축 선택 모달; 압축은 브라우저에서 `GET .../download` blob → 캔버스(최대 변 4096px) 저장(서버 전용 압축 API 없음).
-- **데스크톱 GitHub 릴리즈 에셋 업로드**: 로컬에서 `cd desktop && npm run build:win` 후 `desktop/dist`에 `latest.yml`·`ECH-Setup-{version}.exe`·`.blockmap` 생성. `GITHUB_TOKEN`(repo releases 권한) 설정 뒤 `powershell -File ./tools/publish-electron-github-release.ps1 v1.1.3` — 태그·릴리즈 생성 및 에셋 업로드(`README.md` 자동 업데이트 절차 참고).
+- **데스크톱 GitHub 릴리즈 에셋 업로드**: 로컬에서 `cd desktop && npm run build:win` 후 `desktop/dist`에 `latest.yml`·`ECH-Setup-{version}.exe`·`.blockmap` 생성. `GITHUB_TOKEN`(repo releases 권한) 설정 뒤 `powershell -File ./tools/publish-electron-github-release.ps1 v1.1.3` — 태그·릴리즈 생성 및 에셋 업로드(`README.md`·`docs/DEVELOPER_README.md` 자동 업데이트 절차 참고).
 - **이미지 크게 보기·모아보기 성능**: 서버 `preview_*`가 있으면 라이트박스는 먼저 `/preview`로 표시 후 **원본 보기** 선택 가능(`openChannelImageLightbox`). 파일 허브 이미지 탭 썸네일은 보이는 셀만 로드(IntersectionObserver).
 - **채팅 첨부(다중·DnD)**: 메인 채팅 `#viewChat`에 파일 **드래그 앤 드롭**, 첨부 `<input type="file" multiple>`(메인·스레드), 클립보드 이미지 **여러 장** 붙여넣기 → `pendingFilesQueue` / `threadPendingFilesQueue`로 미리보기 후 순차 업로드. 다른 모달이 열려 있으면 채팅 드롭은 처리하지 않음(`isModalOverlayBlockingChatDrop`). **연속 FILE 첨부 메시지**(같은 분·같은 발신자, 스레드 댓글 없음)는 타임라인에서 `tryConsumeFileAttachmentGroup` → `createFileAttachmentGroupRowFromMsgs`로 **한 묶음** + **일괄저장**은 **JSZip**으로 **ZIP 한 번**(`batchDownloadChannelImageFiles`; `index.html`에 jszip CDN). **이미지**는 `buildImageGridHtml`·`wireImageGridThumbs`로 **2열 그리드** 썸네일(1장만이면 그리드 전체 폭 사용), 클릭 시 `openChannelImageLightbox`; **비이미지**는 `buildAttachmentCardHtml`·`wireAttachmentCardActions`로 **카드**(저장·저장 후 열기만). **저장 후 열기**(`saveChannelFileAndOpenInNewTab`): 브라우저는 다운로드 후 새 탭; **Electron**은 `ech-save-file-and-open-default-app` → **저장 대화상자** 후 디스크 저장 + `shell.openPath`. **FILE 직후** 다음 메시지는 아바타 새 행(`shouldShowAvatarForMessage`·실시간 `appendMessageRealtime`). 이미지+문서 혼합 묶음은 그리드 위·카드 아래로 같은 말풍선에 배치.
 - **채팅 입력·말풍선**: `#messageInput`·`#threadMessageInput`은 **`textarea`** — Enter 전송·Shift+Enter 개행, 타임라인은 `\n`→`<br>`; 본인 메시지는 `msg-mine` 오른쪽·아바타 생략·**시각은 말풍선 콘텐츠 왼쪽**(텍스트 `row-reverse`, 첨부 푸터 정렬). **텍스트 줄**은 CSS 말풍선(`--msg-bubble-*`)으로 가독성 확보; 채널 전환 시 `composerDraftByChannelId`로 미전송 입력·답글 대상·대기 첨부 복원, 로그아웃 시 `clearSession`에서 맵 비움.
@@ -69,6 +69,8 @@
 - **업무·칸반**: 비활성 업무 복원/완전 삭제는 **저장 시** `flushWorkHubSave`에서만 API — 목록·상세 공통 `queueWorkItemRestore`/`queueWorkItemPurge`. 업무 **✕(소프트 삭제)** 는 `workHubPendingWorkDeleteIds`에만 넣고 목록에 **삭제 예정** 배지로 남김(`cancelWorkItemDeletePending`). **완전 삭제** 시 서버가 칸반 카드를 먼저 지우므로, `queueWorkItemPurge`·`flushWorkHubSave`의 purge 직후 `clearPendingKanbanStateForWorkItem`/`collectKanbanCardIdsForWorkItem`로 해당 카드 ID를 pending 맵에서 제거(저장 시 잔여 `PUT /kanban/cards/{id}` 실패 방지). 확인창 `#modalAppDialog`는 `z-index: 1350`으로 중첩 모달 위. 사이드바 **내 업무 항목**의 채널 줄은 API `channelName`(DM은 `description` 우선) + 프론트 `displayChannelLabelForWorkSidebar`; 모달 업무 목록 **선택 행**은 `channel-work-item--selected`.
 
 ## 3) 핵심 문서 위치
+- 루트 소개(제품·기능 요약): `README.md`
+- 개발자 안내(기술·API·실행): `docs/DEVELOPER_README.md`
 - 요구사항: `docs/PROJECT_REQUIREMENTS.md`
 - 로드맵: `docs/ROADMAP.md`
 - 기능 명세: `docs/FEATURE_SPEC.md`
@@ -122,7 +124,7 @@
 ## 4) 운영/개발 체크리스트
 - 신규 기능 개발 시:
   - 요구사항/로드맵 반영 여부 확인
-  - `README.md`의 주요 기능/문서 링크에 변경사항 반영
+  - `README.md`(주요 기능·문서 링크)·필요 시 `docs/DEVELOPER_README.md`(기술 상세)에 변경사항 반영
   - 구현 후 `docs/FEATURE_SPEC.md` 업데이트
   - 필요 시 `docs/HANDOVER.md` 운영 항목 업데이트
   - `.cursor/rules/CHANGELOG.md` 기록
