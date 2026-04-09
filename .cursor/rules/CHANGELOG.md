@@ -5,6 +5,7 @@
 ## 2026-04-12
 
 ### Changed
+- **프론트(워크플로우·검색)**: 업무 항목·칸반을 **워크플로우**로 통합 — `#modalWorkHub` 단일 패널(`.work-hub-panel--workflow`, Tasks/Board 섹션), 채널·DM 연결 `#workHubChannelContext`(`syncWorkHubChannelContext`). 사이드바 **워크플로우** 한 항목(`btnSidebarWorkflow`), 상단 네비 라벨 **워크플로우**. 사이드바 **검색 필드 제거** — 통합 검색은 상단 `appHeaderSearchInput`만(`submitWorkspaceSearchFromHeader`). `index.html`, `app.js`, `styles.css`, `README.md`, `FEATURE_SPEC.md`, `DESIGN_SYSTEM.md`.
 - **프론트(사이드바·칸반)**: 좌측 사이드바 상단 `.sidebar-workspace`(조직도 단축 버튼 줄) 제거 — 조직도는 상단 **팀**(`btnTopNavTeam`)·환영 화면 `openOrgChartModal()`로만 진입. `#channelKanbanBoard`에 `margin-top: 20px`. `index.html`, `app.js`, `styles.css`, `docs/FEATURE_SPEC.md`.
 - **프론트(업무·칸반 모달 레이아웃)**: `#modalWorkHub`에서 `.work-hub-body--split` 제거 — 업무 항목 패널 **위**·칸반 패널 **아래**로 항상 세로 스택(`work-hub-body`). 칸반 3컬럼 가로 폭 확보. `index.html`, `styles.css`, `docs/FEATURE_SPEC.md`, `docs/DESIGN_GAP_CHECKLIST.md`, `docs/DESIGN_SYSTEM.md`, `docs/HANDOVER.md`.
 - **프론트(IA·내비)**: 대시보드 상단 탭 제거 · `#btnAppShellHome`(ECH)로 시작 화면 복귀. `#viewWelcome`을 슬림 `.ech-home-*` 카드로 교체(구 히어로·3열 카드 제거). 좌측 **업무·칸반** 레일(`btnSidebarWorkHubWork`/`Kanban`, `openWorkHubFromTopNav`·`pendingWorkHubPanelFocus`·`#workHubPanelWork`/`Kanban`). 사이드바 워크스페이스 줄에서 ECH 로고 타일 제거·조직도만 유지(`sidebar-workspace--tools-only`). `README.md`·`FEATURE_SPEC.md`·`HANDOVER.md`·`DESIGN_SYSTEM.md`·`DESIGN_GAP_CHECKLIST.md` 반영.

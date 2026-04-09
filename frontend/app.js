@@ -283,14 +283,14 @@ let orgPickerContext = null;  // member | dm | channelMember
 let orgPickerEmbedElId = null; // member/dm/channelMember 조직도 체크박스가 그려진 엘리먼트 id
 /** 프로필 모달에 표시 중인 사용자 사번 (DM 보내기용) */
 let profileViewEmployeeNo = null;
-/** 업무/칸반 모달 상태 */
+/** 워크플로우 모달 상태 */
 let workHubBoardId = null;
 let workHubColumns = [];
 /** When set, Work Hub loads/saves for this channel without switching the main chat view. */
 let workHubScopedChannelId = null;
-/** 업무·칸반 모달 내 업무 목록에서 강조할 행 (`data-work-item-id`와 동일 문자열). */
+/** 워크플로우 모달 내 업무 목록에서 강조할 행 (`data-work-item-id`와 동일 문자열). */
 let workHubSelectedListWorkItemKey = null;
-/** 사이드바「업무 항목」·「칸반」진입 시 모달에서 스크롤할 패널 (`work` | `kanban`). */
+/** 사이드바·내비「워크플로우」진입 시 스크롤할 섹션 (`work` | `kanban`). */
 let pendingWorkHubPanelFocus = null;
 
 function getWorkHubChannelId() {
@@ -302,6 +302,31 @@ function getWorkHubChannelId() {
 function clearWorkHubScopedChannel() {
   workHubScopedChannelId = null;
   workHubSelectedListWorkItemKey = null;
+}
+
+/** 워크플로우 모달 상단: 현재 로드 대상 채널·DM 표시(스코프 채널·헤더 이름·사이드바 스냅샷 순으로 폴백). */
+function syncWorkHubChannelContext() {
+  const el = document.getElementById("workHubChannelContext");
+  if (!el) return;
+  const cid = getWorkHubChannelId();
+  if (!cid) {
+    el.textContent = "";
+    el.classList.add("hidden");
+    return;
+  }
+  el.classList.remove("hidden");
+  let label = "";
+  if (Number(activeChannelId) === Number(cid)) {
+    label = String(document.getElementById("chatChannelName")?.textContent || "").trim();
+  }
+  if (!label && Array.isArray(lastSidebarChannelsSnapshot)) {
+    const ch = lastSidebarChannelsSnapshot.find((c) => Number(c.channelId) === Number(cid));
+    if (ch) {
+      const ct = String(ch.channelType || "").toUpperCase();
+      label = ct === "DM" && ch.description ? String(ch.description).trim() : String(ch.name || "").trim();
+    }
+  }
+  el.textContent = label ? `연결: ${label}` : `연결: 채널 #${cid}`;
 }
 
 /** 좌측 하단 프레즌스 메뉴 이벤트(재로그인 시 중복 바인딩 방지) */
@@ -2005,7 +2030,7 @@ function showMain(user) {
   syncTopNavFromMainView();
 }
 
-/** Stratos-style top bar: 프로젝트(업무 허브) · 팀(조직도)만 강조. 대시보드 없음. */
+/** Stratos-style top bar: 워크플로우 · 팀(조직도)만 강조. 대시보드 없음. */
 function setTopNavActive(key) {
   const pairs = [
     ["projects", "btnTopNavProjects"],
@@ -2366,13 +2391,13 @@ async function openWorkHubModalForActiveChannel() {
     requestAnimationFrame(() => requestAnimationFrame(() => focusWorkHubPanel(panelFocus)));
   } catch (e) {
     pendingWorkHubPanelFocus = null;
-    await uiAlert(e?.message || "업무/칸반 정보를 불러오지 못했습니다.");
+    await uiAlert(e?.message || "워크플로우 정보를 불러오지 못했습니다.");
   }
 }
 
 /**
- * Top nav「프로젝트」·슬림 시작 화면·사이드바 업무/칸반: 채널 맥락 후 업무 허브.
- * @param {"work"|"kanban"|void} panelFocus 사이드바에서 열 때 스크롤할 패널
+ * 상단「워크플로우」·시작 화면·사이드바: 채널·DM 맥락 후 워크플로우 모달.
+ * @param {"work"|"kanban"|void} panelFocus 열 때 스크롤할 섹션(업무/칸반)
  */
 async function openWorkHubFromTopNav(panelFocus) {
   if (panelFocus === "work" || panelFocus === "kanban") {
@@ -2662,7 +2687,7 @@ function renderMyWorkItemsSidebar(channels) {
         }, 120);
       } catch (e) {
         clearWorkHubScopedChannel();
-        await uiAlert(e?.message || "업무/칸반 정보를 불러오지 못했습니다.");
+        await uiAlert(e?.message || "워크플로우 정보를 불러오지 못했습니다.");
       }
     });
     myKanbanListEl.appendChild(li);
@@ -8510,18 +8535,13 @@ document.getElementById("btnTopNavProjects")?.addEventListener("click", () => {
 document.getElementById("btnTopNavTeam")?.addEventListener("click", () => {
   openOrgChartModal();
 });
-document.getElementById("btnSidebarWorkHubWork")?.addEventListener("click", () => {
+document.getElementById("btnSidebarWorkflow")?.addEventListener("click", () => {
   void openWorkHubFromTopNav("work");
 });
-document.getElementById("btnSidebarWorkHubKanban")?.addEventListener("click", () => {
-  void openWorkHubFromTopNav("kanban");
-});
-["btnSidebarWorkHubWork", "btnSidebarWorkHubKanban"].forEach((id) => {
-  document.getElementById(id)?.addEventListener("keydown", (e) => {
-    if (e.key !== "Enter" && e.key !== " ") return;
-    e.preventDefault();
-    document.getElementById(id)?.click();
-  });
+document.getElementById("btnSidebarWorkflow")?.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  e.preventDefault();
+  document.getElementById("btnSidebarWorkflow")?.click();
 });
 
 document.getElementById("workItemCreateForm")?.addEventListener("submit", (e) => e.preventDefault());
@@ -8919,8 +8939,10 @@ document.getElementById("btnProfileDm").addEventListener("click", async () => {
 function openModal(id) {
   const el = document.getElementById(id);
   if (el) el.classList.remove("hidden");
-  if (id === "modalWorkHub") setTopNavActive("projects");
-  else if (id === "modalOrgChart") setTopNavActive("team");
+  if (id === "modalWorkHub") {
+    setTopNavActive("projects");
+    syncWorkHubChannelContext();
+  } else if (id === "modalOrgChart") setTopNavActive("team");
 }
 function closeModal(id) {
   document.getElementById(id)?.classList.add("hidden");
@@ -9286,7 +9308,7 @@ async function handleSearchResultClick(item) {
     return;
   }
 
-  // 업무 항목: 채널 이동 후 업무·칸반 허브에서 해당 행 강조
+  // 업무 항목: 채널 이동 후 워크플로우 모달에서 해당 행 강조
   if (type === "WORK_ITEM" && Number.isFinite(contextId) && Number.isFinite(id)) {
     const meta = resolveChannelMetaForSelect(contextId, item.contextName || "채널");
     await selectChannel(meta.channelId, meta.channelName, meta.channelType);
@@ -9315,7 +9337,7 @@ async function handleSearchResultClick(item) {
   if (type === "KANBAN_CARD" && Number.isFinite(id)) {
     const chId = Number(item.relatedChannelId);
     if (!Number.isFinite(chId)) {
-      await uiAlert("채널에 연결된 칸반 카드만 업무·칸반 창에서 열 수 있습니다.");
+      await uiAlert("채널에 연결된 칸반 카드만 워크플로우 창에서 열 수 있습니다.");
       return;
     }
     const meta = resolveChannelMetaForSelect(chId, item.contextName || "채널");
@@ -9364,20 +9386,23 @@ async function handleSearchResultClick(item) {
   }
 }
 
-document.getElementById("searchForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const q = document.getElementById("searchInput").value.trim();
+function getWorkspaceSearchQueryEl() {
+  return document.getElementById("appHeaderSearchInput");
+}
+
+async function submitWorkspaceSearchFromHeader() {
+  const q = String(getWorkspaceSearchQueryEl()?.value || "").trim();
   if (q.length === 0) return;
-  const selectedType = document.getElementById("searchTypeSelect").value || "ALL";
+  const selectedType = document.getElementById("searchTypeSelect")?.value || "ALL";
   const modalInput = document.getElementById("searchModalInput");
   if (modalInput) modalInput.value = q;
   await runSearch(q, selectedType);
-});
+}
 
 document.getElementById("searchTypeSelect").addEventListener("change", () => {
   const qModal = document.getElementById("searchModalInput")?.value?.trim?.() || "";
-  const qSidebar = document.getElementById("searchInput").value.trim();
-  const q = qModal || qSidebar;
+  const qHeader = String(getWorkspaceSearchQueryEl()?.value || "").trim();
+  const q = qModal || qHeader;
   if (q.length === 1) void runSearch(q, document.getElementById("searchTypeSelect").value);
   else if (q.length >= 2) void runSearch(q, document.getElementById("searchTypeSelect").value);
 });
@@ -9385,7 +9410,8 @@ document.getElementById("searchTypeSelect").addEventListener("change", () => {
 document.getElementById("searchModalSubmitBtn")?.addEventListener("click", async () => {
   const q = document.getElementById("searchModalInput")?.value?.trim?.() || "";
   if (q.length === 0) return;
-  document.getElementById("searchInput").value = q;
+  const hi = getWorkspaceSearchQueryEl();
+  if (hi) hi.value = q;
   const selectedType = document.getElementById("searchTypeSelect").value || "ALL";
   await runSearch(q, selectedType);
 });
@@ -9395,7 +9421,8 @@ document.getElementById("searchModalInput")?.addEventListener("keydown", async (
   e.preventDefault();
   const q = document.getElementById("searchModalInput")?.value?.trim?.() || "";
   if (q.length === 0) return;
-  document.getElementById("searchInput").value = q;
+  const hi = getWorkspaceSearchQueryEl();
+  if (hi) hi.value = q;
   const selectedType = document.getElementById("searchTypeSelect").value || "ALL";
   await runSearch(q, selectedType);
 });
@@ -9557,25 +9584,11 @@ function initEvents() {
       }
       channelList?.querySelector(".sidebar-item")?.focus?.();
     };
-    const syncHeaderSearchToSidebar = () => {
-      const hi = document.getElementById("appHeaderSearchInput");
-      const si = document.getElementById("searchInput");
-      if (hi && si) si.value = hi.value;
-    };
-    const syncSidebarSearchToHeader = () => {
-      const hi = document.getElementById("appHeaderSearchInput");
-      const si = document.getElementById("searchInput");
-      if (hi && si) hi.value = si.value;
-    };
     const focusSearchInputs = () => {
       const hi = document.getElementById("appHeaderSearchInput");
-      const si = document.getElementById("searchInput");
-      if (window.matchMedia("(min-width:768px)").matches && hi) {
+      if (hi) {
         hi.focus();
         hi.select?.();
-      } else if (si) {
-        si.focus();
-        si.select?.();
       }
     };
     document.getElementById("btnWelcomeFocusChannel")?.addEventListener("click", focusWelcomeChannelSection);
@@ -9583,13 +9596,10 @@ function initEvents() {
     document.getElementById("btnWelcomeOpenOrgChart")?.addEventListener("click", () => {
       openOrgChartModal();
     });
-    document.getElementById("appHeaderSearchInput")?.addEventListener("input", syncHeaderSearchToSidebar);
-    document.getElementById("searchInput")?.addEventListener("input", syncSidebarSearchToHeader);
     document.getElementById("appHeaderSearchInput")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        syncHeaderSearchToSidebar();
-        document.getElementById("searchForm")?.requestSubmit?.();
+        void submitWorkspaceSearchFromHeader();
       }
     });
     document.getElementById("btnAppHeaderTheme")?.addEventListener("click", () => {

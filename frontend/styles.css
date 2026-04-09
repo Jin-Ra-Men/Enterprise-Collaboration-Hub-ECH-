@@ -4753,6 +4753,50 @@ html:not([data-theme="light"]) .work-hub-panel.work-hub-panel--flash {
   color: var(--text-muted);
   font-weight: 500;
 }
+/* ECH화면설계 (1) — 단일 워크플로우 패널 안에 업무·칸반 섹션 */
+.work-hub-panel--workflow {
+  padding: 12px 12px 14px;
+}
+.ech-workflow-scope {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.ech-workflow-scope.hidden {
+  display: none;
+}
+html[data-theme="light"] .ech-workflow-scope {
+  color: color-mix(in srgb, var(--text-secondary) 92%, var(--accent) 8%);
+}
+.workflow-section {
+  margin-top: 22px;
+}
+.workflow-section:first-of-type {
+  margin-top: 10px;
+}
+.workflow-section-head {
+  margin-bottom: 6px;
+}
+.workflow-section-kicker {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.workflow-section-title {
+  margin: 2px 0 0;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+.workflow-section-hint {
+  margin-top: 0;
+}
 .work-hub-hint {
   margin: 0 0 10px;
   font-size: 12px;

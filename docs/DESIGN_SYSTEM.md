@@ -74,10 +74,10 @@ Copy-Item -Force "frontend/design-backup/legacy-design/app.js" "frontend/app.js"
 
 | 폴더 | 참고 목업(요지) | 앱에서의 구역 / 식별자 |
 |------|-----------------|-------------------------|
-| `(1)` | ECH Workspace — Work Management | 업무·칸반 모달 `#modalWorkHub` · `.ech-workhub-shell` · `.work-hub-body` 세로 스택(업무 항목 위·칸반 아래) |
+| `(1)` | ECH Workspace — Work Management | **워크플로우** 모달 `#modalWorkHub` · `.ech-workhub-shell` · `.work-hub-panel--workflow`(단일 패널·Tasks/Board 섹션) · `#workHubChannelContext` 채널·DM 연결 표시 |
 | `(2)` | 워크스페이스 셸 + 조직/멤버 모달 | 채팅 타임라인 `#viewChat` · `.ech-messages-wrap` · 글로벌 검색 `#appShellTopBar` — **채팅 화면 세부 톤은 `design/ECH채팅/` 동기화** |
 | `(3)` | Enterprise Admin Hub | 관리자 뷰 공통 `.ech-region--admin` · 사이드바 `#adminSection` (`data-ech-design-ref="screen7-admin-rail"`, `(7)` Admin Console 레일 톤) |
-| `(4)` | Stratos Pro 상단 네비 | `app-shell-topbar` — **프로젝트·팀** + 로고 홈(`#btnAppShellHome`), 좌측 **업무·칸반** 레일과 역할 분리 |
+| `(4)` | Stratos Pro 상단 네비 | `app-shell-topbar` — **워크플로우·팀** + 로고 홈(`#btnAppShellHome`), 좌측 **워크플로우** 레일과 역할 분리 |
 | `(5)` | Organization Directory | 조직 관리 `#viewOrgManagement`(인사이트 카드 + `org-layout` 좌측 탭 레일) · 조직도 `#modalOrgChart` |
 | `(6)` | Task & Kanban Management | `#modalWorkHub` 칸반 컬럼 `#channelKanbanBoard` |
 | `(7)` | User Management | 사용자 관리 `#viewUserManagement` (`data-ech-design-ref="screen7-users"`) · 사이드바 관리 항목 아이콘 레일은 `(3)` `#adminSection`과 공유 |

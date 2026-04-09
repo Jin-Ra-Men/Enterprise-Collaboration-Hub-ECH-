@@ -180,7 +180,7 @@
 ---
 
 ## 좌측 퀵 레일(미읽음)·사이드바 접기
-- 목적: 퀵 레일은 **검색·채널/DM 목록과 동일한 세로 구간**(`.sidebar-body`) 상단에 두고, 그 아래로 **업무·칸반** 단축·채널/DM 목록이 이어지게 함(구 **워크스페이스 상단 줄**·조직도 단축 버튼은 제거; 조직도는 상단 **팀**·환영 화면에서 진입). 퀵에는 **미읽음을 최상단(배지)**으로 올리고, **최근 대화**도 항상 표시(상한 `QUICK_RAIL_MAX_ITEMS`). 사이드바는 **돌출 탭**으로 접어 **퀵 64px만** 남기고 나머지(검색·목록·프로필)는 숨김.
+- 목적: 퀵 레일은 **채널/DM 목록과 동일한 세로 구간**(`.sidebar-body`) 상단에 두고, 그 아래로 **워크플로우** 단축·채널/DM 목록이 이어지게 함(구 **워크스페이스 상단 줄**·조직도 단축 버튼은 제거; 조직도는 상단 **팀**·환영 화면에서 진입). **통합 검색**은 상단 글로벌 바 `appHeaderSearchInput`만 사용(사이드바 중복 검색 제거). 퀵에는 **미읽음을 최상단(배지)**으로 올리고, **최근 대화**도 항상 표시(상한 `QUICK_RAIL_MAX_ITEMS`). 사이드바는 **돌출 탭**으로 접어 **퀵 64px만** 남기고 나머지(목록·프로필)는 숨김.
 - 사용자: 일반 채팅 사용자
 - 관련 화면/경로: `frontend/index.html` `.sidebar` → `.sidebar-body`(`#quickContainer`·`#quickRailScroll` + `.sidebar-main`); `#btnSidebarEdgeToggle`; `frontend/app.js` `renderQuickUnreadList`·`QUICK_RAIL_MAX_ITEMS`·`compareQuickRailChannel`; `frontend/styles.css` `.sidebar-body`·`.sidebar-main`·`.quick-rail`·`.sidebar-column`(324px 펼침)
 - 관련 API: `GET /api/channels` (`unreadCount`, **`lastMessageAt`**, `createdAt` 폴백 정렬)
@@ -550,7 +550,7 @@
 - 목적: 채널 대화 맥락에서 바로 업무를 생성/관리하고, 같은 채널의 칸반 진행 상태를 한 화면에서 확인
 - 사용자: 채널 멤버
 - 관련 화면/경로: 채널 헤더 `📋` 버튼 → `업무 · 칸반` 모달
-- 시각 기준: `design/ECH화면설계 (1)`·`(6)` — 모달 부제·패널 키커(`work-hub-panel-kicker`), 업무 목록 행 상단 상태 칩(`channel-work-item-chip--*`), 칸반 컬럼 헤더(도트·제목·카드 수)·가로 스크롤·빈 컬럼 점선 안내, 컬럼명에 완료 계열이 포함되면 `.kanban-column--done-like`로 카드 톤을 살짝 낮춤(동작·API는 동일).
+- 시각·명칭: **워크플로우** — `design/ECH화면설계 (1)` Work Management 톤(단일 패널 `work-hub-panel--workflow`, 키커 Workflow, 섹션 Tasks/Board). 채널·DM 연결은 모달 `#workHubChannelContext`로 표시. 구 `(6)` 칸반 컬럼·카드 스타일 유지. 업무 목록 상태 칩·완료 유사 컬럼 `.kanban-column--done-like` 등 기존과 동일(동작·API 동일).
 - 관련 API:
   - `GET /api/channels/{channelId}/work-items?employeeNo=&limit=` — 채널 업무 목록
   - `POST /api/channels/{channelId}/work-items` — 채널 업무 생성(`createdByEmployeeNo`, `title`, 선택 `description`, `status`, `sourceMessageId`)
@@ -885,10 +885,11 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 - `#adminSection`은 `design/ECH화면설계 (7)` Admin Console 톤에 맞춰 상단 구분선·라이트 시 은은한 인디고 틴트(`sidebar-section--admin`), 항목은 Material 아이콘 + 라벨(`sidebar-item--admin-nav`).
 - `showView` 호출 시 `syncAdminSidebarActive(viewId)`로 `viewOrgManagement`·`viewUserManagement`·`viewReleases`·`viewSettings` 중 하나와 사이드바 네 항목의 `.active`를 맞추고, 채팅/환영 등 비관리 뷰에서는 관리 메뉴 활성을 해제한다.
 
-## 글로벌 바·시작 화면·업무 허브 진입 (2026-04-09 개정)
+## 글로벌 바·시작 화면·워크플로우 진입 (2026-04-09 개정, 2026-04-09 워크플로우 명칭 통합)
 - **대시보드** 상단 탭은 제거. **ECH** 로고는 `#btnAppShellHome` — 클릭 시 `clearActiveChannelAndReload()`로 슬림 시작 화면(`#viewWelcome`, `.ech-home-*`)으로 복귀.
-- 시작 화면은 대형 히어로·3열 카드 대신 **한 카드** 안내(채널 목록 포커스, 검색, 조직도). 로그인 후 제목은 `안녕하세요, {이름}님` 또는 `시작하기`.
-- 상단 **프로젝트**(`btnTopNavProjects`)·좌측 **업무 항목**(`btnSidebarWorkHubWork`)·**칸반**(`btnSidebarWorkHubKanban`)은 `openWorkHubFromTopNav(panelFocus)` — 채널 있으면 바로 모달, 없으면 `getDefaultChannelForWorkHub` → `selectChannel`. 사이드바에서 `"work"`/`"kanban"`이면 `pendingWorkHubPanelFocus`로 `#workHubPanelWork`/`#workHubPanelKanban` 스크롤·`work-hub-panel--flash`.
+- 시작 화면은 대형 히어로·3열 카드 대신 **한 카드** 안내(채널 목록 포커스, 상단 검색, 조직도). 로그인 후 제목은 `안녕하세요, {이름}님` 또는 `시작하기`.
+- 상단 **워크플로우**(`btnTopNavProjects`)·좌측 **워크플로우**(`btnSidebarWorkflow`)는 `openWorkHubFromTopNav(panelFocus)` — 채널 있으면 바로 모달, 없으면 `getDefaultChannelForWorkHub` → `selectChannel`. 기본 사이드 진입은 업무 섹션으로 스크롤(`pendingWorkHubPanelFocus`·`#workHubPanelWork`).
+- 통합 검색은 **상단** `appHeaderSearchInput`만 사용(사이드바 검색 필드 제거).
 - 채팅 헤더 `btnOpenWorkHub`는 **현재 채널 필수**(패널 포커스 없음).
 
 ---
@@ -901,14 +902,14 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - 칸반 컬럼 내 카드 세로 드래그앤드롭으로 임시 순서를 변경하고, 저장 시 `sortOrder`로 반영
 - 저장 동작:
   - 하단 저장 버튼 클릭 시 확인창(`저장하시겠습니까?`)을 표시
-  - 저장 성공 후에도 `업무 · 칸반` 모달은 닫지 않고 유지(연속 편집·확인 용이)
+  - 저장 성공 후에도 **워크플로우** 모달은 닫지 않고 유지(연속 편집·확인 용이)
   - 칸반 담당자 저장 순서를 `삭제 -> 추가`로 처리해 삭제 후 재바인딩되는 케이스를 완화
   - 저장 직전 카드별 담당 변경 연산을 정규화해(add/remove 충돌 제거), 담당 해제 후 저장 시 기존 담당이 다시 붙는 현상을 보정
   - 정규화 단계에서 로컬 보드 트리에서 카드를 찾지 못하면 서버 기준 assignee diff가 비어 담당 `DELETE`가 생략될 수 있어, `id`/`cardId` 복합 탐색·pending 맵 키 정규화·카드 미탐색 시 스냅샷 해제 목록 폴백으로 보정
 - 좌측 사이드바:
-  - **업무·칸반** 고정 진입(`sidebar-section--hub-shortcuts`: 업무 항목 / 칸반)과 별도로 **담당 업무 목록** 섹션(`myKanbanList`)을 둔다.
+  - **워크플로우** 고정 진입(`sidebar-section--hub-shortcuts`)과 별도로 **담당 업무 목록** 섹션(`myKanbanList`)을 둔다.
   - `GET /api/work-items/sidebar/by-assigned-cards?employeeNo=...&limit=...`로 **내가 칸반 카드 담당으로 지정된 업무 항목** 목록을 조회해 렌더(채널 연동 보드·`kanban_card_assignees` 기준)
-  - 목록 항목 클릭 시 대상 채널 진입 후 `업무 · 칸반` 모달을 열고 해당 카드를 스크롤·강조
+  - 목록 항목 클릭 시 채팅 채널 전환 없이 `workHubScopedChannelId`로 **워크플로우** 모달을 열고 해당 행·카드를 스크롤·강조
 
 ---
 
