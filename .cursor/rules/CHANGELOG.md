@@ -2,6 +2,11 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-04-11
+
+### Changed
+- **문서**: `docs/FEATURE_SPEC.md` 화면설계 훅 섹션 비고에 `docs/DESIGN_GAP_CHECKLIST.md` 링크(시각·밀도 갭 추적, §7 권장 순서) 추가.
+
 ## 2026-04-10
 
 ### Added
