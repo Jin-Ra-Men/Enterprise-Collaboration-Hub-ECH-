@@ -70,6 +70,7 @@
 
 ## 3) 핵심 문서 위치
 - 루트 소개(제품·기능 요약): `README.md`
+- **UI 디자인 시스템·롤백**: `docs/DESIGN_SYSTEM.md` — `frontend/styles.css`·`tailwind.config.js`, `design/` 참고물, `ech_design_version`·`design-backup/legacy-design/` 복구 절차. **화면설계 (1)~(9) ↔ 앱 구역**은 동 문서 섹션 6·마크업 훅(`.ech-region--chat`, `.ech-workhub-shell`, `.ech-region--admin`, `data-ech-design-ref`).
 - 개발자 안내(기술·API·실행): `docs/DEVELOPER_README.md`
 - 요구사항: `docs/PROJECT_REQUIREMENTS.md`
 - 로드맵: `docs/ROADMAP.md`
