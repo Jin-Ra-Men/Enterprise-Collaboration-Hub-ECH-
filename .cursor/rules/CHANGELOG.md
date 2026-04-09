@@ -5,6 +5,8 @@
 ## 2026-04-12
 
 ### Changed
+- **프론트(워크플로우 표시 위치 보정)**: `ensureWorkflowMountedInChatArea()`로 `#modalWorkHub`를 `.chat-area`에 부착해 워크플로우가 메인(가운데 채팅) 영역에서 바로 표시되도록 조정. `styles.css`의 `.view-workflow`를 `flex: 1` 기반으로 수정.
+- **프론트(워크플로우 페이지 전환)**: `#modalWorkHub`를 오버레이 모달에서 메인 콘텐츠의 페이지 뷰(`.view-workflow`/`.workflow-page`)로 전환. `showView("modalWorkHub")` 기반으로 이동하고 상/하단 닫기 버튼(`btnCloseWorkflowPage*`)은 채팅/시작 화면으로 복귀. `index.html`, `app.js`, `styles.css`, `docs/FEATURE_SPEC.md`, `docs/DESIGN_SYSTEM.md`, `docs/DESIGN_GAP_CHECKLIST.md`, `docs/HANDOVER.md`.
 - **프론트(워크플로우 모달 디자인 정합)**: `design/ECH화면설계 (1)` 톤으로 `#modalWorkHub` 상단 툴바(`.workflow-topbar`: Search/Filters/New Task), 섹션 표면(`.workflow-section`)·타이포를 재정렬하고, `btnWorkflowNewTask`/`btnWorkflowFilter` 동작을 추가. `index.html`, `styles.css`, `app.js`.
 - **프론트(워크플로우·검색)**: 업무 항목·칸반을 **워크플로우**로 통합 — `#modalWorkHub` 단일 패널(`.work-hub-panel--workflow`, Tasks/Board 섹션), 채널·DM 연결 `#workHubChannelContext`(`syncWorkHubChannelContext`). 사이드바 **워크플로우** 한 항목(`btnSidebarWorkflow`), 상단 네비 라벨 **워크플로우**. 사이드바 **검색 필드 제거** — 통합 검색은 상단 `appHeaderSearchInput`만(`submitWorkspaceSearchFromHeader`). `index.html`, `app.js`, `styles.css`, `README.md`, `FEATURE_SPEC.md`, `DESIGN_SYSTEM.md`.
 - **프론트(사이드바·칸반)**: 좌측 사이드바 상단 `.sidebar-workspace`(조직도 단축 버튼 줄) 제거 — 조직도는 상단 **팀**(`btnTopNavTeam`)·환영 화면 `openOrgChartModal()`로만 진입. `#channelKanbanBoard`에 `margin-top: 20px`. `index.html`, `app.js`, `styles.css`, `docs/FEATURE_SPEC.md`.

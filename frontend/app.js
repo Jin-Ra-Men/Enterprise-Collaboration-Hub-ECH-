@@ -328,6 +328,17 @@ function syncWorkHubChannelContext() {
   }
   el.textContent = label ? `연결: ${label}` : `연결: 채널 #${cid}`;
 }
+function openWorkflowPage() {
+  ensureWorkflowMountedInChatArea();
+  showView("modalWorkHub");
+  syncWorkHubChannelContext();
+}
+function ensureWorkflowMountedInChatArea() {
+  const workflowEl = document.getElementById("modalWorkHub");
+  const chatArea = document.querySelector(".chat-area");
+  if (!workflowEl || !chatArea) return;
+  if (workflowEl.parentElement !== chatArea) chatArea.appendChild(workflowEl);
+}
 
 /** 좌측 하단 프레즌스 메뉴 이벤트(재로그인 시 중복 바인딩 방지) */
 let sidebarPresenceUiBound = false;
@@ -2045,6 +2056,11 @@ function setTopNavActive(key) {
 }
 
 function syncTopNavFromMainView() {
+  const workflowView = document.getElementById("modalWorkHub");
+  if (workflowView && !workflowView.classList.contains("hidden")) {
+    setTopNavActive("projects");
+    return;
+  }
   ["btnTopNavProjects", "btnTopNavTeam"].forEach((bid) => {
     document.getElementById(bid)?.classList.remove("app-shell-nav-link--active");
   });
@@ -2067,7 +2083,7 @@ function syncAdminSidebarActive(viewId) {
 }
 
 function showView(viewId) {
-  ["viewWelcome","viewChat","viewReleases","viewSettings","viewUserManagement","viewOrgManagement"].forEach(id => {
+  ["viewWelcome","viewChat","viewReleases","viewSettings","viewUserManagement","viewOrgManagement","modalWorkHub"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add("hidden");
   });
@@ -2387,7 +2403,7 @@ async function openWorkHubModalForActiveChannel() {
     ensureWorkHubWorkListDeleteBound();
     const panelFocus = pendingWorkHubPanelFocus;
     pendingWorkHubPanelFocus = null;
-    openModal("modalWorkHub");
+    openWorkflowPage();
     requestAnimationFrame(() => requestAnimationFrame(() => focusWorkHubPanel(panelFocus)));
   } catch (e) {
     pendingWorkHubPanelFocus = null;
@@ -2676,7 +2692,7 @@ function renderMyWorkItemsSidebar(channels) {
       try {
         await Promise.all([loadWorkHubChannelMembersForAssignee(), loadChannelWorkItems(), loadChannelKanbanBoard()]);
         ensureWorkHubWorkListDeleteBound();
-        openModal("modalWorkHub");
+        openWorkflowPage();
         setTimeout(() => {
           applyWorkHubWorkListSelection();
           const rowEl = document.querySelector(`#channelWorkItemsList .channel-work-item[data-work-item-id="${wid}"]`);
@@ -8535,6 +8551,11 @@ document.getElementById("btnTopNavProjects")?.addEventListener("click", () => {
 document.getElementById("btnTopNavTeam")?.addEventListener("click", () => {
   openOrgChartModal();
 });
+function closeWorkflowPageToMain() {
+  clearWorkHubScopedChannel();
+  if (activeChannelId) showView("viewChat");
+  else showView("viewWelcome");
+}
 document.getElementById("btnSidebarWorkflow")?.addEventListener("click", () => {
   void openWorkHubFromTopNav("work");
 });
@@ -8543,6 +8564,8 @@ document.getElementById("btnSidebarWorkflow")?.addEventListener("keydown", (e) =
   e.preventDefault();
   document.getElementById("btnSidebarWorkflow")?.click();
 });
+document.getElementById("btnCloseWorkflowPage")?.addEventListener("click", closeWorkflowPageToMain);
+document.getElementById("btnCloseWorkflowPageFooter")?.addEventListener("click", closeWorkflowPageToMain);
 document.getElementById("btnWorkflowNewTask")?.addEventListener("click", () => {
   const titleEl = document.getElementById("workItemTitleInput");
   if (titleEl) {
@@ -9331,7 +9354,7 @@ async function handleSearchResultClick(item) {
       loadChannelKanbanBoard(),
     ]);
     ensureWorkHubWorkListDeleteBound();
-    openModal("modalWorkHub");
+    openWorkflowPage();
     requestAnimationFrame(() => {
       const row = document.querySelector(`#channelWorkItemsList [data-work-item-id="${id}"]`);
       if (row) {
@@ -9361,7 +9384,7 @@ async function handleSearchResultClick(item) {
       loadChannelKanbanBoard(),
     ]);
     ensureWorkHubWorkListDeleteBound();
-    openModal("modalWorkHub");
+    openWorkflowPage();
     requestAnimationFrame(() => {
       const cardEl = document.querySelector(`#channelKanbanBoard .kanban-card-item[data-kanban-card-id="${id}"]`);
       if (cardEl) {
