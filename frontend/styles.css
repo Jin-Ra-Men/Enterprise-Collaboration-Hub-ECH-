@@ -3500,6 +3500,19 @@ html:not([data-theme="light"]) .modal-overlay {
   color: var(--text-muted);
   margin: 10px 0 0;
 }
+html[data-theme="light"] #modalAppUpdate .modal-header h3 {
+  letter-spacing: var(--ech-tracking-headline, -0.02em);
+  font-weight: 800;
+}
+html[data-theme="light"] #modalAppUpdate .modal-app-update-lead {
+  color: var(--text-primary);
+}
+html[data-theme="light"] #modalAppUpdate .muted-text {
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--outline-variant, #acb3b7) 18%, transparent);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
 
 .member-add-heading {
   display: flex;
@@ -3671,6 +3684,27 @@ html:not([data-theme="light"]) .modal {
   line-height: 1.5;
   color: var(--text-secondary);
 }
+html[data-theme="light"] .modal-footer--image-download .btn-image-download-choice {
+  border-radius: 12px;
+}
+html[data-theme="light"] .modal-footer--image-download #btnImageDownloadOriginal {
+  box-shadow:
+    0 8px 22px rgba(78, 69, 228, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+html[data-theme="light"] .modal-footer--image-download #btnImageDownloadCompressed {
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--outline-variant, #acb3b7) 20%, transparent),
+    0 6px 18px rgba(44, 52, 55, 0.06);
+}
+html[data-theme="light"] .modal-footer--image-download #btnImageDownloadCompressed:hover {
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
+    0 8px 22px rgba(78, 69, 228, 0.1);
+}
 
 /* ── 메시지 컨텍스트 메뉴(댓글/답글) ── */
 .context-menu {
@@ -3821,6 +3855,14 @@ html[data-theme="light"] .btn-secondary:hover {
   cursor: pointer;
 }
 .btn-cancel:hover { background: var(--bg-sidebar-hover); color: var(--text-primary); }
+html[data-theme="light"] .btn-cancel {
+  border-color: color-mix(in srgb, var(--outline-variant, #acb3b7) 28%, transparent);
+  background: rgba(255, 255, 255, 0.84);
+}
+html[data-theme="light"] .btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: var(--border-focus);
+}
 
 .theme-picker-options {
   display: grid;
@@ -5771,6 +5813,30 @@ html[data-theme="light"] .ech-window-head {
   line-height: 1.5;
   color: var(--text-primary);
   white-space: pre-wrap;
+}
+html[data-theme="light"] .app-dialog-modal {
+  border: none;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow:
+    0 24px 64px rgba(44, 52, 55, 0.14),
+    0 10px 32px rgba(78, 69, 228, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
+html[data-theme="light"] .app-dialog-header {
+  background: linear-gradient(180deg, rgba(78, 69, 228, 0.12) 0%, rgba(255, 255, 255, 0.92) 100%);
+  box-shadow: inset 0 -1px 0 var(--ghost-outline);
+}
+html[data-theme="light"] .app-dialog-title-wrap h3 {
+  letter-spacing: var(--ech-tracking-headline, -0.02em);
+  font-weight: 800;
+}
+html[data-theme="light"] #appDialogInput {
+  border: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--outline-variant, #acb3b7) 20%, transparent);
+  background: rgba(255, 255, 255, 0.94);
+}
+html[data-theme="light"] #appDialogInput:focus {
+  box-shadow: inset 0 0 0 2px rgba(78, 69, 228, 0.35), 0 4px 14px rgba(78, 69, 228, 0.08);
 }
 #appDialogInput {
   width: 100%;

@@ -125,7 +125,7 @@
 | 스레드 허브 | `#modalThreadHub` | [x] 공통 모달 다크 토큰 · 라이트 `.thread-hub-row` 카드 톤 |
 | 채널/DM 생성 | `#modalCreateChannel`, `#modalCreateDm`, `#modalAddChannelMembers` | [x] 공통 모달 다크 토큰 |
 | 업무 항목 상세 | `#modalWorkItemDetail` | [x] 공통 모달 다크 토큰 |
-| 공통 다이얼로그 | `#modalAppDialog`, `#modalImageDownloadChoice` | [x] 공통 모달 다크 토큰 |
+| 공통 다이얼로그 | `#modalAppDialog`, `#modalImageDownloadChoice` | [x] 다크 토큰 · 라이트 `app-dialog` 글래스 헤더·입력 포커스 / 다운로드 선택 버튼 톤 분리 |
 
 ---
 
@@ -145,7 +145,7 @@
 - 2026-04-11(2): 관리자 인사이트 카드 호버·조직 탭 레일·통합 검색 모달·보조 버튼·컴포저 전송·환영 히어로 섀도.
 - 2026-04-12: 다크 테마 P0 시각 정합 — `styles.css` `html:not([data-theme="light"])`로 채팅·글로벌 바·로그인·모달·관리자·설정·조직·사용자·검색·업무 허브 셸 보강. §2·§3·§4 일부 `[x]` 처리.
 - 2026-04-12(2): 다크 P1 — Primary CTA 섀도, `work-hub-panel`·배포 카드·칸반·`mention-suggest`·프로필 카드·퀵 레일·`#adminSection`·조직도 멤버 카드. §3·§4 추가 `[x]`.
-- 2026-04-09: §4 보조 UI — 파일 허브·이미지 프리뷰·테마 피커·멘션 토스트·사용자 검색 목록 라이트 톤 (`styles.css`).
+- 2026-04-09: §4 보조 UI — 파일 허브·이미지 프리뷰·테마 피커·멘션 토스트·사용자 검색 목록·공통 다이얼로그·업데이트 안내 라이트 톤 (`styles.css`).
 
 ---
 
