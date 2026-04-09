@@ -2000,6 +2000,33 @@ function showMain(user) {
   initSocket();
   loadMyChannels();
   initEvents();
+  syncTopNavFromMainView();
+}
+
+/** Stratos-style top bar: highlight matches welcome vs. modal (work hub / org chart). */
+function setTopNavActive(key) {
+  const pairs = [
+    ["dashboard", "btnTopNavDashboard"],
+    ["projects", "btnTopNavProjects"],
+    ["team", "btnTopNavTeam"],
+  ];
+  pairs.forEach(([k, bid]) => {
+    const btn = document.getElementById(bid);
+    if (!btn) return;
+    if (k === key) btn.classList.add("app-shell-nav-link--active");
+    else btn.classList.remove("app-shell-nav-link--active");
+  });
+}
+
+function syncTopNavFromMainView() {
+  const welcome = document.getElementById("viewWelcome");
+  if (welcome && !welcome.classList.contains("hidden")) {
+    setTopNavActive("dashboard");
+  } else {
+    ["btnTopNavDashboard", "btnTopNavProjects", "btnTopNavTeam"].forEach((bid) => {
+      document.getElementById(bid)?.classList.remove("app-shell-nav-link--active");
+    });
+  }
 }
 
 function showView(viewId) {
@@ -2009,6 +2036,7 @@ function showView(viewId) {
   });
   const target = document.getElementById(viewId);
   if (target) target.classList.remove("hidden");
+  syncTopNavFromMainView();
 }
 
 /* ==========================================================================
@@ -8378,6 +8406,16 @@ document.getElementById("btnOpenWorkHub")?.addEventListener("click", async () =>
   }
 });
 
+document.getElementById("btnTopNavDashboard")?.addEventListener("click", () => {
+  void clearActiveChannelAndReload();
+});
+document.getElementById("btnTopNavProjects")?.addEventListener("click", () => {
+  document.getElementById("btnOpenWorkHub")?.click();
+});
+document.getElementById("btnTopNavTeam")?.addEventListener("click", () => {
+  document.getElementById("btnOrgChart")?.click();
+});
+
 document.getElementById("workItemCreateForm")?.addEventListener("submit", (e) => e.preventDefault());
 document.getElementById("kanbanCardCreateForm")?.addEventListener("submit", (e) => e.preventDefault());
 
@@ -8770,7 +8808,12 @@ document.getElementById("btnProfileDm").addEventListener("click", async () => {
 /* ==========================================================================
  * 모달 유틸
  * ========================================================================== */
-function openModal(id)  { document.getElementById(id)?.classList.remove("hidden"); }
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.remove("hidden");
+  if (id === "modalWorkHub") setTopNavActive("projects");
+  else if (id === "modalOrgChart") setTopNavActive("team");
+}
 function closeModal(id) {
   document.getElementById(id)?.classList.add("hidden");
   if (id === "modalImageDownloadChoice") {
@@ -8785,6 +8828,7 @@ function closeModal(id) {
     }
   }
   if (id === "modalWorkHub") clearWorkHubScopedChannel();
+  if (id === "modalWorkHub" || id === "modalOrgChart") syncTopNavFromMainView();
 }
 
 document.querySelectorAll(".modal-close, .btn-cancel, .btn-secondary[data-modal]").forEach(btn => {

@@ -36,6 +36,9 @@
 
 ## 2026-04-09
 
+### Added
+- **프론트(상단 네비 동작)**: `index.html`에 `btnTopNavDashboard`·`btnTopNavProjects`·`btnTopNavTeam`. `app.js` — 대시보드는 환영 화면 복귀(`clearActiveChannelAndReload`), 프로젝트는 기존 업무·칸반 허브(`btnOpenWorkHub`, 채널 미선택 시 안내), 팀은 조직도(`btnOrgChart`). `setTopNavActive`·`syncTopNavFromMainView`로 `showView`·`showMain`·`openModal`/`closeModal`과 맞춰 활성 탭 동기화.
+
 ### Changed
 - **프론트(디자인 2차 — 관리자·설정·모달)**: `frontend/styles.css` 라이트 테마 — `--ech-tracking-headline`·`--ech-tracking-label`; 관리자 패널 헤더·인사이트 카드·배포 카드·데이터 테이블·설정 카드/캔버스·조직 탭 레일 No-Line 톤; 공통 `.modal`·헤더/푸터 인셋 구분선; 로그인 카드; 컨텍스트 메뉴 글래스; `#modalAddMemberPicker` `.ech-orgmap-window` 라운드·글래스. `docs/DESIGN_GAP_CHECKLIST.md` 타이포·멤버 피커 항목 갱신.
 - **프론트(디자인 3차 — 검색·채팅 보조·업무·칸반)**: `styles.css` 라이트 — `#searchModal` 툴바·쿼리·포커스; `.mention-suggest` 글래스; `#modalThread` 스레드 답글 세로선; `#modalThreadHub` `.thread-hub-row`; `#modalWorkHub` `.ech-workhub-shell`·`.work-hub-panel`; `#channelKanbanBoard` 컬럼·카드. `DESIGN_GAP_CHECKLIST.md` (1)(2)(6)(9)·§4 스레드 허브 메모 갱신.

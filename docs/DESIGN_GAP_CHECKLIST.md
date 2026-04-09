@@ -71,6 +71,7 @@
 | 앱 위치 | 체크 |
 |---------|------|
 | `#appShellTopBar`와 `ECH메인` 목업 상단 바 시각적 일치도 | [x] 다크 글로벌 바(동일 토큰) · 라이트 상단 메뉴(`대시보드/프로젝트/팀`) 버튼 톤 반영 |
+| `#btnTopNavDashboard` / `#btnTopNavProjects` / `#btnTopNavTeam` 동작(환영·업무 허브·조직도) 및 활성 탭 동기화 | [x] `app.js` 연동(2026-04-09) |
 
 ### `(5)` Organization Directory
 
