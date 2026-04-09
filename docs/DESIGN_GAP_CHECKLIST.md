@@ -23,7 +23,7 @@
 | 항목 | 메모 |
 |------|------|
 | [x] **No-Line / 고스트 보더**: 섹션 구분이 톤·여백 위주인지, 불필요한 실선 1px가 남았는지 점검 | 사이드바·카드·테이블 경계 — 라이트·다크 공통 토큰 정리(2026-04-12) |
-| [ ] **타이포 스케일**: Inter, 헤드라인/라벨(대문자·자간) 계열이 목업 대비 일관적인지 | `styles.css` 변수·헤딩 클래스 |
+| [x] **타이포 스케일**: Inter, 헤드라인/라벨(대문자·자간) 계열이 목업 대비 일관적인지 | `html[data-theme="light"]` — `--ech-tracking-headline`·`--ech-tracking-label`; 관리자 헤더·모달 제목·설정/인사이트 라벨·로그인 제목 |
 | [x] **Primary CTA 그라데이션**: 135° `primary` → `primary_container` 느낌이 버튼에 반영됐는지 | `.btn-primary` — `var(--grad-btn-primary)` + 라이트/다크 섀도(`styles.css`) |
 | [x] **글래스 모달**: 떠 있는 패널·모달의 blur·반투명 레이어가 목업과 유사한지 | 주요 `modal-overlay` — 다크에서 모달 본체·스크림 blur 보강 |
 | [x] **활성 채널 표시**: 좌측 “필 인디케이터 + 은은한 배경” 패턴 적용 여부 | `.sidebar-item.active` — 다크 인디케이터 글로우 |
@@ -78,7 +78,7 @@
 |---------|------|
 | `#viewOrgManagement` 인사이트 카드 + `org-tab-rail` / `org-tab-main` | [x] 다크 레일·본문·활성 탭 인셋 |
 | `#modalOrgChart` · `#modalOrgGroupEdit` | [x] 다크 `.orgchart-member-card` |
-| `#modalAddMemberPicker` 조직도 오버레이 | [ ] |
+| `#modalAddMemberPicker` 조직도 오버레이 | [x] 라이트 — `.ech-orgmap-window` 글래스·16px 라운드·인디고 섀도 (`styles.css`) |
 
 ### `(6)` Task & Kanban Management
 
