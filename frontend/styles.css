@@ -4530,6 +4530,98 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
 .profile-dl dt { color: var(--text-muted); }
 .profile-dl dd { word-break: break-all; color: var(--text-primary); }
 
+/* design/ECH화면설계 (9): 프로필 카드 모달 */
+.ech-profile-modal-inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.ech-profile-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+}
+.ech-profile-body {
+  padding-top: 36px;
+  text-align: center;
+}
+.ech-profile-hero .profile-avatar-lg {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: 4px solid color-mix(in srgb, var(--outline-variant, #acb3b7) 35%, transparent);
+  box-shadow: 0 8px 24px rgba(44, 52, 55, 0.08);
+}
+.profile-modal-subtitle {
+  margin: -8px 0 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent, #4e45e4);
+  letter-spacing: 0.02em;
+}
+.profile-dl--cards {
+  grid-template-columns: 1fr;
+  gap: 14px;
+  text-align: left;
+  max-width: 100%;
+}
+.profile-dl--cards dt {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0;
+}
+.profile-dl--cards .profile-dd-card {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  font-size: 14px;
+  line-height: 1.45;
+}
+html[data-theme="light"] .profile-dl--cards .profile-dd-card {
+  background: color-mix(in srgb, var(--surface-container-low, #f0f4f7) 85%, #fff 15%);
+  border-color: color-mix(in srgb, var(--outline-variant, #acb3b7) 30%, transparent);
+}
+/* `.modal-footer`에 이미 상단 구분선·패딩이 있음 — 중복 제거 */
+.ech-profile-footer {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.ech-profile-modal.modal {
+  overflow: hidden;
+}
+.ech-profile-btn-dm {
+  flex: 1 1 200px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.ech-profile-btn-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+.ech-profile-btn-close {
+  flex: 0 0 auto;
+}
+@media (max-width: 420px) {
+  .ech-profile-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .ech-profile-btn-dm,
+  .ech-profile-btn-close {
+    width: 100%;
+  }
+}
+
 /* 조직도 선택 */
 .org-picker-details {
   margin-top: 12px;

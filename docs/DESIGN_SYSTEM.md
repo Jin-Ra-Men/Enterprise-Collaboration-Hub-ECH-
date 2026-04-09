@@ -81,6 +81,6 @@ Copy-Item -Force "frontend/design-backup/legacy-design/app.js" "frontend/app.js"
 | `(6)` | Task & Kanban Management | `#modalWorkHub` 칸반 컬럼 `#channelKanbanBoard` |
 | `(7)` | User Management | 사용자 관리 `#viewUserManagement` (`data-ech-design-ref="screen7-users"`) |
 | `(8)` | Enterprise Hub — Settings | 앱 설정 `#viewSettings` |
-| `(9)` | (코드만 상이·제목 생략 가능) | 통합 검색 모달·보조 패널 등 점진 적용 |
+| `(9)` | (코드만 상이·제목 생략 가능) | 사용자 **프로필 모달** `#modalUserProfile`(`.ech-profile-modal`·히어로·부제·`.profile-dl--cards`)·통합 검색 등 보조 패널 점진 적용 |
 
 **마크업 훅**: 채팅 `.ech-region--chat`, 헤더 `.ech-chat-header`, 입력 `.ech-composer-bar`, 관리자 `.ech-region--admin` + `data-ech-design-ref`, 배포 관리 `#viewReleases`의 `release-layout`·인사이트 카드. 스타일은 **Tailwind 미로드 시에도** `styles.css`만으로 레이아웃이 유지되도록 시맨틱 규칙을 우선합니다. `index.html`이나 유틸 클래스를 바꾼 뒤에는 `cd frontend && npm run build:css`로 `ech-tailwind.css`를 재생성합니다.

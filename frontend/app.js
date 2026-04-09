@@ -833,6 +833,13 @@ async function openUserProfile(employeeNo) {
     document.getElementById("profileModalDept").textContent = u.department || "-";
     const jl = u.jobLevel != null && String(u.jobLevel).trim() !== "";
     document.getElementById("profileModalJobLevel").textContent = jl ? String(u.jobLevel).trim() : "-";
+    const subEl = document.getElementById("profileModalSubtitle");
+    if (subEl) {
+      const dept = (u.department && String(u.department).trim()) || "";
+      const jt = jl ? String(u.jobLevel).trim() : "";
+      const parts = [dept, jt].filter(Boolean);
+      subEl.textContent = parts.length ? parts.join(" · ") : "—";
+    }
     const posDt = document.getElementById("profileJobPositionDt");
     const posDd = document.getElementById("profileModalJobPosition");
     const hasPos = u.jobPosition != null && String(u.jobPosition).trim() !== "";

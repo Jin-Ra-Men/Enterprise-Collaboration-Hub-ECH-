@@ -1255,28 +1255,39 @@
       </div>
     </div>
 
-    <!-- ===================== 사용자 프로필 모달 ===================== -->
+    <!-- ===================== 사용자 프로필 모달 · design/ECH화면설계 (9) 카드형 ===================== -->
     <div id="modalUserProfile" class="modal-overlay hidden">
-      <div class="modal modal-narrow">
-        <div class="modal-header">
-          <h3>프로필</h3>
-          <button type="button" class="modal-close" data-modal="modalUserProfile">✕</button>
-        </div>
-        <div class="modal-body profile-body">
-          <div class="profile-avatar-lg" id="profileAvatarLg">?</div>
-          <h4 id="profileModalName" class="profile-modal-name">-</h4>
-          <dl class="profile-dl">
-            <dt>사원번호</dt><dd id="profileModalEmpNo">-</dd>
-            <dt>이메일</dt><dd id="profileModalEmail">-</dd>
-            <dt>부서</dt><dd id="profileModalDept">-</dd>
-            <dt>직급</dt><dd id="profileModalJobLevel">-</dd>
-            <dt id="profileJobPositionDt" class="hidden">직위</dt><dd id="profileModalJobPosition" class="hidden"></dd>
-            <dt id="profileJobTitleDt" class="hidden">직책</dt><dd id="profileModalJobTitle" class="hidden"></dd>
-          </dl>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn-primary" id="btnProfileDm">DM 보내기</button>
-          <button type="button" class="btn-cancel" data-modal="modalUserProfile">닫기</button>
+      <div class="modal modal-narrow ech-profile-modal" role="dialog" aria-labelledby="profileModalName">
+        <div class="ech-profile-modal-inner">
+          <button type="button" class="ech-profile-modal-close modal-close" data-modal="modalUserProfile" aria-label="닫기">✕</button>
+          <div class="modal-body profile-body ech-profile-body">
+            <div class="ech-profile-hero">
+              <div class="profile-avatar-lg" id="profileAvatarLg">?</div>
+              <h4 id="profileModalName" class="profile-modal-name">-</h4>
+              <p id="profileModalSubtitle" class="profile-modal-subtitle">-</p>
+            </div>
+            <dl class="profile-dl profile-dl--cards">
+              <dt>사원번호</dt>
+              <dd id="profileModalEmpNo" class="profile-dd-card">-</dd>
+              <dt>이메일</dt>
+              <dd id="profileModalEmail" class="profile-dd-card">-</dd>
+              <dt>부서</dt>
+              <dd id="profileModalDept" class="profile-dd-card">-</dd>
+              <dt>직급</dt>
+              <dd id="profileModalJobLevel" class="profile-dd-card">-</dd>
+              <dt id="profileJobPositionDt" class="hidden">직위</dt>
+              <dd id="profileModalJobPosition" class="profile-dd-card hidden"></dd>
+              <dt id="profileJobTitleDt" class="hidden">직책</dt>
+              <dd id="profileModalJobTitle" class="profile-dd-card hidden"></dd>
+            </dl>
+          </div>
+          <div class="modal-footer ech-profile-footer">
+            <button type="button" class="btn-primary ech-profile-btn-dm" id="btnProfileDm">
+              <span class="material-symbols-outlined ech-profile-btn-icon" aria-hidden="true">chat_bubble</span>
+              DM 보내기
+            </button>
+            <button type="button" class="btn-cancel ech-profile-btn-close" data-modal="modalUserProfile">닫기</button>
+          </div>
         </div>
       </div>
     </div>
