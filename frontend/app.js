@@ -8508,7 +8508,7 @@ document.getElementById("btnTopNavProjects")?.addEventListener("click", () => {
   void openWorkHubFromTopNav();
 });
 document.getElementById("btnTopNavTeam")?.addEventListener("click", () => {
-  document.getElementById("btnOrgChart")?.click();
+  openOrgChartModal();
 });
 document.getElementById("btnSidebarWorkHubWork")?.addEventListener("click", () => {
   void openWorkHubFromTopNav("work");
@@ -9581,7 +9581,7 @@ function initEvents() {
     document.getElementById("btnWelcomeFocusChannel")?.addEventListener("click", focusWelcomeChannelSection);
     document.getElementById("btnWelcomeFocusSearch")?.addEventListener("click", focusSearchInputs);
     document.getElementById("btnWelcomeOpenOrgChart")?.addEventListener("click", () => {
-      document.getElementById("btnOrgChart")?.click();
+      openOrgChartModal();
     });
     document.getElementById("appHeaderSearchInput")?.addEventListener("input", syncHeaderSearchToSidebar);
     document.getElementById("searchInput")?.addEventListener("input", syncSidebarSearchToHeader);
@@ -10658,11 +10658,6 @@ function updatePendingChildPaths(parentCode, parentDisplayPath) {
  * ========================================================================== */
 let orgChartData = null;
 
-document.getElementById("btnOrgChart").addEventListener("click", () => {
-  openModal("modalOrgChart");
-  loadOrgChart();
-});
-
 document.getElementById("btnOrgChartRefresh").addEventListener("click", () => {
   orgChartData = null;
   loadOrgChart();
@@ -10687,6 +10682,11 @@ async function loadOrgChart() {
   } catch (e) {
     if (scroll) scroll.innerHTML = `<p class="orgchart-error">${escHtml(e.message || "오류가 발생했습니다.")}</p>`;
   }
+}
+
+function openOrgChartModal() {
+  openModal("modalOrgChart");
+  void loadOrgChart();
 }
 
 function renderOrgChartTree(data) {

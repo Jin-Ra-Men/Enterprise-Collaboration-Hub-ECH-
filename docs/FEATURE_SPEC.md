@@ -180,9 +180,9 @@
 ---
 
 ## 좌측 퀵 레일(미읽음)·사이드바 접기
-- 목적: **워크스페이스(ECH) 헤더는 사이드바 최상단 전폭**으로 두고, 퀵 레일은 그 아래에서 **검색·채널/DM 목록과 동일한 세로 구간**(`.sidebar-body`)에만 배치해 ECH 제목 영역을 침범하지 않음. 퀵에는 **미읽음을 최상단(배지)**으로 올리고, **최근 대화**도 항상 표시(상한 `QUICK_RAIL_MAX_ITEMS`). 사이드바는 **돌출 탭**으로 접어 **퀵 64px만** 남기고 나머지(워크스페이스·검색·목록·프로필)는 숨김.
+- 목적: 퀵 레일은 **검색·채널/DM 목록과 동일한 세로 구간**(`.sidebar-body`) 상단에 두고, 그 아래로 **업무·칸반** 단축·채널/DM 목록이 이어지게 함(구 **워크스페이스 상단 줄**·조직도 단축 버튼은 제거; 조직도는 상단 **팀**·환영 화면에서 진입). 퀵에는 **미읽음을 최상단(배지)**으로 올리고, **최근 대화**도 항상 표시(상한 `QUICK_RAIL_MAX_ITEMS`). 사이드바는 **돌출 탭**으로 접어 **퀵 64px만** 남기고 나머지(검색·목록·프로필)는 숨김.
 - 사용자: 일반 채팅 사용자
-- 관련 화면/경로: `frontend/index.html` `.sidebar-workspace`(ECH) → `.sidebar-body`(`#quickContainer`·`#quickRailScroll` + `.sidebar-main`); `#btnSidebarEdgeToggle`; `frontend/app.js` `renderQuickUnreadList`·`QUICK_RAIL_MAX_ITEMS`·`compareQuickRailChannel`; `frontend/styles.css` `.sidebar-body`·`.sidebar-main`·`.quick-rail`·`.sidebar-column`(324px 펼침)
+- 관련 화면/경로: `frontend/index.html` `.sidebar` → `.sidebar-body`(`#quickContainer`·`#quickRailScroll` + `.sidebar-main`); `#btnSidebarEdgeToggle`; `frontend/app.js` `renderQuickUnreadList`·`QUICK_RAIL_MAX_ITEMS`·`compareQuickRailChannel`; `frontend/styles.css` `.sidebar-body`·`.sidebar-main`·`.quick-rail`·`.sidebar-column`(324px 펼침)
 - 관련 API: `GET /api/channels` (`unreadCount`, **`lastMessageAt`**, `createdAt` 폴백 정렬)
 - 관련 Socket 이벤트: `message:new`, `channel:system` 등 기존 디바운스 채널 목록 갱신과 동일(약 400ms) — 갱신 시 퀵 레일도 동일 데이터로 재렌더
 - 입력/출력:

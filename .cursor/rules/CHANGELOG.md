@@ -5,6 +5,7 @@
 ## 2026-04-12
 
 ### Changed
+- **프론트(사이드바·칸반)**: 좌측 사이드바 상단 `.sidebar-workspace`(조직도 단축 버튼 줄) 제거 — 조직도는 상단 **팀**(`btnTopNavTeam`)·환영 화면 `openOrgChartModal()`로만 진입. `#channelKanbanBoard`에 `margin-top: 20px`. `index.html`, `app.js`, `styles.css`, `docs/FEATURE_SPEC.md`.
 - **프론트(업무·칸반 모달 레이아웃)**: `#modalWorkHub`에서 `.work-hub-body--split` 제거 — 업무 항목 패널 **위**·칸반 패널 **아래**로 항상 세로 스택(`work-hub-body`). 칸반 3컬럼 가로 폭 확보. `index.html`, `styles.css`, `docs/FEATURE_SPEC.md`, `docs/DESIGN_GAP_CHECKLIST.md`, `docs/DESIGN_SYSTEM.md`, `docs/HANDOVER.md`.
 - **프론트(IA·내비)**: 대시보드 상단 탭 제거 · `#btnAppShellHome`(ECH)로 시작 화면 복귀. `#viewWelcome`을 슬림 `.ech-home-*` 카드로 교체(구 히어로·3열 카드 제거). 좌측 **업무·칸반** 레일(`btnSidebarWorkHubWork`/`Kanban`, `openWorkHubFromTopNav`·`pendingWorkHubPanelFocus`·`#workHubPanelWork`/`Kanban`). 사이드바 워크스페이스 줄에서 ECH 로고 타일 제거·조직도만 유지(`sidebar-workspace--tools-only`). `README.md`·`FEATURE_SPEC.md`·`HANDOVER.md`·`DESIGN_SYSTEM.md`·`DESIGN_GAP_CHECKLIST.md` 반영.
 - **프론트(관리자 레이아웃 리듬)**: `styles.css` — `#adminSection` 상단 여백(`margin-top`/`padding-top`) 확대, `.view-admin` 패딩 `clamp`, `.admin-panel-header` 줄바꿈·`gap`·다크 `h2` 트래킹, `.admin-hint`·`.admin-insight-grid` 여백·갭 정리.
