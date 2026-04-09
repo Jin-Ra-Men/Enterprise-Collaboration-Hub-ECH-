@@ -5,6 +5,7 @@
 ## 2026-04-12
 
 ### Changed
+- **프론트(관리자 레이아웃 리듬)**: `styles.css` — `#adminSection` 상단 여백(`margin-top`/`padding-top`) 확대, `.view-admin` 패딩 `clamp`, `.admin-panel-header` 줄바꿈·`gap`·다크 `h2` 트래킹, `.admin-hint`·`.admin-insight-grid` 여백·갭 정리.
 - **프론트(관리자 사이드바)**: `index.html` `#adminSection` — `data-ech-design-ref="screen7-admin-rail"`, Material 아이콘(`account_tree`·`group`·`rocket_launch`·`settings`)·`sidebar-section--admin`. `app.js` `syncAdminSidebarActive`를 `showView`에 연동해 관리 뷰와 메뉴 `.active` 일치. `styles.css` 구역 구분선·라이트 인디고 틴트·히어로 `isolation`. `DESIGN_GAP_CHECKLIST.md` `(3)`·`FEATURE_SPEC.md`·`HANDOVER.md`·`DESIGN_SYSTEM.md` §6 표·`README.md`(관리자) 보강.
 - **프론트(업무 허브 진입)**: `app.js` — `getDefaultChannelForWorkHub`·`openWorkHubModalForActiveChannel`·`openWorkHubFromTopNav`. 상단 **프로젝트**·환영 카드 **업무·칸반**은 채널 미선택 시 공개→비공개→DM 순으로 기본 채널을 잡아 `selectChannel` 후 모달 오픈. 채팅 헤더 `btnOpenWorkHub`는 채널 필수 동작 유지. `docs/FEATURE_SPEC.md`·환영 카드 카피(`index.html`)·`README.md`(업무 섹션) 반영.
 - **프론트(다크 테마·디자인 갭)**: `frontend/styles.css` — `html:not([data-theme="light"])` 전역 보강(글로벌 바 blur·인셋 섀도·헤더 검색 포커스, 로그인 카드 글래스, 모달 본체·스크림 blur). ECH 채팅: 헤더·채널명(`#a5b4fc`)·멤버 패널 `top`/글래스·타임라인 그라데이션·날짜 구분선·컴포저 바/글래스 포커스·툴바·힌트. 환영 카드 다크 호버·슬레이트 아이콘 랩. 사이드바 활성 인디케이터 글로우. 관리자(인사이트 카드 호버·패널 헤더)·설정 히어로·사용자 분할·조직 탭 레일/본문·`#searchModal` 툴바·`modal-work-hub` 셸 보더.
