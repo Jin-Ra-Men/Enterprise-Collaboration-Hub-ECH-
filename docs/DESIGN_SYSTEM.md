@@ -73,7 +73,7 @@ Copy-Item -Force "frontend/design-backup/legacy-design/app.js" "frontend/app.js"
 
 | 폴더 | 참고 목업(요지) | 앱에서의 구역 / 식별자 |
 |------|-----------------|-------------------------|
-| `(1)` | ECH Workspace — Work Management | 업무·칸반 모달 `#modalWorkHub` · `.ech-workhub-shell` |
+| `(1)` | ECH Workspace — Work Management | 업무·칸반 모달 `#modalWorkHub` · `.ech-workhub-shell` · 넓은 뷰에서 `.work-hub-body--split`(업무/칸반 2열) |
 | `(2)` | 워크스페이스 셸 + 조직/멤버 모달 | 채팅 타임라인 `#viewChat` · `.ech-messages-wrap` · 글로벌 검색 `#appShellTopBar` |
 | `(3)` | Enterprise Admin Hub | 관리자 뷰 공통 `.ech-region--admin` · 사이드바 관리 메뉴 |
 | `(4)` | Stratos Pro 상단 네비 | `app-shell-topbar` (ECH메인과 동일 계열) |
@@ -83,4 +83,4 @@ Copy-Item -Force "frontend/design-backup/legacy-design/app.js" "frontend/app.js"
 | `(8)` | Enterprise Hub — Settings | 앱 설정 `#viewSettings` |
 | `(9)` | (코드만 상이·제목 생략 가능) | 통합 검색 모달·보조 패널 등 점진 적용 |
 
-**마크업 훅**: 채팅 `.ech-region--chat`, 헤더 `.ech-chat-header`, 입력 `.ech-composer-bar`, 관리자 `.ech-region--admin` + `data-ech-design-ref`. 스타일은 **Tailwind 미로드 시에도** `styles.css`만으로 레이아웃이 유지되도록 시맨틱 규칙을 우선합니다. `index.html`이나 유틸 클래스를 바꾼 뒤에는 `cd frontend && npm run build:css`로 `ech-tailwind.css`를 재생성합니다.
+**마크업 훅**: 채팅 `.ech-region--chat`, 헤더 `.ech-chat-header`, 입력 `.ech-composer-bar`, 관리자 `.ech-region--admin` + `data-ech-design-ref`, 배포 관리 `#viewReleases`의 `release-layout`·인사이트 카드. 스타일은 **Tailwind 미로드 시에도** `styles.css`만으로 레이아웃이 유지되도록 시맨틱 규칙을 우선합니다. `index.html`이나 유틸 클래스를 바꾼 뒤에는 `cd frontend && npm run build:css`로 `ech-tailwind.css`를 재생성합니다.

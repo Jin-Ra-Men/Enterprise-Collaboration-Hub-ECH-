@@ -430,31 +430,64 @@
           </div>
         </div>
 
-        <!-- 배포 관리 패널 (관리자) -->
+        <!-- 배포 관리 패널 (관리자) · 인사이트 카드 + 업로드/목록 2단 -->
         <div id="viewReleases" class="view-admin ech-region ech-region--admin hidden" data-ech-design-ref="admin-releases">
           <div class="admin-panel-header">
             <h2>🚀 배포 버전 관리</h2>
             <button id="refreshReleasesBtn" class="btn-refresh">새로고침</button>
           </div>
-          <details class="release-upload-details">
-            <summary>새 릴리즈 업로드</summary>
-            <form id="releaseUploadForm" class="release-form">
-              <input id="releaseVersion" type="text" placeholder="버전 (예: 1.2.0)" required />
-              <input id="releaseFile" type="file" accept=".war,.jar" required />
-              <input id="releaseDescription" type="text" placeholder="변경 내역 (선택)" />
-              <button type="submit" class="btn-primary">업로드</button>
-              <span id="releaseUploadStatus" class="upload-status"></span>
-            </form>
-          </details>
-          <table class="data-table">
-            <thead><tr><th>버전</th><th>파일명</th><th>크기</th><th>상태</th><th>업로드</th><th>활성화</th><th>작업</th></tr></thead>
-            <tbody id="releaseTableBody"></tbody>
-          </table>
-          <h3 style="margin-top:24px">📋 배포 이력</h3>
-          <table class="data-table">
-            <thead><tr><th>일시</th><th>액션</th><th>이전 버전</th><th>배포 버전</th><th>메모</th></tr></thead>
-            <tbody id="deployHistoryBody"></tbody>
-          </table>
+          <p class="admin-hint">릴리즈 파일을 업로드한 뒤 <strong>활성화</strong>로 운영 버전을 전환합니다. 배포 이력은 감사용으로 누적됩니다.</p>
+          <section class="admin-insight-grid" aria-label="배포 현황 요약">
+            <article class="admin-insight-card">
+              <p class="admin-insight-label">등록된 릴리즈</p>
+              <p class="admin-insight-value" id="releaseMetricTotal">-</p>
+            </article>
+            <article class="admin-insight-card">
+              <p class="admin-insight-label">현재 운영 버전</p>
+              <p class="admin-insight-value" id="releaseMetricActiveVersion">-</p>
+            </article>
+            <article class="admin-insight-card">
+              <p class="admin-insight-label">배포 이력 기록</p>
+              <p class="admin-insight-value" id="releaseMetricHistory">-</p>
+            </article>
+          </section>
+          <div class="release-layout">
+            <aside class="release-panel release-panel--aside" aria-label="업로드">
+              <div class="release-upload-card">
+                <h3 class="release-section-title">새 릴리즈 업로드</h3>
+                <details class="release-upload-details" open>
+                  <summary class="release-upload-summary">업로드 폼</summary>
+                  <form id="releaseUploadForm" class="release-form">
+                    <input id="releaseVersion" type="text" placeholder="버전 (예: 1.2.0)" required />
+                    <input id="releaseFile" type="file" accept=".war,.jar" required />
+                    <input id="releaseDescription" type="text" placeholder="변경 내역 (선택)" />
+                    <button type="submit" class="btn-primary">업로드</button>
+                    <span id="releaseUploadStatus" class="upload-status"></span>
+                  </form>
+                </details>
+              </div>
+            </aside>
+            <div class="release-panel release-panel--main">
+              <div class="release-table-block">
+                <h3 class="release-section-title">릴리즈 목록</h3>
+                <div class="admin-release-table-wrap">
+                  <table class="data-table">
+                    <thead><tr><th>버전</th><th>파일명</th><th>크기</th><th>상태</th><th>업로드</th><th>활성화</th><th>작업</th></tr></thead>
+                    <tbody id="releaseTableBody"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="release-table-block">
+                <h3 class="release-section-title">배포 이력</h3>
+                <div class="admin-release-table-wrap">
+                  <table class="data-table">
+                    <thead><tr><th>일시</th><th>액션</th><th>이전 버전</th><th>배포 버전</th><th>메모</th></tr></thead>
+                    <tbody id="deployHistoryBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 사용자 관리 패널 (관리자) -->
@@ -1093,7 +1126,7 @@
           <h3 id="workHubTitle">업무 · 칸반</h3>
           <button class="modal-close" data-modal="modalWorkHub">✕</button>
         </div>
-        <div class="modal-body work-hub-body">
+        <div class="modal-body work-hub-body work-hub-body--split">
           <div class="work-hub-panel">
             <h4>업무 항목</h4>
             <p class="work-hub-hint">신규 입력·목록에서 상태 변경 후 <strong>저장</strong>을 누르면 서버에 반영됩니다. 비활성 업무의 <strong>복원</strong>·<strong>완전 삭제</strong>도 목록(또는 상세)에서 선택한 뒤 <strong>저장</strong> 시에만 서버에 반영되며, 예약된 항목은 배지로 표시됩니다.</p>

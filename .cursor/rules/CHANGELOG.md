@@ -10,6 +10,7 @@
 ### Changed
 - **문서**: `index.html`/유틸 변경 시 `npm run build:css` 안내 유지.
 - **프론트(조직 관리 레이아웃)**: `viewOrgManagement`를 `ECH화면설계 (5)`에 맞춰 상단 인사이트 카드 + 좌측 세로 탭 레일(`org-tab-rail`)·우측 본문(`org-tab-main`) 2단으로 재구성. `updateOrgInsightMetrics()`로 현재 탭·표시 항목 수·저장 대기(`orgPendingCountMirror`) 동기화.
+- **프론트(배포 관리·업무칸반 레이아웃)**: `viewReleases`에 인사이트 카드·`release-layout`(업로드/목록 2단)·`updateReleaseInsightMetrics()` 연동. `#modalWorkHub` 본문에 `.work-hub-body--split`으로 넓은 화면에서 업무·칸반 좌우 2열 배치. `loadReleases` DOM null 가드.
 
 ## 2026-04-09
 

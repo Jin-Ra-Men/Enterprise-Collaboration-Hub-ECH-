@@ -2700,6 +2700,73 @@ html[data-theme="light"] .ech-region--admin .admin-panel-header {
 }
 .upload-status { font-size: 13px; color: var(--text-muted); }
 
+/* 배포 관리(viewReleases) — 인사이트 아래 2단: 업로드 / 목록+이력 */
+.release-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.release-upload-card {
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 14px 16px 16px;
+  background: var(--bg-elevated);
+}
+.release-section-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.release-upload-card .release-upload-details {
+  margin-bottom: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+.release-upload-summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 8px 0 0;
+  margin: 0 0 4px;
+  border-top: 1px solid var(--border-subtle);
+}
+.release-upload-summary::-webkit-details-marker {
+  display: none;
+}
+.release-table-block {
+  margin-bottom: 22px;
+}
+.release-table-block:last-child {
+  margin-bottom: 0;
+}
+.admin-release-table-wrap {
+  overflow-x: auto;
+  border-radius: 8px;
+}
+.release-panel--main {
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 14px 16px 18px;
+  background: var(--bg-elevated);
+  min-width: 0;
+}
+html[data-theme="light"] .release-upload-card,
+html[data-theme="light"] .release-panel--main {
+  border-color: color-mix(in srgb, var(--outline-variant, #acb3b7) 35%, transparent);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 10px 28px rgba(44, 52, 55, 0.05);
+}
+@media (max-width: 900px) {
+  .release-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* 테이블 */
 .data-table {
   width: 100%;
@@ -3665,8 +3732,8 @@ html[data-theme="light"] .theme-option-btn.active {
 
 /* design (1)(6): 업무·칸반 — 넓은 보드 레이아웃 */
 .modal-work-hub {
-  max-width: min(960px, calc(100vw - 24px));
-  width: min(960px, calc(100vw - 24px));
+  max-width: min(1100px, calc(100vw - 24px));
+  width: min(1100px, calc(100vw - 24px));
   max-height: min(90vh, 100dvh - 24px);
   min-height: 0;
 }
@@ -3685,7 +3752,7 @@ html[data-theme="light"] .modal-work-hub.ech-workhub-shell {
   display: block;
   padding: 12px 16px 16px;
 }
-/* 업무 항목 → 칸반 보드 순, 한 열 세로 배치(좌우 2열 아님) */
+/* 업무 항목 → 칸반 보드: 기본 세로 스택, 넓은 뷰에서 좌우 2열 */
 .work-hub-body {
   display: flex;
   flex-direction: column;
@@ -3693,6 +3760,17 @@ html[data-theme="light"] .modal-work-hub.ech-workhub-shell {
   align-items: stretch;
   width: 100%;
   min-width: 0;
+}
+@media (min-width: 960px) {
+  .work-hub-body.work-hub-body--split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+  .work-hub-body.work-hub-body--split > .work-hub-panel + .work-hub-panel {
+    margin-top: 0;
+  }
 }
 .work-hub-body > .work-hub-panel + .work-hub-panel {
   margin-top: 4px;

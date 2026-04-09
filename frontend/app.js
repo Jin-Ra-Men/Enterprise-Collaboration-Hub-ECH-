@@ -8893,15 +8893,32 @@ const STATUS_LABEL = { UPLOADED: "대기", ACTIVE: "운영중", PREVIOUS: "이�
 const STATUS_CLASS = { UPLOADED: "st-uploaded", ACTIVE: "st-active", PREVIOUS: "st-prev", DEPRECATED: "st-dep" };
 const ACTION_LABEL = { ACTIVATED: "활성화", ROLLED_BACK: "롤백" };
 
+let cachedReleasesList = [];
+let cachedDeployHistoryCount = 0;
+
+function updateReleaseInsightMetrics() {
+  const totalEl = document.getElementById("releaseMetricTotal");
+  const activeEl = document.getElementById("releaseMetricActiveVersion");
+  const histEl = document.getElementById("releaseMetricHistory");
+  if (!totalEl || !activeEl || !histEl) return;
+  const list = cachedReleasesList;
+  const active = list.find(r => r.status === "ACTIVE");
+  totalEl.textContent = `${list.length}건`;
+  activeEl.textContent = active?.version ?? "—";
+  histEl.textContent = `${cachedDeployHistoryCount}건`;
+}
+
 async function loadReleases() {
   try {
     const res  = await apiFetch("/api/admin/releases");
     const json = await res.json();
+    cachedReleasesList = json.data || [];
     const tbody = document.getElementById("releaseTableBody");
-    tbody.innerHTML = "";
-    (json.data || []).forEach(r => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
+    if (tbody) {
+      tbody.innerHTML = "";
+      cachedReleasesList.forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
         <td><strong>${escHtml(r.version)}</strong></td>
         <td>${escHtml(r.fileName)}</td>
         <td>${fmtSize(r.fileSize)}</td>
@@ -8916,47 +8933,59 @@ async function loadReleases() {
             ? `<button class="btn-sm btn-danger btn-delete" data-id="${r.id}">삭제</button>`
             : ""}
         </td>`;
-      tbody.appendChild(tr);
-    });
-    tbody.querySelectorAll(".btn-activate").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        if (!(await uiConfirm(`v${btn.dataset.ver}을 운영 버전으로 활성화하시겠습니까?`))) return;
-        const r = await apiFetch(`/api/admin/releases/${btn.dataset.id}/activate`, {
-          method: "POST",
-          body: JSON.stringify({ actorEmployeeNo: currentUser?.employeeNo, note: "수동 활성화" }),
-        });
-        await uiAlert(r.ok ? "활성화 완료" : "활성화 실패");
-        loadReleases();
+        tbody.appendChild(tr);
       });
-    });
-    tbody.querySelectorAll(".btn-delete").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        if (!(await uiConfirm("이 릴리즈 파일을 삭제하시겠습니까?"))) return;
-        const r = await apiFetch(`/api/admin/releases/${btn.dataset.id}?actorEmployeeNo=${encodeURIComponent(currentUser?.employeeNo || "")}`, {
-          method: "DELETE",
+      tbody.querySelectorAll(".btn-activate").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          if (!(await uiConfirm(`v${btn.dataset.ver}을 운영 버전으로 활성화하시겠습니까?`))) return;
+          const r = await apiFetch(`/api/admin/releases/${btn.dataset.id}/activate`, {
+            method: "POST",
+            body: JSON.stringify({ actorEmployeeNo: currentUser?.employeeNo, note: "수동 활성화" }),
+          });
+          await uiAlert(r.ok ? "활성화 완료" : "활성화 실패");
+          loadReleases();
         });
-        await uiAlert(r.ok ? "삭제 완료" : "삭제 실패");
-        loadReleases();
       });
-    });
-  } catch (e) { console.error("릴리즈 로드 실패", e); }
+      tbody.querySelectorAll(".btn-delete").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          if (!(await uiConfirm("이 릴리즈 파일을 삭제하시겠습니까?"))) return;
+          const r = await apiFetch(`/api/admin/releases/${btn.dataset.id}?actorEmployeeNo=${encodeURIComponent(currentUser?.employeeNo || "")}`, {
+            method: "DELETE",
+          });
+          await uiAlert(r.ok ? "삭제 완료" : "삭제 실패");
+          loadReleases();
+        });
+      });
+    }
+  } catch (e) {
+    console.error("릴리즈 로드 실패", e);
+    cachedReleasesList = [];
+  }
 
   try {
     const res  = await apiFetch("/api/admin/releases/history");
     const json = await res.json();
+    const historyRows = json.data || [];
+    cachedDeployHistoryCount = historyRows.length;
     const hbody = document.getElementById("deployHistoryBody");
-    hbody.innerHTML = "";
-    (json.data || []).forEach(h => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
+    if (hbody) {
+      hbody.innerHTML = "";
+      historyRows.forEach(h => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
         <td>${fmtDate(h.createdAt)}</td>
         <td><span class="action-badge">${ACTION_LABEL[h.action] || h.action}</span></td>
         <td>${h.fromVersion || "-"}</td>
         <td><strong>${escHtml(h.toVersion)}</strong></td>
         <td>${escHtml(h.note || "-")}</td>`;
-      hbody.appendChild(tr);
-    });
-  } catch (e) { console.error("배포 이력 로드 실패", e); }
+        hbody.appendChild(tr);
+      });
+    }
+  } catch (e) {
+    console.error("배포 이력 로드 실패", e);
+    cachedDeployHistoryCount = 0;
+  }
+  updateReleaseInsightMetrics();
 }
 
 document.getElementById("releaseUploadForm").addEventListener("submit", async (e) => {
