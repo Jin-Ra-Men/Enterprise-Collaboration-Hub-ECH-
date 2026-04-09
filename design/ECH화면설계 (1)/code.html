@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ECH Workspace - Work Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-fixed": "#ffffff",
+                    "primary-container": "#6760fd",
+                    "outline": "#747c80",
+                    "on-surface": "#2c3437",
+                    "on-background": "#2c3437",
+                    "surface-bright": "#f7f9fb",
+                    "surface-dim": "#d4dbdf",
+                    "inverse-primary": "#8582ff",
+                    "on-tertiary-fixed-variant": "#003954",
+                    "primary-dim": "#4135d8",
+                    "on-surface-variant": "#596064",
+                    "secondary-fixed": "#d3e4fe",
+                    "primary-fixed": "#6760fd",
+                    "on-primary-fixed-variant": "#edeaff",
+                    "background": "#f7f9fb",
+                    "on-error": "#fff7f7",
+                    "on-tertiary": "#f5f9ff",
+                    "tertiary-fixed-dim": "#17a8ec",
+                    "inverse-on-surface": "#9a9d9f",
+                    "on-primary": "#fbf7ff",
+                    "tertiary-dim": "#005980",
+                    "inverse-surface": "#0b0f10",
+                    "surface": "#f7f9fb",
+                    "secondary-container": "#d3e4fe",
+                    "outline-variant": "#acb3b7",
+                    "tertiary-fixed": "#34b5fa",
+                    "surface-tint": "#4e45e4",
+                    "on-secondary": "#f7f9ff",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary-fixed": "#00121e",
+                    "primary": "#4e45e4",
+                    "on-primary-container": "#000000",
+                    "surface-variant": "#dce4e8",
+                    "error-container": "#f97386",
+                    "surface-container": "#eaeff2",
+                    "tertiary": "#006592",
+                    "on-secondary-fixed-variant": "#4d5d73",
+                    "on-error-container": "#6e0523",
+                    "secondary-dim": "#44546a",
+                    "error-dim": "#6b0221",
+                    "primary-fixed-dim": "#5a52f0",
+                    "on-secondary-container": "#435368",
+                    "tertiary-container": "#34b5fa",
+                    "surface-container-high": "#e3e9ed",
+                    "secondary": "#506076",
+                    "error": "#a8364b",
+                    "surface-container-low": "#f0f4f7",
+                    "surface-container-highest": "#dce4e8",
+                    "on-tertiary-container": "#003047",
+                    "on-secondary-fixed": "#314055",
+                    "secondary-fixed-dim": "#c5d6f0"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.5rem",
+                    "lg": "1rem",
+                    "xl": "1.25rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #dce4e8;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface antialiased overflow-hidden">
+<!-- SideNavBar Integration -->
+<aside class="fixed left-0 top-0 h-full z-40 bg-slate-100 dark:bg-slate-900 border-none h-screen w-72 flex-shrink-0 flex flex-col">
+<div class="p-6">
+<div class="flex items-center gap-3 mb-8">
+<div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-sm">hub</span>
+</div>
+<h1 class="text-lg font-bold tracking-tighter text-indigo-600 dark:text-indigo-400">Collaboration Hub</h1>
+</div>
+<div class="mb-4">
+<button class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold transition-transform scale-95 active:scale-90 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[20px]">add</span>
+                    New Message
+                </button>
+</div>
+<nav class="space-y-1">
+<!-- Activity Inactive -->
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined">notifications</span>
+<span class="font-medium">Activity</span>
+</a>
+<!-- Messages Inactive -->
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="font-medium">Messages</span>
+</a>
+<!-- Workflows ACTIVE (Closest to Work Management / Work Items) -->
+<a class="flex items-center gap-3 px-4 py-2 text-indigo-700 dark:text-indigo-300 font-bold border-l-2 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">account_tree</span>
+<span class="font-bold">Workflows</span>
+</a>
+<!-- Teams Inactive -->
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span class="font-medium">Teams</span>
+</a>
+<!-- Settings Inactive -->
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-medium">Settings</span>
+</a>
+</nav>
+</div>
+<div class="mt-auto p-6 space-y-1">
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 hover:text-indigo-600 transition-colors" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-medium">Help</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-slate-500 hover:text-indigo-600 transition-colors" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="font-medium">Archive</span>
+</a>
+</div>
+</aside>
+<!-- Main Workspace Area -->
+<main class="ml-72 flex flex-col h-screen overflow-hidden">
+<!-- TopNavBar Implementation -->
+<header class="fixed top-0 right-0 w-[calc(100%-18rem)] h-16 z-30 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md flex justify-between items-center px-8 shadow-sm">
+<div class="flex items-center gap-8">
+<span class="text-xl font-black text-slate-900 dark:text-slate-100">ECH Workspace</span>
+<nav class="hidden md:flex gap-6">
+<a class="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-inter text-sm font-medium tracking-wide uppercase" href="#">Dashboard</a>
+<a class="text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 pb-1 font-inter text-sm font-medium tracking-wide uppercase" href="#">Analytics</a>
+<a class="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 font-inter text-sm font-medium tracking-wide uppercase" href="#">Files</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 mr-4">
+<button class="hover:bg-slate-50 dark:hover:bg-slate-900 rounded-lg p-2 transition-opacity opacity-80 hover:opacity-100">
+<span class="material-symbols-outlined">group</span>
+</button>
+<button class="hover:bg-slate-50 dark:hover:bg-slate-900 rounded-lg p-2 transition-opacity opacity-80 hover:opacity-100">
+<span class="material-symbols-outlined">info</span>
+</button>
+<button class="hover:bg-slate-50 dark:hover:bg-slate-900 rounded-lg p-2 transition-opacity opacity-80 hover:opacity-100">
+<span class="material-symbols-outlined">star</span>
+</button>
+</div>
+<button class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors">Invite</button>
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container ml-2">
+<img class="w-full h-full object-cover" data-alt="professional user portrait in clear lighting with a soft blurred architectural background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1FhLN_FzmSN-pq_80WETPu4-j_aqSmEqX6mBw5KOFeHzwXpg5OzavDju1kfVIv3EX3bQ7Voem7zthMZDr0mF8hWbG8HJihRRoltOIMSsRkrHrKbCHw80e2SN5qVeV_ge0GQSaKULAqOI2g59PpG6xVLhsInlXlfrtU1HGvJmM0LXunpHGfzclACnQucpXCyUIogAo9qp2XD8auJc2DLwXX6l52ZcuwtipHws1QIJBm2vSD7kLKub_sSZdRzBBHKB4-e0k9uxWv7Bn"/>
+</div>
+</div>
+</header>
+<!-- Kanban Header Section -->
+<div class="pt-24 px-8 pb-6 flex items-end justify-between">
+<div>
+<h2 class="text-3xl font-extrabold tracking-tight text-on-surface">Work Management</h2>
+<p class="text-on-surface-variant mt-1">Track, manage and optimize your team's velocity.</p>
+</div>
+<div class="flex items-center gap-3">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant text-sm">search</span>
+<input class="bg-surface-container border-none rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-primary-container w-64 transition-all" placeholder="Search tasks..." type="text"/>
+</div>
+<button class="flex items-center gap-2 px-4 py-2 bg-surface-container-high hover:bg-surface-container-highest rounded-lg text-sm font-medium transition-colors">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+                    Filters
+                </button>
+<button class="flex items-center gap-2 px-5 py-2 bg-primary text-on-primary rounded-lg text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-95">
+<span class="material-symbols-outlined text-sm">add</span>
+                    New Task
+                </button>
+</div>
+</div>
+<!-- Kanban Board -->
+<div class="flex-1 px-8 pb-8 overflow-hidden">
+<div class="grid grid-cols-3 gap-6 h-full">
+<!-- To-Do Column -->
+<div class="flex flex-col h-full bg-surface-container-low/50 rounded-xl p-4">
+<div class="flex items-center justify-between mb-4 px-2">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-outline-variant"></span>
+<span class="font-bold tracking-tight uppercase text-xs text-on-surface-variant">To-Do</span>
+<span class="bg-surface-container-highest px-2 py-0.5 rounded text-[10px] font-bold text-on-surface-variant">4</span>
+</div>
+<button class="material-symbols-outlined text-outline text-lg">more_horiz</button>
+</div>
+<div class="flex-1 overflow-y-auto space-y-4 custom-scrollbar pr-2">
+<!-- Card 1 -->
+<div class="group bg-surface-container-lowest rounded-xl p-4 shadow-sm hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-primary/10">
+<div class="flex justify-between items-start mb-2">
+<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-error-container/10 text-error font-label tracking-wide uppercase">High Priority</span>
+<span class="material-symbols-outlined text-outline-variant text-sm opacity-0 group-hover:opacity-100 transition-opacity">edit</span>
+</div>
+<h4 class="font-semibold text-on-surface leading-snug mb-3">Refactor authentication middleware for Enterprise SSO</h4>
+<div class="flex items-center justify-between">
+<div class="flex -space-x-2">
+<img class="w-6 h-6 rounded-full ring-2 ring-surface-container-lowest object-cover" data-alt="close up headshot of a developer in casual wear with soft natural light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA-69NFDd-EQ6qaR0CSO3KC4En4yoD3Yy4yLD7C_G5ewGSTgDvrjxTeq9MwepfFJf1hzFnQxuyXa5R5R2SLMDh2EL-d6O54z-BZNpxeD5U5hZBngSmoo01ofnEtJOxjXxTnAUvGBmbNeb1J4C17CHy3z0AizlRFrKnKIscyeUpLdvVU9Pa2bn8khSXX__osRO3NMOsZE1LSOWqmeuDYTZqiJQ7N8U25-6O-TNyEg8Z7hHPGQ7t0ct-Bqgo3L19RJpieiXzE1Y053dap"/>
+</div>
+<div class="flex items-center gap-3 text-outline-variant">
+<span class="flex items-center gap-1 text-[11px] font-medium"><span class="material-symbols-outlined text-sm">chat</span> 4</span>
+<span class="flex items-center gap-1 text-[11px] font-medium"><span class="material-symbols-outlined text-sm">attach_file</span> 2</span>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="group bg-surface-container-lowest rounded-xl p-4 shadow-sm hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-primary/10">
+<div class="flex justify-between items-start mb-2">
+<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-tertiary-container/10 text-tertiary font-label tracking-wide uppercase">Feature</span>
+<span class="material-symbols-outlined text-outline-variant text-sm opacity-0 group-hover:opacity-100 transition-opacity">edit</span>
+</div>
+<h4 class="font-semibold text-on-surface leading-snug mb-3">Implement real-time presence indicators in Sidebar</h4>
+<div class="flex items-center justify-between">
+<div class="flex -space-x-2">
+<img class="w-6 h-6 rounded-full ring-2 ring-surface-container-lowest object-cover" data-alt="vibrant portrait of a female designer with colorful bokeh background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDOcvySCYrqz4hi2z01ITOh9pxAt13aZxIlbrya-g49Q0OjtlOT7sUt-YBhed9k8AkSfFcFJ01xcg1_sDeQsU-tykYa3bprG0w0J9Mv4LScJbgu7FnIFkqW2CFumfatA3HhqEqr-XwIqf9xjzxhXqhvJJagDvdt_WUPzr3vgSsM1MUEXM5QowQQsRaaXTgyzQUZHUAk9zlyfIdDtKgSWtdDDhriccwC0RPvYxLak4AaUQCiQCKp9I41tum8mvwObNigMAWjQDmgZaHY"/>
+<img class="w-6 h-6 rounded-full ring-2 ring-surface-container-lowest object-cover" data-alt="headshot of a smiling professional in a modern office environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1UlAIqmP9xx4X9rr30TklSJrqpFGS_q5F1Z4lggNcIlB5eKLiED8_nwYBxTwtGwhVE1qY71bpNlJjEwSXFQ90jVoF5TH4UEeapwm12hifcyrAS3axz0BfMpbRlLCZSQMD7miJAkOyz0PDorHKIftEzNdlWV35ri9ETwxVqCkapUBFB19bryK3Y3NxoCJ6IzMiyMkFWNqr3TTMKvHQP5pubshImfIpE7cWUR9AvvQ1vj6pWaL6b8gLIs5mPFbNz_MRFFNdUPdINS8N"/>
+</div>
+<div class="flex items-center gap-3 text-outline-variant">
+<span class="flex items-center gap-1 text-[11px] font-medium"><span class="material-symbols-outlined text-sm">chat</span> 12</span>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="group bg-surface-container-lowest rounded-xl p-4 shadow-sm hover:shadow-md transition-all cursor-pointer border border-transparent hover:border-primary/10">
+<div class="flex justify-between items-start mb-2">
+<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-on-secondary-container/10 text-on-secondary-container font-label tracking-wide uppercase">Documentation</span>
+</div>
+<h4 class="font-semibold text-on-surface leading-snug mb-3">Update API documentation for v2.4 releases</h4>
+<div class="flex items-center justify-between">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full bg-secondary-container flex items-center justify-center text-[10px] font-bold text-on-secondary-container ring-2 ring-surface-container-lowest">+3</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- In Progress Column -->
+<div class="flex flex-col h-full bg-surface-container-low/50 rounded-xl p-4">
+<div class="flex items-center justify-between mb-4 px-2">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="font-bold tracking-tight uppercase text-xs text-on-surface-variant">In Progress</span>
+<span class="bg-primary-container/10 px-2 py-0.5 rounded text-[10px] font-bold text-primary">2</span>
+</div>
+<button class="material-symbols-outlined text-outline text-lg">more_horiz</button>
+</div>
+<div class="flex-1 overflow-y-auto space-y-4 custom-scrollbar pr-2">
+<!-- Card Active -->
+<div class="group bg-surface-container-lowest rounded-xl p-4 shadow-md border-l-4 border-primary transition-all cursor-pointer">
+<div class="flex justify-between items-start mb-2">
+<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-container text-white font-label tracking-wide uppercase">Design</span>
+<div class="flex items-center gap-1 text-[10px] text-primary font-bold">
+<span class="material-symbols-outlined text-xs">timer</span> 2d left
+                                </div>
+</div>
+<h4 class="font-bold text-on-surface leading-snug mb-2">Finalize Design System tokens for Dark Mode</h4>
+<div class="mb-4">
+<div class="w-full bg-surface-container-highest h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-3/4 rounded-full"></div>
+</div>
+<p class="text-[10px] text-on-surface-variant mt-1 font-medium">75% complete</p>
+</div>
+<div class="flex items-center justify-between">
+<img class="w-6 h-6 rounded-full object-cover" data-alt="professional user portrait in clear lighting with a soft blurred architectural background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCorRP1GFmA7TY_aD0wATZAaT1UORAZ38xWcz4Ro3n3H8ZgVWQUvnGdzM7EkRGmLisqdOLlVIxI4oJvAjDqIjadXW2a54xOaAICOR95wmL8Yv9xy25FAKWA-MHT9jaYugVWjCFP1ICe0LYf5ui7VIOmPItkWgmPCIGOL6SnUIJZDnhhD29XoTvKX9kbMiDW09phB1zRPaT8z7SxKOmaEmgu-fT4rdoxFq8cQ4ySpNjZGvIJ9RwFRdXZ61-HshV0DLIw0erWse7xz2PP"/>
+<div class="flex items-center gap-3 text-outline-variant">
+<span class="flex items-center gap-1 text-[11px] font-medium"><span class="material-symbols-outlined text-sm">chat</span> 18</span>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="group bg-surface-container-lowest rounded-xl p-4 shadow-sm hover:shadow-md transition-all cursor-pointer border border-transparent">
+<div class="flex justify-between items-start mb-2">
+<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-error-container/10 text-error font-label tracking-wide uppercase">Bug</span>
+</div>
+<h4 class="font-semibold text-on-surface leading-snug mb-3">Fix race condition in message delivery worker</h4>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<img class="w-6 h-6 rounded-full object-cover" data-alt="headshot of a smiling professional in a modern office environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkwbRxu1_zYI2kfdoVR_rJDqu4SC6kVk5gXY8V72CnBF7VtGcOPAnMvjYEJQvbXExerCy5pMYemB6WqrEfEH4dWwqWULwejVUO-PLDbNIB7UUNRt6SUz_hje4Gs0crE-gPmOa_U9sZyM5tvGIsWO0TiMm4dViZCHtuIcip7RJrHqfq9CThjFFozM-hiWY2iq8k-4U1Tw_laQQpgW5A_yvMPzBcA0iM8ntDJrh8lqlrMmoPAz2nJsOzWOjKzl39HtG_VqUZN1dkwGHY"/>
+<span class="text-[11px] font-medium text-on-surface-variant">Assigned to Liam</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Done Column -->
+<div class="flex flex-col h-full bg-surface-container-low/50 rounded-xl p-4">
+<div class="flex items-center justify-between mb-4 px-2">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<span class="font-bold tracking-tight uppercase text-xs text-on-surface-variant">Done</span>
+<span class="bg-tertiary-container/10 px-2 py-0.5 rounded text-[10px] font-bold text-tertiary">12</span>
+</div>
+<button class="material-symbols-outlined text-outline text-lg">more_horiz</button>
+</div>
+<div class="flex-1 overflow-y-auto space-y-4 custom-scrollbar pr-2">
+<!-- Done Card 1 -->
+<div class="group bg-surface-container-lowest opacity-75 grayscale-[20%] rounded-xl p-4 shadow-sm transition-all cursor-pointer border border-transparent">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-1 text-tertiary font-bold text-[10px]">
+<span class="material-symbols-outlined text-xs">check_circle</span> COMPLETED
+                                </div>
+<span class="text-[10px] text-outline-variant font-medium">May 12</span>
+</div>
+<h4 class="font-semibold text-on-surface leading-snug line-through opacity-60">Mobile responsive layout for Kanban board</h4>
+<div class="flex items-center justify-between mt-3">
+<img class="w-5 h-5 rounded-full object-cover grayscale" data-alt="close up headshot of a developer in casual wear with soft natural light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdcE2QfhpjbaFdOXQvWHXoU5wXJbr6eX51sGRlU9mrMX5Vcoa9-3WLivvlJUYZdWarO4ABoSe6o5LXX9wNuvq-k0zv1XB_hCyWD88Z_dANZPaNaGkrlzU-Bl3nh12lceV4qJaavx-kTizht2hhzKWguUVagUor-8Fl5CAcRFcT8TKIoqg-XiMaaa1hOIFfEZhMH8i6vH9anUu_f72QgkN1WLWT4ErE8hzSleGuQ1jNojInJ1HOeZr2qEjtn3yhXLwF2tVDnIHE8Yl_"/>
+</div>
+</div>
+<!-- Done Card 2 -->
+<div class="group bg-surface-container-lowest opacity-75 grayscale-[20%] rounded-xl p-4 shadow-sm transition-all cursor-pointer border border-transparent">
+<div class="flex justify-between items-start mb-2">
+<div class="flex items-center gap-1 text-tertiary font-bold text-[10px]">
+<span class="material-symbols-outlined text-xs">check_circle</span> COMPLETED
+                                </div>
+</div>
+<h4 class="font-semibold text-on-surface leading-snug line-through opacity-60">Onboarding flow for new enterprise clients</h4>
+<div class="flex items-center justify-between mt-3">
+<img class="w-5 h-5 rounded-full object-cover grayscale" data-alt="vibrant portrait of a female designer with colorful bokeh background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFONYVFq9Kev6qntzyTQx-RVMi-D58p6333GkVCFmKWnd5uW3uhAZzWOYykJ-tozswi6SFENdqusUtLjBAbjbhA3tutsRmr9899u5siNEOOlayYs-dCZ7U8tluZXsdkAOuvr6EHFyci9KRCGS5LECLtASbfh8OSblzCd7LTU10o6C_lFB6qI7aWoxF-yOofdolwt-fxpZy-yaLv6dNxygffHcttEriVjPLuVFqyK8D0SCsa6u9nbCVQVyewq8s26Xd5SrzmxkILzhG"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- FAB Integration -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-xl hover:shadow-indigo-500/20 flex items-center justify-center transition-all hover:scale-110 active:scale-90 z-50">
+<span class="material-symbols-outlined text-2xl">bolt</span>
+</button>
+</body></html>

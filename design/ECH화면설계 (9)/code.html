@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+
+<html class="light" lang="ko"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-surface": "#0b0f10",
+                        "tertiary": "#006592",
+                        "on-primary": "#fbf7ff",
+                        "on-tertiary-fixed": "#00121e",
+                        "primary-container": "#6760fd",
+                        "surface-bright": "#f7f9fb",
+                        "primary-fixed": "#6760fd",
+                        "outline": "#747c80",
+                        "surface-variant": "#dce4e8",
+                        "surface-container": "#eaeff2",
+                        "on-secondary": "#f7f9ff",
+                        "surface-dim": "#d4dbdf",
+                        "surface-tint": "#4e45e4",
+                        "surface": "#f7f9fb",
+                        "inverse-on-surface": "#9a9d9f",
+                        "tertiary-fixed": "#34b5fa",
+                        "on-surface": "#2c3437",
+                        "error-dim": "#6b0221",
+                        "on-primary-container": "#000000",
+                        "on-error": "#fff7f7",
+                        "on-secondary-container": "#435368",
+                        "surface-container-high": "#e3e9ed",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-dim": "#005980",
+                        "secondary-fixed": "#d3e4fe",
+                        "secondary-dim": "#44546a",
+                        "on-tertiary": "#f5f9ff",
+                        "tertiary-fixed-dim": "#17a8ec",
+                        "secondary-container": "#d3e4fe",
+                        "on-tertiary-fixed-variant": "#003954",
+                        "tertiary-container": "#34b5fa",
+                        "on-primary-fixed": "#ffffff",
+                        "error-container": "#f97386",
+                        "primary-fixed-dim": "#5a52f0",
+                        "on-surface-variant": "#596064",
+                        "on-error-container": "#6e0523",
+                        "surface-container-highest": "#dce4e8",
+                        "on-secondary-fixed-variant": "#4d5d73",
+                        "on-secondary-fixed": "#314055",
+                        "outline-variant": "#acb3b7",
+                        "error": "#a8364b",
+                        "primary": "#4e45e4",
+                        "secondary": "#506076",
+                        "inverse-primary": "#8582ff",
+                        "primary-dim": "#4135d8",
+                        "on-primary-fixed-variant": "#edeaff",
+                        "on-background": "#2c3437",
+                        "on-tertiary-container": "#003047",
+                        "surface-container-low": "#f0f4f7",
+                        "secondary-fixed-dim": "#c5d6f0",
+                        "background": "#f7f9fb"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface min-h-screen flex items-center justify-center p-4">
+<!-- Modal Backdrop -->
+<div class="fixed inset-0 bg-inverse-surface/10 backdrop-blur-md flex items-center justify-center z-50">
+<!-- Modal Container -->
+<div class="bg-surface-container-lowest w-full max-w-lg rounded-xl overflow-hidden shadow-2xl relative border border-outline-variant/10">
+<!-- Close Button (Absolute) -->
+<button class="absolute top-4 right-4 p-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-colors">
+<span class="material-symbols-outlined text-xl">close</span>
+</button>
+<!-- Profile Header Section -->
+<div class="pt-12 pb-8 px-8 flex flex-col items-center text-center">
+<!-- Avatar Placeholder with Activity Glow -->
+<div class="relative mb-6">
+<div class="w-28 h-28 rounded-full overflow-hidden border-4 border-surface-container">
+<img class="w-full h-full object-cover" data-alt="professional portrait of a korean man in a business suit with a warm and approachable expression, clean studio background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJhUFztFsEZpT3-Eswm9ey4qhUjkUZzHSEroid7QK7Uu58WWll4TC6nYxLbOk7vFNI4wLW7Kc6NfFssuoslI5_HAINLuEa4t4vl-HECCU69ggYSAQDTIlhwOG-0J_HTYdFRUZuXwARMWKO_JjKQBTZEW4fY9Ky6T-kabdoSe9Bz7iMlgVRV1lFJQZx0QkJOVUfbTOrub25PQ3GXR0X2Nr5vG39apV4blYCbsGUh_42G_073WNIvgbH4eeEqaKhcHyQ1liNFHWmkv2W"/>
+</div>
+<div class="absolute bottom-1 right-1 w-6 h-6 bg-tertiary rounded-full border-4 border-surface-container-lowest shadow-[0_0_8px_rgba(0,101,146,0.5)]"></div>
+</div>
+<h2 class="text-3xl font-bold tracking-tight text-on-surface mb-1">홍주현</h2>
+<p class="text-primary font-medium tracking-wide">고객사업팀 부장</p>
+</div>
+<!-- Profile Details List -->
+<div class="px-8 pb-8 space-y-4">
+<div class="grid grid-cols-1 gap-1">
+<label class="text-[10px] font-bold uppercase tracking-widest text-outline">Employee ID</label>
+<div class="p-3 bg-surface-container-low rounded-lg text-on-surface-variant font-mono text-sm">jhhong2</div>
+</div>
+<div class="grid grid-cols-1 gap-1">
+<label class="text-[10px] font-bold uppercase tracking-widest text-outline">Email</label>
+<div class="p-3 bg-surface-container-low rounded-lg text-on-surface-variant text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">mail</span>
+                        jhhong2@ech-test.local
+                    </div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="grid grid-cols-1 gap-1">
+<label class="text-[10px] font-bold uppercase tracking-widest text-outline">Department</label>
+<div class="p-3 bg-surface-container-low rounded-lg text-on-surface-variant text-sm">고객사업팀</div>
+</div>
+<div class="grid grid-cols-1 gap-1">
+<label class="text-[10px] font-bold uppercase tracking-widest text-outline">Position</label>
+<div class="p-3 bg-surface-container-low rounded-lg text-on-surface-variant text-sm">부장</div>
+</div>
+</div>
+<div class="grid grid-cols-1 gap-1">
+<label class="text-[10px] font-bold uppercase tracking-widest text-outline">Responsibility</label>
+<div class="p-3 bg-surface-container-low rounded-lg text-on-surface-variant text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">stars</span>
+                        팀장
+                    </div>
+</div>
+</div>
+<!-- Action Buttons Footer -->
+<div class="p-6 bg-surface-container flex gap-3">
+<button class="flex-1 bg-gradient-to-br from-primary to-primary-container text-white py-3 px-4 rounded-lg font-semibold flex items-center justify-center gap-2 shadow-lg shadow-primary/20 hover:brightness-110 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-lg" data-weight="fill">chat_bubble</span>
+                    DM 보내기
+                </button>
+<button class="flex-none bg-surface-container-lowest text-on-surface-variant border border-outline-variant/30 py-3 px-6 rounded-lg font-medium hover:bg-surface-bright active:scale-[0.98] transition-all">
+                    닫기
+                </button>
+</div>
+</div>
+</div>
+<!-- Background UI Mockup (Simulating Enterprise Hub) -->
+<div class="w-full max-w-6xl mx-auto grid grid-cols-[260px_1fr] h-[800px] bg-white rounded-2xl shadow-xl overflow-hidden blur-sm pointer-events-none">
+<!-- SideNav Mockup -->
+<aside class="bg-surface-container-low p-6 flex flex-col gap-6">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-sm">hub</span>
+</div>
+<span class="font-bold text-lg">ECH Hub</span>
+</div>
+<nav class="space-y-1">
+<div class="flex items-center gap-3 p-3 bg-white rounded-lg text-primary font-bold shadow-sm">
+<span class="material-symbols-outlined">dashboard</span>
+                    Dashboard
+                </div>
+<div class="flex items-center gap-3 p-3 text-on-surface-variant">
+<span class="material-symbols-outlined">chat_bubble</span>
+                    Messages
+                </div>
+<div class="flex items-center gap-3 p-3 text-on-surface-variant">
+<span class="material-symbols-outlined">group</span>
+                    Team
+                </div>
+</nav>
+</aside>
+<!-- Content Area Mockup -->
+<main class="bg-surface p-8">
+<header class="flex justify-between items-center mb-8">
+<h1 class="text-2xl font-extrabold tracking-tight">Organization Overview</h1>
+<div class="w-10 h-10 rounded-full bg-outline-variant/30"></div>
+</header>
+<div class="grid grid-cols-3 gap-6">
+<div class="h-40 bg-white rounded-xl shadow-sm border border-outline-variant/10"></div>
+<div class="h-40 bg-white rounded-xl shadow-sm border border-outline-variant/10"></div>
+<div class="h-40 bg-white rounded-xl shadow-sm border border-outline-variant/10"></div>
+<div class="col-span-2 h-64 bg-white rounded-xl shadow-sm border border-outline-variant/10"></div>
+<div class="h-64 bg-white rounded-xl shadow-sm border border-outline-variant/10"></div>
+</div>
+</main>
+</div>
+</body></html>

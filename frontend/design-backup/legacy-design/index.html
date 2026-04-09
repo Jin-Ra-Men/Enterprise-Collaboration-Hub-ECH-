@@ -1,0 +1,1109 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- 배포 시 비워두면 페이지 origin / 호스트:3001 자동 추론. 필요 시 값만 채움 -->
+    <meta name="ech-api-base" content="" />
+    <meta name="ech-realtime-url" content="" />
+    <title>ECH — Enterprise Collaboration Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("ech_theme");
+          if (t === "light") document.documentElement.setAttribute("data-theme", "light");
+          else if (t === "dark") document.documentElement.removeAttribute("data-theme");
+          else document.documentElement.setAttribute("data-theme", "light");
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+
+    <!-- ===================== 로그인 화면 ===================== -->
+    <div id="loginPage" class="login-page">
+      <div class="login-card">
+        <div class="login-logo">
+          <div class="login-logo-icon">ECH</div>
+          <h1 class="login-title">Enterprise Collaboration Hub</h1>
+          <p class="login-subtitle">사내 협업 플랫폼</p>
+        </div>
+        <form id="loginForm" class="login-form" novalidate>
+          <div class="form-group">
+            <label for="loginId">사원번호 또는 이메일</label>
+            <input id="loginId" type="text" placeholder="예) ECH-ADM-001 또는 email@ech.com" autocomplete="username" required />
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">비밀번호</label>
+            <input id="loginPassword" type="password" placeholder="비밀번호 입력" autocomplete="current-password" required />
+            <label class="login-remember" for="loginRememberId">아이디 저장<input type="checkbox" id="loginRememberId" /></label>
+          </div>
+          <p id="loginError" class="login-error hidden"></p>
+          <button type="submit" id="loginBtn" class="btn-login">로그인</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ===================== 메인 앱 ===================== -->
+    <div id="mainApp" class="app-layout hidden">
+
+      <!-- 채널/DM 사이드바(워크스페이스 ECH 단독 상단 · 퀵 레일은 검색~목록과 같은 세로 구간) + 돌출 접기 탭 -->
+      <div class="sidebar-column" id="sidebarColumn">
+        <div class="sidebar-slip">
+          <aside class="sidebar">
+        <!-- 워크스페이스 헤더 (퀵 레일보다 위 전폭) -->
+        <div class="sidebar-workspace">
+          <span class="workspace-name">ECH</span>
+          <button id="btnOrgChart" class="btn-workspace-tool" title="조직도" aria-label="조직도 보기">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="2" y="7" width="6" height="5" rx="1"/><rect x="9" y="2" width="6" height="5" rx="1"/>
+              <rect x="16" y="7" width="6" height="5" rx="1"/>
+              <path d="M5 12v3h14v-3M12 7V5"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="sidebar-body">
+          <nav id="quickContainer" class="quick-rail" aria-label="최근 대화·미읽음 빠른 이동">
+            <div class="quick-rail-scroll" id="quickRailScroll"></div>
+          </nav>
+          <div class="sidebar-main">
+        <!-- 검색 -->
+        <div class="sidebar-search-wrap">
+          <form id="searchForm" autocomplete="off">
+            <button type="submit" class="sidebar-search-icon">🔍</button>
+            <input id="searchInput" type="search" class="sidebar-search-input" placeholder="검색" />
+          </form>
+        </div>
+
+        <!-- 채널 섹션 -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-header" id="channelSectionHeader">
+            <button type="button" class="section-toggle" data-target="channelList">
+              <span class="section-toggle-chevron" aria-hidden="true">▾</span>
+              <span class="section-toggle-label">채널</span>
+            </button>
+            <button type="button" class="btn-add-item" id="btnCreateChannel" title="채널 만들기">+</button>
+          </div>
+          <ul class="sidebar-list" id="channelList"></ul>
+        </div>
+
+        <!-- 다이렉트 메시지 섹션 -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-header">
+            <button type="button" class="section-toggle" data-target="dmList">
+              <span class="section-toggle-chevron" aria-hidden="true">▾</span>
+              <span class="section-toggle-label">다이렉트 메시지</span>
+            </button>
+            <button type="button" class="btn-add-item" id="btnCreateDm" title="새 DM">+</button>
+          </div>
+          <ul class="sidebar-list" id="dmList"></ul>
+        </div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-section-header">
+            <button type="button" class="section-toggle" data-target="myKanbanList">
+              <span class="section-toggle-chevron" aria-hidden="true">▾</span>
+              <span class="section-toggle-label">내 업무 항목</span>
+            </button>
+          </div>
+          <ul class="sidebar-list" id="myKanbanList"></ul>
+        </div>
+
+        <!-- 미확인 멘션 -->
+        <div class="sidebar-section">
+          <div class="sidebar-section-header">
+            <button type="button" class="section-toggle" data-target="mentionList">
+              <span class="section-toggle-chevron" aria-hidden="true">▾</span>
+              <span class="section-toggle-label">멘션</span>
+            </button>
+            <span class="channel-unread-badge hidden" id="mentionUnreadBadge">0</span>
+          </div>
+          <ul class="sidebar-list mention-list" id="mentionList"></ul>
+        </div>
+
+        <!-- 관리자 전용 -->
+        <div class="sidebar-section admin-only hidden" id="adminSection">
+          <div class="sidebar-section-header">
+            <span class="section-toggle section-toggle-static">
+              <span class="section-toggle-chevron" aria-hidden="true">▾</span>
+              <span class="section-toggle-label">관리자</span>
+            </span>
+          </div>
+          <ul class="sidebar-list">
+            <li class="sidebar-item" id="navOrgManagement" data-view="orgManagement">🏢 조직 관리</li>
+            <li class="sidebar-item" id="navUserManagement" data-view="userManagement">👤 사용자 관리</li>
+            <li class="sidebar-item" id="navReleases" data-view="releases">🚀 배포 관리</li>
+            <li class="sidebar-item" id="navSettings" data-view="settings">⚙️ 설정</li>
+          </ul>
+        </div>
+
+          </div>
+        </div>
+
+        <!-- 사용자 프로필 (프레즌스 메뉴는 행 기준으로 위로 뜨도록 이 블록에 둠 — user-info overflow 제한 회피) -->
+        <div class="sidebar-user sidebar-user-presence-host">
+          <div class="user-avatar" id="sidebarAvatar">?</div>
+          <div class="user-info">
+            <span class="user-name" id="sidebarUserName">-</span>
+            <button
+              type="button"
+              class="user-status user-status-trigger online"
+              id="sidebarUserStatus"
+              title="상태 선택 (온라인 · 자리비움)"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-controls="sidebarPresenceMenu"
+            >
+              온라인
+            </button>
+          </div>
+          <button id="themeSettingsBtn" class="btn-sidebar-gear" title="테마 설정" aria-label="테마 설정">⚙</button>
+          <div class="sidebar-presence-menu hidden" id="sidebarPresenceMenu" role="menu" aria-label="내 프레즌스">
+            <button type="button" class="sidebar-presence-option" data-presence-status="ONLINE" role="menuitem">
+              <span class="presence-dot presence-online" aria-hidden="true"></span>
+              <span>온라인</span>
+            </button>
+            <button type="button" class="sidebar-presence-option" data-presence-status="AWAY" role="menuitem">
+              <span class="presence-dot presence-away" aria-hidden="true"></span>
+              <span>자리비움</span>
+            </button>
+          </div>
+        </div>
+          </aside>
+        </div>
+        <button
+          type="button"
+          id="btnSidebarEdgeToggle"
+          class="sidebar-edge-toggle"
+          aria-expanded="true"
+          aria-controls="sidebarColumn"
+          title="사이드바 접기"
+          aria-label="사이드바 접기"
+        >
+          <span class="sidebar-edge-toggle-icon" aria-hidden="true">‹</span>
+        </button>
+      </div>
+
+      <!-- 오른쪽 채팅 영역 -->
+      <main class="chat-area">
+
+        <!-- 채널 선택 전 기본 화면 -->
+        <div id="viewWelcome" class="view-welcome">
+          <div class="welcome-content">
+            <div class="welcome-icon">👋</div>
+            <h2>ECH에 오신 것을 환영합니다</h2>
+            <p>왼쪽 사이드바에서 채널을 선택하거나, <strong>+</strong> 버튼으로 새 채널을 만드세요.</p>
+          </div>
+        </div>
+
+        <!-- 채팅 패널 -->
+        <div id="viewChat" class="view-chat hidden" aria-label="채팅 영역 · 파일 드롭으로 첨부">
+          <!-- 채널 헤더 -->
+          <header class="chat-header">
+            <div class="chat-header-left">
+              <span class="chat-channel-prefix" id="chatChannelPrefix">#</span>
+              <h2 class="chat-channel-name" id="chatChannelName">채널명</h2>
+            </div>
+            <div class="chat-header-right">
+              <span class="chat-member-count" id="chatMemberCount"></span>
+              <button class="btn-header-icon" id="btnHeaderMenu" title="채널 메뉴">☰</button>
+            </div>
+          </header>
+
+          <!-- 멤버 패널 (토글) -->
+          <div id="memberPanel" class="member-panel hidden">
+            <div class="member-panel-header">
+              <h3>채널 메뉴</h3>
+              <button id="btnCloseMemberPanel" class="btn-panel-close">✕</button>
+            </div>
+            <div class="member-panel-scroll">
+              <div class="member-panel-actions member-panel-actions-top">
+                <button class="btn-member-panel-action hidden" id="btnHeaderNotifyToggle" type="button" title="다른 채에서 온 일반 메시지 토스트만 끔 · 멘션·미읽음 배지는 유지"><span class="btn-member-panel-action-icon" aria-hidden="true">🔕</span><span class="btn-member-panel-action-label">알림 끄기</span></button>
+                <button class="btn-member-panel-action" id="btnOpenFileHub" title="첨부파일 모아보기"><span class="btn-member-panel-action-icon" aria-hidden="true">📎</span><span class="btn-member-panel-action-label">첨부파일</span></button>
+                <button class="btn-member-panel-action" id="btnOpenImageHub" title="이미지 첨부만 모아보기"><span class="btn-member-panel-action-icon" aria-hidden="true">🖼</span><span class="btn-member-panel-action-label">이미지 모아보기</span></button>
+                <button class="btn-member-panel-action" id="btnOpenThreadHub" type="button" title="댓글·답글이 있는 스레드 모아보기"><span class="btn-member-panel-action-icon" aria-hidden="true">💬</span><span class="btn-member-panel-action-label">스레드 모아보기</span></button>
+                <button class="btn-member-panel-action" id="btnOpenWorkHub" title="업무/칸반"><span class="btn-member-panel-action-icon" aria-hidden="true">📋</span><span class="btn-member-panel-action-label">업무/칸반</span></button>
+                <button class="btn-member-panel-action hidden" id="btnRenameChannel" title="채널 이름 변경"><span class="btn-member-panel-action-icon" aria-hidden="true">✏️</span><span class="btn-member-panel-action-label">채널 이름 변경</span></button>
+                <button class="btn-member-panel-action hidden" id="btnRenameDm" title="DM 이름 변경"><span class="btn-member-panel-action-icon" aria-hidden="true">✏️</span><span class="btn-member-panel-action-label">DM 이름 변경</span></button>
+              </div>
+              <div class="member-panel-member-heading" id="memberPanelMemberHeading">멤버 목록</div>
+              <ul id="memberList" class="member-list"></ul>
+              <div class="member-panel-actions member-panel-actions-bottom">
+                <button class="btn-member-panel-action" id="btnAddMembersLater" title="구성원 추가"><span class="btn-member-panel-action-icon" aria-hidden="true">➕</span><span class="btn-member-panel-action-label">구성원 추가</span></button>
+                <button class="btn-member-panel-action" id="btnLeaveChannel" title="채팅방 나가기"><span class="btn-member-panel-action-icon" aria-hidden="true">🚪</span><span class="btn-member-panel-action-label">채팅방 나가기</span></button>
+                <button class="btn-member-panel-action hidden" id="btnCloseChannel" title="채널 폐쇄"><span class="btn-member-panel-action-icon" aria-hidden="true">🗑️</span><span class="btn-member-panel-action-label">채널 폐쇄</span></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 메시지 영역 -->
+          <div class="messages-wrap">
+            <div id="msgHistoryLoading" class="msg-history-loading hidden" role="status" aria-live="polite">이전 메시지 불러오는 중…</div>
+            <div id="messages" class="messages"></div>
+          </div>
+
+          <!-- 메시지 입력 -->
+          <div class="composer">
+            <div id="mentionSuggest" class="mention-suggest hidden" role="listbox" aria-label="멘션 사용자"></div>
+            <div id="replyComposerBanner" class="reply-composer-banner hidden" aria-live="polite">
+              <div class="reply-composer-banner-main">
+                <div class="reply-composer-banner-title" id="replyComposerBannerTitle"></div>
+                <div class="reply-composer-banner-preview" id="replyComposerBannerPreview"></div>
+              </div>
+              <button type="button" id="replyComposerBannerClose" class="reply-composer-banner-close" title="답글 취소" aria-label="답글 취소">✕</button>
+            </div>
+            <div class="composer-inner">
+              <button class="composer-attach-btn" id="btnAttach" title="파일·이미지 첨부(다중 선택 가능)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
+                </svg>
+              </button>
+              <input type="file" id="fileInput" class="hidden" multiple />
+              <textarea id="messageInput" class="composer-input" rows="1" placeholder="메시지 보내기… Enter 전송 · Shift+Enter 줄바꿈 · @멘션 · Ctrl+V · 드롭 첨부" autocomplete="off"></textarea>
+              <button class="composer-send-btn" id="btnSend" title="전송">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                </svg>
+              </button>
+            </div>
+            <div id="filePreview" class="file-preview hidden">
+              <img id="filePreviewThumb" class="file-preview-thumb hidden" alt="" decoding="async" />
+              <span id="filePreviewName"></span>
+              <span id="filePreviewUploadStatus" class="file-preview-upload-status" aria-live="polite"></span>
+              <button id="btnClearFile" class="btn-clear-file">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 배포 관리 패널 (관리자) -->
+        <div id="viewReleases" class="view-admin hidden">
+          <div class="admin-panel-header">
+            <h2>🚀 배포 버전 관리</h2>
+            <button id="refreshReleasesBtn" class="btn-refresh">새로고침</button>
+          </div>
+          <details class="release-upload-details">
+            <summary>새 릴리즈 업로드</summary>
+            <form id="releaseUploadForm" class="release-form">
+              <input id="releaseVersion" type="text" placeholder="버전 (예: 1.2.0)" required />
+              <input id="releaseFile" type="file" accept=".war,.jar" required />
+              <input id="releaseDescription" type="text" placeholder="변경 내역 (선택)" />
+              <button type="submit" class="btn-primary">업로드</button>
+              <span id="releaseUploadStatus" class="upload-status"></span>
+            </form>
+          </details>
+          <table class="data-table">
+            <thead><tr><th>버전</th><th>파일명</th><th>크기</th><th>상태</th><th>업로드</th><th>활성화</th><th>작업</th></tr></thead>
+            <tbody id="releaseTableBody"></tbody>
+          </table>
+          <h3 style="margin-top:24px">📋 배포 이력</h3>
+          <table class="data-table">
+            <thead><tr><th>일시</th><th>액션</th><th>이전 버전</th><th>배포 버전</th><th>메모</th></tr></thead>
+            <tbody id="deployHistoryBody"></tbody>
+          </table>
+        </div>
+
+        <!-- 사용자 관리 패널 (관리자) -->
+        <div id="viewUserManagement" class="view-admin hidden">
+          <div class="admin-panel-header">
+            <h2>👤 사용자 관리</h2>
+            <div class="admin-user-toolbar">
+              <button id="btnAdminUserNew" class="btn-primary btn-sm-action">+ 새 사용자</button>
+              <button id="btnAdminUserSave" class="btn-primary btn-sm-action">저장</button>
+              <button id="btnAdminUserReset" class="btn-secondary btn-sm-action">변경 취소</button>
+            </div>
+          </div>
+          <p class="admin-hint">우클릭으로 편집·삭제, 역할/상태/조직 셀렉트는 직접 변경 후 [저장]</p>
+          <div id="adminUserPendingBanner" class="admin-pending-banner hidden">
+            변경사항 <strong id="adminUserPendingCount">0</strong>건이 저장 대기 중입니다. [저장] 버튼을 눌러 반영하세요.
+          </div>
+          <!-- 좌우 분할: 조직 선택(좌) + 사용자 목록(우) -->
+          <div class="user-mgmt-split">
+            <div class="user-org-panel" id="userOrgPanel">
+              <div class="user-org-panel-header">조직 선택</div>
+              <div class="user-org-tree" id="userOrgTree"></div>
+            </div>
+            <div class="user-list-panel">
+              <div id="userListPanelHeader" class="user-list-panel-header">
+                <span id="userListPanelTitle">전체</span>
+                <span id="userListPanelCount" class="tree-count"></span>
+              </div>
+              <div class="admin-user-table-wrap">
+                <table class="data-table" id="adminUserTable">
+                  <thead>
+                    <tr>
+                      <th>사원번호(AD)</th>
+                      <th>이름</th>
+                      <th>이메일</th>
+                      <th>부서</th>
+                      <th>직급</th>
+                      <th>직위</th>
+                      <th>직책</th>
+                      <th>역할</th>
+                      <th>상태</th>
+                      <th>등록일</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminUserTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 조직 관리 패널 (관리자) -->
+        <div id="viewOrgManagement" class="view-admin hidden">
+          <div class="admin-panel-header">
+            <h2>🏢 조직 관리</h2>
+            <div class="admin-user-toolbar">
+              <button id="btnOrgSave" class="btn-primary btn-sm-action">저장</button>
+              <button id="btnOrgReset" class="btn-secondary btn-sm-action">변경 취소</button>
+              <button id="btnRefreshOrg" class="btn-refresh">새로고침</button>
+            </div>
+          </div>
+          <div id="orgPendingBanner" class="admin-pending-banner hidden">
+            변경사항 <strong id="orgPendingCount">0</strong>건이 저장 대기 중입니다. [저장] 버튼을 눌러 반영하세요.
+          </div>
+          <div class="org-tabs">
+            <button class="org-tab active" data-tab="structure">조직 구조</button>
+            <button class="org-tab" data-tab="joblevel">직급</button>
+            <button class="org-tab" data-tab="jobposition">직위</button>
+            <button class="org-tab" data-tab="jobtitle">직책</button>
+          </div>
+          <div id="orgTabStructure" class="org-tab-content">
+            <div class="org-tab-toolbar">
+              <button class="btn-primary btn-sm-action" data-action="org-add-root" data-type="COMPANY">+ 회사 추가</button>
+            </div>
+            <div id="orgTreeContainer" class="org-tree-container"></div>
+          </div>
+          <div id="orgTabJobLevel" class="org-tab-content hidden">
+            <div class="org-tab-toolbar">
+              <button class="btn-primary btn-sm-action" data-action="org-add-flat" data-type="JOB_LEVEL">+ 직급 추가</button>
+            </div>
+            <div id="orgJobLevelList" class="org-flat-list"></div>
+          </div>
+          <div id="orgTabJobPosition" class="org-tab-content hidden">
+            <div class="org-tab-toolbar">
+              <button class="btn-primary btn-sm-action" data-action="org-add-flat" data-type="JOB_POSITION">+ 직위 추가</button>
+            </div>
+            <div id="orgJobPositionList" class="org-flat-list"></div>
+          </div>
+          <div id="orgTabJobTitle" class="org-tab-content hidden">
+            <div class="org-tab-toolbar">
+              <button class="btn-primary btn-sm-action" data-action="org-add-flat" data-type="JOB_TITLE">+ 직책 추가</button>
+            </div>
+            <div id="orgJobTitleList" class="org-flat-list"></div>
+          </div>
+        </div>
+
+        <!-- 설정 패널 (관리자) -->
+        <div id="viewSettings" class="view-admin hidden">
+          <div class="admin-panel-header">
+            <h2>⚙️ 앱 설정</h2>
+            <button id="refreshSettingsBtn" class="btn-refresh">새로고침</button>
+          </div>
+          <p class="settings-desc">변경 사항은 즉시 반영됩니다. 서버 재기동이 필요하지 않습니다.</p>
+          <div class="settings-add-card">
+            <h3 class="settings-add-title">기초설정 추가</h3>
+            <p class="settings-add-hint">키는 영문·숫자·점(.)·하이픈(-)·밑줄(_)만 사용, 최대 100자입니다. 앱에서 읽는 키는 코드와 일치해야 합니다.</p>
+            <div class="settings-add-grid">
+              <div class="form-group">
+                <label for="newSettingKey">설정 키 <span class="required">*</span></label>
+                <input id="newSettingKey" type="text" maxlength="100" placeholder="예) feature.flag.example" autocomplete="off" />
+              </div>
+              <div class="form-group">
+                <label for="newSettingValue">값</label>
+                <input id="newSettingValue" type="text" placeholder="설정 값" autocomplete="off" />
+              </div>
+              <div class="form-group settings-add-desc">
+                <label for="newSettingDesc">설명</label>
+                <input id="newSettingDesc" type="text" maxlength="2000" placeholder="관리자용 메모" />
+              </div>
+            </div>
+            <button type="button" id="btnAddSetting" class="btn-primary">추가</button>
+          </div>
+          <div id="settingsList"></div>
+        </div>
+
+      </main>
+
+    </div>
+
+    <!-- ===================== 조직도 모달 ===================== -->
+    <div id="modalOrgChart" class="modal-overlay hidden">
+      <div class="modal modal-orgchart">
+        <div class="modal-header orgchart-modal-header">
+          <h3>🏢 조직도</h3>
+          <button type="button" id="btnOrgChartRefresh" class="btn-refresh orgchart-refresh-btn">새로고침</button>
+          <button class="modal-close" data-modal="modalOrgChart" type="button">✕</button>
+        </div>
+        <div class="orgchart-body">
+          <!-- 좌측: 조직 트리 -->
+          <div class="orgchart-tree-pane" id="orgChartTreePane">
+            <div class="orgchart-tree-scroll" id="orgChartTreeScroll">
+              <p class="orgchart-hint">불러오는 중…</p>
+            </div>
+          </div>
+          <!-- 우측: 팀 멤버 -->
+          <div class="orgchart-member-pane" id="orgChartMemberPane">
+            <div class="orgchart-member-header" id="orgChartMemberHeader">
+              <span class="orgchart-member-team-name" id="orgChartTeamName">팀을 선택하세요</span>
+              <span class="orgchart-member-count" id="orgChartTeamCount"></span>
+            </div>
+            <div class="orgchart-member-grid" id="orgChartMemberGrid">
+              <p class="orgchart-hint">좌측에서 팀을 선택하면 구성원이 표시됩니다.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 멘션 토스트: mainApp overflow:hidden 밖에 두어 잘리지 않도록 body 직계 -->
+    <div id="mentionToastStack" class="mention-toast-stack" aria-live="polite"></div>
+
+    <!-- 메시지 컨텍스트 메뉴(댓글/답글) -->
+    <div id="messageContextMenu" class="context-menu hidden" role="menu" aria-label="메시지 메뉴">
+      <button type="button" class="context-menu-item" data-action="comment" role="menuitem">댓글</button>
+      <button type="button" class="context-menu-item" data-action="reply" role="menuitem">답글</button>
+    </div>
+    <div id="memberContextMenu" class="context-menu hidden" role="menu" aria-label="멤버 메뉴">
+      <button type="button" class="context-menu-item" id="btnMemberCtxDelegate" role="menuitem">관리자 위임</button>
+    </div>
+    <div id="channelSidebarContextMenu" class="context-menu hidden" role="menu" aria-label="대화 목록 메뉴">
+      <button type="button" class="context-menu-item" id="btnSidebarCtxToggleNotify" role="menuitem">알림 끄기</button>
+      <button type="button" class="context-menu-item" id="btnSidebarCtxQuickRailPin" role="menuitem">퀵 레일에 고정</button>
+      <button type="button" class="context-menu-item" id="btnSidebarCtxLeave" role="menuitem">채팅방 나가기</button>
+    </div>
+
+    <!-- 사용자 관리 우클릭 컨텍스트 메뉴 -->
+    <div id="adminUserContextMenu" class="context-menu hidden" role="menu">
+      <button type="button" class="context-menu-item" data-action="ctx-edit" role="menuitem">✏️ 편집</button>
+      <button type="button" class="context-menu-item ctx-delete-btn" data-action="ctx-delete" role="menuitem">🗑 삭제</button>
+      <button type="button" class="context-menu-item hidden" data-action="ctx-restore" role="menuitem">↩ 복원</button>
+    </div>
+
+    <!-- 조직 그룹 추가/편집 모달 -->
+    <div id="modalOrgGroupEdit" class="modal-overlay hidden">
+      <div class="modal modal-medium">
+        <div class="modal-header">
+          <h3 id="orgGroupEditTitle">조직 그룹 추가</h3>
+        </div>
+        <div class="modal-body">
+          <p id="orgGroupEditError" class="login-error hidden"></p>
+          <div class="admin-user-edit-grid">
+            <div class="form-group">
+              <label for="ogType">유형 <span class="required">*</span></label>
+              <select id="ogType">
+                <option value="COMPANY">회사 (COMPANY)</option>
+                <option value="DIVISION">본부/부서 (DIVISION)</option>
+                <option value="TEAM">팀 (TEAM)</option>
+                <option value="JOB_LEVEL">직급 (JOB_LEVEL)</option>
+                <option value="JOB_POSITION">직위 (JOB_POSITION)</option>
+                <option value="JOB_TITLE">직책 (JOB_TITLE)</option>
+              </select>
+            </div>
+            <div class="form-group" id="ogParentRow">
+              <label for="ogParent">상위 조직</label>
+              <select id="ogParent"><option value="">(없음)</option></select>
+            </div>
+            <div class="form-group">
+              <label for="ogCode">그룹 코드 <span class="required">*</span> <small class="hint">(영문·숫자·하이픈, 최대 32자)</small></label>
+              <input id="ogCode" type="text" placeholder="예) TEAM-DEV-BACKEND" maxlength="32" />
+              <p id="ogCodeChangeWarn" class="field-warn hidden">⚠ 코드 변경 시 연관 사용자 배정 정보가 자동 갱신됩니다.</p>
+            </div>
+            <div class="form-group">
+              <label for="ogDisplayName">표시명 <span class="required">*</span></label>
+              <input id="ogDisplayName" type="text" placeholder="예) 백엔드 팀" maxlength="200" />
+            </div>
+            <div class="form-group">
+              <label for="ogSortOrder">정렬 순서</label>
+              <input id="ogSortOrder" type="number" value="0" min="0" />
+            </div>
+            <div class="form-group">
+              <label>활성 여부</label>
+              <label class="toggle-label"><input type="checkbox" id="ogIsActive" checked /><span>활성</span></label>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:8px">
+            <label>경로 미리보기 (자동)</label>
+            <div id="ogPathPreview" class="org-path-preview">-</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="btnOrgGroupEditConfirm" class="btn-primary" data-edit-code="">저장</button>
+          <button type="button" class="btn-secondary" data-modal="modalOrgGroupEdit">취소</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 사용자 등록/편집 모달 -->
+    <div id="modalAdminUserEdit" class="modal-overlay hidden">
+      <div class="modal modal-medium">
+        <div class="modal-header">
+          <h3 id="adminUserEditTitle">사용자 등록</h3>
+        </div>
+        <div class="modal-body admin-user-edit-body">
+          <div class="admin-user-edit-grid">
+            <div class="form-group">
+              <label for="auEmpNo">사원번호 <span class="required">*</span> <small class="hint">(AD sAMAccountName)</small></label>
+              <input id="auEmpNo" type="text" placeholder="예) jsmith" autocomplete="off" />
+              <p id="auEmpNoChangeWarn" class="field-warn hidden">⚠ 변경 시 해당 사원은 새 사원번호로 AD 로그인해야 합니다.</p>
+            </div>
+            <div class="form-group">
+              <label for="auName">이름 <span class="required">*</span></label>
+              <input id="auName" type="text" placeholder="예) 홍길동" />
+            </div>
+            <div class="form-group">
+              <label for="auEmail">이메일 <span class="required">*</span></label>
+              <input id="auEmail" type="email" placeholder="예) user@company.com" />
+            </div>
+            <div class="form-group">
+              <label for="auRole">역할</label>
+              <select id="auRole">
+                <option value="MEMBER">일반 (MEMBER)</option>
+                <option value="MANAGER">매니저 (MANAGER)</option>
+                <option value="ADMIN">관리자 (ADMIN)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="auStatus">상태</label>
+              <select id="auStatus">
+                <option value="ACTIVE">사용 (ACTIVE)</option>
+                <option value="INACTIVE">미사용 (INACTIVE)</option>
+              </select>
+            </div>
+          </div>
+          <hr class="modal-divider" />
+          <p class="admin-user-org-label">조직 정보 (선택)</p>
+          <div class="admin-user-edit-grid">
+            <div class="form-group">
+              <label for="auTeam">부서</label>
+              <select id="auTeam"><option value="">선택 안함</option></select>
+            </div>
+            <div class="form-group">
+              <label for="auJobLevel">직급</label>
+              <select id="auJobLevel"><option value="">선택 안함</option></select>
+            </div>
+            <div class="form-group">
+              <label for="auJobPosition">직위</label>
+              <select id="auJobPosition"><option value="">선택 안함</option></select>
+            </div>
+            <div class="form-group">
+              <label for="auJobTitle">직책</label>
+              <select id="auJobTitle"><option value="">선택 안함</option></select>
+            </div>
+          </div>
+          <p id="adminUserEditError" class="login-error hidden" style="margin-top:8px"></p>
+        </div>
+        <div class="modal-footer">
+          <button id="btnAdminUserEditConfirm" class="btn-primary" data-edit-emp="">확인</button>
+          <button type="button" class="btn-secondary" data-modal="modalAdminUserEdit">취소</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modalAppDialog" class="modal-overlay hidden modal-stacked">
+      <div class="modal modal-narrow app-dialog-modal">
+        <div class="modal-header app-dialog-header">
+          <div class="app-dialog-title-wrap">
+            <span id="appDialogBadge" class="app-dialog-badge">i</span>
+            <h3 id="appDialogTitle">알림</h3>
+          </div>
+        </div>
+        <div class="modal-body">
+          <p id="appDialogMessage" class="app-dialog-message"></p>
+          <input id="appDialogInput" class="hidden" type="text" />
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary hidden" id="btnAppDialogCancel">취소</button>
+          <button class="btn-primary" id="btnAppDialogOk">확인</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modalImageDownloadChoice" class="modal-overlay hidden modal-stacked">
+      <div class="modal modal-narrow app-dialog-modal">
+        <div class="modal-header app-dialog-header">
+          <h3>이미지 다운로드</h3>
+        </div>
+        <div class="modal-body">
+          <div id="imageDownloadChoiceMessage" class="app-dialog-message image-download-choice-message"></div>
+        </div>
+        <div class="modal-footer modal-footer--stack modal-footer--image-download">
+          <button type="button" class="btn-primary btn-image-download-choice" id="btnImageDownloadOriginal">
+            <span class="btn-image-dl-main">원본 파일</span>
+            <span class="btn-image-dl-size" id="imageDownloadOriginalSize">—</span>
+          </button>
+          <button type="button" class="btn-secondary btn-image-download-choice" id="btnImageDownloadCompressed">
+            <span class="btn-image-dl-main">미리보기(압축)</span>
+            <span class="btn-image-dl-size" id="imageDownloadCompressedSize">—</span>
+          </button>
+          <button type="button" class="btn-cancel btn-image-download-cancel" id="btnImageDownloadCancel">취소</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 스레드 모달(원글 + 댓글) -->
+    <div id="modalThread" class="modal-overlay hidden">
+      <div class="modal modal-wide modal-thread">
+        <div class="modal-header">
+          <h3>스레드</h3>
+          <button class="modal-close" data-modal="modalThread" type="button">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="threadRootContainer" class="thread-root"></div>
+          <div id="threadCommentsContainer" class="thread-comments"></div>
+        </div>
+        <div class="modal-footer thread-composer">
+          <div class="thread-composer-controls">
+            <input id="threadFileInput" type="file" class="hidden" multiple />
+            <button id="threadBtnAttach" type="button" class="composer-attach-btn" title="파일·이미지 첨부">📎</button>
+            <textarea id="threadMessageInput" class="composer-input" rows="1" placeholder="댓글 입력… Enter 전송 · Shift+Enter 줄바꿈 · @멘션" autocomplete="off"></textarea>
+            <button id="threadBtnSend" type="button" class="composer-send-btn" title="전송">➤</button>
+          </div>
+          <div id="threadFilePreview" class="file-preview hidden">
+            <img id="threadFilePreviewThumb" class="file-preview-thumb hidden" alt="" decoding="async" />
+            <span id="threadFilePreviewName"></span>
+            <span id="threadFilePreviewUploadStatus" class="file-preview-upload-status" aria-live="polite"></span>
+            <button id="threadBtnClearFile" class="btn-clear-file" type="button">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 이미지 첨부: 크게 보기 + 다운로드 -->
+    <div id="modalImagePreview" class="modal-overlay modal-image-preview hidden">
+      <div class="image-preview-shell">
+        <button type="button" class="image-preview-close modal-close" data-modal="modalImagePreview" aria-label="닫기">✕</button>
+        <img id="imagePreviewLarge" class="image-preview-large" alt="" />
+        <div class="image-preview-toolbar">
+          <span id="imagePreviewCaption" class="image-preview-caption"></span>
+          <div class="image-preview-toolbar-actions">
+            <button type="button" id="imagePreviewLoadOriginal" class="btn-secondary btn-sm hidden">원본 보기</button>
+            <button type="button" id="imagePreviewDownload" class="btn-primary btn-sm">다운로드</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 채널 만들기 모달 ===================== -->
+    <div id="modalCreateChannel" class="modal-overlay hidden">
+      <div class="modal modal-wide">
+        <div class="modal-header">
+          <h3 id="modalCreateTitle">채널 만들기</h3>
+          <button class="modal-close" data-modal="modalCreateChannel">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>채널 이름</label>
+            <input id="newChannelName" type="text" placeholder="예) 프로젝트-알파" />
+          </div>
+          <div class="form-group">
+            <label>설명 (선택)</label>
+            <input id="newChannelDesc" type="text" placeholder="채널 목적을 입력하세요" />
+          </div>
+          <div class="form-group">
+            <label>채널 유형</label>
+            <select id="newChannelType">
+              <option value="PUBLIC">공개</option>
+              <option value="PRIVATE">비공개</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <div class="member-add-heading">
+              <label>구성원 추가</label>
+              <button type="button" id="btnOpenAddMemberPickerForCreateChannel" class="btn-picker-plus" title="조직도·검색으로 추가" aria-label="조직도 및 검색으로 구성원 추가"><svg class="btn-picker-plus-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M8 2.5v11M2.5 8h11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+            </div>
+            <p class="member-add-hint">＋ 버튼을 눌러 팝업에서 검색하거나 조직도로 선택할 수 있습니다.</p>
+            <div id="selectedMembersWrap" class="selected-members"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" data-modal="modalCreateChannel">취소</button>
+          <button class="btn-primary" id="btnConfirmCreateChannel">만들기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== DM 만들기 모달 ===================== -->
+    <div id="modalCreateDm" class="modal-overlay hidden">
+      <div class="modal modal-wide">
+        <div class="modal-header">
+          <h3>새 다이렉트 메시지</h3>
+          <button class="modal-close" data-modal="modalCreateDm">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <div class="member-add-heading">
+              <label>대화 상대</label>
+              <button type="button" id="btnOpenAddMemberPickerForCreateDm" class="btn-picker-plus" title="조직도·검색으로 추가" aria-label="조직도 및 검색으로 구성원 추가"><svg class="btn-picker-plus-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M8 2.5v11M2.5 8h11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+            </div>
+            <p class="member-add-hint">＋ 버튼을 눌러 팝업에서 검색하거나 조직도로 선택할 수 있습니다.</p>
+            <div id="selectedDmMembersWrap" class="selected-members"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" data-modal="modalCreateDm">취소</button>
+          <button class="btn-primary" id="btnConfirmCreateDm">대화 시작</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 채널 구성원 추가 모달 ===================== -->
+    <div id="modalAddChannelMembers" class="modal-overlay hidden">
+      <div class="modal modal-wide">
+        <div class="modal-header">
+          <h3>채널 구성원 추가</h3>
+          <button class="modal-close" data-modal="modalAddChannelMembers">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <div class="member-add-heading">
+              <label>구성원 추가</label>
+              <button type="button" id="btnOpenAddMemberPicker" class="btn-picker-plus" title="조직도·검색으로 추가" aria-label="조직도 및 검색으로 구성원 추가"><svg class="btn-picker-plus-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M8 2.5v11M2.5 8h11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+            </div>
+            <p class="member-add-hint">＋ 버튼을 눌러 팝업에서 검색하거나 조직도로 선택할 수 있습니다.</p>
+            <div id="selectedAddMembersWrap" class="selected-members"></div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" data-modal="modalAddChannelMembers">취소</button>
+          <button class="btn-primary" id="btnConfirmAddMembers">추가</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 구성원 추가: 조직도·검색 팝업 (그룹웨어 ui_window 형태, 본문은 iframe 대신 SPA) -->
+    <div id="modalAddMemberPicker" class="modal-overlay modal-stacked ech-orgmap-overlay hidden">
+      <div class="ech-ui-window ech-orgmap-window" role="dialog" aria-labelledby="orgmapPopTitle" aria-modal="true">
+        <div class="ech-window-container">
+          <div class="ech-window-head">
+            <div class="ech-window-title">
+              <div id="orgmapPopTitle" class="ech-window-main-label">조직도</div>
+              <div id="orgmapPopSubTitle" class="ech-window-sub-label"></div>
+            </div>
+            <div class="ech-window-toolbar">
+              <button type="button" class="ech-window-tool-btn modal-close" data-modal="modalAddMemberPicker" aria-label="닫기">✕</button>
+            </div>
+          </div>
+          <div class="ech-window-body">
+            <div id="orgmapPopBodyRoot" class="ech-body-root">
+              <div class="split_filter member-picker-company-filter">
+                <label for="companySelect" class="ech-visually-hidden">회사</label>
+                <select id="companySelect" class="ui_select_field full" title="회사">
+                  <option value="ORGROOT">불러오는 중…</option>
+                </select>
+              </div>
+              <div class="member-picker-top-search">
+                <select id="addMemberTopSearchType" class="member-search-select">
+                  <option value="NAME">이름</option>
+                  <option value="DEPARTMENT">부서</option>
+                  <option value="EMAIL">이메일</option>
+                  <option value="EMP_NO">사번</option>
+                </select>
+                <input id="addMemberTopSearchInput" type="text" placeholder="검색어 입력" />
+                <button type="button" id="btnSearchTop" class="btn-search">검색</button>
+              </div>
+
+              <div class="member-picker-popup">
+                <div class="member-picker-tree">
+                  <div class="picker-org-title">조직</div>
+                  <div id="orgTreeEmbedAdd" class="org-tree-embedded"></div>
+                </div>
+
+                <div class="member-picker-members">
+                  <div class="picker-org-title" style="margin-bottom:10px;">선택 부서원</div>
+                  <ul id="addMemberMemberList" class="member-picker-member-list"></ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="ech-window-footer">
+            <div id="pickerSelectedMembersWrap" class="selected-members picker-selected-footer"></div>
+            <button type="button" class="btn-primary" id="btnCloseAddMemberPicker">선택 완료</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 첨부파일 · 이미지 모아보기 ===================== -->
+    <div id="modalFileHub" class="modal-overlay hidden">
+      <div class="modal modal-wide modal-file-hub">
+        <div class="modal-header">
+          <h3>첨부 · 이미지</h3>
+          <button class="modal-close" data-modal="modalFileHub">✕</button>
+        </div>
+        <div class="modal-body file-hub-modal-body">
+          <div class="file-hub-tabs" role="tablist" aria-label="첨부 보기 방식">
+            <button type="button" class="file-hub-tab active" data-file-hub-tab="all" id="fileHubTabAll" role="tab" aria-selected="true">전체 파일</button>
+            <button type="button" class="file-hub-tab" data-file-hub-tab="images" id="fileHubTabImages" role="tab" aria-selected="false">이미지</button>
+          </div>
+          <div id="fileHubPaneAll" class="file-hub-pane" role="tabpanel" aria-labelledby="fileHubTabAll">
+            <ul id="channelFilesList" class="channel-files-list channel-files-list-modal"></ul>
+            <p id="channelFilesEmpty" class="channel-files-empty hidden">첨부 파일이 없습니다.</p>
+          </div>
+          <div id="fileHubPaneImages" class="file-hub-pane hidden" role="tabpanel" aria-labelledby="fileHubTabImages">
+            <div id="channelImageGrid" class="channel-image-grid"></div>
+            <p id="channelImagesEmpty" class="channel-files-empty hidden">이미지 첨부가 없습니다.</p>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" data-modal="modalFileHub">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modalThreadHub" class="modal-overlay hidden">
+      <div class="modal modal-wide modal-thread-hub">
+        <div class="modal-header">
+          <h3>스레드 모아보기</h3>
+          <button class="modal-close" data-modal="modalThreadHub" type="button">✕</button>
+        </div>
+        <div class="modal-body thread-hub-body">
+          <p class="thread-hub-hint">댓글·답글이 달린 원글만, 최근 스레드 활동 순으로 표시합니다.</p>
+          <p id="threadHubError" class="thread-hub-error hidden" role="alert"></p>
+          <div id="threadHubList" class="thread-hub-list"></div>
+          <p id="threadHubEmpty" class="channel-files-empty hidden">활성 스레드가 없습니다.</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" type="button" data-modal="modalThreadHub">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modalWorkHub" class="modal-overlay hidden">
+      <div class="modal modal-wide modal-work-hub">
+        <div class="modal-header">
+          <h3 id="workHubTitle">업무 · 칸반</h3>
+          <button class="modal-close" data-modal="modalWorkHub">✕</button>
+        </div>
+        <div class="modal-body work-hub-body">
+          <div class="work-hub-panel">
+            <h4>업무 항목</h4>
+            <p class="work-hub-hint">신규 입력·목록에서 상태 변경 후 <strong>저장</strong>을 누르면 서버에 반영됩니다. 비활성 업무의 <strong>복원</strong>·<strong>완전 삭제</strong>도 목록(또는 상세)에서 선택한 뒤 <strong>저장</strong> 시에만 서버에 반영되며, 예약된 항목은 배지로 표시됩니다.</p>
+            <div class="work-hub-panel-body">
+              <form id="workItemCreateForm" class="work-item-create-form" onsubmit="return false;">
+                <input id="workItemTitleInput" type="text" maxlength="500" placeholder="새 업무 제목" />
+                <textarea id="workItemDescInput" rows="3" maxlength="8000" placeholder="업무 설명(선택)"></textarea>
+                <div class="work-item-create-row">
+                  <select id="workItemStatusSelect" aria-label="신규 업무 상태">
+                    <option value="OPEN">대기</option>
+                    <option value="IN_PROGRESS">진행 중</option>
+                    <option value="DONE">완료</option>
+                  </select>
+                  <button type="button" class="btn-primary btn-sm btn-work-add" id="btnQueueWorkItem">업무 추가</button>
+                </div>
+              </form>
+              <ul id="channelWorkItemsList" class="channel-work-item-list"></ul>
+            </div>
+          </div>
+          <div class="work-hub-panel">
+            <h4>칸반 보드</h4>
+            <p class="work-hub-hint">카드는 <strong>저장된 업무 항목</strong>에만 연결됩니다. 새 업무는 먼저 저장한 뒤 카드를 추가하세요. 컬럼 이동은 편집 후 <strong>저장</strong> 시 반영됩니다.</p>
+            <div class="work-hub-panel-body">
+              <form id="kanbanCardCreateForm" class="work-item-create-form" onsubmit="return false;">
+                <label class="kanban-new-card-work-item-label" for="kanbanNewCardWorkItemSelect">연결 업무</label>
+                <select id="kanbanNewCardWorkItemSelect" aria-label="신규 카드에 연결할 업무 항목">
+                  <option value="">업무 항목 선택(필수)</option>
+                </select>
+                <input id="kanbanCardTitleInput" type="text" maxlength="500" placeholder="새 카드 제목" />
+                <textarea id="kanbanCardDescInput" rows="2" maxlength="8000" placeholder="카드 설명(선택)"></textarea>
+                <div id="kanbanNewCardAssigneeWrap" class="kanban-new-card-assignee-wrap">
+                  <div class="kanban-new-card-assignee-label">담당자(선택)</div>
+                  <div id="kanbanNewCardAssigneeChips" class="kanban-assignee-chips" aria-live="polite"></div>
+                  <div class="kanban-assignee-add">
+                    <input
+                      id="kanbanNewCardAssigneeSearch"
+                      type="search"
+                      maxlength="100"
+                      placeholder="채널 멤버 검색 (↑↓·Enter)"
+                      autocomplete="off"
+                    />
+                    <button type="button" class="btn-primary btn-sm btn-work-add" id="btnQueueKanbanCard">카드 추가</button>
+                    <ul id="kanbanNewCardAssigneeSuggest" class="kanban-assignee-suggest hidden" role="listbox" aria-label="담당자 검색"></ul>
+                  </div>
+                </div>
+              </form>
+              <div id="channelKanbanBoard" class="channel-kanban-board"></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer work-hub-footer">
+          <button type="button" class="btn-primary" id="btnWorkHubSave">저장</button>
+          <button type="button" class="btn-cancel" data-modal="modalWorkHub">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modalWorkItemDetail" class="modal-overlay hidden modal-stacked">
+      <div class="modal modal-narrow">
+        <div class="modal-header">
+          <h3>업무 항목 상세</h3>
+          <button class="modal-close" data-modal="modalWorkItemDetail">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="workItemDetailTitle">제목</label>
+            <input id="workItemDetailTitle" type="text" maxlength="500" />
+          </div>
+          <div class="form-group">
+            <label for="workItemDetailDesc">설명</label>
+            <textarea id="workItemDetailDesc" rows="5" maxlength="8000"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="workItemDetailStatus">상태</label>
+            <select id="workItemDetailStatus">
+              <option value="OPEN">대기</option>
+              <option value="IN_PROGRESS">진행 중</option>
+              <option value="DONE">완료</option>
+            </select>
+          </div>
+          <div id="workItemDetailInactiveActions" class="work-item-inactive-actions hidden">
+            <p class="muted work-item-inactive-hint">비활성 처리된 업무입니다. <strong>복원</strong>·<strong>완전 삭제</strong> 선택은 즉시 서버로 가지 않으며, 상위 <strong>업무·칸반</strong> 창의 <strong>저장</strong>을 누를 때 함께 반영됩니다. 목록에서도 동일하게 선택할 수 있습니다.</p>
+            <button type="button" class="btn-secondary btn-sm" id="btnWorkItemRestore">복원</button>
+            <button type="button" class="btn-danger btn-sm" id="btnWorkItemPurge">완전 삭제</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-primary" id="btnSaveWorkItemDetail">적용</button>
+          <button type="button" class="btn-cancel" data-modal="modalWorkItemDetail">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modalKanbanCardDetail" class="modal-overlay hidden modal-stacked">
+      <div class="modal modal-narrow">
+        <div class="modal-header">
+          <h3>칸반 카드 상세</h3>
+          <button class="modal-close" data-modal="modalKanbanCardDetail">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="kanbanCardDetailTitle">제목</label>
+            <input id="kanbanCardDetailTitle" type="text" maxlength="500" />
+          </div>
+          <div class="form-group">
+            <label for="kanbanCardDetailDesc">설명</label>
+            <textarea id="kanbanCardDetailDesc" rows="5" maxlength="8000"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="kanbanCardDetailColumn">상태</label>
+            <select id="kanbanCardDetailColumn"></select>
+          </div>
+          <div class="form-group">
+            <label>담당자</label>
+            <div id="kanbanCardDetailAssigneeChips" class="kanban-assignee-chips" aria-live="polite"></div>
+            <div class="kanban-assignee-add">
+              <input id="kanbanCardDetailAssigneeSearch" type="search" maxlength="100" placeholder="채널 멤버 검색 (↑↓·Enter)" autocomplete="off" />
+              <ul id="kanbanCardDetailAssigneeSuggest" class="kanban-assignee-suggest hidden" role="listbox" aria-label="담당자 검색"></ul>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-primary" id="btnSaveKanbanCardDetail">적용</button>
+          <button type="button" class="btn-cancel" data-modal="modalKanbanCardDetail">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 사용자 프로필 모달 ===================== -->
+    <div id="modalUserProfile" class="modal-overlay hidden">
+      <div class="modal modal-narrow">
+        <div class="modal-header">
+          <h3>프로필</h3>
+          <button type="button" class="modal-close" data-modal="modalUserProfile">✕</button>
+        </div>
+        <div class="modal-body profile-body">
+          <div class="profile-avatar-lg" id="profileAvatarLg">?</div>
+          <h4 id="profileModalName" class="profile-modal-name">-</h4>
+          <dl class="profile-dl">
+            <dt>사원번호</dt><dd id="profileModalEmpNo">-</dd>
+            <dt>이메일</dt><dd id="profileModalEmail">-</dd>
+            <dt>부서</dt><dd id="profileModalDept">-</dd>
+            <dt>직급</dt><dd id="profileModalJobLevel">-</dd>
+            <dt id="profileJobPositionDt" class="hidden">직위</dt><dd id="profileModalJobPosition" class="hidden"></dd>
+            <dt id="profileJobTitleDt" class="hidden">직책</dt><dd id="profileModalJobTitle" class="hidden"></dd>
+          </dl>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-primary" id="btnProfileDm">DM 보내기</button>
+          <button type="button" class="btn-cancel" data-modal="modalUserProfile">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== 검색 결과 모달 ===================== -->
+    <div id="searchModal" class="modal-overlay hidden">
+      <div class="modal modal-wide">
+        <div class="modal-header">
+          <h3 id="searchModalTitle">검색 결과</h3>
+          <button class="modal-close" data-modal="searchModal">✕</button>
+        </div>
+        <div class="search-modal-toolbar">
+          <div class="search-filter-wrap">
+            <select id="searchTypeSelect">
+              <option value="ALL">전체</option>
+              <option value="MESSAGES">메시지</option>
+              <option value="COMMENTS">댓글</option>
+              <option value="CHANNELS">채널명</option>
+              <option value="FILES">파일</option>
+              <option value="WORK_ITEMS">업무 항목</option>
+              <option value="KANBAN_CARDS">칸반 카드</option>
+            </select>
+          </div>
+          <div class="search-modal-query-wrap">
+            <input
+              id="searchModalInput"
+              type="search"
+              class="search-modal-query-input"
+              placeholder="검색어 입력"
+              autocomplete="off"
+            />
+            <button type="button" id="searchModalSubmitBtn" class="search-modal-query-btn">검색</button>
+          </div>
+        </div>
+        <div id="searchResults" class="search-results"></div>
+      </div>
+    </div>
+
+    <!-- Electron 데스크톱: 자동 업데이트 설치 안내 -->
+    <div id="modalAppUpdate" class="modal-overlay hidden">
+      <div class="modal modal-narrow">
+        <div class="modal-header">
+          <h3>업데이트</h3>
+        </div>
+        <div class="modal-body">
+          <p class="modal-app-update-lead">새 버전이 존재하여 업데이트가 필요합니다.</p>
+          <p id="modalAppUpdateVersion" class="muted-text"></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn-cancel" id="btnAppUpdateLater" data-modal="modalAppUpdate">나중에</button>
+          <button type="button" class="btn-primary" id="btnAppUpdateNow">확인</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modalThemePicker" class="modal-overlay hidden">
+      <div class="modal modal-narrow">
+        <div class="modal-header">
+          <h3>테마 설정</h3>
+          <button class="modal-close" data-modal="modalThemePicker">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="theme-picker-options" role="group" aria-label="화면 테마 선택">
+            <button type="button" class="theme-option-btn" data-theme="dark">검정</button>
+            <button type="button" class="theme-option-btn" data-theme="light">하양</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" crossorigin="anonymous"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

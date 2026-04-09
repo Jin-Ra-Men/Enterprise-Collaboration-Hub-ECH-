@@ -1,0 +1,280 @@
+<html><head><meta charset="utf-8"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "secondary-dim": "#44546a",
+                "on-primary-fixed": "#ffffff",
+                "surface-tint": "#4e45e4",
+                "error-dim": "#6b0221",
+                "on-secondary-fixed-variant": "#4d5d73",
+                "secondary-container": "#d3e4fe",
+                "surface-dim": "#d4dbdf",
+                "on-tertiary": "#f5f9ff",
+                "on-surface": "#2c3437",
+                "tertiary-fixed-dim": "#17a8ec",
+                "on-secondary-fixed": "#314055",
+                "primary-fixed-dim": "#5a52f0",
+                "on-primary": "#fbf7ff",
+                "on-surface-variant": "#596064",
+                "surface": "#f7f9fb",
+                "background": "#f7f9fb",
+                "tertiary-container": "#34b5fa",
+                "surface-container-highest": "#dce4e8",
+                "inverse-on-surface": "#9a9d9f",
+                "surface-variant": "#dce4e8",
+                "surface-container-high": "#e3e9ed",
+                "on-error": "#fff7f7",
+                "on-tertiary-fixed": "#00121e",
+                "on-secondary": "#f7f9ff",
+                "outline-variant": "#acb3b7",
+                "outline": "#747c80",
+                "error-container": "#f97386",
+                "error": "#a8364b",
+                "surface-container-low": "#f0f4f7",
+                "on-background": "#2c3437",
+                "primary-fixed": "#6760fd",
+                "surface-bright": "#f7f9fb",
+                "on-error-container": "#6e0523",
+                "on-primary-fixed-variant": "#edeaff",
+                "on-secondary-container": "#435368",
+                "secondary-fixed": "#d3e4fe",
+                "secondary-fixed-dim": "#c5d6f0",
+                "tertiary-dim": "#005980",
+                "tertiary": "#006592",
+                "secondary": "#506076",
+                "surface-container-lowest": "#ffffff",
+                "on-tertiary-fixed-variant": "#003954",
+                "primary-dim": "#4135d8",
+                "inverse-primary": "#8582ff",
+                "tertiary-fixed": "#34b5fa",
+                "inverse-surface": "#0b0f10",
+                "surface-container": "#eaeff2",
+                "primary-container": "#6760fd",
+                "on-tertiary-container": "#003047",
+                "primary": "#4e45e4",
+                "on-primary-container": "#000000"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "fontFamily": {
+                "headline": ["Inter"],
+                "body": ["Inter"],
+                "label": ["Inter"]
+        }
+      },
+    },
+  }
+</script>
+<style>
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  }
+  .glass-effect {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(20px);
+  }
+</style>
+</head><body class="bg-surface text-on-surface font-body min-h-screen">
+<!-- TopNavBar Implementation from JSON -->
+<header class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-none shadow-sm shadow-slate-200/50 dark:shadow-none docked full-width top-0 sticky z-50 flex justify-between items-center w-full px-6 h-16">
+<div class="flex items-center gap-8">
+<div class="text-xl font-bold tracking-tighter text-slate-900 dark:text-white">Stratos Pro</div>
+<nav class="hidden md:flex gap-6">
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors duration-200" href="#">Directory</a>
+<a class="text-indigo-600 dark:text-indigo-400 font-semibold border-b-2 border-indigo-600" href="#">Workspaces</a>
+<a class="text-slate-500 dark:text-slate-400 font-medium hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors duration-200" href="#">Insights</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-on-surface-variant hover:bg-slate-50 p-2 rounded-full transition-all">notifications</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:bg-slate-50 p-2 rounded-full transition-all">settings</button>
+<img alt="User profile" class="w-8 h-8 rounded-full border border-outline-variant/20" data-alt="professional headshot of a creative director in a neutral studio setting with soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuARd3bObil2QFpL8InsHCWYVEObr705vYf1qYxJolJpCZRoTsOInVjkQMLVu12WHuuXVR_nvmKdZuw2ebkUu7G-y4jH_d3esLOusAZhIw6fLxN1DIhC9xFZpvS9-8NEX_S0HAGVM61s0tWks6RqstWMuJ2_QmiXhxRj3ZRrNMGwCL8EqOaEBDDv4C2sVI4Gk-ppRGA5b3-lOwueI-RvWQqwzdAwb1081KXw4y4ynIx-YZ0F6vx4CC4HzhcenzfAw5DmPgOXBSyRbX0e"/>
+</div>
+</header>
+<div class="flex h-[calc(100vh-64px)] overflow-hidden">
+<!-- SideNavBar Implementation from JSON -->
+<aside class="hidden md:flex flex-col h-full py-6 space-y-2 bg-slate-50 dark:bg-slate-950 h-screen w-64 border-r-0 bg-slate-50 dark:bg-slate-900 transition-all duration-200 ease-out">
+<div class="px-6 mb-6">
+<h2 class="text-lg font-bold text-slate-900 dark:text-slate-100">ECH Workspace</h2>
+<p class="font-['Inter'] label-md uppercase tracking-widest text-slate-500 text-[10px]">Global Operations</p>
+</div>
+<div class="flex-1 px-4 space-y-1">
+<a class="text-slate-600 dark:text-slate-400 flex items-center gap-3 px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all" href="#">
+<span class="material-symbols-outlined">forum</span>
+<span class="font-['Inter'] label-md uppercase tracking-widest text-xs">Threads</span>
+</a>
+<a class="text-slate-600 dark:text-slate-400 flex items-center gap-3 px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all" href="#">
+<span class="material-symbols-outlined">account_tree</span>
+<span class="font-['Inter'] label-md uppercase tracking-widest text-xs">Organization</span>
+</a>
+<a class="bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm rounded-lg flex items-center gap-3 px-4 py-3 ml-2 border-l-4 border-indigo-600" href="#">
+<span class="material-symbols-outlined">view_kanban</span>
+<span class="font-['Inter'] label-md uppercase tracking-widest text-xs">Kanban</span>
+</a>
+<a class="text-slate-600 dark:text-slate-400 flex items-center gap-3 px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all" href="#">
+<span class="material-symbols-outlined">folder_open</span>
+<span class="font-['Inter'] label-md uppercase tracking-widest text-xs">Files</span>
+</a>
+<a class="text-slate-600 dark:text-slate-400 flex items-center gap-3 px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all" href="#">
+<span class="material-symbols-outlined">insert_chart</span>
+<span class="font-['Inter'] label-md uppercase tracking-widest text-xs">Analytics</span>
+</a>
+</div>
+<div class="px-4 mt-auto">
+<button class="w-full bg-gradient-to-br from-primary to-primary-container text-white py-3 rounded-xl font-semibold shadow-lg shadow-primary/20 hover:scale-[1.02] transition-transform active:scale-95">
+          New Initiative
+        </button>
+</div>
+</aside>
+<!-- Main Content: Threaded Discussion Modal Area -->
+<main class="flex-1 bg-surface-container-low p-4 md:p-8 flex items-center justify-center relative">
+<!-- Modal Container -->
+<div class="max-w-4xl w-full h-full max-h-[800px] bg-surface-container-lowest rounded-xl shadow-2xl flex flex-col overflow-hidden relative border border-outline-variant/10">
+<!-- Modal Header -->
+<div class="px-8 py-6 flex items-center justify-between border-b border-outline-variant/5">
+<div>
+<h1 class="headline-md font-bold text-on-surface tracking-tight">Threaded Discussion</h1>
+<p class="text-on-surface-variant text-sm">Reviewing Project Chronos Milestones</p>
+</div>
+<button class="material-symbols-outlined text-on-surface-variant hover:bg-surface-container p-2 rounded-full transition-all">close</button>
+</div>
+<!-- Thread Content -->
+<div class="flex-1 overflow-y-auto p-8 space-y-8">
+<!-- Original Message -->
+<div class="flex gap-4 group">
+<div class="relative">
+<img alt="Team Lead" class="w-12 h-12 rounded-lg object-cover" data-alt="portrait of a confident man with a beard wearing a charcoal sweater in a minimalist modern office setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUHabfoJgNQhaK4MZrz_U3LWDdKSI89mkJPT4We83p7atQxPiptbYzZt0LbeORpPy33VF5Xkr0SGoyMosKKwHC9EVB8VRHP5byt4b60q3gnX1remFIyKUSw6MHxgwPiKCDZ_8KZP1x2NCqAmbooogW_HMliaMEZHYw_foPg65cCx6tRNfEugPD1rx8B6wuRE-kX1SyikPhldoRF3CD-KZ943aOgeWBVtd_Q8b3iXID-dDiOdsOR2iCucjiu0KtKxqZZ9W3HTYMFFKZ"/>
+<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-tertiary rounded-full border-2 border-surface-container-lowest flex items-center justify-center">
+<div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+</div>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-2 mb-1">
+<span class="font-bold text-on-surface">Alex Rivera</span>
+<span class="text-on-surface-variant text-xs font-medium">10:42 AM</span>
+</div>
+<div class="bg-surface-container-high rounded-xl rounded-tl-none p-4 text-on-surface leading-relaxed shadow-sm">
+                Has anyone reviewed the final shader performance metrics for the Chronos dashboard? We need to finalize the visual fidelity pass by EOD. I've attached the latest profiling report for the atmospheric effects.
+              </div>
+<div class="mt-3 flex gap-2">
+<button class="flex items-center gap-1.5 px-3 py-1 bg-surface-container-highest rounded-full text-xs font-medium text-on-surface-variant hover:bg-primary-container hover:text-on-primary-container transition-colors">
+<span class="material-symbols-outlined text-sm">description</span>
+                  profiling_v4.pdf
+                </button>
+</div>
+</div>
+</div>
+<!-- Divider -->
+<div class="flex items-center gap-4 py-2">
+<div class="h-[1px] flex-1 bg-outline-variant/20"></div>
+<span class="text-[10px] font-bold uppercase tracking-widest text-outline">3 Replies</span>
+<div class="h-[1px] flex-1 bg-outline-variant/20"></div>
+</div>
+<!-- Replies -->
+<div class="space-y-6 pl-8 border-l-2 border-surface-container-high ml-6">
+<!-- Reply 1 -->
+<div class="flex gap-4">
+<img alt="Sarah Chen" class="w-10 h-10 rounded-lg object-cover" data-alt="close up profile of a woman smiling with warm cinematic lighting and a blurred bokeh background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCgxZEqUutlDpYp88fzqdb35JrLpK4avnHftL-gdcnfPUE-4UTXPHwKXgk3Yp7OPJ64HaD5aFSl0SjGHVYung5jr-5L6mWpii7RRbzPtDggjZ2eLis-BxJTVbZSsHHO6oFfSFild-R137n0VToJa84sjKBlSWGmbsarsMrDydEUk3VChRLorcoSYYa8yXyPi4x1Lm0UYYhZ8gbvtJ7QZHP83ez5-ei0Q74DJn-b1wix38O8qxqXh9o0_xWjTrDRWU28VwsbMj8oND32"/>
+<div class="flex-1">
+<div class="flex items-center gap-2 mb-1">
+<span class="font-semibold text-on-surface text-sm">Sarah Chen</span>
+<span class="text-on-surface-variant text-[10px] font-medium uppercase tracking-tighter">11:05 AM</span>
+</div>
+<div class="bg-surface-container rounded-xl rounded-tl-none p-4 text-on-surface text-sm leading-relaxed border border-outline-variant/5">
+                  Looking at it now, Alex. The draw calls are peaking during the volumetric lighting transition. I'm tweaking the stencil buffer to optimize.
+                </div>
+</div>
+</div>
+<!-- Reply 2 -->
+<div class="flex gap-4">
+<img alt="Marcus Volt" class="w-10 h-10 rounded-lg object-cover" data-alt="young man with glasses looking directly at camera with neutral expression in soft window light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdPeYU400V1cf_06AO8sB6EUHwh-4OdLQKQKYMtYKHys9x_TiccpvdK_pmtqLu8E_zWViiPHlYJBh74lqfFCTKNSPy8Jz7nN80CEhGOHXvnQxVOiik0J__c-N_aA6GxbCL2diT8uNST7jA3aAqQbZimpxoYAp2l_e1CJuDURaZR66dpHKVXCEfbO854IxZRBJnaNSbSqREwCpX-s9aUIwbj8XhhhG6V6VQNSKQeODOGivGTLSah7zQWuNLko3ZlxkBM_h1FgeL8nTG"/>
+<div class="flex-1">
+<div class="flex items-center gap-2 mb-1">
+<span class="font-semibold text-on-surface text-sm">Marcus Volt</span>
+<span class="text-on-surface-variant text-[10px] font-medium uppercase tracking-tighter">11:12 AM</span>
+</div>
+<div class="bg-surface-container rounded-xl rounded-tl-none p-4 text-on-surface text-sm leading-relaxed border border-outline-variant/5">
+                  The stencil buffer fix should help, but Sarah, can we also check the MipMap generation? I noticed some shimmering at lower resolutions.
+                </div>
+<div class="mt-2 flex gap-4">
+<button class="text-primary font-bold text-[10px] uppercase tracking-widest flex items-center gap-1 hover:underline">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">favorite</span>
+                    2
+                  </button>
+<button class="text-on-surface-variant font-bold text-[10px] uppercase tracking-widest flex items-center gap-1 hover:text-on-surface">
+                    Reply
+                  </button>
+</div>
+</div>
+</div>
+<!-- Reply 3 (Self/Input State) -->
+<div class="flex gap-4">
+<img alt="Me" class="w-10 h-10 rounded-lg object-cover" data-alt="professional headshot of a creative director in a neutral studio setting with soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCPQNoMfmbb1zkGgHFOdeogmIG9nwBRSH-U3w6EQI4JMWaGz6lODhnv4Kbj6NZmJvRbXuWHb1mvzU14mFHwnPpKn95b0w7wqBZIOXd25uMV_eftaDHigkH08Txkcpp2setWLsnSJBFdsKh5Ji0hQg-EjUGLhEcltL1kTAsQ-YJDrmXJWYWrgjZ47GxxbiYhyI3D84zhsOLWMDWaKfF3szGLk0hLE_-WqLzaDBkinm7FOWdfTBipwNGPiMGNadsUfSO9th3hLETniDcM"/>
+<div class="flex-1">
+<div class="flex items-center gap-2 mb-1">
+<span class="font-semibold text-on-surface text-sm">You</span>
+<span class="text-on-surface-variant text-[10px] font-medium uppercase tracking-tighter">Just now</span>
+</div>
+<div class="bg-primary/5 rounded-xl rounded-tl-none p-4 text-on-surface text-sm leading-relaxed border border-primary/20 italic">
+                  Typing...
+                </div>
+</div>
+</div>
+</div>
+</div>
+<!-- Modal Footer / Input Area -->
+<div class="p-6 bg-surface-container-low border-t border-outline-variant/10">
+<div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-outline-variant/20 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+<textarea class="w-full bg-transparent border-none focus:ring-0 text-sm resize-none h-24 placeholder:text-outline" placeholder="Write a response to this thread..."></textarea>
+<div class="flex items-center justify-between mt-4">
+<div class="flex items-center gap-2">
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary p-2 hover:bg-surface-container rounded-lg transition-all">format_bold</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary p-2 hover:bg-surface-container rounded-lg transition-all">format_italic</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary p-2 hover:bg-surface-container rounded-lg transition-all">link</button>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary p-2 hover:bg-surface-container rounded-lg transition-all">attach_file</button>
+<div class="w-[1px] h-6 bg-outline-variant/20 mx-2"></div>
+<button class="material-symbols-outlined text-on-surface-variant hover:text-primary p-2 hover:bg-surface-container rounded-lg transition-all">mood</button>
+</div>
+<button class="bg-gradient-to-br from-primary to-primary-container text-on-primary font-bold px-6 py-2 rounded-lg flex items-center gap-2 shadow-lg shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all">
+                Send
+                <span class="material-symbols-outlined text-sm">send</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Floating Backdrop Elements for Aesthetic Depth -->
+<div class="absolute top-20 right-20 w-64 h-64 bg-indigo-200/20 blur-3xl rounded-full -z-10"></div>
+<div class="absolute bottom-20 left-20 w-48 h-48 bg-blue-200/20 blur-3xl rounded-full -z-10"></div>
+</main>
+</div>
+<!-- Mobile Navigation implementation -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-outline-variant/10 flex items-center justify-around px-4 z-50">
+<button class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined">forum</span>
+<span class="text-[10px] font-bold">Threads</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">view_kanban</span>
+<span class="text-[10px] font-bold">Kanban</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined">folder_open</span>
+<span class="text-[10px] font-bold">Files</span>
+</button>
+<button class="flex flex-col items-center gap-1 text-on-surface-variant">
+<img alt="User profile" class="w-6 h-6 rounded-full" data-alt="professional headshot of a creative director in a neutral studio setting with soft lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuASr_6au8HGqymd-X6wYMzwYe4DQtDYqGXfun6tN0WeXQW9Syyzup9IB5jkL_W5RukFjHYcotN7uCjeq3aySwAo1tThya0UYP1ZXDJXCLI0FiynPS0c9o6wAv9G24Hlkki2pGyXIdTiHbtDkgUqVFW2tyx86d7LVn_6ZyvIyh1oRE2sSTwyk-8fqbKtznlDRGIoaOd42mnynNeltYEyoq6jMSZ4vC-gNqG9acATGfs_KPlgEs7rIbcjP2sTROyJzte4hZusgpiQrqbu"/>
+<span class="text-[10px] font-bold">Me</span>
+</button>
+</nav>
+</body></html>

@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Enterprise Hub - Settings</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-dim": "#005980",
+                        "inverse-surface": "#0b0f10",
+                        "surface-dim": "#d4dbdf",
+                        "tertiary": "#006592",
+                        "primary-container": "#6760fd",
+                        "primary-fixed": "#6760fd",
+                        "on-secondary-fixed": "#314055",
+                        "on-background": "#2c3437",
+                        "secondary-container": "#d3e4fe",
+                        "outline-variant": "#acb3b7",
+                        "on-surface": "#2c3437",
+                        "surface-container-low": "#f0f4f7",
+                        "inverse-on-surface": "#9a9d9f",
+                        "error-dim": "#6b0221",
+                        "secondary-fixed": "#d3e4fe",
+                        "surface-container": "#eaeff2",
+                        "background": "#f7f9fb",
+                        "secondary-dim": "#44546a",
+                        "on-error-container": "#6e0523",
+                        "surface-tint": "#4e45e4",
+                        "on-secondary-fixed-variant": "#4d5d73",
+                        "primary-dim": "#4135d8",
+                        "on-tertiary-fixed-variant": "#003954",
+                        "on-primary-fixed-variant": "#edeaff",
+                        "on-surface-variant": "#596064",
+                        "on-tertiary-container": "#003047",
+                        "on-secondary": "#f7f9ff",
+                        "surface": "#f7f9fb",
+                        "error-container": "#f97386",
+                        "surface-variant": "#dce4e8",
+                        "on-primary-fixed": "#ffffff",
+                        "primary-fixed-dim": "#5a52f0",
+                        "surface-bright": "#f7f9fb",
+                        "on-primary": "#fbf7ff",
+                        "surface-container-highest": "#dce4e8",
+                        "outline": "#747c80",
+                        "tertiary-fixed-dim": "#17a8ec",
+                        "on-tertiary-container": "#000000",
+                        "inverse-primary": "#8582ff",
+                        "on-tertiary-fixed": "#00121e",
+                        "on-error": "#fff7f7",
+                        "tertiary-container": "#34b5fa",
+                        "on-secondary-container": "#435368",
+                        "error": "#a8364b",
+                        "surface-container-high": "#e3e9ed",
+                        "secondary": "#506076",
+                        "primary": "#4e45e4",
+                        "secondary-fixed-dim": "#c5d6f0",
+                        "tertiary-fixed": "#34b5fa",
+                        "on-tertiary": "#f5f9ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    }
+                },
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface selection:bg-primary-container selection:text-on-primary-container">
+<!-- Sidebar Shell (Mapped from Shared Component SideNavBar) -->
+<aside class="fixed left-0 top-0 h-screen w-72 flex flex-col py-4 px-4 overflow-y-auto bg-slate-100 dark:bg-slate-900 z-40">
+<div class="flex items-center gap-3 px-3 mb-8">
+<div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary">hub</span>
+</div>
+<div>
+<h2 class="text-lg font-black text-indigo-600 dark:text-indigo-400">Admin Console</h2>
+<p class="text-[10px] uppercase tracking-[0.1em] text-on-surface-variant font-bold">Enterprise Edition</p>
+</div>
+</div>
+<nav class="flex-1 space-y-2">
+<div class="flex items-center gap-3 text-slate-600 dark:text-slate-400 px-3 py-2 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-200 rounded-lg group cursor-pointer">
+<span class="material-symbols-outlined">group</span>
+<span class="font-['Inter'] text-sm tracking-wide">User Management</span>
+</div>
+<div class="flex items-center gap-3 text-slate-600 dark:text-slate-400 px-3 py-2 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-200 rounded-lg group cursor-pointer">
+<span class="material-symbols-outlined">shield_person</span>
+<span class="font-['Inter'] text-sm tracking-wide">Roles &amp; Permissions</span>
+</div>
+<div class="flex items-center gap-3 text-slate-600 dark:text-slate-400 px-3 py-2 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-200 rounded-lg group cursor-pointer">
+<span class="material-symbols-outlined">monitor_heart</span>
+<span class="font-['Inter'] text-sm tracking-wide">System Health</span>
+</div>
+<div class="flex items-center gap-3 text-slate-600 dark:text-slate-400 px-3 py-2 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-200 rounded-lg group cursor-pointer">
+<span class="material-symbols-outlined">insights</span>
+<span class="font-['Inter'] text-sm tracking-wide">Analytics</span>
+</div>
+<div class="flex items-center gap-3 text-indigo-700 dark:text-indigo-300 bg-slate-200/50 dark:bg-slate-800/50 rounded-lg px-3 py-2 border-l-4 border-indigo-600">
+<span class="material-symbols-outlined">settings_suggest</span>
+<span class="font-['Inter'] text-sm tracking-wide">Settings</span>
+</div>
+</nav>
+<div class="mt-auto space-y-2">
+<button class="w-full bg-surface-container-highest text-on-surface text-sm font-semibold py-2 rounded-lg hover:bg-surface-variant transition-colors mb-4">
+                View Logs
+            </button>
+<div class="flex items-center gap-3 text-slate-600 dark:text-slate-400 px-3 py-2 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-200 cursor-pointer">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-['Inter'] text-sm tracking-wide">Documentation</span>
+</div>
+<div class="flex items-center gap-3 text-slate-600 dark:text-slate-400 px-3 py-2 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all duration-200 cursor-pointer">
+<span class="material-symbols-outlined">contact_support</span>
+<span class="font-['Inter'] text-sm tracking-wide">Support</span>
+</div>
+</div>
+</aside>
+<!-- Header Shell (Mapped from Shared Component TopNavBar) -->
+<header class="ml-72 flex justify-between items-center px-8 w-full h-16 sticky top-0 z-30 bg-slate-50 dark:bg-slate-950">
+<div class="flex items-center gap-6">
+<h1 class="text-xl font-bold tracking-tighter text-slate-900 dark:text-slate-50">Enterprise Hub</h1>
+<div class="relative w-80">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm">search</span>
+<input class="w-full bg-surface-container-high text-sm border-none rounded-lg pl-10 py-2 focus:ring-2 focus:ring-primary/20 placeholder:text-outline-variant" placeholder="Global system search..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center">
+<button class="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors"><span class="material-symbols-outlined">help</span></button>
+<button class="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full ring-2 ring-slate-50"></span>
+</button>
+<button class="p-2 text-slate-500 hover:bg-slate-100 rounded-full transition-colors"><span class="material-symbols-outlined">apps</span></button>
+</div>
+<div class="h-8 w-[1px] bg-outline-variant/30"></div>
+<button class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 active:scale-95 transition-all">
+                Invite User
+            </button>
+<div class="w-10 h-10 rounded-full bg-surface-container overflow-hidden">
+<img alt="Administrator Profile" class="w-full h-full object-cover" data-alt="Professional headshot of a senior corporate executive in a business suit with neutral grey studio background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBCKzytcRx0sJMOgC_Yf4rHHyfhVOn9QZkxnQq9ibi0h5p-tmiPCyFwbWH4ozrd_PrGdf8wXTIceaDq2X4GqF6VlSJifuY5gVexi76ta4wpu1z-x6fcx2aMH_ziIRHJlrfJKghUxyAeMziGNln7OXAL3GHF2i1JJh4PwHfjrgYwcZw0K8Amsy5dEQAOBTu-cXCPTcEyV6A0fOobyoPl5y05cJF1JkrDSw6x8hpbrIdqnJg8kUVfRuswe4YodXGsRIPGWFm-DEkdeyti"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-72 p-10 min-h-screen">
+<div class="max-w-4xl mx-auto">
+<!-- Breadcrumbs -->
+<nav class="flex items-center gap-2 text-xs font-medium text-outline-variant mb-4 tracking-widest uppercase">
+<span>Enterprise Hub</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span>Admin Console</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="text-on-surface">Application Settings</span>
+</nav>
+<header class="mb-12">
+<h2 class="text-4xl font-extrabold tracking-tight text-on-surface mb-2">System Preferences</h2>
+<p class="text-on-surface-variant max-w-2xl">Configure global application parameters, file storage protocols, and visual branding standards for the workspace.</p>
+</header>
+<!-- Bento Grid Settings Sections -->
+<div class="grid grid-cols-1 md:grid-cols-6 gap-6">
+<!-- General Storage Bento -->
+<div class="md:col-span-4 bg-surface-container-lowest rounded-xl p-6 transition-all border border-outline-variant/10">
+<div class="flex items-center gap-3 mb-8">
+<div class="p-2 bg-primary/5 rounded-lg">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">storage</span>
+</div>
+<h3 class="font-bold text-lg">Storage Architecture</h3>
+</div>
+<div class="space-y-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-1.5">
+<label class="text-xs font-bold uppercase tracking-wider text-outline-variant">Base Directory</label>
+<div class="relative">
+<input class="w-full bg-surface-container-high border-none rounded-lg px-4 py-2.5 font-mono text-sm focus:ring-2 focus:ring-primary/20" type="text" value="/var/www/enterprise/data"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-primary text-xs font-semibold">Change</button>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="text-xs font-bold uppercase tracking-wider text-outline-variant">Max File Size (MB)</label>
+<input class="w-full bg-surface-container-high border-none rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary/20" type="number" value="1024"/>
+</div>
+</div>
+<div class="flex items-center justify-between p-4 bg-surface-container-low rounded-lg">
+<div>
+<h4 class="text-sm font-semibold">Auto-Sync Subdirectories</h4>
+<p class="text-xs text-on-surface-variant">Enable real-time background indexing of new file structures.</p>
+</div>
+<div class="w-12 h-6 bg-primary rounded-full relative cursor-pointer">
+<div class="absolute right-1 top-1 w-4 h-4 bg-white rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Quick Stats Bento -->
+<div class="md:col-span-2 bg-surface-container-lowest rounded-xl p-6 transition-all border border-outline-variant/10 flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-3 mb-6">
+<div class="p-2 bg-tertiary/10 rounded-lg">
+<span class="material-symbols-outlined text-tertiary">analytics</span>
+</div>
+<h3 class="font-bold text-lg">Health Status</h3>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between items-center text-sm">
+<span class="text-on-surface-variant">DB Connectivity</span>
+<span class="text-tertiary font-bold flex items-center gap-1">
+<span class="w-2 h-2 bg-tertiary rounded-full shadow-[0_0_8px_rgba(0,101,146,0.5)]"></span>
+                                    Operational
+                                </span>
+</div>
+<div class="flex justify-between items-center text-sm">
+<span class="text-on-surface-variant">Disk Usage</span>
+<span class="font-medium text-on-surface">42% (512 GB)</span>
+</div>
+</div>
+</div>
+<button class="w-full mt-6 py-2 border border-outline-variant/30 rounded-lg text-sm font-semibold hover:bg-surface-container-low transition-colors">
+                        Run Diagnostics
+                    </button>
+</div>
+<!-- Security Bento -->
+<div class="md:col-span-3 bg-surface-container-lowest rounded-xl p-6 transition-all border border-outline-variant/10">
+<div class="flex items-center gap-3 mb-6">
+<div class="p-2 bg-error/5 rounded-lg">
+<span class="material-symbols-outlined text-error">policy</span>
+</div>
+<h3 class="font-bold text-lg">Access Governance</h3>
+</div>
+<div class="space-y-4">
+<div class="flex items-start gap-4">
+<input checked="" class="mt-1 rounded text-primary focus:ring-primary/20 bg-surface-container-high border-none h-4 w-4" type="checkbox"/>
+<div>
+<h4 class="text-sm font-semibold">Enforce MFA</h4>
+<p class="text-xs text-on-surface-variant">Require multi-factor authentication for all privileged sessions.</p>
+</div>
+</div>
+<div class="flex items-start gap-4">
+<input class="mt-1 rounded text-primary focus:ring-primary/20 bg-surface-container-high border-none h-4 w-4" type="checkbox"/>
+<div>
+<h4 class="text-sm font-semibold">Session Heartbeat</h4>
+<p class="text-xs text-on-surface-variant">Automatically terminate idle sessions after 30 minutes.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Theme Selection Teaser Bento -->
+<div class="md:col-span-3 bg-gradient-to-br from-primary to-primary-container rounded-xl p-6 transition-all text-white flex flex-col justify-between">
+<div>
+<div class="flex items-center gap-3 mb-4">
+<div class="p-2 bg-white/20 rounded-lg">
+<span class="material-symbols-outlined text-white">palette</span>
+</div>
+<h3 class="font-bold text-lg">Visual Branding</h3>
+</div>
+<p class="text-primary-fixed-dim text-sm font-medium leading-relaxed">Customize the workspace environment to match your corporate identity or preferred focus mode.</p>
+</div>
+<button class="w-fit bg-white text-primary px-5 py-2 rounded-lg text-sm font-bold shadow-lg active:scale-95 transition-all">
+                        Change Theme
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Theme Selection Modal Overlay -->
+<div class="fixed inset-0 z-50 flex items-center justify-center p-6 bg-inverse-surface/40 backdrop-blur-md">
+<div class="bg-surface-container-lowest w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+<!-- Modal Header -->
+<div class="flex items-center justify-between p-6 border-b border-outline-variant/10">
+<div>
+<h2 class="text-2xl font-bold tracking-tight text-on-surface">Visual Appearance</h2>
+<p class="text-sm text-on-surface-variant">Set your preferred workspace atmosphere and theme mode.</p>
+</div>
+<button class="p-2 hover:bg-surface-container rounded-full transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Modal Content -->
+<div class="p-8">
+<div class="grid grid-cols-2 gap-8">
+<!-- Light Mode Selection -->
+<div class="group cursor-pointer">
+<div class="relative aspect-[16/10] rounded-xl border-2 border-primary overflow-hidden mb-4 shadow-xl shadow-primary/5">
+<div class="absolute inset-0 bg-white p-3 space-y-2">
+<div class="h-2 w-1/2 bg-slate-200 rounded"></div>
+<div class="grid grid-cols-3 gap-2">
+<div class="h-12 bg-slate-100 rounded"></div>
+<div class="h-12 bg-slate-100 rounded"></div>
+<div class="h-12 bg-slate-100 rounded"></div>
+</div>
+<div class="h-16 bg-primary/10 border-2 border-primary/20 rounded-lg flex items-center justify-center">
+<span class="w-3 h-3 bg-primary rounded-full"></span>
+</div>
+</div>
+<div class="absolute top-2 right-2 bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</div>
+<h4 class="text-center font-bold text-on-surface">Atmospheric Day</h4>
+<p class="text-center text-xs text-on-surface-variant">High clarity and contrast for bright workspaces.</p>
+</div>
+<!-- Dark Mode Selection -->
+<div class="group cursor-pointer">
+<div class="relative aspect-[16/10] rounded-xl border-2 border-transparent hover:border-outline-variant/30 overflow-hidden mb-4 transition-all">
+<div class="absolute inset-0 bg-slate-900 p-3 space-y-2">
+<div class="h-2 w-1/2 bg-slate-700 rounded"></div>
+<div class="grid grid-cols-3 gap-2">
+<div class="h-12 bg-slate-800 rounded"></div>
+<div class="h-12 bg-slate-800 rounded"></div>
+<div class="h-12 bg-slate-800 rounded"></div>
+</div>
+<div class="h-16 bg-indigo-500/10 border-2 border-indigo-500/20 rounded-lg flex items-center justify-center">
+<div class="w-3 h-3 bg-indigo-400 rounded-full"></div>
+</div>
+</div>
+</div>
+<h4 class="text-center font-bold text-on-surface">Midnight Sanctuary</h4>
+<p class="text-center text-xs text-on-surface-variant">Deep tones reduced eye strain in low-light environments.</p>
+</div>
+</div>
+<!-- Secondary Theme Options -->
+<div class="mt-10 pt-8 border-t border-outline-variant/10">
+<h5 class="text-xs font-bold uppercase tracking-[0.2em] text-outline-variant mb-6">Accent Color Palette</h5>
+<div class="flex items-center gap-4">
+<button class="w-8 h-8 rounded-full bg-indigo-600 ring-4 ring-indigo-600/20 ring-offset-2 ring-offset-surface-container-lowest"></button>
+<button class="w-8 h-8 rounded-full bg-emerald-600 hover:scale-110 transition-transform"></button>
+<button class="w-8 h-8 rounded-full bg-amber-500 hover:scale-110 transition-transform"></button>
+<button class="w-8 h-8 rounded-full bg-rose-500 hover:scale-110 transition-transform"></button>
+<button class="w-8 h-8 rounded-full bg-sky-500 hover:scale-110 transition-transform"></button>
+<div class="ml-auto flex items-center gap-2 px-3 py-1.5 bg-surface-container rounded-full text-xs font-semibold">
+<span class="material-symbols-outlined text-sm">schedule</span>
+                            Sync with System
+                        </div>
+</div>
+</div>
+</div>
+<!-- Modal Footer -->
+<div class="bg-surface-container p-6 flex justify-end gap-3">
+<button class="px-6 py-2 rounded-lg text-sm font-semibold text-on-surface hover:bg-surface-container-high transition-colors">
+                    Discard changes
+                </button>
+<button class="bg-primary text-white px-8 py-2 rounded-lg text-sm font-bold shadow-lg shadow-primary/20 active:scale-95 transition-all">
+                    Apply Preferences
+                </button>
+</div>
+</div>
+</div>
+<!-- Background Decoration -->
+<div class="fixed top-0 right-0 -z-10 w-1/3 h-1/3 bg-primary/5 blur-[120px] rounded-full pointer-events-none"></div>
+<div class="fixed bottom-0 left-0 -z-10 w-1/4 h-1/4 bg-tertiary/5 blur-[100px] rounded-full pointer-events-none"></div>
+</body></html>
