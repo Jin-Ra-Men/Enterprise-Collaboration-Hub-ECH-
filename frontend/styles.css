@@ -2491,6 +2491,22 @@ html:not([data-theme="light"]) .msg-date-pill {
   background: rgba(0, 0, 0, 0.88);
   padding: 20px;
 }
+html[data-theme="light"] .modal-overlay.modal-image-preview {
+  background: color-mix(in srgb, var(--inverse-surface, #0b0f10) 82%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+html[data-theme="light"] .modal-overlay.modal-image-preview .image-preview-close {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #f8fafc;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+html[data-theme="light"] .image-preview-caption {
+  color: rgba(248, 250, 252, 0.92);
+}
 .image-preview-shell {
   position: relative;
   max-width: min(96vw, 1200px);
@@ -2928,6 +2944,28 @@ html[data-theme="light"] .mention-suggest-item:hover {
   border-color: color-mix(in srgb, var(--text-muted) 45%, var(--border-subtle));
   cursor: default;
   pointer-events: auto;
+}
+html[data-theme="light"] .mention-toast {
+  border: none;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow:
+    0 16px 48px rgba(44, 52, 55, 0.14),
+    0 6px 22px rgba(78, 69, 228, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
+html[data-theme="light"] .mention-toast-title {
+  letter-spacing: var(--ech-tracking-label, 0.05em);
+}
+html[data-theme="light"] .mention-toast-notice {
+  border: none;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow:
+    0 8px 24px rgba(44, 52, 55, 0.08),
+    inset 0 0 0 1px color-mix(in srgb, var(--outline-variant, #acb3b7) 18%, transparent);
+  border-radius: 10px;
+  padding: 12px 14px;
 }
 
 .msg-mention {
@@ -3809,8 +3847,31 @@ html[data-theme="light"] .btn-secondary:hover {
   color: var(--accent);
   background: rgba(167, 139, 250, 0.12);
 }
+html[data-theme="light"] .theme-option-btn {
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 4px 16px rgba(44, 52, 55, 0.06),
+    inset 0 0 0 1px color-mix(in srgb, var(--outline-variant, #acb3b7) 22%, transparent);
+  border-radius: 12px;
+}
+html[data-theme="light"] .theme-option-btn:hover {
+  border-color: transparent;
+  box-shadow:
+    0 6px 20px rgba(44, 52, 55, 0.08),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 32%, transparent);
+}
 html[data-theme="light"] .theme-option-btn.active {
-  background: rgba(99, 102, 241, 0.12);
+  border: none;
+  color: var(--accent);
+  background: linear-gradient(145deg, rgba(78, 69, 228, 0.12), rgba(103, 96, 253, 0.08));
+  box-shadow:
+    inset 0 0 0 2px rgba(78, 69, 228, 0.35),
+    0 6px 22px rgba(78, 69, 228, 0.14);
+}
+html[data-theme="light"] #modalThemePicker .modal-header h3 {
+  letter-spacing: var(--ech-tracking-headline, -0.02em);
+  font-weight: 800;
 }
 /* 사용자 검색 */
 .member-search-wrap { display: flex; gap: 8px; margin-bottom: 10px; }
@@ -3843,6 +3904,14 @@ html[data-theme="light"] .theme-option-btn.active {
   border-radius: 8px;
   margin-bottom: 10px;
   background: var(--bg-input);
+}
+html[data-theme="light"] .user-search-results {
+  border: none;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--outline-variant, #acb3b7) 20%, transparent),
+    0 6px 20px rgba(44, 52, 55, 0.06);
+  border-radius: 10px;
 }
 .user-search-item {
   display: flex;
@@ -4149,6 +4218,28 @@ html[data-theme="light"] .search-item-clickable:hover {
   background: var(--bg-sidebar-hover, rgba(124, 58, 237, 0.12));
   border-color: var(--accent);
   color: var(--text-primary);
+}
+html[data-theme="light"] .file-hub-tabs {
+  border-bottom: none;
+  box-shadow: inset 0 -1px 0 var(--ghost-outline);
+}
+html[data-theme="light"] .file-hub-tab {
+  border: none;
+  background: color-mix(in srgb, var(--surface-container-low, #f0f4f7) 88%, #ffffff 12%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--outline-variant, #acb3b7) 22%, transparent);
+  border-radius: 10px;
+}
+html[data-theme="light"] .file-hub-tab:hover {
+  border-color: transparent;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+html[data-theme="light"] .file-hub-tab.active {
+  border: none;
+  background: color-mix(in srgb, var(--primary, #4e45e4) 10%, #ffffff 90%);
+  color: var(--accent);
+  box-shadow:
+    inset 0 0 0 2px rgba(78, 69, 228, 0.28),
+    0 4px 16px rgba(78, 69, 228, 0.12);
 }
 .file-hub-pane {
   min-height: 120px;
