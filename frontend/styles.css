@@ -4653,28 +4653,17 @@ html:not([data-theme="light"]) .modal-work-hub.ech-workhub-shell {
   display: block;
   padding: 12px 16px 16px;
 }
-/* 업무 항목 → 칸반 보드: 기본 세로 스택, 넓은 뷰에서 좌우 2열 */
+/* 업무 항목(위) → 칸반 보드(아래): 항상 세로 스택 — 칸반 컬럼 가로 공간 확보 */
 .work-hub-body {
   display: flex;
   flex-direction: column;
-  gap: 40px;
+  gap: 28px;
   align-items: stretch;
   width: 100%;
   min-width: 0;
 }
-@media (min-width: 960px) {
-  .work-hub-body.work-hub-body--split {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    align-items: start;
-  }
-  .work-hub-body.work-hub-body--split > .work-hub-panel + .work-hub-panel {
-    margin-top: 0;
-  }
-}
 .work-hub-body > .work-hub-panel + .work-hub-panel {
-  margin-top: 4px;
+  margin-top: 0;
 }
 .work-hub-panel {
   border: 1px solid var(--border-subtle);
