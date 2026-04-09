@@ -66,7 +66,7 @@
     <!-- ===================== 메인 앱 ===================== -->
     <div id="mainApp" class="app-layout hidden">
       <!-- design/ECH메인: 상단 글로벌 바 -->
-      <header id="appShellTopBar" class="app-shell-topbar" role="banner">
+      <header id="appShellTopBar" class="app-shell-topbar" role="banner" data-ech-design-ref="screen4-topbar">
         <div class="app-shell-topbar-left">
           <span class="app-shell-brand">ECH</span>
           <div class="app-shell-global-search">
@@ -82,7 +82,9 @@
           </div>
         </div>
         <nav class="app-shell-topbar-nav" aria-label="메인 메뉴">
-          <span class="app-shell-nav-active">대시보드</span>
+          <button type="button" class="app-shell-nav-link app-shell-nav-link--active">대시보드</button>
+          <button type="button" class="app-shell-nav-link">프로젝트</button>
+          <button type="button" class="app-shell-nav-link">팀</button>
         </nav>
         <div class="app-shell-topbar-right">
           <button type="button" class="app-shell-icon-btn" id="btnAppHeaderNotifications" title="알림" aria-label="알림">
@@ -1126,7 +1128,7 @@
       </div>
     </div>
 
-    <div id="modalThreadHub" class="modal-overlay hidden">
+    <div id="modalThreadHub" class="modal-overlay hidden" data-ech-design-ref="screen2-threadhub">
       <div class="modal modal-wide modal-thread-hub">
         <div class="modal-header">
           <h3>스레드 모아보기</h3>
@@ -1144,7 +1146,7 @@
       </div>
     </div>
 
-    <div id="modalWorkHub" class="modal-overlay hidden">
+    <div id="modalWorkHub" class="modal-overlay hidden" data-ech-design-ref="screen1-workhub">
       <div class="modal modal-wide modal-work-hub ech-workhub-shell">
         <div class="modal-header">
           <h3 id="workHubTitle">업무 · 칸반</h3>
@@ -1244,7 +1246,7 @@
       </div>
     </div>
 
-    <div id="modalKanbanCardDetail" class="modal-overlay hidden modal-stacked">
+    <div id="modalKanbanCardDetail" class="modal-overlay hidden modal-stacked" data-ech-design-ref="screen6-kanban-detail">
       <div class="modal modal-narrow">
         <div class="modal-header">
           <h3>칸반 카드 상세</h3>
@@ -1280,7 +1282,7 @@
     </div>
 
     <!-- ===================== 사용자 프로필 모달 · design/ECH화면설계 (9) 카드형 ===================== -->
-    <div id="modalUserProfile" class="modal-overlay hidden">
+    <div id="modalUserProfile" class="modal-overlay hidden" data-ech-design-ref="screen9-profile">
       <div class="modal modal-narrow ech-profile-modal" role="dialog" aria-labelledby="profileModalName">
         <div class="ech-profile-modal-inner">
           <button type="button" class="ech-profile-modal-close modal-close" data-modal="modalUserProfile" aria-label="닫기">✕</button>
