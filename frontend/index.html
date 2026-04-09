@@ -7,7 +7,25 @@
     <meta name="ech-api-base" content="" />
     <meta name="ech-realtime-url" content="" />
     <title>ECH — Enterprise Collaboration Hub</title>
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
+    <link id="echStylesheet" rel="stylesheet" href="./styles.css" />
+    <!-- 선택: npm run build:css 로 생성 시 유틸 보강용. 없어도 메인 대시보드는 styles.css만으로 동작 -->
+    <link id="echTailwindStylesheet" rel="stylesheet" href="./ech-tailwind.css" />
+    <script>
+      (function () {
+        try {
+          if (localStorage.getItem("ech_design_version") === "legacy") {
+            var el = document.getElementById("echStylesheet");
+            if (el) el.setAttribute("href", "./design-backup/legacy-design/styles.css");
+            var tw = document.getElementById("echTailwindStylesheet");
+            if (tw) tw.remove();
+          }
+        } catch (e) {}
+      })();
+    </script>
     <script>
       (function () {
         try {
@@ -47,7 +65,40 @@
 
     <!-- ===================== 메인 앱 ===================== -->
     <div id="mainApp" class="app-layout hidden">
+      <!-- design/ECH메인: 상단 글로벌 바 -->
+      <header id="appShellTopBar" class="app-shell-topbar" role="banner">
+        <div class="app-shell-topbar-left">
+          <span class="app-shell-brand">ECH</span>
+          <div class="app-shell-global-search">
+            <span class="material-symbols-outlined app-shell-search-glyph" aria-hidden="true">search</span>
+            <input
+              type="search"
+              id="appHeaderSearchInput"
+              class="app-shell-search-input"
+              placeholder="워크스페이스 검색…"
+              autocomplete="off"
+              aria-label="워크스페이스 검색"
+            />
+          </div>
+        </div>
+        <nav class="app-shell-topbar-nav" aria-label="메인 메뉴">
+          <span class="app-shell-nav-active">대시보드</span>
+        </nav>
+        <div class="app-shell-topbar-right">
+          <button type="button" class="app-shell-icon-btn" id="btnAppHeaderNotifications" title="알림" aria-label="알림">
+            <span class="material-symbols-outlined" aria-hidden="true">notifications</span>
+          </button>
+          <button type="button" class="app-shell-icon-btn" id="btnAppHeaderHelp" title="도움말" aria-label="도움말">
+            <span class="material-symbols-outlined" aria-hidden="true">help</span>
+          </button>
+          <button type="button" class="app-shell-icon-btn" id="btnAppHeaderTheme" title="테마 설정" aria-label="테마 설정">
+            <span class="material-symbols-outlined" aria-hidden="true">settings</span>
+          </button>
+          <div class="user-avatar app-shell-header-avatar" id="appHeaderAvatar">?</div>
+        </div>
+      </header>
 
+      <div class="app-shell-body">
       <!-- 채널/DM 사이드바(워크스페이스 ECH 단독 상단 · 퀵 레일은 검색~목록과 같은 세로 구간) + 돌출 접기 탭 -->
       <div class="sidebar-column" id="sidebarColumn">
         <div class="sidebar-slip">
@@ -189,19 +240,121 @@
       <!-- 오른쪽 채팅 영역 -->
       <main class="chat-area">
 
-        <!-- 채널 선택 전 기본 화면 -->
+        <!-- 채널 선택 전 기본 화면 (design/ECH메인 — styles.css .ech-welcome-* 로만 스타일, Tailwind 불필요) -->
         <div id="viewWelcome" class="view-welcome">
-          <div class="welcome-content">
-            <div class="welcome-icon">👋</div>
-            <h2>ECH에 오신 것을 환영합니다</h2>
-            <p>왼쪽 사이드바에서 채널을 선택하거나, <strong>+</strong> 버튼으로 새 채널을 만드세요.</p>
+          <div class="welcome-dashboard-inner ech-welcome-scroll">
+            <div class="ech-welcome-wrap">
+              <section class="ech-welcome-hero" aria-labelledby="welcomeHeroTitle">
+                <div class="ech-welcome-hero-content">
+                  <div class="ech-welcome-hero-title-row">
+                    <span class="ech-welcome-emoji" aria-hidden="true">👋</span>
+                    <h1 id="welcomeHeroTitle" class="ech-welcome-hero-title">Hello!</h1>
+                  </div>
+                  <p id="welcomeHeroLead" class="ech-welcome-hero-lead">
+                    Enterprise Collaboration Hub에 오신 것을 환영합니다. 왼쪽에서 <strong>채널·DM</strong>을 선택하거나, 아래 모듈로 바로 이동해 보세요.
+                  </p>
+                  <div class="ech-welcome-hero-actions">
+                    <button type="button" id="btnWelcomeFocusChannel" class="ech-welcome-btn ech-welcome-btn--primary">
+                      채널 목록으로
+                    </button>
+                    <button type="button" id="btnWelcomeFocusSearch" class="ech-welcome-btn ech-welcome-btn--ghost">
+                      검색 열기
+                    </button>
+                  </div>
+                </div>
+                <div class="ech-welcome-blob ech-welcome-blob--a" aria-hidden="true"></div>
+                <div class="ech-welcome-blob ech-welcome-blob--b" aria-hidden="true"></div>
+              </section>
+
+              <section class="ech-welcome-block">
+                <div class="ech-welcome-block-head">
+                  <div>
+                    <h2 class="ech-welcome-h2">시작하기</h2>
+                    <p class="ech-welcome-sub">주요 기능을 빠르게 살펴보세요.</p>
+                  </div>
+                  <button type="button" id="btnWelcomeFocusChannel2" class="ech-welcome-link-btn">
+                    <span>채널로 이동</span>
+                    <span class="material-symbols-outlined ech-welcome-icon-sm" aria-hidden="true">arrow_forward</span>
+                  </button>
+                </div>
+                <div class="ech-welcome-cards">
+                  <article id="welcomeCardThreads" role="button" tabindex="0" class="ech-welcome-card ech-welcome-card--threads">
+                    <div class="ech-welcome-card-icon-wrap ech-welcome-card-icon-wrap--primary">
+                      <span class="material-symbols-outlined" aria-hidden="true">chat_bubble</span>
+                    </div>
+                    <h3 class="ech-welcome-h3">스레드·채널</h3>
+                    <p class="ech-welcome-card-desc">채널과 DM에서 대화하고, 스레드로 맥락을 유지합니다.</p>
+                    <div class="ech-welcome-card-footer ech-welcome-card-footer--primary">
+                      <span>채널 열기</span>
+                      <span class="material-symbols-outlined ech-welcome-chevron" aria-hidden="true">chevron_right</span>
+                    </div>
+                  </article>
+                  <article id="welcomeCardKanban" role="button" tabindex="0" class="ech-welcome-card ech-welcome-card--kanban">
+                    <div class="ech-welcome-card-icon-wrap ech-welcome-card-icon-wrap--tertiary">
+                      <span class="material-symbols-outlined" aria-hidden="true">view_kanban</span>
+                    </div>
+                    <h3 class="ech-welcome-h3">업무·칸반</h3>
+                    <p class="ech-welcome-card-desc">채널 업무 허브에서 항목·칸반을 한 모달에서 관리합니다.</p>
+                    <div class="ech-welcome-card-footer ech-welcome-card-footer--tertiary">
+                      <span class="ech-welcome-card-footer-text">채널 선택 후 헤더 메뉴</span>
+                      <span class="material-symbols-outlined ech-welcome-chevron" aria-hidden="true">chevron_right</span>
+                    </div>
+                  </article>
+                  <article id="welcomeCardOrg" role="button" tabindex="0" class="ech-welcome-card ech-welcome-card--org">
+                    <div class="ech-welcome-card-icon-wrap ech-welcome-card-icon-wrap--slate">
+                      <span class="material-symbols-outlined" aria-hidden="true">corporate_fare</span>
+                    </div>
+                    <h3 class="ech-welcome-h3">조직·검색</h3>
+                    <p class="ech-welcome-card-desc">조직도와 통합 검색으로 멤버·대화를 찾습니다.</p>
+                    <div class="ech-welcome-card-footer ech-welcome-card-footer--slate">
+                      <span>조직도</span>
+                      <span class="material-symbols-outlined ech-welcome-chevron" aria-hidden="true">chevron_right</span>
+                    </div>
+                  </article>
+                </div>
+              </section>
+
+              <section class="ech-welcome-split">
+                <div class="ech-welcome-split-col">
+                  <h2 class="ech-welcome-h2 ech-welcome-h2--sm">바로가기</h2>
+                  <div class="ech-welcome-list-card">
+                    <div class="ech-welcome-list-row">
+                      <div class="ech-welcome-list-badge" aria-hidden="true">1</div>
+                      <div class="ech-welcome-list-text">
+                        <p class="ech-welcome-list-title">채널을 선택하면 대화가 이 영역에 표시됩니다.</p>
+                        <p class="ech-welcome-list-meta">미읽음은 사이드바 배지로 확인하세요.</p>
+                      </div>
+                    </div>
+                    <div class="ech-welcome-list-row ech-welcome-list-row--border">
+                      <div class="ech-welcome-list-badge ech-welcome-list-badge--tertiary">
+                        <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                      </div>
+                      <div class="ech-welcome-list-text">
+                        <p class="ech-welcome-list-title">상단 검색창 또는 사이드바 검색으로 통합 검색을 실행합니다.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="ech-welcome-split-col">
+                  <h2 class="ech-welcome-h2 ech-welcome-h2--sm">즐겨 찾는 채널</h2>
+                  <p class="ech-welcome-sub ech-welcome-sub--solo">자주 쓰는 채널은 퀵 레일에 고정할 수 있습니다.</p>
+                  <div class="ech-welcome-tip">
+                    <span class="material-symbols-outlined ech-welcome-tip-icon" aria-hidden="true">lightbulb</span>
+                    <div>
+                      <p class="ech-welcome-tip-title">Pro Tip</p>
+                      <p class="ech-welcome-tip-body">채널·DM 목록에서 우클릭해 <strong>퀵 레일에 고정</strong>을 켜보세요.</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
           </div>
         </div>
 
         <!-- 채팅 패널 -->
-        <div id="viewChat" class="view-chat hidden" aria-label="채팅 영역 · 파일 드롭으로 첨부">
-          <!-- 채널 헤더 -->
-          <header class="chat-header">
+        <div id="viewChat" class="view-chat ech-region ech-region--chat hidden" aria-label="채팅 영역 · 파일 드롭으로 첨부">
+          <!-- 채널 헤더 · design/ECH화면설계 (2)(4) 타임라인·글로벌 바 톤 -->
+          <header class="chat-header ech-chat-header">
             <div class="chat-header-left">
               <span class="chat-channel-prefix" id="chatChannelPrefix">#</span>
               <h2 class="chat-channel-name" id="chatChannelName">채널명</h2>
@@ -239,13 +392,13 @@
           </div>
 
           <!-- 메시지 영역 -->
-          <div class="messages-wrap">
+          <div class="messages-wrap ech-messages-wrap">
             <div id="msgHistoryLoading" class="msg-history-loading hidden" role="status" aria-live="polite">이전 메시지 불러오는 중…</div>
             <div id="messages" class="messages"></div>
           </div>
 
           <!-- 메시지 입력 -->
-          <div class="composer">
+          <div class="composer ech-composer-bar">
             <div id="mentionSuggest" class="mention-suggest hidden" role="listbox" aria-label="멘션 사용자"></div>
             <div id="replyComposerBanner" class="reply-composer-banner hidden" aria-live="polite">
               <div class="reply-composer-banner-main">
@@ -278,7 +431,7 @@
         </div>
 
         <!-- 배포 관리 패널 (관리자) -->
-        <div id="viewReleases" class="view-admin hidden">
+        <div id="viewReleases" class="view-admin ech-region ech-region--admin hidden" data-ech-design-ref="admin-releases">
           <div class="admin-panel-header">
             <h2>🚀 배포 버전 관리</h2>
             <button id="refreshReleasesBtn" class="btn-refresh">새로고침</button>
@@ -305,7 +458,7 @@
         </div>
 
         <!-- 사용자 관리 패널 (관리자) -->
-        <div id="viewUserManagement" class="view-admin hidden">
+        <div id="viewUserManagement" class="view-admin ech-region ech-region--admin hidden" data-ech-design-ref="screen7-users">
           <div class="admin-panel-header">
             <h2>👤 사용자 관리</h2>
             <div class="admin-user-toolbar">
@@ -315,6 +468,20 @@
             </div>
           </div>
           <p class="admin-hint">우클릭으로 편집·삭제, 역할/상태/조직 셀렉트는 직접 변경 후 [저장]</p>
+          <section class="admin-insight-grid" aria-label="사용자 현황 요약">
+            <article class="admin-insight-card">
+              <p class="admin-insight-label">조회 대상</p>
+              <p class="admin-insight-value" id="adminUserMetricScope">전체 사용자</p>
+            </article>
+            <article class="admin-insight-card">
+              <p class="admin-insight-label">선택 조직 인원</p>
+              <p class="admin-insight-value" id="adminUserMetricCount">-</p>
+            </article>
+            <article class="admin-insight-card">
+              <p class="admin-insight-label">저장 대기 변경</p>
+              <p class="admin-insight-value"><span id="adminUserPendingCountMirror">0</span>건</p>
+            </article>
+          </section>
           <div id="adminUserPendingBanner" class="admin-pending-banner hidden">
             변경사항 <strong id="adminUserPendingCount">0</strong>건이 저장 대기 중입니다. [저장] 버튼을 눌러 반영하세요.
           </div>
@@ -352,8 +519,8 @@
           </div>
         </div>
 
-        <!-- 조직 관리 패널 (관리자) -->
-        <div id="viewOrgManagement" class="view-admin hidden">
+        <!-- 조직 관리 패널 (관리자) · design/ECH화면설계 (5) 디렉터리형 2단 + 요약 카드 -->
+        <div id="viewOrgManagement" class="view-admin ech-region ech-region--admin hidden" data-ech-design-ref="screen5-org">
           <div class="admin-panel-header">
             <h2>🏢 조직 관리</h2>
             <div class="admin-user-toolbar">
@@ -362,71 +529,119 @@
               <button id="btnRefreshOrg" class="btn-refresh">새로고침</button>
             </div>
           </div>
+          <p class="admin-hint">조직 트리·직급/직위/직책 목록을 편집한 뒤 <strong>[저장]</strong>으로 서버에 반영합니다.</p>
+          <section class="admin-insight-grid" aria-label="조직 현황 요약">
+            <article class="admin-insight-card">
+              <p class="admin-insight-label">현재 탭</p>
+              <p class="admin-insight-value" id="orgMetricTabLabel">조직 구조</p>
+            </article>
+            <article class="admin-insight-card">
+              <p class="admin-insight-label">표시 항목 수</p>
+              <p class="admin-insight-value" id="orgMetricItemCount">-</p>
+            </article>
+            <article class="admin-insight-card">
+              <p class="admin-insight-label">저장 대기 변경</p>
+              <p class="admin-insight-value"><span id="orgPendingCountMirror">0</span>건</p>
+            </article>
+          </section>
           <div id="orgPendingBanner" class="admin-pending-banner hidden">
             변경사항 <strong id="orgPendingCount">0</strong>건이 저장 대기 중입니다. [저장] 버튼을 눌러 반영하세요.
           </div>
-          <div class="org-tabs">
-            <button class="org-tab active" data-tab="structure">조직 구조</button>
-            <button class="org-tab" data-tab="joblevel">직급</button>
-            <button class="org-tab" data-tab="jobposition">직위</button>
-            <button class="org-tab" data-tab="jobtitle">직책</button>
-          </div>
-          <div id="orgTabStructure" class="org-tab-content">
-            <div class="org-tab-toolbar">
-              <button class="btn-primary btn-sm-action" data-action="org-add-root" data-type="COMPANY">+ 회사 추가</button>
+          <div class="org-layout">
+            <nav class="org-tab-rail" aria-label="조직 관리 구역 선택">
+              <button type="button" class="org-tab org-tab--rail active" data-tab="structure">
+                <span class="org-tab-rail-title">조직 구조</span>
+                <span class="org-tab-rail-desc">회사·본부·팀 트리</span>
+              </button>
+              <button type="button" class="org-tab org-tab--rail" data-tab="joblevel">
+                <span class="org-tab-rail-title">직급</span>
+                <span class="org-tab-rail-desc">JOB_LEVEL</span>
+              </button>
+              <button type="button" class="org-tab org-tab--rail" data-tab="jobposition">
+                <span class="org-tab-rail-title">직위</span>
+                <span class="org-tab-rail-desc">JOB_POSITION</span>
+              </button>
+              <button type="button" class="org-tab org-tab--rail" data-tab="jobtitle">
+                <span class="org-tab-rail-title">직책</span>
+                <span class="org-tab-rail-desc">JOB_TITLE</span>
+              </button>
+            </nav>
+            <div class="org-tab-main">
+              <div id="orgTabStructure" class="org-tab-content">
+                <div class="org-tab-toolbar">
+                  <button class="btn-primary btn-sm-action" data-action="org-add-root" data-type="COMPANY">+ 회사 추가</button>
+                </div>
+                <div id="orgTreeContainer" class="org-tree-container"></div>
+              </div>
+              <div id="orgTabJobLevel" class="org-tab-content hidden">
+                <div class="org-tab-toolbar">
+                  <button class="btn-primary btn-sm-action" data-action="org-add-flat" data-type="JOB_LEVEL">+ 직급 추가</button>
+                </div>
+                <div id="orgJobLevelList" class="org-flat-list"></div>
+              </div>
+              <div id="orgTabJobPosition" class="org-tab-content hidden">
+                <div class="org-tab-toolbar">
+                  <button class="btn-primary btn-sm-action" data-action="org-add-flat" data-type="JOB_POSITION">+ 직위 추가</button>
+                </div>
+                <div id="orgJobPositionList" class="org-flat-list"></div>
+              </div>
+              <div id="orgTabJobTitle" class="org-tab-content hidden">
+                <div class="org-tab-toolbar">
+                  <button class="btn-primary btn-sm-action" data-action="org-add-flat" data-type="JOB_TITLE">+ 직책 추가</button>
+                </div>
+                <div id="orgJobTitleList" class="org-flat-list"></div>
+              </div>
             </div>
-            <div id="orgTreeContainer" class="org-tree-container"></div>
-          </div>
-          <div id="orgTabJobLevel" class="org-tab-content hidden">
-            <div class="org-tab-toolbar">
-              <button class="btn-primary btn-sm-action" data-action="org-add-flat" data-type="JOB_LEVEL">+ 직급 추가</button>
-            </div>
-            <div id="orgJobLevelList" class="org-flat-list"></div>
-          </div>
-          <div id="orgTabJobPosition" class="org-tab-content hidden">
-            <div class="org-tab-toolbar">
-              <button class="btn-primary btn-sm-action" data-action="org-add-flat" data-type="JOB_POSITION">+ 직위 추가</button>
-            </div>
-            <div id="orgJobPositionList" class="org-flat-list"></div>
-          </div>
-          <div id="orgTabJobTitle" class="org-tab-content hidden">
-            <div class="org-tab-toolbar">
-              <button class="btn-primary btn-sm-action" data-action="org-add-flat" data-type="JOB_TITLE">+ 직책 추가</button>
-            </div>
-            <div id="orgJobTitleList" class="org-flat-list"></div>
           </div>
         </div>
 
         <!-- 설정 패널 (관리자) -->
-        <div id="viewSettings" class="view-admin hidden">
+        <div id="viewSettings" class="view-admin ech-region ech-region--admin hidden" data-ech-design-ref="screen8-settings">
           <div class="admin-panel-header">
             <h2>⚙️ 앱 설정</h2>
             <button id="refreshSettingsBtn" class="btn-refresh">새로고침</button>
           </div>
-          <p class="settings-desc">변경 사항은 즉시 반영됩니다. 서버 재기동이 필요하지 않습니다.</p>
-          <div class="settings-add-card">
-            <h3 class="settings-add-title">기초설정 추가</h3>
-            <p class="settings-add-hint">키는 영문·숫자·점(.)·하이픈(-)·밑줄(_)만 사용, 최대 100자입니다. 앱에서 읽는 키는 코드와 일치해야 합니다.</p>
-            <div class="settings-add-grid">
-              <div class="form-group">
-                <label for="newSettingKey">설정 키 <span class="required">*</span></label>
-                <input id="newSettingKey" type="text" maxlength="100" placeholder="예) feature.flag.example" autocomplete="off" />
+          <section class="settings-hero-grid" aria-label="설정 상태">
+            <article class="settings-hero-card">
+              <p class="settings-hero-label">구성 상태</p>
+              <p class="settings-hero-value">Operational</p>
+              <p class="settings-hero-meta">설정 변경 즉시 반영 · 서버 재기동 불필요</p>
+            </article>
+            <article class="settings-hero-card settings-hero-card--accent">
+              <p class="settings-hero-label">관리 가이드</p>
+              <p class="settings-hero-value">Key Naming</p>
+              <p class="settings-hero-meta">영문/숫자/점(.)/하이픈(-)/밑줄(_) 조합 권장</p>
+            </article>
+          </section>
+          <div class="settings-layout">
+            <div class="settings-add-card">
+              <h3 class="settings-add-title">기초설정 추가</h3>
+              <p class="settings-add-hint">키는 영문·숫자·점(.)·하이픈(-)·밑줄(_)만 사용, 최대 100자입니다. 앱에서 읽는 키는 코드와 일치해야 합니다.</p>
+              <div class="settings-add-grid">
+                <div class="form-group">
+                  <label for="newSettingKey">설정 키 <span class="required">*</span></label>
+                  <input id="newSettingKey" type="text" maxlength="100" placeholder="예) feature.flag.example" autocomplete="off" />
+                </div>
+                <div class="form-group">
+                  <label for="newSettingValue">값</label>
+                  <input id="newSettingValue" type="text" placeholder="설정 값" autocomplete="off" />
+                </div>
+                <div class="form-group settings-add-desc">
+                  <label for="newSettingDesc">설명</label>
+                  <input id="newSettingDesc" type="text" maxlength="2000" placeholder="관리자용 메모" />
+                </div>
               </div>
-              <div class="form-group">
-                <label for="newSettingValue">값</label>
-                <input id="newSettingValue" type="text" placeholder="설정 값" autocomplete="off" />
-              </div>
-              <div class="form-group settings-add-desc">
-                <label for="newSettingDesc">설명</label>
-                <input id="newSettingDesc" type="text" maxlength="2000" placeholder="관리자용 메모" />
-              </div>
+              <button type="button" id="btnAddSetting" class="btn-primary">추가</button>
             </div>
-            <button type="button" id="btnAddSetting" class="btn-primary">추가</button>
+            <div class="settings-canvas">
+              <p class="settings-desc">등록된 설정 목록</p>
+              <div id="settingsList"></div>
+            </div>
           </div>
-          <div id="settingsList"></div>
         </div>
 
       </main>
+      </div>
 
     </div>
 
@@ -873,7 +1088,7 @@
     </div>
 
     <div id="modalWorkHub" class="modal-overlay hidden">
-      <div class="modal modal-wide modal-work-hub">
+      <div class="modal modal-wide modal-work-hub ech-workhub-shell">
         <div class="modal-header">
           <h3 id="workHubTitle">업무 · 칸반</h3>
           <button class="modal-close" data-modal="modalWorkHub">✕</button>

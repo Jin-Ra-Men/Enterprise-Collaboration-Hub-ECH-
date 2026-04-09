@@ -304,6 +304,7 @@ function clearWorkHubScopedChannel() {
 
 /** 좌측 하단 프레즌스 메뉴 이벤트(재로그인 시 중복 바인딩 방지) */
 let sidebarPresenceUiBound = false;
+let welcomeDashboardShellBound = false;
 /** 사이드바 섹션 토글·접기 버튼은 initEvents가 여러 번 호출돼도 한 번만 바인딩 */
 let sidebarSectionTogglesBound = false;
 let sidebarCollapseBound = false;
@@ -1969,6 +1970,14 @@ function showMain(user) {
 
   sidebarUserName.textContent = `${user.name}`;
   sidebarAvatar.textContent = avatarInitials(user.name);
+  const appHeaderAvatarEl = document.getElementById("appHeaderAvatar");
+  if (appHeaderAvatarEl) appHeaderAvatarEl.textContent = avatarInitials(user.name);
+  const welcomeHeroTitleEl = document.getElementById("welcomeHeroTitle");
+  if (welcomeHeroTitleEl) {
+    const nm = String(user.name || "").trim();
+    const first = nm ? nm.split(/\s+/)[0] : "";
+    welcomeHeroTitleEl.textContent = first ? `안녕하세요, ${first}님!` : "환영합니다!";
+  }
 
   /** 다른 계정 재로그인 시 이전 세션 프레즌스 캐시 제거 */
   presenceByEmployeeNo.clear();
@@ -9337,6 +9346,67 @@ function initEvents() {
 
   ensureKanbanNewCardAssigneeUiBound();
   bindModalWorkHubKanbanSuggestKeyboard();
+
+  if (!welcomeDashboardShellBound) {
+    welcomeDashboardShellBound = true;
+    const focusWelcomeChannelSection = () => {
+      const channelList = document.getElementById("channelList");
+      const btn = document.querySelector("#channelSectionHeader .section-toggle");
+      if (channelList && btn) {
+        channelList.classList.remove("hidden");
+        syncSectionToggleChevron(btn, channelList);
+      }
+      channelList?.querySelector(".sidebar-item")?.focus?.();
+    };
+    const syncHeaderSearchToSidebar = () => {
+      const hi = document.getElementById("appHeaderSearchInput");
+      const si = document.getElementById("searchInput");
+      if (hi && si) si.value = hi.value;
+    };
+    const syncSidebarSearchToHeader = () => {
+      const hi = document.getElementById("appHeaderSearchInput");
+      const si = document.getElementById("searchInput");
+      if (hi && si) hi.value = si.value;
+    };
+    const focusSearchInputs = () => {
+      const hi = document.getElementById("appHeaderSearchInput");
+      const si = document.getElementById("searchInput");
+      if (window.matchMedia("(min-width:768px)").matches && hi) {
+        hi.focus();
+        hi.select?.();
+      } else if (si) {
+        si.focus();
+        si.select?.();
+      }
+    };
+    document.getElementById("btnWelcomeFocusChannel")?.addEventListener("click", focusWelcomeChannelSection);
+    document.getElementById("btnWelcomeFocusChannel2")?.addEventListener("click", focusWelcomeChannelSection);
+    document.getElementById("btnWelcomeFocusSearch")?.addEventListener("click", focusSearchInputs);
+    document.getElementById("welcomeCardThreads")?.addEventListener("click", focusWelcomeChannelSection);
+    document.getElementById("welcomeCardKanban")?.addEventListener("click", focusWelcomeChannelSection);
+    document.getElementById("welcomeCardOrg")?.addEventListener("click", () => {
+      document.getElementById("btnOrgChart")?.click();
+    });
+    ["welcomeCardThreads", "welcomeCardKanban", "welcomeCardOrg"].forEach((id) => {
+      document.getElementById(id)?.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault();
+        document.getElementById(id)?.click();
+      });
+    });
+    document.getElementById("appHeaderSearchInput")?.addEventListener("input", syncHeaderSearchToSidebar);
+    document.getElementById("searchInput")?.addEventListener("input", syncSidebarSearchToHeader);
+    document.getElementById("appHeaderSearchInput")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        syncHeaderSearchToSidebar();
+        document.getElementById("searchForm")?.requestSubmit?.();
+      }
+    });
+    document.getElementById("btnAppHeaderTheme")?.addEventListener("click", () => {
+      themeSettingsBtn?.click();
+    });
+  }
 }
 
 /* ==========================================================================
@@ -9615,9 +9685,13 @@ function renderAdminUserTable() {
   // 우측 패널 헤더 업데이트
   const titleEl = document.getElementById("userListPanelTitle");
   const countEl = document.getElementById("userListPanelCount");
+  const metricScopeEl = document.getElementById("adminUserMetricScope");
+  const metricCountEl = document.getElementById("adminUserMetricCount");
   const activeCount = rows.filter(u => adminUserPendingChanges.get(u.employeeNo)?.op !== "delete").length;
   if (titleEl) titleEl.textContent = panelTitle;
   if (countEl) countEl.textContent = `${activeCount}명`;
+  if (metricScopeEl) metricScopeEl.textContent = panelTitle;
+  if (metricCountEl) metricCountEl.textContent = `${activeCount}명`;
 
   const opts = adminUserOrgOptions || { teams: [], jobLevels: [], jobPositions: [], jobTitles: [] };
 
@@ -9647,8 +9721,10 @@ function updateAdminUserPendingBanner() {
   const count = adminUserPendingChanges.size;
   const banner   = document.getElementById("adminUserPendingBanner");
   const countEl  = document.getElementById("adminUserPendingCount");
+  const mirrorEl = document.getElementById("adminUserPendingCountMirror");
   if (banner)  banner.classList.toggle("hidden", count === 0);
   if (countEl) countEl.textContent = String(count);
+  if (mirrorEl) mirrorEl.textContent = String(count);
 }
 
 // ── 사용자 공통 행 렌더 헬퍼 ──────────────────────────────────────────────
@@ -10006,8 +10082,36 @@ function updateOrgPendingBanner() {
   const count   = orgPendingChanges.size;
   const banner  = document.getElementById("orgPendingBanner");
   const countEl = document.getElementById("orgPendingCount");
+  const mirrorEl = document.getElementById("orgPendingCountMirror");
   if (banner)  banner.classList.toggle("hidden", count === 0);
   if (countEl) countEl.textContent = String(count);
+  if (mirrorEl) mirrorEl.textContent = String(count);
+}
+
+/** 조직 관리 상단 인사이트 카드: 현재 탭·항목 수 */
+function updateOrgInsightMetrics() {
+  const eff = buildEffectiveOrgList();
+  const structural = eff.filter(g => ["COMPANY", "DIVISION", "TEAM"].includes(g.groupType));
+  const jobLevels = eff.filter(g => g.groupType === "JOB_LEVEL");
+  const jobPositions = eff.filter(g => g.groupType === "JOB_POSITION");
+  const jobTitles = eff.filter(g => g.groupType === "JOB_TITLE");
+  const active = document.querySelector("#viewOrgManagement .org-tab.active");
+  const tab = active?.dataset?.tab || "structure";
+  const LABEL = {
+    structure: "조직 구조",
+    joblevel: "직급",
+    jobposition: "직위",
+    jobtitle: "직책"
+  };
+  const labelEl = document.getElementById("orgMetricTabLabel");
+  const countEl = document.getElementById("orgMetricItemCount");
+  if (labelEl) labelEl.textContent = LABEL[tab] || tab;
+  let n = 0;
+  if (tab === "structure") n = structural.length;
+  else if (tab === "joblevel") n = jobLevels.length;
+  else if (tab === "jobposition") n = jobPositions.length;
+  else if (tab === "jobtitle") n = jobTitles.length;
+  if (countEl) countEl.textContent = `${n}개`;
 }
 
 // ─── 로드 ──────────────────────────────────────────────────────────────────
@@ -10041,6 +10145,7 @@ function renderOrgManagement() {
   renderOrgFlatList("orgJobPositionList", jobPositions);
   renderOrgFlatList("orgJobTitleList",    jobTitles);
   updateOrgPendingBanner();
+  updateOrgInsightMetrics();
 }
 
 function buildOrgTreeHtml(structural) {
@@ -10129,6 +10234,7 @@ document.getElementById("viewOrgManagement").addEventListener("click", (e) => {
     tab.classList.add("active");
     const tabId = { structure:"orgTabStructure", joblevel:"orgTabJobLevel", jobposition:"orgTabJobPosition", jobtitle:"orgTabJobTitle" }[tab.dataset.tab];
     if (tabId) document.getElementById(tabId)?.classList.remove("hidden");
+    updateOrgInsightMetrics();
     return;
   }
 

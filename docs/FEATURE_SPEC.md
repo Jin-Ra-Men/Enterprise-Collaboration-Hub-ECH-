@@ -28,6 +28,31 @@
 
 ---
 
+## 화면설계 구역별 적용 훅 (ECH화면설계 1~9)
+- 목적: 화면별 목업 차이를 실제 앱 구조에 안전하게 반영하기 위해 구역 단위 마크업 훅과 스타일 기준을 고정
+- 사용자: 프론트엔드 개발자, 디자인 반영 담당자
+- 관련 화면/경로: `frontend/index.html` (`#viewChat`, `#modalWorkHub`, `#viewReleases`, `#viewUserManagement`, `#viewOrgManagement`, `#viewSettings`)
+- 관련 API: 해당 없음(표현 계층 중심)
+- 관련 Socket 이벤트: 기존 채팅/업무 이벤트 그대로 사용(식별자 변경 없음)
+- 입력/출력:
+  - 입력: 화면 구역 클래스(`.ech-region--chat`, `.ech-region--admin`, `.ech-chat-header`, `.ech-composer-bar`, `.ech-workhub-shell`)
+  - 출력: 구역별 스타일 스코프 적용, 기존 동작 로직(`app.js`) 유지
+- 상태 전이/예외 케이스:
+  - Tailwind 산출물(`ech-tailwind.css`) 미로드 시에도 `styles.css` 기준 레이아웃 유지
+  - `index.html` 유틸 클래스/마크업 수정 후에는 `npm run build:css` 재실행으로 유틸 산출물 동기화
+- 권한/보안: UI 클래스 스코프 변경만 포함, 권한 로직 영향 없음
+- 로그/감사 포인트: 해당 없음
+- 테스트 기준:
+  - 채팅 화면 진입 시 헤더/타임라인/컴포저가 정상 렌더링되는지 확인
+  - 업무·칸반 모달 너비/스크롤이 깨지지 않는지 확인
+  - 관리자 각 뷰(배포/사용자/조직/설정) 전환 시 패널 헤더 톤이 일관되는지 확인
+  - 사용자 관리(`viewUserManagement`)의 상단 인사이트 카드(조회 대상/선택 조직 인원/저장 대기 변경)가 조직 선택/변경 대기 상태와 동기화되는지 확인
+  - 설정(`viewSettings`)이 Hero 카드 + 좌측 입력 폼/우측 목록 캔버스 2열 구조로 표시되고, 반응형에서 1열로 정상 전환되는지 확인
+  - 조직 관리(`viewOrgManagement`)가 상단 인사이트 카드 + 좌측 탭 레일(`org-tab-rail`)·우측 본문(`org-tab-main`) 2단 구조로 표시되고, 탭 전환 시 현재 탭명·표시 항목 수·저장 대기 건수가 갱신되는지 확인
+- 비고: 설계 소스 매핑은 `docs/DESIGN_SYSTEM.md`의 "화면설계 (1)~(9) ↔ 앱 구역 매핑" 표를 기준으로 유지
+
+---
+
 ## DM 채널 생성 제약 자동 보정 (환경 호환)
 - 목적: 오래된 로컬 DB 스키마에서 DM 생성 실패를 자동 복구하여 사용자 DM 생성 흐름을 안정화
 - 사용자: 채팅 사용자, 운영자, 백엔드 개발자
@@ -993,3 +1018,13 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - 존재하지 않는 사원번호로 `PUT`/`DELETE` 시 404 오류
   - ADMIN 본인 계정 삭제 방지는 현재 구현되어 있지 않음 (운영 주의)
 - 보류 알림 배너: 저장 전 변경 건수를 배너로 표시, 취소 시 전체 초기화
+
+---
+
+## UI 구역 (ECH 화면설계 연동)
+- 목적: `design/ECH화면설계 (1)~(9)` Stitch 목업과 실제 앱 구역을 추적 가능하게 맞춤
+- 관련 화면: 채팅 `#viewChat`, 업무·칸반 `#modalWorkHub`, 관리자 `#viewReleases`·`#viewUserManagement`·`#viewOrgManagement`·`#viewSettings`
+- 마크업 훅: `.ech-region--chat`, `.ech-chat-header`, `.ech-messages-wrap`, `.ech-composer-bar`, `.ech-workhub-shell`, `.ech-region--admin`, `data-ech-design-ref` (예: `admin-releases`, `screen7-users`, `screen5-org`, `screen8-settings`)
+- 스타일: `frontend/styles.css` — 시맨틱 스타일 우선(Tailwind 미로드 시에도 동작). `ech-tailwind.css` 갱신: `cd frontend && npm run build:css`
+- 테스트 기준: 라이트 테마에서 채팅·칸반 모달·관리자 탭 전환 시 레이아웃 깨짐 없음
+- 비고: 상세 매핑 표는 `docs/DESIGN_SYSTEM.md` 섹션 6

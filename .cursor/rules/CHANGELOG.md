@@ -2,9 +2,26 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-04-10
+
+### Added
+- **프론트(ECH 화면설계 연동)**: `design/ECH화면설계 (1)~(9)` 구역별 마크업 훅 — 채팅 `#viewChat` (`.ech-region--chat`, `.ech-chat-header`, `.ech-messages-wrap`, `.ech-composer-bar`), 업무·칸반 `#modalWorkHub` (`.ech-workhub-shell`, 모달 폭 960px·라운드), 관리자 뷰 `.ech-region--admin` + `data-ech-design-ref`. `styles.css`에 타임라인 스크롤바·라이트 컴포저 바·관리자 패널 헤더 글래스 보강. `docs/DESIGN_SYSTEM.md` 섹션 6 매핑 표.
+
+### Changed
+- **문서**: `index.html`/유틸 변경 시 `npm run build:css` 안내 유지.
+- **프론트(조직 관리 레이아웃)**: `viewOrgManagement`를 `ECH화면설계 (5)`에 맞춰 상단 인사이트 카드 + 좌측 세로 탭 레일(`org-tab-rail`)·우측 본문(`org-tab-main`) 2단으로 재구성. `updateOrgInsightMetrics()`로 현재 탭·표시 항목 수·저장 대기(`orgPendingCountMirror`) 동기화.
+
 ## 2026-04-09
 
 ### Changed
+- **프론트(ECH메인 레이아웃)**: `design/ECH메인/code.html`에 맞춰 상단 글로벌 바(`app-shell-topbar`)·`app-shell-body`·채널 미선택 시 **대시보드형 환영 화면**(히어로·3열 카드·바로가기·Pro Tip). Tailwind 빌드: `frontend/package.json`, `src/tailwind-input.css` → `ech-tailwind.css`. Material Symbols·헤더 검색·환영 카드 클릭 동작 `app.js`. `docs/DESIGN_SYSTEM.md` 빌드 절차 보강.
+- **fix(환영 대시보드)**: `ech-tailwind.css` 미로드 시 레이아웃 붕괴 — 환영 화면을 **`styles.css`의 `.ech-welcome-*` 시맨틱 스타일만**으로 재구성(Tailwind 유틸 의존 제거). 히어로·그리드·카드 푸터·바로가기 리스트 정렬.
+- **프론트(디자인 시스템)**: `design/ECH메인`·`ECH화면설계`·DESIGN.md(Atmospheric) 기준으로 `frontend/styles.css` 라이트 테마 — 고스트 보더·사이드바 톤·채널 헤더 글래스·모달 등. `frontend/tailwind.config.js`에 `content`/그림자/타이포 확장. 롤백: `localStorage` `ech_design_version` 또는 `frontend/design-backup/legacy-design/`. 문서 `docs/DESIGN_SYSTEM.md`, `docs/HANDOVER.md`, 루트 `README.md` 문서 표, `design/README.md` 보강.
+- **프론트(화면설계 1~9 구역 적용)**: `frontend/index.html`에 구역 훅 클래스(`.ech-region--chat`, `.ech-messages-wrap`, `.ech-composer-bar`, `.ech-region--admin`, `.ech-workhub-shell`)를 추가하고, `styles.css`에서 채팅/관리자/업무칸반 영역의 시맨틱 스코프 스타일을 보강. `docs/DESIGN_SYSTEM.md` 화면 매핑 표와 `docs/FEATURE_SPEC.md` 기능 기준을 함께 갱신.
+- **프론트(화면설계 2차 디테일 매칭)**: `styles.css` 라이트 테마에서 관리자 영역의 테이블/카드/조직탭/조직선택 패널 톤을 `ECH화면설계 (5)(7)(8)`에 맞춰 보강(고스트 보더·소프트 섀도·선택 그라데이션). 사용자 관리 분할 패널·설정 카드·관리 테이블 행 hover 가독성 개선.
+- **프론트(화면설계 2차 디테일 매칭-채팅)**: `ECH화면설계 (2)` 톤에 맞춰 채팅 타임라인 라이트 테마를 보강(`.ech-messages-wrap .messages` 배경 레이어, 메시지 말풍선 보더/섀도, 메타/시간 대비, `.composer-inner` 고스트 보더·소프트 섀도). 채팅 가독성은 유지하면서 카드형 밀도를 개선.
+- **프론트(레이아웃 구조 변경)**: 톤 조정 중심에서 확장해 `viewUserManagement`·`viewSettings` 화면 구조 자체를 재배치. 사용자 관리 상단에 인사이트 카드(조회 대상/선택 조직 인원/저장 대기)를 추가하고 `app.js`에서 목록 렌더 시 실시간 동기화. 설정 화면은 Hero 카드 + 좌측 입력 패널/우측 설정 목록 캔버스(`settings-layout`) 2열 구조로 변경.
+- **프론트(레이아웃 재구성)**: `viewUserManagement`에 상단 인사이트 카드 3종(조회 대상/선택 조직 인원/저장 대기 변경)을 추가하고 `app.js`에서 패널 제목·인원·대기 건수를 동기화. `viewSettings`는 상단 히어로 카드 + 우측 설정 목록 캔버스 + 좌측 추가 폼(2열 레이아웃)으로 구조를 재배치해 화면 형태가 목업처럼 즉시 체감되도록 변경.
 - **문서(README)**: 제품 소개용 `README.md`에 이모지·강조·표·섹션 확장 — 기능을 영역별로 세분화해 가독성·인상 강화, 기술 스택 요약 표 추가. 세부 API는 `docs/DEVELOPER_README.md`로 안내 유지.
 - **문서**: 루트 `README.md`를 제품·기능 소개 중심으로 정리하고, 기존 개발자·API·실행 안내 전체는 `docs/DEVELOPER_README.md`로 이전. `docs/FEATURE_SPEC.md`에 문서 역할 안내 문구 추가. `.cursor/rules/core-rules.mdc`, `docs/PROJECT_REQUIREMENTS.md`, `docs/HANDOVER.md`에 README·DEVELOPER_README 역할 구분 반영.
 
