@@ -4531,6 +4531,9 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
 .profile-dl dd { word-break: break-all; color: var(--text-primary); }
 
 /* design/ECH화면설계 (9): 프로필 카드 모달 */
+.ech-profile-modal.modal {
+  overflow: hidden;
+}
 .ech-profile-modal-inner {
   position: relative;
   display: flex;
@@ -4593,9 +4596,6 @@ html[data-theme="light"] .profile-dl--cards .profile-dd-card {
 .ech-profile-footer {
   flex-wrap: wrap;
   gap: 10px;
-}
-.ech-profile-modal.modal {
-  overflow: hidden;
 }
 .ech-profile-btn-dm {
   flex: 1 1 200px;
