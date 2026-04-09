@@ -459,13 +459,13 @@ Stop-Process -Id <PID> -Force
   - 카드 자체를 세로 드래그앤드롭으로 재배치하고, 임시 변경은 저장 시 `sortOrder`로 반영
 - 저장 흐름:
   - 저장 버튼 클릭 시 확인창을 보여준 뒤 진행
-  - 저장 성공 후에도 `modalWorkHub`는 열린 채 유지(사용자가 **닫기**로 닫음)
+  - 저장 성공 후에도 워크플로우 페이지(`modalWorkHub` id)는 열린 채 유지(사용자가 상단/하단 **닫기** 버튼으로 채팅/시작 화면 복귀)
   - 칸반 담당자 반영 순서를 `담당 해제 -> 담당 추가`로 바꿔 삭제 후 되살아나는 현상을 완화
   - 저장 직전 카드별 담당 추가/해제 맵을 정규화해 상충 상태를 제거하고, 담당 해제 후 저장 시 재바인딩되는 케이스를 보정
 - 좌측 사이드바:
   - `내 담당 칸반` 섹션(`myKanbanList`)을 추가해 담당 카드 목록을 채널/DM 목록과 같은 영역에서 제공
   - 데이터 소스: `GET /api/work-items/sidebar/by-assigned-cards?employeeNo=...&limit=...`(내가 담당인 칸반 카드가 하나라도 있는 업무 항목)
-  - 클릭 동작: 채널 진입 -> 업무·칸반 모달 오픈 -> 대상 카드 스크롤/강조
+- 클릭 동작: 채널 진입 -> 워크플로우 페이지 오픈 -> 대상 카드 스크롤/강조
 
 ---
 
@@ -482,7 +482,7 @@ Stop-Process -Id <PID> -Force
 - **사이드바 빈 문구**: `내 업무 항목`·`멘션` 섹션의 빈 상태는 `sidebar-item sidebar-item-empty`(작은 글자·`--text-muted` 계열).
 - **다크 기본 테마**: `:root`의 `--text-secondary` / `--text-muted`를 약간 밝게 조정해 보조 텍스트 대비를 올림. 범용 보조 문구는 `.muted`.
 - **내 업무 항목 동기화**: `flushWorkHubSave()` 성공 시 `scheduleRefreshMyChannels()`로 사이드바 담당 업무 목록을 갱신한다.
-- **채널 전환 없이 모달만**: 사이드바 행 클릭 시 `selectChannel`을 호출하지 않고 `workHubScopedChannelId`만 설정한 뒤 `loadWorkHubChannelMembersForAssignee` / `loadChannelWorkItems` / `loadChannelKanbanBoard`가 `getWorkHubChannelId()`로 해당 채널 API를 호출한다. 채팅 패널의 `activeChannelId`는 그대로. `closeModal("modalWorkHub")` 시 `clearWorkHubScopedChannel()`. 헤더 `📋`로 열 때는 `workHubScopedChannelId = null`로 현재 채널 기준.
+- **채널 전환 없이 워크플로우만**: 사이드바 행 클릭 시 `selectChannel`을 호출하지 않고 `workHubScopedChannelId`만 설정한 뒤 `loadWorkHubChannelMembersForAssignee` / `loadChannelWorkItems` / `loadChannelKanbanBoard`가 `getWorkHubChannelId()`로 해당 채널 API를 호출한다. 채팅 패널의 `activeChannelId`는 그대로. 워크플로우 페이지 닫기(`btnCloseWorkflowPage*`) 시 `clearWorkHubScopedChannel()`. 헤더 `📋`로 열 때는 `workHubScopedChannelId = null`로 현재 채널 기준.
 - **칸반 DnD·status**: 카드를 다른 컬럼으로 끌어 놓을 수 있으며(`boardEl.querySelector(".kanban-card-dragging")`), 드롭 시 출발·도착 컬럼에 대해 `syncKanbanBoardPartial`로 임시 `columnId`/`sortOrder`를 갱신하고, 미저장 신규 카드는 `syncKanbanDraftsOrderFromDom`. 저장 시 `statusForKanbanColumnId(targetColumnId)`로 `PUT`/`POST`에 `status`를 포함한다.
 
 ---

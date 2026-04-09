@@ -31,7 +31,7 @@
 ## 화면설계 구역별 적용 훅 (ECH화면설계 1~9)
 - 목적: 화면별 목업 차이를 실제 앱 구조에 안전하게 반영하기 위해 구역 단위 마크업 훅과 스타일 기준을 고정
 - 사용자: 프론트엔드 개발자, 디자인 반영 담당자
-- 관련 화면/경로: `frontend/index.html` (`#viewChat`·`data-ech-design-ref="ech-chat"`, `#modalWorkHub`, `#viewReleases`, `#viewUserManagement`, `#viewOrgManagement`, `#viewSettings`) — 채팅 화면 시각 기준은 `design/ECH채팅/`과 동기화
+- 관련 화면/경로: `frontend/index.html` (`#viewChat`·`data-ech-design-ref="ech-chat"`, `#modalWorkHub` **워크플로우 페이지 뷰**, `#viewReleases`, `#viewUserManagement`, `#viewOrgManagement`, `#viewSettings`) — 채팅 화면 시각 기준은 `design/ECH채팅/`과 동기화
 - 관련 API: 해당 없음(표현 계층 중심)
 - 관련 Socket 이벤트: 기존 채팅/업무 이벤트 그대로 사용(식별자 변경 없음)
 - 입력/출력:
@@ -53,7 +53,7 @@
   - 설정(`viewSettings`)이 Hero 카드 + 좌측 입력 폼/우측 목록 캔버스 2열 구조로 표시되고, 반응형에서 1열로 정상 전환되는지 확인
   - 조직 관리(`viewOrgManagement`)가 상단 인사이트 카드 + 좌측 탭 레일(`org-tab-rail`)·우측 본문(`org-tab-main`) 2단 구조로 표시되고, 탭 전환 시 현재 탭명·표시 항목 수·저장 대기 건수가 갱신되는지 확인
   - 배포 관리(`viewReleases`)가 인사이트 카드(등록 수·현재 운영 버전·배포 이력 건수) + `release-layout`(좌측 업로드 카드·우측 목록/이력)로 표시되고, `loadReleases` 후 지표가 API 결과와 일치하는지 확인
-  - 업무·칸반 모달(`modalWorkHub`)에서 업무 목록 패널이 **위**·칸반 패널이 **아래**로 한 열(`work-hub-body` 세로 스택)로 배치되는지 확인(모든 뷰포트 동일)
+  - 워크플로우 페이지 뷰(`modalWorkHub` id 사용)에서 업무 섹션이 **위**·칸반 섹션이 **아래**로 한 열(`work-hub-body` 세로 스택)로 배치되는지 확인(모든 뷰포트 동일)
   - 사용자 프로필 모달(`modalUserProfile`)이 `ECH화면설계 (9)`에 맞게 히어로·부제(부서·직급 ` · `)·카드형 필드·하단 DM/닫기 버튼으로 표시되는지 확인
 - 비고: 설계 소스 매핑은 `docs/DESIGN_SYSTEM.md`의 "화면설계 (1)~(9) ↔ 앱 구역 매핑" 표를 기준으로 유지한다. 목업(`design/`)과의 **시각·밀도 갭**은 별도로 [DESIGN_GAP_CHECKLIST.md](./DESIGN_GAP_CHECKLIST.md)에서 구역별 체크·우선순위(P0~P2)·권장 작업 순서(동 문서 §7)로 추적한다.
 
@@ -867,7 +867,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - **스레드 댓글**: 스레드 입력의 파일 input도 `multiple`이며, 선택한 파일을 큐에 두고 순차 업로드(메인 채팅과 동일한 업로드·갱신 패턴)
   - **날짜 구분선**: 초기 목록(`renderMessages`)과 동일하게 로컬 날짜가 바뀔 때 pill 표시. **실시간**(`appendMessageRealtime`)은 마지막 DOM 형제가 시스템 메시지여도 뒤에서 마지막 채팅 행·이전 날짜 키를 찾아 구분선·같은 분 묶음을 맞춤; `channel:system`은 서버 `createdAt`이 있을 때 구분선 정합
   - UI: CSS 변수 기반 **다크·보라 액센트** 톤(모달·관리자·검색·조직도 블록 포함)
-  - **테마 선택**: 로그인 사용자 영역의 톱니바퀴 버튼으로 팝업을 열어 `검정`(기본 다크·보라) / `하양`(라이트·인디고) / `파랑`(네이비·시안 액센트) 선택. 즉시 적용되며 `PUT /api/auth/me/theme`로 사용자별 DB(`users.theme_preference`)에 저장되어 로그아웃/재로그인 후에도 유지
+  - **테마 선택**: 로그인 사용자 영역의 톱니바퀴 버튼으로 팝업을 열어 `검정`(기본 다크·보라) / `하양`(라이트·인디고) / `오션 다크`(심야 블루 계열) / `크림 라이트`(웜 뉴트럴 계열) 선택. 즉시 적용되며 기본 테마(`검정/하양`)는 `PUT /api/auth/me/theme`로 사용자별 DB(`users.theme_preference`)에 저장
 - 상태 전이/예외 케이스:
   - 중복 멤버 추가 시 서버 검증 메시지를 시스템 메시지로 노출
   - 사이드바에는 별도 **로그아웃** 버튼이 없음(세션 종료는 브라우저/앱 탭·창 종료 또는 `localStorage`/쿠키 삭제 등 운영 정책에 따름)
@@ -1043,7 +1043,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 ## UI 구역 (ECH 화면설계 연동)
 - 목적: `design/ECH화면설계 (1)~(9)` Stitch 목업과 실제 앱 구역을 추적 가능하게 맞춤
-- 관련 화면: 채팅 `#viewChat`, 업무·칸반 `#modalWorkHub`, 관리자 `#viewReleases`·`#viewUserManagement`·`#viewOrgManagement`·`#viewSettings`
+- 관련 화면: 채팅 `#viewChat`, 워크플로우 페이지 `#modalWorkHub`, 관리자 `#viewReleases`·`#viewUserManagement`·`#viewOrgManagement`·`#viewSettings`
 - 마크업 훅: `.ech-region--chat`, `.ech-chat-header`, `.ech-messages-wrap`, `.ech-composer-bar`, `.ech-workhub-shell`, `.ech-region--admin`, `data-ech-design-ref` (예: `admin-releases`, `screen7-users`, `screen5-org`, `screen8-settings`)
 - 스타일: `frontend/styles.css` — 시맨틱 스타일 우선(Tailwind 미로드 시에도 동작). `ech-tailwind.css` 갱신: `cd frontend && npm run build:css`
 - 테스트 기준: 라이트 테마에서 채팅·칸반 모달·관리자 탭 전환 시 레이아웃 깨짐 없음

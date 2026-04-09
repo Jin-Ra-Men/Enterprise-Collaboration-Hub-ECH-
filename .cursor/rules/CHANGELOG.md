@@ -5,6 +5,7 @@
 ## 2026-04-12
 
 ### Changed
+- **프론트(테마·가독성·프레즌스)**: 테마 2종 추가(`ocean`, `cream`) 및 테마 피커 버튼 확장. 프레즌스 점을 테마 변수(`--presence-*`) 기반으로 재설계해 온라인/자리비움/오프라인 식별성과 대비(링/글로우/크기)를 강화. `index.html`, `app.js`, `styles.css`.
 - **프론트(워크플로우 표시 위치 보정)**: `ensureWorkflowMountedInChatArea()`로 `#modalWorkHub`를 `.chat-area`에 부착해 워크플로우가 메인(가운데 채팅) 영역에서 바로 표시되도록 조정. `styles.css`의 `.view-workflow`를 `flex: 1` 기반으로 수정.
 - **프론트(워크플로우 페이지 전환)**: `#modalWorkHub`를 오버레이 모달에서 메인 콘텐츠의 페이지 뷰(`.view-workflow`/`.workflow-page`)로 전환. `showView("modalWorkHub")` 기반으로 이동하고 상/하단 닫기 버튼(`btnCloseWorkflowPage*`)은 채팅/시작 화면으로 복귀. `index.html`, `app.js`, `styles.css`, `docs/FEATURE_SPEC.md`, `docs/DESIGN_SYSTEM.md`, `docs/DESIGN_GAP_CHECKLIST.md`, `docs/HANDOVER.md`.
 - **프론트(워크플로우 모달 디자인 정합)**: `design/ECH화면설계 (1)` 톤으로 `#modalWorkHub` 상단 툴바(`.workflow-topbar`: Search/Filters/New Task), 섹션 표면(`.workflow-section`)·타이포를 재정렬하고, `btnWorkflowNewTask`/`btnWorkflowFilter` 동작을 추가. `index.html`, `styles.css`, `app.js`.

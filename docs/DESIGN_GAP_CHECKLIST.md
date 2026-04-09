@@ -44,8 +44,8 @@
 
 | 앱 위치 | 체크 |
 |---------|------|
-| `#modalWorkHub` 레이아웃·헤더·닫기 | [x] 다크 패널·셸 보더 · 라이트 `ech-workhub-shell` 글래스·인디고 섀도 · 부제 `ech-workhub-modal-subtitle` · 패널 키커 `work-hub-panel-kicker`(2026-04-09) |
-| `#modalWorkHub` 본문 `work-hub-body` 세로 스택(업무 위·칸반 아래)·스크롤 | [x] 좌우 2열(`work-hub-body--split`) 제거(2026-04-09) — 다크 `work-hub-panel` · 라이트 No-Line·층 섀도 |
+| `#modalWorkHub` 페이지 레이아웃·헤더·닫기 | [x] 모달 오버레이 대신 페이지 뷰(`.view-workflow`) 전환 · 다크 패널·셸 보더 · 라이트 `ech-workhub-shell` 글래스·인디고 섀도 · 부제 `ech-workhub-modal-subtitle` |
+| `#modalWorkHub` 본문 `work-hub-body` 세로 스택(업무 위·칸반 아래)·스크롤 | [x] 좌우 2열(`work-hub-body--split`) 제거(2026-04-09) + 페이지 뷰 높이(`.workflow-page`) 정합 — 다크 `work-hub-panel` · 라이트 No-Line·층 섀도 |
 | 업무 탭/칸반 도구 모음이 목업 밀도와 맞는지 | [x] 다크 칸반 컬럼·카드 톤 · 라이트 칸반 컬럼/카드 소프트 섀도 · 업무 행 상태 칩·라운드 카드(2026-04-09) |
 
 ### `(2)` 워크스페이스 셸 + 멤버/조직 맥락 · `design/ECH채팅`

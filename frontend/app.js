@@ -73,7 +73,8 @@ const TIMELINE_PAGE_LIMIT = 100;
 const MAX_CHAT_DOM_NODES = 4000;
 const HARD_MAX_CHAT_DOM_NODES = 10000;
 const THEME_KEY  = "ech_theme";
-const VALID_THEMES = ["dark", "light"];
+const VALID_THEMES = ["dark", "light", "ocean", "cream"];
+const SERVER_SYNC_THEMES = ["dark", "light"];
 const SIDEBAR_COLLAPSED_KEY = "ech_sidebar_collapsed";
 const LOGIN_REMEMBER_KEY = "ech_login_remember";
 const LOGIN_SAVED_ID_KEY = "ech_saved_login_id";
@@ -133,6 +134,7 @@ function initTheme() {
 
 async function saveThemePreference(theme) {
   if (!currentUser) return;
+  if (!SERVER_SYNC_THEMES.includes(theme)) return;
   try {
     const res = await apiFetch("/api/auth/me/theme", {
       method: "PUT",
@@ -2006,9 +2008,10 @@ function showMain(user) {
   lastSidebarChannelsSnapshot = [];
   loginPage.classList.add("hidden");
   mainApp.classList.remove("hidden");
-  let preferredTheme = VALID_THEMES.includes(user?.themePreference)
-    ? user.themePreference
-    : (localStorage.getItem(THEME_KEY) || "light");
+  const localTheme = localStorage.getItem(THEME_KEY) || "";
+  let preferredTheme = VALID_THEMES.includes(localTheme)
+    ? localTheme
+    : (VALID_THEMES.includes(user?.themePreference) ? user.themePreference : "light");
   if (preferredTheme === "blue") preferredTheme = "dark";
   applyTheme(VALID_THEMES.includes(preferredTheme) ? preferredTheme : "light");
   applySidebarCollapsedState();
