@@ -4769,11 +4769,69 @@ html:not([data-theme="light"]) .work-hub-panel.work-hub-panel--flash {
 html[data-theme="light"] .ech-workflow-scope {
   color: color-mix(in srgb, var(--text-secondary) 92%, var(--accent) 8%);
 }
+.workflow-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+.workflow-topbar-search {
+  flex: 1 1 auto;
+  min-width: 0;
+  position: relative;
+}
+.workflow-topbar-search .material-symbols-outlined {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+  color: var(--text-muted);
+}
+.workflow-topbar-search input {
+  width: 100%;
+  padding: 9px 10px 9px 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.workflow-topbar-search input:disabled {
+  opacity: 0.8;
+}
+.workflow-topbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.workflow-topbar-btn .material-symbols-outlined {
+  font-size: 16px;
+}
+.workflow-topbar-btn--primary {
+  border: none;
+  color: #fff;
+  background: linear-gradient(135deg, #4e45e4, #6760fd);
+  box-shadow: 0 8px 20px rgba(78, 69, 228, 0.28);
+}
 .workflow-section {
   margin-top: 22px;
+  border-radius: 14px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--bg-elevated) 94%, var(--accent) 6%);
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 86%, transparent);
 }
 .workflow-section:first-of-type {
-  margin-top: 10px;
+  margin-top: 0;
 }
 .workflow-section-head {
   margin-bottom: 6px;
@@ -4796,6 +4854,10 @@ html[data-theme="light"] .ech-workflow-scope {
 }
 .workflow-section-hint {
   margin-top: 0;
+}
+html[data-theme="light"] .workflow-section {
+  background: color-mix(in srgb, #f0f4f7 70%, #ffffff 30%);
+  border: 1px solid rgba(172, 179, 183, 0.35);
 }
 .work-hub-hint {
   margin: 0 0 10px;

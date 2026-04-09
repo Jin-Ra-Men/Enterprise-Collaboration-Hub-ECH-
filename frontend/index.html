@@ -1074,6 +1074,20 @@
               <h4>워크플로우</h4>
             </div>
             <p class="ech-workflow-scope hidden" id="workHubChannelContext" aria-live="polite"></p>
+            <div class="workflow-topbar">
+              <div class="workflow-topbar-search">
+                <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                <input type="search" id="workHubQuickSearch" placeholder="업무·카드 빠른 검색(미구현)" disabled />
+              </div>
+              <button type="button" class="workflow-topbar-btn" id="btnWorkflowFilter" aria-label="워크플로우 필터" title="필터(준비중)">
+                <span class="material-symbols-outlined" aria-hidden="true">filter_list</span>
+                <span>Filters</span>
+              </button>
+              <button type="button" class="workflow-topbar-btn workflow-topbar-btn--primary" id="btnWorkflowNewTask">
+                <span class="material-symbols-outlined" aria-hidden="true">add</span>
+                <span>New Task</span>
+              </button>
+            </div>
             <div class="workflow-section" id="workHubPanelWork">
               <div class="workflow-section-head">
                 <span class="workflow-section-kicker">Tasks</span>

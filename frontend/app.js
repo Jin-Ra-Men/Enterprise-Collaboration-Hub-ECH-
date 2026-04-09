@@ -8543,6 +8543,16 @@ document.getElementById("btnSidebarWorkflow")?.addEventListener("keydown", (e) =
   e.preventDefault();
   document.getElementById("btnSidebarWorkflow")?.click();
 });
+document.getElementById("btnWorkflowNewTask")?.addEventListener("click", () => {
+  const titleEl = document.getElementById("workItemTitleInput");
+  if (titleEl) {
+    titleEl.focus();
+    titleEl.select?.();
+  }
+});
+document.getElementById("btnWorkflowFilter")?.addEventListener("click", () => {
+  void uiAlert("워크플로우 필터는 다음 단계에서 연결 예정입니다.");
+});
 
 document.getElementById("workItemCreateForm")?.addEventListener("submit", (e) => e.preventDefault());
 document.getElementById("kanbanCardCreateForm")?.addEventListener("submit", (e) => e.preventDefault());
