@@ -129,6 +129,7 @@ html[data-theme="light"] {
   --sidebar-edge-shadow: 4px 0 32px rgba(11, 15, 16, 0.055);
   --header-ambient: 0 1px 0 rgba(116, 124, 128, 0.1), 0 8px 28px rgba(44, 52, 55, 0.045);
   --surface-tint-hover: rgba(78, 69, 228, 0.05);
+  --outline-variant: #acb3b7;
 }
 
 /* ── 리셋 / 기본 ── */
@@ -277,6 +278,13 @@ html[data-theme="light"] .login-card {
   border-bottom: 1px solid var(--ghost-outline, rgba(172, 179, 183, 0.2));
   z-index: 40;
 }
+html[data-theme="light"] .app-shell-topbar {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid color-mix(in srgb, var(--outline-variant, #acb3b7) 18%, transparent);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.55), var(--header-ambient);
+}
 html:not([data-theme="light"]) .app-shell-topbar {
   background: rgba(26, 30, 38, 0.94);
   border-bottom-color: rgba(255, 255, 255, 0.08);
@@ -305,6 +313,11 @@ html:not([data-theme="light"]) .app-shell-topbar {
   border-radius: 10px;
   background: var(--sidebar-search-bg);
   box-shadow: inset 0 0 0 1px var(--ghost-outline, rgba(172, 179, 183, 0.15));
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+html[data-theme="light"] .app-shell-global-search:focus-within {
+  background: #ffffff;
+  box-shadow: inset 0 0 0 2px rgba(78, 69, 228, 0.35), 0 4px 16px rgba(78, 69, 228, 0.08);
 }
 @media (min-width: 768px) {
   .app-shell-global-search {
@@ -706,7 +719,8 @@ button.section-toggle { cursor: pointer; }
 span.section-toggle-static { cursor: default; }
 .section-toggle:hover { color: var(--sidebar-item-fg-strong); }
 /* design: 사이드바 구역 라벨 — 살짝 넓은 자간(한글은 대문자 변환 없음) */
-html[data-theme="light"] .section-toggle-label {
+html[data-theme="light"] .section-toggle-label,
+html:not([data-theme="light"]) .section-toggle-label {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -1067,7 +1081,9 @@ html[data-theme="light"] .sidebar-item.active::before {
   padding: 2rem 2rem 2.25rem;
   background: linear-gradient(135deg, #4e45e4 0%, #4338ca 55%, #3730a3 100%);
   color: #fbf7ff;
-  box-shadow: 0 24px 48px rgba(44, 52, 55, 0.12);
+  box-shadow:
+    0 24px 48px rgba(44, 52, 55, 0.12),
+    0 8px 28px rgba(78, 69, 228, 0.28);
 }
 @media (min-width: 1024px) {
   .ech-welcome-hero {
@@ -1238,7 +1254,7 @@ html[data-theme="light"] .sidebar-item.active::before {
   padding: 1.75rem;
   border-radius: 1.5rem;
   background: var(--bg-elevated);
-  border: 1px solid rgba(172, 179, 183, 0.2);
+  border: 1px solid color-mix(in srgb, var(--outline-variant, #acb3b7) 22%, transparent);
   box-shadow: 0 1px 3px rgba(44, 52, 55, 0.06);
   cursor: pointer;
   text-align: left;
@@ -1514,6 +1530,13 @@ html[data-theme="light"] .chat-header {
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+}
+html[data-theme="light"] .member-panel {
+  border-left: 1px solid var(--ghost-outline);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: -8px 0 28px rgba(44, 52, 55, 0.05);
 }
 .member-panel-scroll {
   flex: 1 1 auto;
@@ -2557,6 +2580,10 @@ html[data-theme="light"] .composer-inner {
   box-shadow: 0 8px 24px rgba(44, 52, 55, 0.05);
 }
 .composer-inner:focus-within { border-color: var(--border-focus); box-shadow: 0 0 0 2px var(--focus-ring); }
+html[data-theme="light"] .composer-inner:focus-within {
+  border-color: rgba(78, 69, 228, 0.42);
+  box-shadow: 0 0 0 2px var(--focus-ring), 0 10px 28px rgba(44, 52, 55, 0.07);
+}
 
 .composer-attach-btn {
   padding: 10px 12px;
@@ -2599,6 +2626,9 @@ html[data-theme="light"] .composer-inner {
 }
 .composer-send-btn:hover { filter: brightness(1.08); }
 .composer-send-btn:disabled { opacity: .5; cursor: default; }
+html[data-theme="light"] .composer-send-btn:not(:disabled) {
+  box-shadow: 0 4px 14px rgba(78, 69, 228, 0.28);
+}
 
 html[data-theme="light"] .ech-composer-bar {
   background: rgba(255, 255, 255, 0.92);
@@ -2982,9 +3012,9 @@ html[data-theme="light"] .settings-canvas {
   z-index: 1000;
 }
 html[data-theme="light"] .modal-overlay {
-  background: rgba(44, 52, 55, 0.42);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(44, 52, 55, 0.36);
+  backdrop-filter: blur(18px) saturate(1.06);
+  -webkit-backdrop-filter: blur(18px) saturate(1.06);
 }
 .modal-overlay.modal-stacked { z-index: 1100; }
 /* 공통 확인/알림 — 업무 상세 등 중첩 모달보다 위에 표시 */
@@ -3242,9 +3272,16 @@ html[data-theme="light"] .modal {
   font-weight: 600;
   font-size: 15px;
   cursor: pointer;
-  transition: filter .12s;
+  transition: filter .12s, box-shadow .12s;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
 }
 .btn-primary:hover { filter: brightness(1.08); }
+html[data-theme="light"] .btn-primary {
+  box-shadow: 0 4px 16px rgba(78, 69, 228, 0.24);
+}
+.btn-primary:active {
+  filter: brightness(0.96);
+}
 
 /* 보조 버튼(모달 취소·이미지 다운로드 선택 등) — 테두리·배경을 두어 본문과 구분 */
 .btn-secondary {
@@ -3260,6 +3297,14 @@ html[data-theme="light"] .modal {
 }
 .btn-secondary:hover {
   background: var(--bg-sidebar-hover);
+  border-color: var(--border-focus);
+}
+html[data-theme="light"] .btn-secondary {
+  border-color: color-mix(in srgb, var(--outline-variant, #acb3b7) 38%, transparent);
+  background: rgba(255, 255, 255, 0.72);
+}
+html[data-theme="light"] .btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.95);
   border-color: var(--border-focus);
 }
 
@@ -3469,6 +3514,20 @@ html[data-theme="light"] .theme-option-btn.active {
   min-width: 52px;
   flex-shrink: 0;
 }
+html[data-theme="light"] #searchModal .search-modal-toolbar {
+  border-bottom-color: color-mix(in srgb, var(--outline-variant, #acb3b7) 38%, transparent);
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+html[data-theme="light"] #searchModal .search-modal-query-input {
+  border-color: color-mix(in srgb, var(--outline-variant, #acb3b7) 40%, transparent);
+  background: rgba(255, 255, 255, 0.92);
+}
+html[data-theme="light"] #searchModal .search-modal-query-btn {
+  border-color: color-mix(in srgb, var(--outline-variant, #acb3b7) 44%, transparent);
+  background: rgba(255, 255, 255, 0.88);
+}
 
 /* 검색 결과 */
 .search-results { padding: 12px 20px; overflow-y: auto; max-height: 60vh; }
@@ -3491,6 +3550,12 @@ html[data-theme="light"] .theme-option-btn.active {
 }
 .search-item-clickable:hover {
   background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+html[data-theme="light"] .search-item {
+  border-bottom-color: color-mix(in srgb, var(--outline-variant, #acb3b7) 35%, transparent);
+}
+html[data-theme="light"] .search-item-clickable:hover {
+  background: rgba(78, 69, 228, 0.06);
 }
 .search-item:last-child { border-bottom: none; }
 .search-type-badge {
@@ -5513,6 +5578,12 @@ html[data-theme="light"] .uorg-item.selected {
   border-radius: 12px;
   padding: 12px 14px;
   background: var(--bg-elevated);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+html[data-theme="light"] .admin-insight-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--outline-variant, #acb3b7) 68%);
+  box-shadow: 0 12px 28px rgba(44, 52, 55, 0.08), 0 4px 14px rgba(78, 69, 228, 0.1);
+  transform: translateY(-1px);
 }
 .admin-insight-label {
   margin: 0 0 6px;
@@ -5587,6 +5658,11 @@ html[data-theme="light"] .org-tabs {
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
   background: var(--bg-elevated);
+}
+html[data-theme="light"] .org-tab-rail {
+  border-color: color-mix(in srgb, var(--outline-variant, #acb3b7) 34%, transparent);
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 8px 22px rgba(44, 52, 55, 0.06);
 }
 .org-tab-main {
   min-width: 0;

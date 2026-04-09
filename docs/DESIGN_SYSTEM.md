@@ -90,3 +90,15 @@ Copy-Item -Force "frontend/design-backup/legacy-design/app.js" "frontend/app.js"
 픽셀 단위 완료 여부가 아니라 **구역별로 무엇을 더 맞출지**를 체크리스트로 관리합니다.
 
 - **[DESIGN_GAP_CHECKLIST.md](./DESIGN_GAP_CHECKLIST.md)** — `ECH메인`·`(1)~(9)`·매핑 외 화면(로그인, 각종 모달)별 검증 항목 및 우선순위 안내.
+
+## 8) Cursor MCP + Stitch로 목업을 낼 때 (앱 반영 절차)
+
+Cursor에 **Stitch 등 디자인 MCP**를 연결해 두었다면, 새 화면·컴포넌트는 Stitch 쪽에서 먼저 뽑고 저장소 `design/`에 맞춰 두는 흐름이 안전합니다.
+
+1. **산출물 저장**: Stitch가 낸 `code.html`·`DESIGN.md`·`screen.png`를 `design/ECH화면설계 (N)/` 또는 `design/ECH메인/` 규칙에 맞게 넣고, [§6](#6-화면설계-19--앱-구역-매핑) 표에 맞는 **앱 구역(`#view…`, 모달 ID)** 을 정한다.
+2. **토큰 정합**: 목업의 색·반경·그림자는 `frontend/tailwind.config.js`와 `frontend/styles.css`의 `:root` / `html[data-theme="light"]` 변수와 맞춘 뒤, 마크업은 `index.html`의 해당 구역에 **훅 클래스만** 통합한다(전역 교체 금지 — [§3](#3-점진적-적용-팁)).
+3. **플레이스홀더 제거**: Stitch 기본 이미지 URL·더미 링크는 프로덕션에 그대로 두지 않는다.
+4. **빌드**: `index.html` 또는 `app.js`에 Tailwind 유틸을 새로 썼다면 `cd frontend && npm run build:css`로 `ech-tailwind.css`를 갱신한다.
+5. **갭 관리**: 시각적으로 맞췄으면 [DESIGN_GAP_CHECKLIST.md](./DESIGN_GAP_CHECKLIST.md)에서 해당 구역 체크를 갱신한다.
+
+MCP는 **목업 생성·반복 실험**에 쓰고, 실제 동작·API·권한은 기존 `app.js`/백엔드 규칙을 따른다.

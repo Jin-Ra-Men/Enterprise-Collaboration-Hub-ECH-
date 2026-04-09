@@ -76,7 +76,7 @@
 | 문서 | 설명 |
 | :--- | :--- |
 | 📄 [기능 명세](docs/FEATURE_SPEC.md) | 화면별 동작·조건·예외 |
-| 🎨 [UI 디자인 시스템](docs/DESIGN_SYSTEM.md) · [목업 대비 갭 체크리스트](docs/DESIGN_GAP_CHECKLIST.md) | Stitch 참고물·토큰·`tailwind.config.js`·롤백·**화면설계 (1)~(9) ↔ 앱 구역(섹션 6)**·구역별 미정합 항목 추적 |
+| 🎨 [UI 디자인 시스템](docs/DESIGN_SYSTEM.md) · [목업 대비 갭 체크리스트](docs/DESIGN_GAP_CHECKLIST.md) | Stitch 참고물·토큰·`tailwind.config.js`·롤백·**화면설계 (1)~(9) ↔ 앱 구역(섹션 6)**·**MCP+Stitch 반영 절차(섹션 8)**·구역별 미정합 항목 추적 |
 | 🛠 [개발자용 저장소 안내](docs/DEVELOPER_README.md) | 기술 스택 상세, **API 목록**, 로컬 실행, 스키마 링크 |
 | 🪟 [배포·Windows](docs/DEPLOYMENT_WINDOWS.md) | 서버·설치·내부망 업데이트 |
 | 📋 [인수인계](docs/HANDOVER.md) | 운영·개발 인수인계 요약 |

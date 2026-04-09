@@ -4,8 +4,13 @@
 
 ## 2026-04-11
 
+### Added
+- **문서**: `docs/DESIGN_SYSTEM.md` §8 — Cursor MCP(Stitch 등)로 목업 생성 후 `design/` 저장·토큰 정합·`build:css`·갭 체크리스트까지의 앱 반영 절차.
+
 ### Changed
-- **문서**: `docs/FEATURE_SPEC.md` 화면설계 훅 섹션 비고에 `docs/DESIGN_GAP_CHECKLIST.md` 링크(시각·밀도 갭 추적, §7 권장 순서) 추가.
+- **프론트(라이트 테마 P0 시각)**: `styles.css` — 글로벌 바 글래스·헤더 그림자, 헤더 검색 포커스, 모달 스크림(blur·채도), 멤버 패널 글래스·고스트 보더, 컴포저 포커스 링, `.btn-primary` 앰비언트 섀도, 환영 카드 보더 토큰화, 사이드바 섹션 라벨 다크 일관. `--outline-variant` 라이트 토큰 명시.
+- **프론트(라이트 테마 2차 시각)**: `styles.css` — 관리자 인사이트 카드 호버·`org-tab-rail` 글래스, `#searchModal` 툴바/쿼리 입력·결과 행, `.btn-secondary` 라이트 톤, 컴포저 전송 버튼 섀도, 환영 히어로 그라데이션 섀도 강화.
+- **문서**: `README.md`·`HANDOVER.md`·`FEATURE_SPEC.md`(테스트 기준)·`DESIGN_GAP_CHECKLIST.md` 변경 이력 반영.
 
 ## 2026-04-10
 
