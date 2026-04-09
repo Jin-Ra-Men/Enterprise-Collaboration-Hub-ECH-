@@ -4697,7 +4697,7 @@ html[data-theme="light"] .work-hub-panel {
     inset 0 1px 0 rgba(255, 255, 255, 0.98);
   border-radius: 12px;
 }
-html[data-theme="light"] .work-hub-panel > h4 {
+html[data-theme="light"] .work-hub-panel-head h4 {
   letter-spacing: var(--ech-tracking-headline, -0.02em);
   font-weight: 800;
 }
@@ -4729,10 +4729,40 @@ html:not([data-theme="light"]) .work-hub-panel.work-hub-panel--flash {
   gap: 10px;
   overflow: visible;
 }
-.work-hub-panel > h4 {
-  margin-bottom: 8px;
-  color: var(--text-primary);
+.work-hub-panel-head {
   flex-shrink: 0;
+  margin-bottom: 6px;
+}
+.work-hub-panel-kicker {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+.work-hub-panel-head h4 {
+  margin: 0 0 8px;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+.ech-workhub-modal-header {
+  align-items: flex-start;
+}
+.ech-workhub-modal-header-text {
+  flex: 1;
+  min-width: 0;
+}
+.ech-workhub-modal-header-text h3 {
+  margin: 0;
+}
+.ech-workhub-modal-subtitle {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  font-weight: 500;
 }
 .work-hub-hint {
   margin: 0 0 10px;
@@ -4823,7 +4853,7 @@ html:not([data-theme="light"]) .work-hub-panel.work-hub-panel--flash {
 .kanban-card-highlight {
   outline: 2px solid var(--accent, #3b82f6);
   outline-offset: 2px;
-  border-radius: 8px;
+  border-radius: 12px;
   transition: outline 0.2s ease;
 }
 .kanban-assignee-pick.kanban-suggest-active,
@@ -4843,12 +4873,67 @@ html:not([data-theme="light"]) .work-hub-panel.work-hub-panel--flash {
 }
 .channel-work-item {
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  padding: 8px;
+  border-radius: 12px;
+  padding: 10px 10px 8px;
   background: var(--bg-elevated);
   min-width: 0;
   overflow-wrap: anywhere;
   transition: border-color 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+}
+.channel-work-item:hover {
+  border-color: color-mix(in srgb, var(--accent, #6366f1) 22%, var(--border-subtle));
+  box-shadow: 0 4px 14px rgba(44, 52, 55, 0.06);
+}
+html[data-theme="light"] .channel-work-item {
+  border: none;
+  box-shadow:
+    0 6px 18px rgba(44, 52, 55, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+html[data-theme="light"] .channel-work-item:hover {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent),
+    0 8px 22px rgba(44, 52, 55, 0.08);
+}
+html[data-theme="light"] .channel-work-item-inactive {
+  box-shadow:
+    inset 3px 0 0 rgba(245, 158, 11, 0.55),
+    0 6px 18px rgba(44, 52, 55, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+.channel-work-item-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.channel-work-item-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--bg-chat) 92%, var(--accent) 8%);
+  color: var(--text-secondary);
+}
+.channel-work-item-chip--OPEN {
+  border-color: color-mix(in srgb, #94a3b8 40%, var(--border-subtle));
+  background: color-mix(in srgb, var(--bg-elevated) 94%, #64748b 6%);
+}
+.channel-work-item-chip--IN_PROGRESS {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border-subtle));
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-elevated));
+  color: var(--text-primary);
+}
+.channel-work-item-chip--DONE {
+  border-color: color-mix(in srgb, #22c55e 40%, var(--border-subtle));
+  background: color-mix(in srgb, #22c55e 10%, var(--bg-elevated));
+  color: var(--text-secondary);
 }
 .channel-work-item--selected {
   border-color: color-mix(in srgb, var(--accent) 55%, var(--border-subtle));
@@ -4898,13 +4983,21 @@ html[data-theme="light"] .channel-work-item--selected {
 }
 .channel-kanban-board {
   display: flex;
-  gap: 10px;
+  gap: 16px;
   min-height: 0;
   width: 100%;
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  padding-bottom: 4px;
+  padding: 4px 4px 12px 2px;
+  scrollbar-gutter: stable;
+}
+.channel-kanban-board::-webkit-scrollbar {
+  height: 8px;
+}
+.channel-kanban-board::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-muted) 35%, transparent);
+  border-radius: 999px;
 }
 .kanban-col {
   border: 1px solid var(--border-subtle);
@@ -4922,10 +5015,10 @@ html[data-theme="light"] .kanban-column {
   border-radius: 12px;
 }
 html[data-theme="light"] .kanban-col-title,
-html[data-theme="light"] .kanban-column h5 {
-  letter-spacing: var(--ech-tracking-headline, -0.02em);
+html[data-theme="light"] .kanban-column-title {
+  letter-spacing: 0.1em;
   font-weight: 800;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--text-primary);
 }
 .kanban-col-title {
@@ -4942,13 +5035,14 @@ html[data-theme="light"] .kanban-column h5 {
 }
 html[data-theme="light"] .kanban-card,
 html[data-theme="light"] .kanban-card-item {
-  border: none;
-  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 2px 10px rgba(44, 52, 55, 0.06);
-  border-radius: 10px;
+  border-radius: 12px;
 }
 html[data-theme="light"] .kanban-card-item:hover {
-  box-shadow: 0 4px 16px rgba(44, 52, 55, 0.08);
+  border-color: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: 0 6px 18px rgba(44, 52, 55, 0.09);
 }
 .kanban-card-title {
   font-size: 13px;
@@ -4981,11 +5075,60 @@ html[data-theme="light"] .kanban-card-item:hover {
   flex-direction: column;
   align-items: stretch;
 }
-.kanban-column h5 {
-  margin: 0 0 8px;
+.channel-kanban-board .kanban-column {
+  flex: 0 0 320px;
+  width: 320px;
+  max-width: 320px;
+  min-width: 280px;
+  border-radius: 14px;
+  padding: 12px 10px 10px;
+}
+.kanban-column-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
   flex-shrink: 0;
-  font-weight: 700;
+  min-width: 0;
+}
+.kanban-column-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent, #6366f1) 55%, var(--text-muted));
+  flex-shrink: 0;
+}
+.kanban-column-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--text-primary);
+}
+.kanban-column-count {
+  flex-shrink: 0;
+  min-width: 1.5rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  background: color-mix(in srgb, var(--accent, #6366f1) 10%, var(--bg-elevated));
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+html[data-theme="light"] .kanban-column-count {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: color-mix(in srgb, var(--border-subtle) 80%, transparent);
+}
+.kanban-column--done-like .kanban-card-item:not(:hover):not(.kanban-card-dragging) {
+  opacity: 0.88;
+  filter: saturate(0.92);
+}
+.kanban-column--done-like .kanban-column-dot {
+  background: color-mix(in srgb, #22c55e 45%, var(--text-muted));
 }
 .kanban-card-list {
   display: flex;
@@ -4996,6 +5139,17 @@ html[data-theme="light"] .kanban-card-item:hover {
   flex: 1 1 auto;
   align-self: stretch;
   min-height: 8rem;
+}
+.kanban-card-list > .empty-notice {
+  margin: 0;
+  padding: 18px 12px;
+  border: 1px dashed color-mix(in srgb, var(--border-subtle) 82%, var(--accent) 18%);
+  border-radius: 12px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
 }
 .kanban-card-item {
   border: 1px solid var(--border-subtle);
@@ -5087,6 +5241,9 @@ html[data-theme="light"] .kanban-card-item:hover {
 }
 .channel-work-item-inactive {
   opacity: 0.6;
+  box-shadow:
+    inset 3px 0 0 color-mix(in srgb, #f59e0b 55%, transparent),
+    0 1px 0 rgba(255, 255, 255, 0.06) inset;
 }
 .channel-work-item-inactive .channel-work-item-title {
   text-decoration: line-through;

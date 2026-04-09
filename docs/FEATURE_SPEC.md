@@ -550,6 +550,7 @@
 - 목적: 채널 대화 맥락에서 바로 업무를 생성/관리하고, 같은 채널의 칸반 진행 상태를 한 화면에서 확인
 - 사용자: 채널 멤버
 - 관련 화면/경로: 채널 헤더 `📋` 버튼 → `업무 · 칸반` 모달
+- 시각 기준: `design/ECH화면설계 (1)`·`(6)` — 모달 부제·패널 키커(`work-hub-panel-kicker`), 업무 목록 행 상단 상태 칩(`channel-work-item-chip--*`), 칸반 컬럼 헤더(도트·제목·카드 수)·가로 스크롤·빈 컬럼 점선 안내, 컬럼명에 완료 계열이 포함되면 `.kanban-column--done-like`로 카드 톤을 살짝 낮춤(동작·API는 동일).
 - 관련 API:
   - `GET /api/channels/{channelId}/work-items?employeeNo=&limit=` — 채널 업무 목록
   - `POST /api/channels/{channelId}/work-items` — 채널 업무 생성(`createdByEmployeeNo`, `title`, 선택 `description`, `status`, `sourceMessageId`)

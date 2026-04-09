@@ -6709,7 +6709,11 @@ function renderChannelWorkItems(items) {
       }
     }
 
+    const statusKey = String(status || "OPEN");
     li.innerHTML = `
+      <div class="channel-work-item-chips" aria-hidden="true">
+        <span class="channel-work-item-chip channel-work-item-chip--${statusKey}">${escHtml(WORK_ITEM_STATUS_LABEL[statusKey] || statusKey)}</span>
+      </div>
       <div class="channel-work-item-head">
         <strong class="channel-work-item-title">${escHtml(baseTitle || "(제목 없음)")}</strong>
         <div class="channel-work-item-head-actions">
@@ -8214,9 +8218,21 @@ function renderKanbanBoard(board) {
       const options = cols
         .map((c) => `<option value="${Number(c.id)}">${escHtml(c.name || "")}</option>`)
         .join("");
+      const colNameLower = String(col.name || "").trim().toLowerCase();
+      const isDoneLikeCol =
+        colNameLower.includes("완료") ||
+        colNameLower === "done" ||
+        colNameLower.includes("complete") ||
+        colNameLower.includes("완료됨");
+      const colModClass = isDoneLikeCol ? " kanban-column--done-like" : "";
+      const cardCount = cards.length;
       return `
-      <section class="kanban-column" data-column-id="${Number(col.id)}">
-        <h5>${escHtml(col.name || "컬럼")}</h5>
+      <section class="kanban-column${colModClass}" data-column-id="${Number(col.id)}">
+        <header class="kanban-column-head">
+          <span class="kanban-column-dot" aria-hidden="true"></span>
+          <span class="kanban-column-title">${escHtml(col.name || "컬럼")}</span>
+          <span class="kanban-column-count" aria-label="카드 수">${cardCount}</span>
+        </header>
         <div class="kanban-card-list">
           ${
             cards.length

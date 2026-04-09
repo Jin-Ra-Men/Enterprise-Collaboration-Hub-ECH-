@@ -1085,13 +1085,19 @@
 
     <div id="modalWorkHub" class="modal-overlay hidden" data-ech-design-ref="screen1-workhub">
       <div class="modal modal-wide modal-work-hub ech-workhub-shell">
-        <div class="modal-header">
-          <h3 id="workHubTitle">업무 · 칸반</h3>
+        <div class="modal-header ech-workhub-modal-header">
+          <div class="ech-workhub-modal-header-text">
+            <h3 id="workHubTitle">업무 · 칸반</h3>
+            <p class="ech-workhub-modal-subtitle">채널 업무를 추적하고 칸반으로 진행 상황을 관리합니다.</p>
+          </div>
           <button class="modal-close" data-modal="modalWorkHub">✕</button>
         </div>
         <div class="modal-body work-hub-body work-hub-body--split">
           <div class="work-hub-panel" id="workHubPanelWork">
-            <h4>업무 항목</h4>
+            <div class="work-hub-panel-head">
+              <span class="work-hub-panel-kicker">Work items</span>
+              <h4>업무 항목</h4>
+            </div>
             <p class="work-hub-hint">신규 입력·목록에서 상태 변경 후 <strong>저장</strong>을 누르면 서버에 반영됩니다. 비활성 업무의 <strong>복원</strong>·<strong>완전 삭제</strong>도 목록(또는 상세)에서 선택한 뒤 <strong>저장</strong> 시에만 서버에 반영되며, 예약된 항목은 배지로 표시됩니다.</p>
             <div class="work-hub-panel-body">
               <form id="workItemCreateForm" class="work-item-create-form" onsubmit="return false;">
@@ -1109,8 +1115,11 @@
               <ul id="channelWorkItemsList" class="channel-work-item-list"></ul>
             </div>
           </div>
-          <div class="work-hub-panel" id="workHubPanelKanban">
-            <h4>칸반 보드</h4>
+          <div class="work-hub-panel" id="workHubPanelKanban" data-ech-design-ref="screen6-kanban">
+            <div class="work-hub-panel-head">
+              <span class="work-hub-panel-kicker">Kanban</span>
+              <h4>칸반 보드</h4>
+            </div>
             <p class="work-hub-hint">카드는 <strong>저장된 업무 항목</strong>에만 연결됩니다. 새 업무는 먼저 저장한 뒤 카드를 추가하세요. 컬럼 이동은 편집 후 <strong>저장</strong> 시 반영됩니다.</p>
             <div class="work-hub-panel-body">
               <form id="kanbanCardCreateForm" class="work-item-create-form" onsubmit="return false;">
