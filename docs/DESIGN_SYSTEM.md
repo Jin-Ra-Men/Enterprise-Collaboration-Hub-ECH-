@@ -84,3 +84,9 @@ Copy-Item -Force "frontend/design-backup/legacy-design/app.js" "frontend/app.js"
 | `(9)` | (코드만 상이·제목 생략 가능) | 사용자 **프로필 모달** `#modalUserProfile`(`.ech-profile-modal`·히어로·부제·`.profile-dl--cards`)·통합 검색 등 보조 패널 점진 적용 |
 
 **마크업 훅**: 채팅 `.ech-region--chat`, 헤더 `.ech-chat-header`, 입력 `.ech-composer-bar`, 관리자 `.ech-region--admin` + `data-ech-design-ref`, 배포 관리 `#viewReleases`의 `release-layout`·인사이트 카드. 스타일은 **Tailwind 미로드 시에도** `styles.css`만으로 레이아웃이 유지되도록 시맨틱 규칙을 우선합니다. `index.html`이나 유틸 클래스를 바꾼 뒤에는 `cd frontend && npm run build:css`로 `ech-tailwind.css`를 재생성합니다.
+
+## 7) 목업 대비 남은 갭 추적
+
+픽셀 단위 완료 여부가 아니라 **구역별로 무엇을 더 맞출지**를 체크리스트로 관리합니다.
+
+- **[DESIGN_GAP_CHECKLIST.md](./DESIGN_GAP_CHECKLIST.md)** — `ECH메인`·`(1)~(9)`·매핑 외 화면(로그인, 각종 모달)별 검증 항목 및 우선순위 안내.

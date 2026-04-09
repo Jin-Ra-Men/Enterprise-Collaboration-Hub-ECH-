@@ -5,6 +5,7 @@
 ## 2026-04-10
 
 ### Added
+- **문서**: `docs/DESIGN_GAP_CHECKLIST.md` — `design/ECH메인`·`ECH화면설계 (1)~(9)` 대비 앱 구역별 갭 체크리스트·검증 방법·우선순위. `docs/DESIGN_SYSTEM.md` §7에서 링크.
 - **프론트(ECH 화면설계 연동)**: `design/ECH화면설계 (1)~(9)` 구역별 마크업 훅 — 채팅 `#viewChat` (`.ech-region--chat`, `.ech-chat-header`, `.ech-messages-wrap`, `.ech-composer-bar`), 업무·칸반 `#modalWorkHub` (`.ech-workhub-shell`, 모달 폭 960px·라운드), 관리자 뷰 `.ech-region--admin` + `data-ech-design-ref`. `styles.css`에 타임라인 스크롤바·라이트 컴포저 바·관리자 패널 헤더 글래스 보강. `docs/DESIGN_SYSTEM.md` 섹션 6 매핑 표.
 
 ### Changed
