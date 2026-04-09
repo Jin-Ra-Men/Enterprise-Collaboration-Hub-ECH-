@@ -48,11 +48,11 @@
 | `.work-hub-body--split`(넓은 화면) 업무 목록 ↔ 칸반 2열 비율·스크롤 | [ ] |
 | 업무 탭/칸반 도구 모음이 목업 밀도와 맞는지 | [ ] |
 
-### `(2)` 워크스페이스 셸 + 멤버/조직 맥락
+### `(2)` 워크스페이스 셸 + 멤버/조직 맥락 · `design/ECH채팅`
 
 | 앱 위치 | 체크 |
 |---------|------|
-| `#viewChat` · `.ech-chat-header` · `.ech-messages-wrap` | [ ] |
+| `#viewChat`(`data-ech-design-ref="ech-chat"`) · `.ech-chat-header` · `.ech-messages-wrap` · `.ech-composer-glass` | [ ] |
 | `.ech-composer-bar` 입력·첨부·전송 정렬 | [ ] |
 | `#appHeaderSearchInput` + 헤더 검색 동작 | [ ] |
 | `#quickContainer` 퀵 레일·미읽음·`#mentionList` 멘션 목록 밀도 | [ ] |

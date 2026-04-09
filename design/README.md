@@ -5,6 +5,7 @@
 | 하위 | 내용 |
 |------|------|
 | `ECH메인/` | 메인 레이아웃 기준 — `code.html`, `DESIGN.md`, `screen.png` |
+| `ECH채팅/` | 채팅 캔버스·헤더·글래스 컴포저·우측 패널 톤 — 앱 `#viewChat`과 동기화 |
 | `ECH화면설계 (1)` ~ `(9)/` | 세부 기능별 동일 구성 |
 
 실제 앱 스타일은 `frontend/styles.css`와 `frontend/tailwind.config.js`에 반영합니다.  

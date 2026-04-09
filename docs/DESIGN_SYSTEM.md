@@ -7,6 +7,7 @@
 | 경로 | 용도 |
 |------|------|
 | `design/ECH메인/` | `code.html`, `DESIGN.md`, `screen.png` — 메인·레이아웃 기준 |
+| `design/ECH채팅/` | 채팅 캔버스·타임라인·글래스 컴포저·우측 패널 톤 — `#viewChat` (`data-ech-design-ref="ech-chat"`) |
 | `design/ECH화면설계 (1)` ~ `(9)/` | 세부 화면별 `code.html`·`DESIGN.md`·`screen.png` |
 
 `DESIGN.md`의 **Chromatic Sanctuary** 규칙(톤 대비·고스트 보더·그라데이션 CTA 등)은 `frontend/styles.css`의 CSS 변수·`html[data-theme="light"]` 오버라이드로 반영합니다.
@@ -74,7 +75,7 @@ Copy-Item -Force "frontend/design-backup/legacy-design/app.js" "frontend/app.js"
 | 폴더 | 참고 목업(요지) | 앱에서의 구역 / 식별자 |
 |------|-----------------|-------------------------|
 | `(1)` | ECH Workspace — Work Management | 업무·칸반 모달 `#modalWorkHub` · `.ech-workhub-shell` · 넓은 뷰에서 `.work-hub-body--split`(업무/칸반 2열) |
-| `(2)` | 워크스페이스 셸 + 조직/멤버 모달 | 채팅 타임라인 `#viewChat` · `.ech-messages-wrap` · 글로벌 검색 `#appShellTopBar` |
+| `(2)` | 워크스페이스 셸 + 조직/멤버 모달 | 채팅 타임라인 `#viewChat` · `.ech-messages-wrap` · 글로벌 검색 `#appShellTopBar` — **채팅 화면 세부 톤은 `design/ECH채팅/` 동기화** |
 | `(3)` | Enterprise Admin Hub | 관리자 뷰 공통 `.ech-region--admin` · 사이드바 관리 메뉴 |
 | `(4)` | Stratos Pro 상단 네비 | `app-shell-topbar` (ECH메인과 동일 계열) |
 | `(5)` | Organization Directory | 조직 관리 `#viewOrgManagement`(인사이트 카드 + `org-layout` 좌측 탭 레일) · 조직도 `#modalOrgChart` |
@@ -83,7 +84,7 @@ Copy-Item -Force "frontend/design-backup/legacy-design/app.js" "frontend/app.js"
 | `(8)` | Enterprise Hub — Settings | 앱 설정 `#viewSettings` |
 | `(9)` | (코드만 상이·제목 생략 가능) | 사용자 **프로필 모달** `#modalUserProfile`(`.ech-profile-modal`·히어로·부제·`.profile-dl--cards`)·통합 검색 등 보조 패널 점진 적용 |
 
-**마크업 훅**: 채팅 `.ech-region--chat`, 헤더 `.ech-chat-header`, 입력 `.ech-composer-bar`, 관리자 `.ech-region--admin` + `data-ech-design-ref`, 배포 관리 `#viewReleases`의 `release-layout`·인사이트 카드. 스타일은 **Tailwind 미로드 시에도** `styles.css`만으로 레이아웃이 유지되도록 시맨틱 규칙을 우선합니다. `index.html`이나 유틸 클래스를 바꾼 뒤에는 `cd frontend && npm run build:css`로 `ech-tailwind.css`를 재생성합니다.
+**마크업 훅**: 채팅 `.ech-region--chat`, 헤더 `.ech-chat-header`, 입력 `.ech-composer-bar`·`.ech-composer-glass`, 관리자 `.ech-region--admin` + `data-ech-design-ref`, 배포 관리 `#viewReleases`의 `release-layout`·인사이트 카드. 스타일은 **Tailwind 미로드 시에도** `styles.css`만으로 레이아웃이 유지되도록 시맨틱 규칙을 우선합니다. `index.html`이나 유틸 클래스를 바꾼 뒤에는 `cd frontend && npm run build:css`로 `ech-tailwind.css`를 재생성합니다.
 
 ## 7) 목업 대비 남은 갭 추적
 

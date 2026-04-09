@@ -5,6 +5,8 @@
 ## 2026-04-11
 
 ### Added
+- **프론트(ECH채팅 목업 반영)**: `design/ECH채팅/code.html` 기준으로 `#viewChat` — 헤더 2줄(채널명 인디고·`#chatHeaderMeta`·터치 점)·햄버거 Material 아이콘, 날짜 구분선 좌우 라인, 라이트 말풍선/아바타 원형, 글래스 컴포저(`.ech-composer-glass`·장식 툴바·하단 힌트)·첨부/전송 Material 아이콘, 멤버 패널 제목「채널 상세」·`top` 보정. `app.js`에서 멤버 로드 시 `팀원 N명`·메타 표시.
+- **문서**: `docs/DESIGN_SYSTEM.md` §1·§6에 `design/ECH채팅/`·`data-ech-design-ref="ech-chat"`·`.ech-composer-glass` 안내. `FEATURE_SPEC`·`HANDOVER`·`DESIGN_GAP_CHECKLIST` 갱신.
 - **문서**: `docs/DESIGN_SYSTEM.md` §8 — Cursor MCP(Stitch 등)로 목업 생성 후 `design/` 저장·토큰 정합·`build:css`·갭 체크리스트까지의 앱 반영 절차.
 
 ### Changed

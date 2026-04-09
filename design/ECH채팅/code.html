@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ECH Workspace | Enterprise Collaboration Hub</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-tint": "#4e45e4",
+                    "secondary-fixed": "#d3e4fe",
+                    "secondary-fixed-dim": "#c5d6f0",
+                    "on-tertiary": "#f5f9ff",
+                    "tertiary-fixed-dim": "#17a8ec",
+                    "on-secondary-fixed-variant": "#4d5d73",
+                    "surface-bright": "#f7f9fb",
+                    "background": "#f7f9fb",
+                    "on-primary": "#fbf7ff",
+                    "on-surface": "#2c3437",
+                    "surface-dim": "#d4dbdf",
+                    "secondary": "#506076",
+                    "on-tertiary-fixed-variant": "#003954",
+                    "tertiary": "#006592",
+                    "primary-container": "#6760fd",
+                    "primary-fixed-dim": "#5a52f0",
+                    "outline-variant": "#acb3b7",
+                    "surface-container-high": "#e3e9ed",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-highest": "#dce4e8",
+                    "on-secondary-container": "#435368",
+                    "on-primary-fixed": "#ffffff",
+                    "error-container": "#f97386",
+                    "error-dim": "#6b0221",
+                    "inverse-surface": "#0b0f10",
+                    "tertiary-fixed": "#34b5fa",
+                    "tertiary-container": "#34b5fa",
+                    "on-tertiary-fixed": "#00121e",
+                    "on-error-container": "#6e0523",
+                    "on-background": "#2c3437",
+                    "on-secondary": "#f7f9ff",
+                    "surface": "#f7f9fb",
+                    "on-tertiary-container": "#003047",
+                    "on-secondary-fixed": "#314055",
+                    "inverse-on-surface": "#9a9d9f",
+                    "surface-container": "#eaeff2",
+                    "tertiary-dim": "#005980",
+                    "inverse-primary": "#8582ff",
+                    "surface-container-low": "#f0f4f7",
+                    "surface-variant": "#dce4e8",
+                    "outline": "#747c80",
+                    "on-primary-container": "#000000",
+                    "primary-dim": "#4135d8",
+                    "primary": "#4e45e4",
+                    "error": "#a8364b",
+                    "on-primary-fixed-variant": "#edeaff",
+                    "primary-fixed": "#6760fd",
+                    "secondary-dim": "#44546a",
+                    "secondary-container": "#d3e4fe",
+                    "on-surface-variant": "#596064",
+                    "on-error": "#fff7f7"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.5rem",
+                    "lg": "1rem",
+                    "xl": "1.5rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #dce4e8; border-radius: 10px; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface flex h-screen overflow-hidden">
+<!-- Sidebar Navigation Shell -->
+<aside class="hidden md:flex flex-col h-full py-4 space-y-2 bg-slate-100 dark:bg-slate-900 h-screen w-72 shrink-0 background-tonal-transition-no-border">
+<div class="px-6 py-4 flex items-center space-x-3">
+<div class="w-10 h-10 bg-primary-container rounded-lg flex items-center justify-center text-white font-black text-xl shadow-lg shadow-primary/20">
+                E
+            </div>
+<div>
+<h2 class="text-on-surface font-bold text-sm tracking-tight">ECH Workspace</h2>
+<p class="text-on-surface-variant text-[10px] uppercase tracking-widest font-bold">Premium Tier</p>
+</div>
+</div>
+<div class="px-4 py-2">
+<button class="w-full bg-primary hover:bg-primary-container text-white py-3 rounded-xl flex items-center justify-center space-x-2 transition-all duration-200 shadow-lg shadow-primary/10">
+<span class="material-symbols-outlined text-sm">add</span>
+<span class="font-semibold text-sm">New Message</span>
+</button>
+</div>
+<nav class="flex-1 overflow-y-auto px-2 space-y-1 custom-scrollbar">
+<!-- Navigation Items Mapping from JSON -->
+<div class="flex items-center text-indigo-700 dark:text-indigo-300 font-bold border-l-4 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/20 px-4 py-3 cursor-pointer translate-x-1 duration-200">
+<span class="material-symbols-outlined mr-3">forum</span>
+<span class="font-inter label-md uppercase tracking-widest text-xs">Threads</span>
+</div>
+<div class="flex items-center text-slate-600 dark:text-slate-400 font-medium px-4 py-3 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer">
+<span class="material-symbols-outlined mr-3">chat_bubble</span>
+<span class="font-inter label-md uppercase tracking-widest text-xs">Direct Messages</span>
+</div>
+<div class="flex items-center text-slate-600 dark:text-slate-400 font-medium px-4 py-3 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer">
+<span class="material-symbols-outlined mr-3">list_alt</span>
+<span class="font-inter label-md uppercase tracking-widest text-xs">Channels</span>
+</div>
+<div class="flex items-center text-slate-600 dark:text-slate-400 font-medium px-4 py-3 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer">
+<span class="material-symbols-outlined mr-3">attachment</span>
+<span class="font-inter label-md uppercase tracking-widest text-xs">Files</span>
+</div>
+<div class="flex items-center text-slate-600 dark:text-slate-400 font-medium px-4 py-3 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer">
+<span class="material-symbols-outlined mr-3">drafts</span>
+<span class="font-inter label-md uppercase tracking-widest text-xs">Drafts</span>
+</div>
+<div class="flex items-center text-slate-600 dark:text-slate-400 font-medium px-4 py-3 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer">
+<span class="material-symbols-outlined mr-3">notifications</span>
+<span class="font-inter label-md uppercase tracking-widest text-xs">Activity</span>
+</div>
+</nav>
+<div class="px-2 pt-4 border-t border-outline-variant/10">
+<div class="flex items-center text-slate-600 dark:text-slate-400 font-medium px-4 py-3 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer">
+<span class="material-symbols-outlined mr-3">settings</span>
+<span class="font-inter label-md uppercase tracking-widest text-xs">Settings</span>
+</div>
+<div class="flex items-center text-slate-600 dark:text-slate-400 font-medium px-4 py-3 hover:bg-slate-200 dark:hover:bg-slate-800 transition-all cursor-pointer">
+<span class="material-symbols-outlined mr-3">contact_support</span>
+<span class="font-inter label-md uppercase tracking-widest text-xs">Support</span>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col bg-surface overflow-hidden relative">
+<!-- Top App Bar Shell -->
+<header class="flex justify-between items-center w-full px-6 h-16 bg-slate-50 dark:bg-slate-950 background-shift-tonal-depth shrink-0">
+<div class="flex items-center space-x-4">
+<div class="flex items-center space-x-2 md:hidden">
+<span class="material-symbols-outlined text-primary">menu</span>
+</div>
+<div>
+<h1 class="text-xl font-black tracking-tighter text-indigo-700 dark:text-indigo-300"># design-system</h1>
+<div class="flex items-center space-x-2">
+<span class="w-2 h-2 bg-tertiary rounded-full shadow-[0_0_8px_rgba(0,101,146,0.6)]"></span>
+<p class="text-[10px] text-on-surface-variant font-medium">12 Team Members Online</p>
+</div>
+</div>
+</div>
+<div class="flex items-center space-x-2">
+<div class="relative group hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="bg-surface-container-low border-none rounded-full pl-10 pr-4 py-1.5 text-xs w-64 focus:ring-2 focus:ring-primary/20 focus:bg-surface-container-lowest transition-all" placeholder="Search conversation..." type="text"/>
+</div>
+<button class="p-2 rounded-full hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors text-slate-500">
+<span class="material-symbols-outlined">tune</span>
+</button>
+<button class="p-2 rounded-full hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors text-slate-500">
+<span class="material-symbols-outlined">help</span>
+</button>
+<div class="h-8 w-8 rounded-full overflow-hidden ml-2 ring-2 ring-primary-container/20 ring-offset-2 ring-offset-surface">
+<img class="w-full h-full object-cover" data-alt="professional male portrait with friendly expression in office setting, soft natural lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkf7JJAW3bgQTnaxrg2jGcUxoJ4GGayJ_o3vRm85fvBmTwl0NK24yqdIjIbtsM5f5sROlsuqTg52ZT1PqpJeDt0U8Z-H58kcYSX2d2K-iwwF3JVifPZNAyBtGEUTOI5TH3bLM9_K6xt9-XxGbsrGk_pGxeSCpd0MKzRyrCIhcDsEMgXwHh6AxjiFvxeFYsUCNKR1IR9GZ_kS0adFZ-nyxNpN5CzJmp-M4YUgJ-WZmDvK0PfKDhBHGFilZbWntfy_P4SepCrEZuu55E"/>
+</div>
+</div>
+</header>
+<!-- Chat Canvas -->
+<div class="flex-1 overflow-y-auto px-8 py-6 space-y-8 custom-scrollbar">
+<!-- Date Separator -->
+<div class="flex items-center space-x-4">
+<div class="flex-1 h-px bg-outline-variant/15"></div>
+<span class="text-[11px] font-bold uppercase tracking-[0.2em] text-on-surface-variant/60">Tuesday, April 7, 2026</span>
+<div class="flex-1 h-px bg-outline-variant/15"></div>
+</div>
+<!-- Message: Received -->
+<div class="flex items-start space-x-4 group">
+<div class="relative shrink-0">
+<img class="w-10 h-10 rounded-full object-cover shadow-sm" data-alt="young professional woman portrait in creative studio, bright and airy lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAfNMyzRifqCSn0LliRm1Hv0d1W6Q2Ss7QPQNCI8STJcvN-6jijQDdSKGyFARakfa3ngptio7rpdvH3vZezW73x5YR8Y_92ylpDzWe-CqzEKx68_6GLOqTiLN6V67b7rg1HX42kEkqFWYbLKy9Ui10dX_IcTz1Xs4FiiDjy6aIZWnSxjXU7PYUQ773cKhluYykenKmSXF5QTshe2U3Sr0LQRZkOWZXEmiM7L2Ki-c9s9JC_QLzUEKJtel5W4kduPHko3NW-cPiqx7cS"/>
+<span class="absolute bottom-0 right-0 w-3 h-3 bg-tertiary border-2 border-surface rounded-full shadow-[0_0_4px_rgba(0,101,146,0.4)]"></span>
+</div>
+<div class="space-y-1 max-w-[70%]">
+<div class="flex items-baseline space-x-2">
+<span class="font-bold text-sm text-on-surface">Sarah Jenkins</span>
+<span class="text-[10px] text-on-surface-variant/60">10:24 AM</span>
+</div>
+<div class="bg-surface-container-high p-4 rounded-lg rounded-tl-none text-sm leading-relaxed text-on-surface shadow-sm">
+                        Hey team! I've finished the initial moodboard for the Chromatic Sanctuary theme. I've attached some reference shots and the draft design guidelines. What do you think about the tonal depth here?
+                    </div>
+</div>
+</div>
+<!-- Message: Sent -->
+<div class="flex flex-row-reverse items-start space-x-4 space-x-reverse">
+<div class="relative shrink-0">
+<img class="w-10 h-10 rounded-full object-cover shadow-sm" data-alt="close-up profile of man in business casual attire, warm indoor lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC1Uc6dGxD-YwdWGidWU_hpUg7dsaPOZWzRimHa1PAfslZ-uplJ-yxv0bDJ2aHl3rK0YnsdOaO9KEcJ1kBTfzbPpKrSweXwdwekK3zn6MukjGo7b067bFjej3InyiNSYE2IqdnPYR23TlzDEoXGDsjz_mxMw2htP_fL-vWbApVWBlTBQ-7rTrK_ucik_KVCsa8mnB1XWUYrPJX16rez21caK5hY-eg1lecYdhPaS1rjHKMWbEkJ6JF0536oAmULZxZfoG8Nyu8FUX5r"/>
+<span class="absolute bottom-0 right-0 w-3 h-3 bg-tertiary border-2 border-surface rounded-full shadow-[0_0_4px_rgba(0,101,146,0.4)]"></span>
+</div>
+<div class="space-y-1 max-w-[70%] flex flex-col items-end">
+<div class="flex items-baseline space-x-2 space-x-reverse">
+<span class="font-bold text-sm text-on-surface">Alex Rivera</span>
+<span class="text-[10px] text-on-surface-variant/60">10:26 AM</span>
+</div>
+<div class="bg-primary text-white p-4 rounded-lg rounded-tr-none text-sm leading-relaxed shadow-lg shadow-primary/10">
+                        Looks incredible, Sarah. The indigo palette really gives it that premium editorial feel. Let's make sure the grid transitions feel as fluid as the typography.
+                    </div>
+</div>
+</div>
+<!-- Message: Received with Grid Images -->
+<div class="flex items-start space-x-4">
+<div class="relative shrink-0">
+<img class="w-10 h-10 rounded-full object-cover shadow-sm" data-alt="young woman with glasses smiling in professional studio setting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAN5h9HttcZ22Jo_q2rRlPnTWidHei2lYNxzC__TE10u2GRKV9-nq8EurCTGd0bSZlUhRnIZTRyRGlLKwGBOYJOA9fYSYrsRegdO1Q9rdo84GV7h9T4k7_07g-g1b6RxfoM2l9psTUWUBq9p09q73wqWdcXIU6mJlZIjwXn_EZBbjS09g-ABE6iFkZWtNds1rjWVPZLvuWVhj1Six0W5w90hI5zjNDSRLF6Gdpg4f5M3pYvPxiPdooZajXnCab4lVRppkjx1YhUztlY"/>
+<span class="absolute bottom-0 right-0 w-3 h-3 bg-tertiary border-2 border-surface rounded-full"></span>
+</div>
+<div class="space-y-3 max-w-[70%]">
+<div class="flex items-baseline space-x-2">
+<span class="font-bold text-sm text-on-surface">Sarah Jenkins</span>
+<span class="text-[10px] text-on-surface-variant/60">10:28 AM</span>
+</div>
+<div class="bg-surface-container-high p-4 rounded-lg rounded-tl-none space-y-4 shadow-sm">
+<p class="text-sm leading-relaxed">Here are those reference frames I was talking about. I'm focusing on the "Atmospheric" softness for the container transitions.</p>
+<!-- Bento-ish Grid for Images -->
+<div class="grid grid-cols-2 gap-2">
+<div class="aspect-square rounded-md overflow-hidden bg-surface-container-highest">
+<img class="w-full h-full object-cover hover:scale-105 transition-transform duration-500" data-alt="abstract fluid shapes in shades of deep indigo and violet with smooth gradients" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDaa-BUJYbINtGfEzS4doSNFbOoxDYZP7mcoAIqh0aP4_FNohQUfSbdkDL7MZXmKku6eh7EVxLH_8L4e6806Eo_0vH6Zx4vJcGI9YKtQGRt0r_FbF3lvGq85yi9T3VVnCCt_LWA7iliNWKOLH1z8U5HcNu3MHyp2VTVwWCrw22kL6KVDLa90DBEYFvQhgLgDGXp_fyQuu4FCatMfGU5Zs-bqJQ4TOXghfHeN50tTLUBdFAyn-av8Hk_r2HE0mgiZg5D9NO_rfMlDrIS"/>
+</div>
+<div class="aspect-square rounded-md overflow-hidden bg-surface-container-highest">
+<img class="w-full h-full object-cover hover:scale-105 transition-transform duration-500" data-alt="modern minimalist interior with soft shadows and neutral grey tones, architectural clean lines" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA6dI0MmLvJmhDSGr-CFuSd2BFARAXX3uYoHb5p5VLv3T_Dc6y1Fy0Nfok8spv73aqMI17gfW_-DfO-F3OKWEBTAskU5gl9SB_kvghBPNoDN1oktLxFhAorycO4c4cVydF02qNg6nELJp0Ku2btkBSfal2uck_cNws7urNdmaAD6LDChNmfwQNQLCLeYOu-tuahs4WwOhSnPHW7pfPtuk2CfsyPEASf-kcTSEfOzoOCg50Brdv40tOie6Th-1CqL69lfvBgtstaaLmW"/>
+</div>
+<div class="aspect-square rounded-md overflow-hidden bg-surface-container-highest">
+<img class="w-full h-full object-cover hover:scale-105 transition-transform duration-500" data-alt="smooth blue to dark purple gradient background with subtle noise texture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBpXafsJvUhqdNHnLatWqcZ15wUzKWXR6XdtX5k3zhOaOwx_UK7X-7Sk7ZogNGSB7dEirBlfm3pvD3Vf_iDeJaaEpf0VBJtvQpaKJt1XPWbGZ8gQiSFld2w3duJws8pXx10BFfTprbBAD9D6bL59VSYkOCGiQNAWhf1CkBxJ5OguzLmpV84v56jKeYzPES1yXFuBpyCkw66x6iiNOG3T0F1jO_V8FsFt67PSihpfwqtoHAJ-BjZepY-SEsNtK-MKbQv7mx-IB4THDLC"/>
+</div>
+<div class="aspect-square rounded-md overflow-hidden bg-surface-container-highest relative group cursor-pointer">
+<img class="w-full h-full object-cover blur-[1px]" data-alt="soft focus glass texture with light refracting through creating prism effects" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxlaEOwnB6xtuNjQ-ciqnfrGmkQjM4PtNOt12I-mwFVhjaAoDorJIjmknD2GRJkqSdJmJb0z1Cyp37Vrl1ZPgPj9fus0C0AVcpc_3vOpDbE_CtoxJmlQKbsPFLi0wxkJ2Xz64ik_Xcp2BLjRcd2xpkS8Tn1d30P2KbsQYmUVlEGUwq_uxmOX13YNdXGxKhQsf0tBwVxuAaDhfD00jbcPcMEGlYIMHzWPle-p2FgS8Nx4rrC9KERbID2RUlKQXPakurMx1nGGJsY7P0"/>
+<div class="absolute inset-0 bg-black/40 flex items-center justify-center text-white font-bold text-lg group-hover:bg-black/50 transition-colors">
+                                    +5
+                                </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Message: Received with File Attachment -->
+<div class="flex items-start space-x-4">
+<div class="w-10 h-10 shrink-0"></div> <!-- Placeholder for avatar alignment -->
+<div class="space-y-3 max-w-[70%]">
+<div class="bg-surface-container-lowest border border-outline-variant/20 p-3 rounded-lg flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
+<div class="flex items-center space-x-3">
+<div class="w-10 h-10 bg-indigo-50 text-indigo-600 rounded flex items-center justify-center">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div>
+<p class="text-sm font-semibold text-on-surface">Design_System_v2.pdf</p>
+<p class="text-[10px] text-on-surface-variant font-medium">4.2 MB • PDF Document</p>
+</div>
+</div>
+<button class="p-2 hover:bg-surface-container text-primary transition-colors rounded-full">
+<span class="material-symbols-outlined">download</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Message Input Bar -->
+<footer class="px-8 pb-8 pt-4">
+<div class="relative glass-panel rounded-xl border border-outline-variant/10 shadow-xl shadow-indigo-900/5">
+<div class="flex items-center p-2 space-x-1 border-b border-outline-variant/5">
+<button class="p-2 hover:bg-surface-container rounded-lg text-on-surface-variant transition-colors" title="Bold">
+<span class="material-symbols-outlined text-[20px]">format_bold</span>
+</button>
+<button class="p-2 hover:bg-surface-container rounded-lg text-on-surface-variant transition-colors" title="Italic">
+<span class="material-symbols-outlined text-[20px]">format_italic</span>
+</button>
+<button class="p-2 hover:bg-surface-container rounded-lg text-on-surface-variant transition-colors" title="Link">
+<span class="material-symbols-outlined text-[20px]">link</span>
+</button>
+<div class="w-px h-6 bg-outline-variant/20 mx-1"></div>
+<button class="p-2 hover:bg-surface-container rounded-lg text-on-surface-variant transition-colors" title="List">
+<span class="material-symbols-outlined text-[20px]">format_list_bulleted</span>
+</button>
+</div>
+<div class="flex items-end px-4 py-3 space-x-3">
+<button class="mb-1 p-1 hover:bg-surface-container rounded text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined">add_circle</span>
+</button>
+<textarea class="flex-1 bg-transparent border-none focus:ring-0 text-sm py-1 resize-none h-10 min-h-[40px] max-h-32 custom-scrollbar" placeholder="Message #design-system" rows="1"></textarea>
+<div class="flex items-center space-x-2 mb-1">
+<button class="p-1 hover:bg-surface-container rounded text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined">sentiment_satisfied</span>
+</button>
+<button class="p-1 hover:bg-surface-container rounded text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined">alternate_email</span>
+</button>
+<button class="bg-primary text-white p-2 rounded-lg flex items-center justify-center hover:scale-105 transition-all active:scale-95 shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined text-sm">send</span>
+</button>
+</div>
+</div>
+</div>
+<p class="text-center text-[10px] text-on-surface-variant/40 mt-3 font-medium tracking-wide">Enter to send, Shift+Enter for new line</p>
+</footer>
+</main>
+<!-- Contextual Right Panel -->
+<aside class="hidden lg:flex flex-col w-80 bg-surface-container-low h-screen border-l border-outline-variant/5">
+<div class="p-6 h-16 flex items-center border-b border-outline-variant/5">
+<h3 class="font-bold text-sm tracking-tight text-on-surface">Channel Details</h3>
+</div>
+<div class="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+<!-- Channel Info Section -->
+<section class="space-y-4">
+<div class="aspect-video rounded-xl bg-surface-container-highest overflow-hidden relative group">
+<img class="w-full h-full object-cover opacity-80" data-alt="vibrant modern office workspace with collaborative design elements and large windows" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAuWxi7-Jz7fl4cou3g_6mzC4epes4NzEbiRU-w2ZJsHd5xSkc5QxgH75-wng_UIADE61ZqRBudmEHi_vKxiKVT0c6McaKiWo0S_DgNsd2m63XKwudonDcIJaqN5WnJPEDBXDZig5Ni3mQ78bfs_zhBcjrijNgpGWVJMlTP1Hv7KMN3QW2GVDIytIJMo6pR_yhF3-MPP6zgomqnupjDFDdMmmd0jpydCJ2UwrQn61pC0K42TlBoYqs-ks3gIZk5UsBRpttRWx69y1F"/>
+<div class="absolute inset-0 bg-gradient-to-t from-indigo-900/60 to-transparent"></div>
+<div class="absolute bottom-3 left-3 text-white">
+<p class="text-[10px] font-bold uppercase tracking-widest opacity-80">Workspace ID</p>
+<p class="text-xs font-bold">ECH-DS-ALPHA-01</p>
+</div>
+</div>
+<div>
+<h4 class="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest mb-1">About</h4>
+<p class="text-xs text-on-surface leading-relaxed">Central hub for Stratos Pro design system updates, documentation links, and chromatic sanctuary component reviews.</p>
+</div>
+</section>
+<!-- Members Section -->
+<section class="space-y-4">
+<div class="flex justify-between items-center">
+<h4 class="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Members — 12</h4>
+<button class="text-[10px] font-bold text-primary hover:underline">View All</button>
+</div>
+<div class="space-y-3">
+<div class="flex items-center space-x-3 group cursor-pointer">
+<div class="relative">
+<img class="w-8 h-8 rounded-full object-cover" data-alt="user avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwgBnTs8_ymrwkCDvW6GT-UZrIjQYhiTDUT6aQJ80qxVzN1Kozcf_6Kmvv_WsMmy9V0GDfnuH-rc-6vYJ3Y-oBO729n4eg1_vxNMoKESlGcettXAxCHiVnf2gajrnW0kP3ZYtzzkesK7-VIpJR7GPVw1qKZx5VDnE4oGvxG7xs_QL1R51ogZMSVGW86SfM-k-g0IwWOksF2JDxqkCOS8KneUUTrwc_LztBAAIKs-8clfgN8U0XZUcqnjSNPj7cYG4cmp2upktlWqj6"/>
+<span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-tertiary border-2 border-surface-container-low rounded-full"></span>
+</div>
+<div class="flex-1 overflow-hidden">
+<p class="text-xs font-semibold text-on-surface truncate">Sarah Jenkins</p>
+<p class="text-[10px] text-on-surface-variant truncate">Lead Designer</p>
+</div>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">more_horiz</span>
+</div>
+<div class="flex items-center space-x-3 group cursor-pointer">
+<div class="relative">
+<img class="w-8 h-8 rounded-full object-cover" data-alt="user avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA2jNqYN2cuJcGsXOeGpaNFJW9hXQtOAxbLfKzfFyttxeosBoiGfby7JQvGNDSe5pFqqvwYbn0D72CDG_EJujnSAlZjzNfJH99lOJIP2QogW53Vz-ELZ4SW_E7W_4FE208Ag2M_TvmUCUWvN2qoeKnruVRv4W7Tk5IkKZjPfu4u-OX-Ddi7TOGIyvODuHqzieK63uBptX_1ijsujDI4N7-Fq6NjJrXXCin4Xn-znaGAywrpfl8PI7BIk0VzxvWSahXHpIPazP3Jt92a"/>
+<span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-tertiary border-2 border-surface-container-low rounded-full"></span>
+</div>
+<div class="flex-1 overflow-hidden">
+<p class="text-xs font-semibold text-on-surface truncate">Alex Rivera</p>
+<p class="text-[10px] text-on-surface-variant truncate">Design Ops</p>
+</div>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant opacity-0 group-hover:opacity-100 transition-opacity">more_horiz</span>
+</div>
+<div class="flex items-center space-x-3 group cursor-pointer opacity-60">
+<div class="relative">
+<img class="w-8 h-8 rounded-full object-cover grayscale" data-alt="user avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDZZ4MXTBp5qlJEoFUCg9OEROH9NidtNcc6bNhufbQ-nU0G4hJbCtGmjXpY2_bGW6M6IngbxpCGVnp_a8VI2eNZvS1ua4X3_lJKyv84tuFQCSr9QHuIZ7ZPsI1ySH_p0S0_X_es17eCp4bYM1v1kJNdNXNhbHi1W5cAyTo_ADaC9M-h5coLS34vkIAK2nqZCOxyTfrdBex7d4-mHSLMR-aL34jMFWpPsjeBQ_Ew1oPkp9y6ElbdLlV_eqRZvli_YnRI7MWfd7kw6TnZ"/>
+<span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-outline-variant border-2 border-surface-container-low rounded-full"></span>
+</div>
+<div class="flex-1 overflow-hidden">
+<p class="text-xs font-semibold text-on-surface truncate">Marcus Chen</p>
+<p class="text-[10px] text-on-surface-variant truncate">Fullstack Eng</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Files Section -->
+<section class="space-y-4">
+<h4 class="text-[11px] font-bold text-on-surface-variant uppercase tracking-widest">Recent Files</h4>
+<div class="space-y-2">
+<div class="flex items-center space-x-3 p-2 rounded-lg hover:bg-surface-container-high transition-colors cursor-pointer">
+<div class="w-8 h-8 bg-surface-container-highest rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[18px]">image</span>
+</div>
+<div class="flex-1 overflow-hidden">
+<p class="text-[10px] font-bold text-on-surface truncate">hero_v2_mockup.png</p>
+<p class="text-[9px] text-on-surface-variant">2.4 MB • 2h ago</p>
+</div>
+</div>
+<div class="flex items-center space-x-3 p-2 rounded-lg hover:bg-surface-container-high transition-colors cursor-pointer">
+<div class="w-8 h-8 bg-surface-container-highest rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[18px]">article</span>
+</div>
+<div class="flex-1 overflow-hidden">
+<p class="text-[10px] font-bold text-on-surface truncate">sprint_notes_apr.pdf</p>
+<p class="text-[9px] text-on-surface-variant">1.1 MB • 5h ago</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+<div class="p-6 border-t border-outline-variant/5 bg-surface-container-lowest">
+<button class="w-full text-xs font-bold text-error bg-error/5 hover:bg-error/10 py-3 rounded-lg transition-colors">
+                Leave Channel
+            </button>
+</div>
+</aside>
+</body></html>

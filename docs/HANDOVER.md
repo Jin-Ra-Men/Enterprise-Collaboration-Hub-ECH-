@@ -70,7 +70,7 @@
 
 ## 3) 핵심 문서 위치
 - 루트 소개(제품·기능 요약): `README.md`
-- **UI 디자인 시스템·롤백**: `docs/DESIGN_SYSTEM.md` — `frontend/styles.css`·`tailwind.config.js`, `design/` 참고물, `ech_design_version`·`design-backup/legacy-design/` 복구 절차. **화면설계 (1)~(9) ↔ 앱 구역**은 동 문서 섹션 6·마크업 훅(`.ech-region--chat`, `.ech-workhub-shell`, `.ech-region--admin`, `data-ech-design-ref`). **목업 대비 남은 갭**은 `docs/DESIGN_GAP_CHECKLIST.md`에서 구역별로 체크·우선순위 관리. Cursor에 **Stitch·디자인 MCP**를 연결한 경우 목업 생성·저장 후 앱 반영 절차는 `docs/DESIGN_SYSTEM.md` **섹션 8**을 따른다.
+- **UI 디자인 시스템·롤백**: `docs/DESIGN_SYSTEM.md` — `frontend/styles.css`·`tailwind.config.js`, `design/` 참고물, `ech_design_version`·`design-backup/legacy-design/` 복구 절차. **화면설계 (1)~(9) ↔ 앱 구역**은 동 문서 섹션 6·마크업 훅(`.ech-region--chat`, `.ech-workhub-shell`, `.ech-region--admin`, `data-ech-design-ref`). 채팅 화면 최신 목업은 **`design/ECH채팅/`** → `#viewChat` (`data-ech-design-ref="ech-chat"`). **목업 대비 남은 갭**은 `docs/DESIGN_GAP_CHECKLIST.md`에서 구역별로 체크·우선순위 관리. Cursor에 **Stitch·디자인 MCP**를 연결한 경우 목업 생성·저장 후 앱 반영 절차는 `docs/DESIGN_SYSTEM.md` **섹션 8**을 따른다.
 - 개발자 안내(기술·API·실행): `docs/DEVELOPER_README.md`
 - 요구사항: `docs/PROJECT_REQUIREMENTS.md`
 - 로드맵: `docs/ROADMAP.md`

@@ -31,7 +31,7 @@
 ## 화면설계 구역별 적용 훅 (ECH화면설계 1~9)
 - 목적: 화면별 목업 차이를 실제 앱 구조에 안전하게 반영하기 위해 구역 단위 마크업 훅과 스타일 기준을 고정
 - 사용자: 프론트엔드 개발자, 디자인 반영 담당자
-- 관련 화면/경로: `frontend/index.html` (`#viewChat`, `#modalWorkHub`, `#viewReleases`, `#viewUserManagement`, `#viewOrgManagement`, `#viewSettings`)
+- 관련 화면/경로: `frontend/index.html` (`#viewChat`·`data-ech-design-ref="ech-chat"`, `#modalWorkHub`, `#viewReleases`, `#viewUserManagement`, `#viewOrgManagement`, `#viewSettings`) — 채팅 화면 시각 기준은 `design/ECH채팅/`과 동기화
 - 관련 API: 해당 없음(표현 계층 중심)
 - 관련 Socket 이벤트: 기존 채팅/업무 이벤트 그대로 사용(식별자 변경 없음)
 - 입력/출력:
@@ -43,7 +43,8 @@
 - 권한/보안: UI 클래스 스코프 변경만 포함, 권한 로직 영향 없음
 - 로그/감사 포인트: 해당 없음
 - 테스트 기준:
-  - 라이트 테마에서 글로벌 바(`app-shell-topbar`)·모달 스크림·채팅 멤버 패널·컴포저 포커스 링이 과도한 실선 없이(고스트 보더·글래스 계열) 일관되는지 확인
+  - 라이트 테마에서 글로벌 바(`app-shell-topbar`)·모달 스크림·채팅 멤버 패널·컴포저(`.ech-composer-glass`) 포커스 링이 과도한 실선 없이(고스트 보더·글래스 계열) 일관되는지 확인
+  - 채팅(`#viewChat`)이 `design/ECH채팅`에 맞게 헤더(채널명 인디고·팀원 N명·메뉴 아이콘)·날짜 구분선·말풍선·글래스 컴포저·하단 힌트로 보이는지 확인(툴바 아이콘은 장식, 서식 미구현)
   - 채팅 화면 진입 시 헤더/타임라인/컴포저가 정상 렌더링되는지 확인
   - 업무·칸반 모달 너비/스크롤이 깨지지 않는지 확인
   - 관리자 각 뷰(배포/사용자/조직/설정) 전환 시 패널 헤더 톤이 일관되는지 확인
