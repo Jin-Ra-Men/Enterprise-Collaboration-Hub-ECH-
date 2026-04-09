@@ -37,6 +37,7 @@
 ## 2026-04-09
 
 ### Changed
+- **프론트(화면설계 동기화)**: `design/ECH메인`·`ECH채팅`·`DESIGN.md`(Chromatic Sanctuary) 기준으로 `frontend/styles.css` 라이트 테마 전반 정리 — 글로벌 바 인디고 앰비언트 섀도·하단 보더 제거, 웰컴 카드/리스트 카드 No-Line(톤·섀도만), 히어로 그라데이션 보강, 채팅 헤더·상대 말풍선·컴포저 글래스(ECH채팅 `rounded-xl` 톤), 사이드바 사용자 구분선·활성 행·접기 탭. `index.html` — 워크스페이스 `corporate_fare` 로고 타일, 사이드바 검색·설정 Material 아이콘.
 - **프론트(ECH메인 레이아웃)**: `design/ECH메인/code.html`에 맞춰 상단 글로벌 바(`app-shell-topbar`)·`app-shell-body`·채널 미선택 시 **대시보드형 환영 화면**(히어로·3열 카드·바로가기·Pro Tip). Tailwind 빌드: `frontend/package.json`, `src/tailwind-input.css` → `ech-tailwind.css`. Material Symbols·헤더 검색·환영 카드 클릭 동작 `app.js`. `docs/DESIGN_SYSTEM.md` 빌드 절차 보강.
 - **fix(환영 대시보드)**: `ech-tailwind.css` 미로드 시 레이아웃 붕괴 — 환영 화면을 **`styles.css`의 `.ech-welcome-*` 시맨틱 스타일만**으로 재구성(Tailwind 유틸 의존 제거). 히어로·그리드·카드 푸터·바로가기 리스트 정렬.
 - **프론트(디자인 시스템)**: `design/ECH메인`·`ECH화면설계`·DESIGN.md(Atmospheric) 기준으로 `frontend/styles.css` 라이트 테마 — 고스트 보더·사이드바 톤·채널 헤더 글래스·모달 등. `frontend/tailwind.config.js`에 `content`/그림자/타이포 확장. 롤백: `localStorage` `ech_design_version` 또는 `frontend/design-backup/legacy-design/`. 문서 `docs/DESIGN_SYSTEM.md`, `docs/HANDOVER.md`, 루트 `README.md` 문서 표, `design/README.md` 보강.

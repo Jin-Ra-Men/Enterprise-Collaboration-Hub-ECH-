@@ -128,6 +128,9 @@ html[data-theme="light"] {
   --ghost-outline: rgba(172, 179, 183, 0.15);
   --sidebar-edge-shadow: 4px 0 32px rgba(11, 15, 16, 0.055);
   --header-ambient: 0 1px 0 rgba(116, 124, 128, 0.1), 0 8px 28px rgba(44, 52, 55, 0.045);
+  /* ECH메인 code.html: shadow-sm shadow-indigo-500/5 계열 */
+  --topbar-ambient-indigo: 0 1px 0 rgba(255, 255, 255, 0.65), 0 4px 20px rgba(78, 69, 228, 0.06),
+    0 12px 40px rgba(44, 52, 55, 0.04);
   --surface-tint-hover: rgba(78, 69, 228, 0.05);
   --outline-variant: #acb3b7;
 }
@@ -289,8 +292,8 @@ html[data-theme="light"] .app-shell-topbar {
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
-  border-bottom: 1px solid color-mix(in srgb, var(--outline-variant, #acb3b7) 18%, transparent);
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.55), var(--header-ambient);
+  border-bottom: none;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.55), var(--topbar-ambient-indigo, var(--header-ambient));
 }
 html:not([data-theme="light"]) .app-shell-topbar {
   background: rgba(26, 30, 38, 0.94);
@@ -402,6 +405,10 @@ html[data-theme="light"] .app-shell-global-search:focus-within {
   font-size: 12px;
   margin-left: 4px;
   cursor: default;
+}
+html[data-theme="light"] .app-shell-header-avatar.user-avatar {
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.96), 0 0 0 4px rgba(78, 69, 228, 0.16);
 }
 .app-shell-body {
   display: flex;
@@ -635,6 +642,10 @@ html[data-theme="light"] .sidebar-slip .sidebar {
   align-items: center;
   justify-content: center;
 }
+html[data-theme="light"] .sidebar-edge-toggle {
+  border-color: color-mix(in srgb, var(--outline-variant, #acb3b7) 18%, transparent);
+  box-shadow: 2px 0 16px rgba(44, 52, 55, 0.08);
+}
 .sidebar-edge-toggle:hover {
   background: var(--sidebar-item-hover-bg);
   color: var(--sidebar-item-fg-strong);
@@ -657,7 +668,7 @@ html[data-theme="light"] .sidebar-slip .sidebar {
   overflow: hidden;
   min-height: 0;
 }
-/* 워크스페이스 헤더 */
+/* 워크스페이스 헤더 — design/ECH메인·ECH채팅: 로고 타일 + 워크스페이스명 */
 .sidebar-workspace {
   flex-shrink: 0;
   display: flex;
@@ -669,6 +680,28 @@ html[data-theme="light"] .sidebar-slip .sidebar {
   border-bottom: 1px solid var(--sidebar-border);
   cursor: pointer;
   user-select: none;
+}
+.sidebar-workspace-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.sidebar-workspace-logo {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #4e45e4 0%, #6760fd 100%);
+  color: #fbf7ff;
+  box-shadow: 0 4px 14px rgba(78, 69, 228, 0.22);
+}
+.sidebar-workspace-logo .material-symbols-outlined {
+  font-size: 18px;
+  line-height: 1;
 }
 html[data-theme="light"] .sidebar-workspace {
   border-bottom: none;
@@ -697,7 +730,22 @@ html[data-theme="light"] .sidebar-search-wrap form:focus-within {
   background: #ffffff;
   box-shadow: inset 0 0 0 2px rgba(78, 69, 228, 0.35), 0 4px 16px rgba(78, 69, 228, 0.08);
 }
-.sidebar-search-icon { color: var(--sidebar-item-fg); font-size: 13px; cursor: pointer; background: none; }
+.sidebar-search-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--sidebar-item-fg);
+  cursor: pointer;
+  background: none;
+  border: none;
+  flex-shrink: 0;
+}
+.sidebar-search-glyph {
+  font-size: 18px !important;
+  line-height: 1;
+  opacity: 0.88;
+}
 .sidebar-search-input {
   flex: 1;
   background: none;
@@ -797,8 +845,8 @@ html[data-theme="light"] .sidebar-item:hover {
   border-left: none;
 }
 html[data-theme="light"] .sidebar-item.active {
-  background: rgba(227, 233, 237, 0.85);
-  box-shadow: inset 0 0 0 1px var(--ghost-outline);
+  background: color-mix(in srgb, #ffffff 72%, var(--bg-sidebar) 28%);
+  box-shadow: none;
 }
 .sidebar-item.active::before {
   content: '';
@@ -928,6 +976,10 @@ html:not([data-theme="light"]) .sidebar-item.active::before {
   border-top: 1px solid var(--sidebar-border);
   background: var(--sidebar-user-bg);
 }
+html[data-theme="light"] .sidebar-user {
+  border-top: none;
+  box-shadow: inset 0 1px 0 var(--ghost-outline);
+}
 /** 프레즌스 드롭업이 .user-info overflow:hidden 에 잘리지 않도록 행 단위 기준 */
 .sidebar-user-presence-host {
   position: relative;
@@ -1032,12 +1084,21 @@ html:not([data-theme="light"]) .sidebar-item.active::before {
   opacity: 0.7;
 }
 .btn-sidebar-gear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--sidebar-item-fg);
-  font-size: 17px;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+  padding: 6px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
   transition: background .1s, color .1s;
+}
+.btn-sidebar-gear-icon {
+  font-size: 20px !important;
+  line-height: 1;
+  opacity: 0.9;
 }
 .btn-sidebar-gear:hover { background: var(--sidebar-item-hover-bg); color: var(--sidebar-item-fg-strong); }
 
@@ -1096,7 +1157,8 @@ html:not([data-theme="light"]) .sidebar-item.active::before {
   overflow: hidden;
   border-radius: 2rem;
   padding: 2rem 2rem 2.25rem;
-  background: linear-gradient(135deg, #4e45e4 0%, #4338ca 55%, #3730a3 100%);
+  /* design/ECH메인 code.html: from-primary → indigo-700 */
+  background: linear-gradient(135deg, #4e45e4 0%, #4338ca 42%, #312e81 100%);
   color: #fbf7ff;
   box-shadow:
     0 24px 48px rgba(44, 52, 55, 0.12),
@@ -1271,11 +1333,14 @@ html:not([data-theme="light"]) .sidebar-item.active::before {
   padding: 1.75rem;
   border-radius: 1.5rem;
   background: var(--bg-elevated);
-  border: 1px solid color-mix(in srgb, var(--outline-variant, #acb3b7) 22%, transparent);
-  box-shadow: 0 1px 3px rgba(44, 52, 55, 0.06);
+  /* DESIGN.md No-Line: 구역은 톤·깊이로만 */
+  border: none;
+  box-shadow:
+    0 4px 24px rgba(44, 52, 55, 0.07),
+    0 1px 0 rgba(255, 255, 255, 0.85) inset;
   cursor: pointer;
   text-align: left;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 .ech-welcome-card::before {
   content: '';
@@ -1288,12 +1353,13 @@ html:not([data-theme="light"]) .sidebar-item.active::before {
   transition: height 0.2s ease;
 }
 .ech-welcome-card:hover {
-  box-shadow: 0 16px 40px rgba(78, 69, 228, 0.1);
-  border-color: rgba(78, 69, 228, 0.2);
+  box-shadow: 0 20px 48px rgba(78, 69, 228, 0.12), 0 4px 16px rgba(44, 52, 55, 0.06);
+}
+html:not([data-theme="light"]) .ech-welcome-card {
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 html:not([data-theme="light"]) .ech-welcome-card:hover {
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
-  border-color: rgba(103, 96, 253, 0.35);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
 }
 .ech-welcome-card:hover::before {
   height: 100%;
@@ -1400,9 +1466,12 @@ html:not([data-theme="light"]) .ech-welcome-card-icon-wrap--slate {
 .ech-welcome-list-card {
   border-radius: 1.5rem;
   background: var(--bg-elevated);
-  border: 1px solid rgba(172, 179, 183, 0.2);
-  box-shadow: 0 1px 3px rgba(44, 52, 55, 0.06);
+  border: none;
+  box-shadow: 0 4px 24px rgba(44, 52, 55, 0.07), 0 1px 0 rgba(255, 255, 255, 0.85) inset;
   overflow: hidden;
+}
+html:not([data-theme="light"]) .ech-welcome-list-card {
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 .ech-welcome-list-row {
   display: flex;
@@ -1615,7 +1684,8 @@ html[data-theme="light"] .ech-chat-header.chat-header {
   min-height: 64px;
   height: auto;
   padding: 12px 24px;
-  background: rgba(248, 250, 252, 0.95);
+  /* ECH채팅: surface 대비 살짝 올린 헤더 톤 */
+  background: color-mix(in srgb, var(--bg-chat) 88%, #f0f4f7 12%);
 }
 
 /* 다크 테마: ECH 채팅 헤더 · 멤버 패널 (라이트와 동일 레이아웃·대비) */
@@ -2001,8 +2071,9 @@ html[data-theme="light"] .msg-row.msg-chat {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14);
 }
 html[data-theme="light"] .msg-row.msg-other .msg-content-row:has(.msg-text) .msg-text {
-  border-color: color-mix(in srgb, var(--outline-variant, #acb3b7) 28%, transparent);
-  box-shadow: 0 4px 14px rgba(44, 52, 55, 0.06);
+  /* ECH채팅: surface_container_high, 테두리 없이 톤만 */
+  border: none;
+  box-shadow: 0 2px 12px rgba(44, 52, 55, 0.06);
   background: #e3e9ed;
 }
 .msg-row.msg-mine .msg-content-row:has(.msg-text) .msg-text {
@@ -2535,7 +2606,8 @@ html:not([data-theme="light"]) .msg-date-pill {
 }
 html[data-theme="light"] .ech-composer-bar.composer {
   padding: 12px 28px 10px;
-  border-top: 1px solid color-mix(in srgb, var(--outline-variant, #acb3b7) 12%, transparent);
+  border-top: none;
+  box-shadow: inset 0 1px 0 var(--ghost-outline);
   background: linear-gradient(180deg, rgba(247, 249, 251, 0.5) 0%, #f7f9fb 100%);
 }
 html:not([data-theme="light"]) .ech-composer-bar.composer {
@@ -2544,16 +2616,17 @@ html:not([data-theme="light"]) .ech-composer-bar.composer {
   background: linear-gradient(180deg, rgba(16, 20, 24, 0.3) 0%, var(--bg-elevated) 100%);
 }
 
-/* design/ECH채팅: 글래스 컴포저 + 장식 툴바 */
+/* design/ECH채팅: 글래스 컴포저 + 장식 툴바 (rounded-xl · indigo ambient) */
 .ech-composer-glass {
-  border-radius: 12px;
-  border: 1px solid color-mix(in srgb, var(--outline-variant, #acb3b7) 12%, transparent);
-  background: rgba(255, 255, 255, 0.82);
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--outline-variant, #acb3b7) 10%, transparent);
+  background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow:
-    0 16px 40px rgba(44, 52, 55, 0.07),
-    0 4px 14px rgba(78, 69, 228, 0.05);
+    0 20px 50px rgba(44, 52, 55, 0.08),
+    0 8px 24px rgba(30, 27, 75, 0.05),
+    0 2px 8px rgba(78, 69, 228, 0.04);
   overflow: hidden;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }

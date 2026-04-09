@@ -105,7 +105,12 @@
           <aside class="sidebar">
         <!-- 워크스페이스 헤더 (퀵 레일보다 위 전폭) -->
         <div class="sidebar-workspace">
-          <span class="workspace-name">ECH</span>
+          <div class="sidebar-workspace-brand">
+            <div class="sidebar-workspace-logo" aria-hidden="true">
+              <span class="material-symbols-outlined">corporate_fare</span>
+            </div>
+            <span class="workspace-name">ECH</span>
+          </div>
           <button id="btnOrgChart" class="btn-workspace-tool" title="조직도" aria-label="조직도 보기">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <rect x="2" y="7" width="6" height="5" rx="1"/><rect x="9" y="2" width="6" height="5" rx="1"/>
@@ -123,7 +128,9 @@
         <!-- 검색 -->
         <div class="sidebar-search-wrap">
           <form id="searchForm" autocomplete="off">
-            <button type="submit" class="sidebar-search-icon">🔍</button>
+            <button type="submit" class="sidebar-search-icon" aria-label="검색">
+              <span class="material-symbols-outlined sidebar-search-glyph" aria-hidden="true">search</span>
+            </button>
             <input id="searchInput" type="search" class="sidebar-search-input" placeholder="검색" />
           </form>
         </div>
@@ -210,7 +217,9 @@
               온라인
             </button>
           </div>
-          <button id="themeSettingsBtn" class="btn-sidebar-gear" title="테마 설정" aria-label="테마 설정">⚙</button>
+          <button id="themeSettingsBtn" class="btn-sidebar-gear" title="테마 설정" aria-label="테마 설정">
+            <span class="material-symbols-outlined btn-sidebar-gear-icon" aria-hidden="true">settings</span>
+          </button>
           <div class="sidebar-presence-menu hidden" id="sidebarPresenceMenu" role="menu" aria-label="내 프레즌스">
             <button type="button" class="sidebar-presence-option" data-presence-status="ONLINE" role="menuitem">
               <span class="presence-dot presence-online" aria-hidden="true"></span>
