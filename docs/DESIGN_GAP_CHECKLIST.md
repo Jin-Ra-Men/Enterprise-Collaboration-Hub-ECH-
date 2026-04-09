@@ -44,9 +44,9 @@
 
 | 앱 위치 | 체크 |
 |---------|------|
-| `#modalWorkHub` 레이아웃·헤더·닫기 | [x] 다크 패널·셸 보더 |
-| `.work-hub-body--split`(넓은 화면) 업무 목록 ↔ 칸반 2열 비율·스크롤 | [x] 구조 유지·다크 `work-hub-panel` |
-| 업무 탭/칸반 도구 모음이 목업 밀도와 맞는지 | [x] 다크 칸반 컬럼·카드 톤 |
+| `#modalWorkHub` 레이아웃·헤더·닫기 | [x] 다크 패널·셸 보더 · 라이트 `ech-workhub-shell` 글래스·인디고 섀도 |
+| `.work-hub-body--split`(넓은 화면) 업무 목록 ↔ 칸반 2열 비율·스크롤 | [x] 구조 유지·다크 `work-hub-panel` · 라이트 패널 No-Line·층 섀도 |
+| 업무 탭/칸반 도구 모음이 목업 밀도와 맞는지 | [x] 다크 칸반 컬럼·카드 톤 · 라이트 칸반 컬럼/카드 소프트 섀도 |
 
 ### `(2)` 워크스페이스 셸 + 멤버/조직 맥락 · `design/ECH채팅`
 
@@ -55,7 +55,7 @@
 | `#viewChat`(`data-ech-design-ref="ech-chat"`) · `.ech-chat-header` · `.ech-messages-wrap` · `.ech-composer-glass` | [x] 다크 헤더·타임라인·날짜선·글래스 컴포저 |
 | `.ech-composer-bar` 입력·첨부·전송 정렬 | [x] 다크 컴포저 바·툴바·포커스 |
 | `#appHeaderSearchInput` + 헤더 검색 동작 | [x] 다크 포커스(글로벌 바와 동일 토큰) |
-| `#quickContainer` 퀵 레일·미읽음·`#mentionList` 멘션 목록 밀도 | [x] 다크 퀵 레일 인셋·`mention-suggest` 글래스 |
+| `#quickContainer` 퀵 레일·미읽음·`#mentionList` 멘션 목록 밀도 | [x] 다크 퀵 레일 인셋·`mention-suggest` 글래스 · 라이트 멘션 제안 패널 글래스·호버 틴트 |
 | `#memberPanel` 햄버거 메뉴·액션 버튼 줄 | [x] 다크 멤버 패널(이전 스프린트) |
 
 ### `(3)` Enterprise Admin Hub
@@ -84,7 +84,7 @@
 
 | 앱 위치 | 체크 |
 |---------|------|
-| `#channelKanbanBoard` 컬럼·카드·빈 상태 | [x] 다크 칸반 컬럼·카드 |
+| `#channelKanbanBoard` 컬럼·카드·빈 상태 | [x] 다크 칸반 컬럼·카드 · 라이트 No-Line·컬럼 제목 자간 |
 | `#modalKanbanCardDetail` | [x] 공통 `.modal` 다크 토큰 |
 
 ### `(7)` User Management
@@ -105,7 +105,7 @@
 | 앱 위치 | 체크 |
 |---------|------|
 | `#modalUserProfile` 히어로·부제·`.profile-dl--cards`·푸터 | [x] 다크 아바타·카드 필드 |
-| `#searchModal` 통합 검색 결과 레이아웃·타이포 | [x] 다크 툴바·쿼리 입력 |
+| `#searchModal` 통합 검색 결과 레이아웃·타이포 | [x] 다크 툴바·쿼리 입력 · 라이트 툴바 인셋·쿼리 고스트 포커스·제목 자간 |
 | 기타 보조 모달(`#modalThemePicker`, `#modalAppUpdate` 등) | [x] 공통 `.modal`·`.modal-overlay` 다크 토큰 |
 
 ---
@@ -117,9 +117,9 @@
 | 화면 | ID / 영역 | 체크 |
 |------|-----------|------|
 | 로그인 | `#loginPage` | [x] 다크 로그인 카드 글래스 |
-| 스레드 | `#modalThread` | [x] 공통 모달 다크 토큰 |
+| 스레드 | `#modalThread` | [x] 공통 모달 다크 토큰 · 라이트 답글 스레드 세로선 고스트 |
 | 첨부/이미지 허브 | `#modalFileHub`, `#modalImagePreview` | [x] 공통 모달 다크 토큰 |
-| 스레드 허브 | `#modalThreadHub` | [x] 공통 모달 다크 토큰 |
+| 스레드 허브 | `#modalThreadHub` | [x] 공통 모달 다크 토큰 · 라이트 `.thread-hub-row` 카드 톤 |
 | 채널/DM 생성 | `#modalCreateChannel`, `#modalCreateDm`, `#modalAddChannelMembers` | [x] 공통 모달 다크 토큰 |
 | 업무 항목 상세 | `#modalWorkItemDetail` | [x] 공통 모달 다크 토큰 |
 | 공통 다이얼로그 | `#modalAppDialog`, `#modalImageDownloadChoice` | [x] 공통 모달 다크 토큰 |
