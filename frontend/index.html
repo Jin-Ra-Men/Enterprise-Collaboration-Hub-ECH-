@@ -80,12 +80,25 @@
               aria-label="워크스페이스 검색"
             />
           </div>
+          <div id="appTopbarChannelContext" class="app-shell-channel-context hidden" aria-live="polite">
+            <div class="app-shell-channel-title-row">
+              <span class="chat-channel-prefix" id="chatChannelPrefix">#</span>
+              <h2 class="chat-channel-name" id="chatChannelName">채널명</h2>
+            </div>
+            <div class="ech-chat-header-meta hidden" id="chatHeaderMeta">
+              <span class="ech-chat-header-presence-dot" aria-hidden="true"></span>
+              <span class="chat-header-member-line" id="chatMemberCount"></span>
+            </div>
+          </div>
         </div>
         <nav class="app-shell-topbar-nav" aria-label="메인 메뉴">
           <button type="button" id="btnTopNavProjects" class="app-shell-nav-link">워크플로우</button>
           <button type="button" id="btnTopNavTeam" class="app-shell-nav-link">팀</button>
         </nav>
         <div class="app-shell-topbar-right">
+          <button type="button" class="app-shell-icon-btn hidden" id="btnHeaderMenu" title="채널 메뉴" aria-label="채널 메뉴">
+            <span class="material-symbols-outlined" aria-hidden="true">menu</span>
+          </button>
           <button type="button" class="app-shell-icon-btn" id="btnAppHeaderNotifications" title="알림" aria-label="알림">
             <span class="material-symbols-outlined" aria-hidden="true">notifications</span>
           </button>
@@ -276,27 +289,6 @@
 
         <!-- 채팅 패널 -->
         <div id="viewChat" class="view-chat ech-region ech-region--chat hidden" data-ech-design-ref="ech-chat" aria-label="채팅 영역 · 파일 드롭으로 첨부">
-          <!-- 채널 헤더 · design/ECH채팅 + ECH화면설계 (2)(4) -->
-          <header class="chat-header ech-chat-header">
-            <div class="chat-header-left">
-              <div class="ech-chat-header-title-block">
-                <div class="ech-chat-header-title-row">
-                  <span class="chat-channel-prefix" id="chatChannelPrefix">#</span>
-                  <h2 class="chat-channel-name" id="chatChannelName">채널명</h2>
-                </div>
-                <div class="ech-chat-header-meta hidden" id="chatHeaderMeta">
-                  <span class="ech-chat-header-presence-dot" aria-hidden="true"></span>
-                  <span class="chat-header-member-line" id="chatMemberCount"></span>
-                </div>
-              </div>
-            </div>
-            <div class="chat-header-right">
-              <button type="button" class="btn-header-icon" id="btnHeaderMenu" title="채널 메뉴">
-                <span class="material-symbols-outlined" aria-hidden="true">menu</span>
-              </button>
-            </div>
-          </header>
-
           <!-- 멤버 패널 (토글) -->
           <div id="memberPanel" class="member-panel hidden">
             <div class="member-panel-header">

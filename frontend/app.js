@@ -2092,6 +2092,9 @@ function showView(viewId) {
   });
   const target = document.getElementById(viewId);
   if (target) target.classList.remove("hidden");
+  const inChat = viewId === "viewChat";
+  document.getElementById("appTopbarChannelContext")?.classList.toggle("hidden", !inChat);
+  document.getElementById("btnHeaderMenu")?.classList.toggle("hidden", !inChat);
   syncTopNavFromMainView();
   syncAdminSidebarActive(viewId);
 }

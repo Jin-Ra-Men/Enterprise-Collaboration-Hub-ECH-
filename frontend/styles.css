@@ -398,6 +398,53 @@ html:not([data-theme="light"]) .app-shell-global-search:focus-within {
   min-width: 0;
   flex: 1;
 }
+.app-shell-channel-context {
+  display: none;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 440px;
+  margin-left: 4px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+}
+@media (min-width: 980px) {
+  .app-shell-channel-context {
+    display: inline-flex;
+  }
+}
+.app-shell-channel-context.hidden {
+  display: none !important;
+}
+.app-shell-channel-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+.app-shell-channel-context .chat-channel-prefix {
+  font-size: 15px;
+  line-height: 1;
+}
+.app-shell-channel-context .chat-channel-name {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+}
+.app-shell-channel-context .ech-chat-header-meta {
+  justify-content: center;
+  gap: 6px;
+  min-height: 14px;
+}
+.app-shell-channel-context .chat-header-member-line {
+  font-size: 11px;
+}
 button.app-shell-brand {
   font: inherit;
   font-size: 1.125rem;
