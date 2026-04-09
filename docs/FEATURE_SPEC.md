@@ -880,6 +880,13 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 ---
 
+## 글로벌 바「프로젝트」·환영「업무·칸반」진입 (2026-04-09)
+- 상단 네비 **프로젝트**(`btnTopNavProjects`)와 환영 카드 **업무·칸반** 클릭 시, 이미 채널이 선택되어 있으면 곧바로 업무·칸반 모달(`openWorkHubModalForActiveChannel`)을 연다.
+- 채널이 없을 때는 `lastSidebarChannelsSnapshot` 기준으로 기본 채널을 고른 뒤 `selectChannel` → 모달을 연다. 우선순위: **공개(PUBLIC) → 비공개(PRIVATE) → 최근 활동 시각 기준 DM** (`getDefaultChannelForWorkHub`). 참여 채널이 전혀 없으면 안내 메시지만 표시한다.
+- 채팅 헤더의 **업무·칸반** 버튼(`btnOpenWorkHub`)은 기존과 같이 **현재 채널이 없으면**「채널을 먼저 선택하세요.」로 유지한다(의도적 채널 맥락).
+
+---
+
 ## 채널 업무 허브 UX 보강 (2026-04-01)
 - 자동완성 목록 가독성:
   - 칸반 담당자 자동완성 목록 항목에 좌우 패딩을 추가해 텍스트가 경계선에 붙지 않도록 조정

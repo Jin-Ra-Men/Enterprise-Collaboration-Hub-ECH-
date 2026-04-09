@@ -72,6 +72,7 @@
 |---------|------|
 | `#appShellTopBar`와 `ECH메인` 목업 상단 바 시각적 일치도 | [x] 다크 글로벌 바(동일 토큰) · 라이트 상단 메뉴(`대시보드/프로젝트/팀`) 버튼 톤 반영 |
 | `#btnTopNavDashboard` / `#btnTopNavProjects` / `#btnTopNavTeam` 동작(환영·업무 허브·조직도) 및 활성 탭 동기화 | [x] `app.js` 연동(2026-04-09) |
+| `#btnTopNavProjects`·환영 업무 카드: 채널 없을 때 기본 채널 자동 선택 후 업무 허브 | [x] `getDefaultChannelForWorkHub`·`openWorkHubFromTopNav`(2026-04-09) |
 
 ### `(5)` Organization Directory
 
@@ -146,6 +147,7 @@
 - 2026-04-11(2): 관리자 인사이트 카드 호버·조직 탭 레일·통합 검색 모달·보조 버튼·컴포저 전송·환영 히어로 섀도.
 - 2026-04-12: 다크 테마 P0 시각 정합 — `styles.css` `html:not([data-theme="light"])`로 채팅·글로벌 바·로그인·모달·관리자·설정·조직·사용자·검색·업무 허브 셸 보강. §2·§3·§4 일부 `[x]` 처리.
 - 2026-04-12(2): 다크 P1 — Primary CTA 섀도, `work-hub-panel`·배포 카드·칸반·`mention-suggest`·프로필 카드·퀵 레일·`#adminSection`·조직도 멤버 카드. §3·§4 추가 `[x]`.
+- 2026-04-09(2): `(4)` 상단 **프로젝트**·환영 **업무·칸반** — 채널 미선택 시 기본 채널 선택 후 업무 허브(`openWorkHubFromTopNav`).
 - 2026-04-09: §4 보조 UI — 파일 허브·이미지 프리뷰·테마 피커·멘션 토스트·사용자 검색 목록·공통 다이얼로그·업데이트 안내 라이트 톤 (`styles.css`).
 
 ---

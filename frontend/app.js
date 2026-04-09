@@ -2310,6 +2310,60 @@ function channelActivityTimeMs(ch) {
   return Number.isFinite(ms) ? ms : 0;
 }
 
+/** When opening the work hub without a selected channel, pick from sidebar snapshot: public → private → most recent DM. */
+function getDefaultChannelForWorkHub() {
+  const list = lastSidebarChannelsSnapshot;
+  if (!Array.isArray(list) || !list.length) return null;
+  const upper = (ch) => String(ch.channelType || "").toUpperCase();
+  const pub = list.find((ch) => upper(ch) === "PUBLIC");
+  if (pub) return pub;
+  const priv = list.find((ch) => upper(ch) === "PRIVATE");
+  if (priv) return priv;
+  const dms = list.filter((ch) => upper(ch) === "DM");
+  if (dms.length) {
+    return [...dms].sort((a, b) => channelActivityTimeMs(b) - channelActivityTimeMs(a))[0];
+  }
+  return [...list].sort((a, b) => channelActivityTimeMs(b) - channelActivityTimeMs(a))[0];
+}
+
+async function openWorkHubModalForActiveChannel() {
+  workHubScopedChannelId = null;
+  try {
+    clearWorkHubPendingMaps();
+    clearPendingNewKanbanAssignees();
+    await Promise.all([
+      loadWorkHubChannelMembersForAssignee(),
+      loadChannelWorkItems(),
+      loadChannelKanbanBoard(),
+    ]);
+    ensureWorkHubWorkListDeleteBound();
+    openModal("modalWorkHub");
+  } catch (e) {
+    await uiAlert(e?.message || "업무/칸반 정보를 불러오지 못했습니다.");
+  }
+}
+
+/** Top nav「프로젝트」/ welcome「업무·칸반」: reuse active channel or auto-select a default, then open work hub. */
+async function openWorkHubFromTopNav() {
+  if (!currentUser) {
+    await uiAlert("로그인이 필요합니다.");
+    return;
+  }
+  if (activeChannelId) {
+    await openWorkHubModalForActiveChannel();
+    return;
+  }
+  const ch = getDefaultChannelForWorkHub();
+  if (!ch) {
+    await uiAlert("참여 중인 채널이 없습니다. 채널을 생성하거나 초대를 받은 뒤 다시 시도하세요.");
+    return;
+  }
+  const ct = String(ch.channelType || "").toUpperCase();
+  const displayName = ct === "DM" && ch.description ? ch.description : ch.name;
+  await selectChannel(ch.channelId, displayName, ch.channelType);
+  await openWorkHubModalForActiveChannel();
+}
+
 function setSidebarCollapsedUi(collapsed) {
   mainApp.classList.toggle("sidebar-collapsed", collapsed);
   const btn = document.getElementById("btnSidebarEdgeToggle");
@@ -8390,27 +8444,14 @@ document.getElementById("btnOpenWorkHub")?.addEventListener("click", async () =>
     await uiAlert("채널을 먼저 선택하세요.");
     return;
   }
-  workHubScopedChannelId = null;
-  try {
-    clearWorkHubPendingMaps();
-    clearPendingNewKanbanAssignees();
-    await Promise.all([
-      loadWorkHubChannelMembersForAssignee(),
-      loadChannelWorkItems(),
-      loadChannelKanbanBoard(),
-    ]);
-    ensureWorkHubWorkListDeleteBound();
-    openModal("modalWorkHub");
-  } catch (e) {
-    await uiAlert(e?.message || "업무/칸반 정보를 불러오지 못했습니다.");
-  }
+  await openWorkHubModalForActiveChannel();
 });
 
 document.getElementById("btnTopNavDashboard")?.addEventListener("click", () => {
   void clearActiveChannelAndReload();
 });
 document.getElementById("btnTopNavProjects")?.addEventListener("click", () => {
-  document.getElementById("btnOpenWorkHub")?.click();
+  void openWorkHubFromTopNav();
 });
 document.getElementById("btnTopNavTeam")?.addEventListener("click", () => {
   document.getElementById("btnOrgChart")?.click();
@@ -9474,7 +9515,9 @@ function initEvents() {
     document.getElementById("btnWelcomeFocusChannel2")?.addEventListener("click", focusWelcomeChannelSection);
     document.getElementById("btnWelcomeFocusSearch")?.addEventListener("click", focusSearchInputs);
     document.getElementById("welcomeCardThreads")?.addEventListener("click", focusWelcomeChannelSection);
-    document.getElementById("welcomeCardKanban")?.addEventListener("click", focusWelcomeChannelSection);
+    document.getElementById("welcomeCardKanban")?.addEventListener("click", () => {
+      void openWorkHubFromTopNav();
+    });
     document.getElementById("welcomeCardOrg")?.addEventListener("click", () => {
       document.getElementById("btnOrgChart")?.click();
     });
