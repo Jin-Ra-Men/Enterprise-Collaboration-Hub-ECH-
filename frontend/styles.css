@@ -2927,10 +2927,13 @@ html[data-theme="light"] .image-preview-caption {
 .composer {
   position: relative;
   min-height: var(--layout-footer-height);
+  height: var(--layout-footer-height);
   padding: 8px 14px;
   background: var(--bg-elevated);
   flex-shrink: 0;
   border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
 }
 html[data-theme="light"] .ech-composer-bar.composer {
   padding: 8px 14px;
@@ -2946,6 +2949,7 @@ html:not([data-theme="light"]) .ech-composer-bar.composer {
 
 /* design/ECH채팅: 글래스 컴포저 + 장식 툴바 (rounded-xl · indigo ambient) */
 .ech-composer-glass {
+  width: 100%;
   border-radius: 14px;
   border: 1px solid color-mix(in srgb, var(--outline-variant, #acb3b7) 10%, transparent);
   background: rgba(255, 255, 255, 0.8);
@@ -2981,12 +2985,7 @@ html:not([data-theme="light"]) .ech-composer-glass:focus-within {
   box-shadow: none !important;
 }
 .ech-composer-footnote {
-  margin: 8px 0 0;
-  text-align: center;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: color-mix(in srgb, var(--text-muted) 55%, transparent);
+  display: none;
 }
 html:not([data-theme="light"]) .ech-composer-footnote {
   color: rgba(174, 179, 184, 0.55);

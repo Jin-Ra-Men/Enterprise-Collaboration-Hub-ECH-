@@ -5,6 +5,7 @@
 ## 2026-04-12
 
 ### Changed
+- **프론트(하단 라인 완전 정렬)**: `.composer` 높이를 `--layout-footer-height`로 고정하고(`height`+`min-height`), 하단 안내문 `.ech-composer-footnote`를 숨겨 좌측 하단 프로필 바와 수평 라인을 동일하게 고정.
 - **프론트(상단 컨텍스트 중앙정렬·컴포저 라인 정렬)**: 상단 채널 컨텍스트(`appTopbarChannelContext`)를 탑바 절대 중앙 정렬(`left:50%/translateX`)로 보정. 메시지 입력의 서식 툴바(`ech-composer-toolbar`) 제거, 컴포저 패딩을 축소해 좌측 하단 메뉴 라인과 높이감을 맞춤.
 - **프론트(상단바 채널 컨텍스트 이동)**: 채팅방 이름·구성원 수를 채팅 헤더에서 상단 글로벌 바 검색 옆 중앙(`appTopbarChannelContext`)으로 이동. 채널 설정 햄버거(`btnHeaderMenu`)는 상단 우측 아이콘 영역으로 재배치하고 채팅 뷰에서만 노출.
 - **프론트(테마·가독성·프레즌스)**: 테마 2종 추가(`ocean`, `cream`) 및 테마 피커 버튼 확장. 프레즌스 점을 테마 변수(`--presence-*`) 기반으로 재설계해 온라인/자리비움/오프라인 식별성과 대비(링/글로우/크기)를 강화. `index.html`, `app.js`, `styles.css`.
