@@ -184,6 +184,13 @@ html[data-theme="light"] .login-card {
   border: 1px solid rgba(172, 179, 183, 0.2);
   box-shadow: 0 24px 48px rgba(44, 52, 55, 0.12);
 }
+html:not([data-theme="light"]) .login-card {
+  background: rgba(26, 30, 38, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+}
 .login-logo { text-align: center; margin-bottom: 32px; }
 .login-logo-icon {
   display: inline-flex;
@@ -288,6 +295,13 @@ html[data-theme="light"] .app-shell-topbar {
 html:not([data-theme="light"]) .app-shell-topbar {
   background: rgba(26, 30, 38, 0.94);
   border-bottom-color: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+}
+html:not([data-theme="light"]) .app-shell-global-search:focus-within {
+  background: rgba(26, 30, 38, 0.88);
+  box-shadow: inset 0 0 0 2px rgba(103, 96, 253, 0.35), 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 .app-shell-topbar-left {
   display: flex;
@@ -804,6 +818,9 @@ html[data-theme="light"] .sidebar-item.active::before {
   background: linear-gradient(180deg, var(--accent) 0%, #6760fd 100%);
   box-shadow: 0 0 10px rgba(78, 69, 228, 0.35);
 }
+html:not([data-theme="light"]) .sidebar-item.active::before {
+  box-shadow: 0 0 12px rgba(129, 140, 248, 0.45);
+}
 .item-icon { flex-shrink: 0; width: 18px; text-align: center; font-size: 13px; }
 .item-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .assigned-kanban-item {
@@ -1274,6 +1291,10 @@ html[data-theme="light"] .sidebar-item.active::before {
   box-shadow: 0 16px 40px rgba(78, 69, 228, 0.1);
   border-color: rgba(78, 69, 228, 0.2);
 }
+html:not([data-theme="light"]) .ech-welcome-card:hover {
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  border-color: rgba(103, 96, 253, 0.35);
+}
 .ech-welcome-card:hover::before {
   height: 100%;
 }
@@ -1310,6 +1331,10 @@ html[data-theme="light"] .sidebar-item.active::before {
 .ech-welcome-card-icon-wrap--slate {
   background: #f1f5f9;
   color: #1e293b;
+}
+html:not([data-theme="light"]) .ech-welcome-card-icon-wrap--slate {
+  background: rgba(148, 163, 184, 0.12);
+  color: #e2e8f0;
 }
 .ech-welcome-h3 {
   margin: 0 0 0.5rem;
@@ -1593,6 +1618,39 @@ html[data-theme="light"] .ech-chat-header.chat-header {
   background: rgba(248, 250, 252, 0.95);
 }
 
+/* 다크 테마: ECH 채팅 헤더 · 멤버 패널 (라이트와 동일 레이아웃·대비) */
+html:not([data-theme="light"]) .ech-chat-header.chat-header {
+  min-height: 64px;
+  height: auto;
+  padding: 12px 24px;
+  border-bottom: none;
+  background: rgba(19, 22, 30, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.06), 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+html:not([data-theme="light"]) .ech-chat-header .chat-channel-name {
+  color: #a5b4fc;
+}
+html:not([data-theme="light"]) .btn-header-icon:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+html:not([data-theme="light"]) .ech-region--chat .member-panel {
+  top: 76px;
+  border-left-color: rgba(255, 255, 255, 0.08);
+  background: rgba(22, 26, 34, 0.94);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: -12px 0 36px rgba(0, 0, 0, 0.45);
+}
+html:not([data-theme="light"]) .ech-region--chat:has(#chatHeaderMeta.hidden) .member-panel {
+  top: 64px;
+}
+html:not([data-theme="light"]) .member-panel-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
 /* 멤버 패널: 헤더 고정, 나머지(알림~멤버~하단 액션)는 한 덩어리로 세로 스크롤 */
 .member-panel {
   position: absolute;
@@ -1851,7 +1909,16 @@ html[data-theme="light"] .ech-messages-wrap .messages {
     radial-gradient(140% 120% at 100% 0%, rgba(78, 69, 228, 0.05), transparent 42%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.48), rgba(255, 255, 255, 0));
 }
+html:not([data-theme="light"]) .ech-messages-wrap .messages {
+  padding: 20px 28px 28px;
+  background:
+    radial-gradient(120% 100% at 100% 0%, rgba(103, 96, 253, 0.07), transparent 45%),
+    linear-gradient(180deg, rgba(16, 20, 24, 0.5), rgba(16, 20, 24, 0));
+}
 html[data-theme="light"] .view-chat.ech-region--chat {
+  background: var(--bg-chat);
+}
+html:not([data-theme="light"]) .view-chat.ech-region--chat {
   background: var(--bg-chat);
 }
 
@@ -2019,6 +2086,10 @@ html[data-theme="light"] .msg-avatar {
   border-radius: 50%;
   box-shadow: 0 1px 4px rgba(44, 52, 55, 0.12);
 }
+html:not([data-theme="light"]) .msg-avatar {
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
 .msg-spacer {
   width: 36px;
   flex-shrink: 0;
@@ -2150,6 +2221,13 @@ html[data-theme="light"] .msg-reply-to-card:hover {
 }
 html[data-theme="light"] .msg-date-pill {
   color: color-mix(in srgb, var(--text-muted) 75%, var(--text-secondary) 25%);
+}
+html:not([data-theme="light"]) .msg-date-divider::before,
+html:not([data-theme="light"]) .msg-date-divider::after {
+  background: rgba(255, 255, 255, 0.1);
+}
+html:not([data-theme="light"]) .msg-date-pill {
+  color: rgba(174, 179, 184, 0.85);
 }
 
 .msg-attachment-inline {
@@ -2460,6 +2538,11 @@ html[data-theme="light"] .ech-composer-bar.composer {
   border-top: 1px solid color-mix(in srgb, var(--outline-variant, #acb3b7) 12%, transparent);
   background: linear-gradient(180deg, rgba(247, 249, 251, 0.5) 0%, #f7f9fb 100%);
 }
+html:not([data-theme="light"]) .ech-composer-bar.composer {
+  padding: 12px 28px 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, rgba(16, 20, 24, 0.3) 0%, var(--bg-elevated) 100%);
+}
 
 /* design/ECH채팅: 글래스 컴포저 + 장식 툴바 */
 .ech-composer-glass {
@@ -2482,6 +2565,10 @@ html:not([data-theme="light"]) .ech-composer-glass {
 .ech-composer-glass:focus-within {
   border-color: var(--border-focus);
   box-shadow: 0 0 0 2px var(--focus-ring), 0 16px 40px rgba(44, 52, 55, 0.08);
+}
+html:not([data-theme="light"]) .ech-composer-glass:focus-within {
+  border-color: rgba(103, 96, 253, 0.55);
+  box-shadow: 0 0 0 2px rgba(103, 96, 253, 0.2), 0 12px 40px rgba(0, 0, 0, 0.45);
 }
 .ech-composer-toolbar {
   display: flex;
@@ -2521,6 +2608,15 @@ html:not([data-theme="light"]) .ech-composer-glass {
   font-weight: 600;
   letter-spacing: 0.04em;
   color: color-mix(in srgb, var(--text-muted) 55%, transparent);
+}
+html:not([data-theme="light"]) .ech-composer-toolbar {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+html:not([data-theme="light"]) .ech-composer-fmt-sep {
+  background: rgba(255, 255, 255, 0.12);
+}
+html:not([data-theme="light"]) .ech-composer-footnote {
+  color: rgba(174, 179, 184, 0.55);
 }
 
 /* 답글 모드: 입력창 위 미리보기(참조 UI — 반투명 바) */
@@ -2864,6 +2960,15 @@ html[data-theme="light"] .ech-region--admin .admin-panel-header {
   -webkit-backdrop-filter: blur(10px);
   box-shadow: var(--header-ambient, 0 1px 0 rgba(0, 0, 0, 0.04));
 }
+html:not([data-theme="light"]) .ech-region--admin .admin-panel-header {
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(22, 26, 34, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
 .admin-panel-header {
   display: flex;
   align-items: center;
@@ -3121,6 +3226,18 @@ html[data-theme="light"] .settings-canvas {
   background: rgba(255, 255, 255, 0.78);
   box-shadow: 0 12px 24px rgba(44, 52, 55, 0.05);
 }
+html:not([data-theme="light"]) .settings-add-card,
+html:not([data-theme="light"]) .setting-item {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(26, 30, 38, 0.72);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+html:not([data-theme="light"]) .settings-hero-card,
+html:not([data-theme="light"]) .settings-canvas {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(26, 30, 38, 0.72);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.28);
+}
 .settings-add-title { font-size: 16px; margin: 0 0 8px; color: var(--text-primary); }
 .settings-add-hint { font-size: 13px; color: var(--text-muted); margin: 0 0 14px; line-height: 1.45; }
 .settings-add-grid {
@@ -3195,6 +3312,10 @@ html[data-theme="light"] .modal-overlay {
   backdrop-filter: blur(18px) saturate(1.06);
   -webkit-backdrop-filter: blur(18px) saturate(1.06);
 }
+html:not([data-theme="light"]) .modal-overlay {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
 .modal-overlay.modal-stacked { z-index: 1100; }
 /* 공통 확인/알림 — 업무 상세 등 중첩 모달보다 위에 표시 */
 #modalAppDialog.modal-overlay {
@@ -3266,6 +3387,13 @@ html[data-theme="light"] .modal {
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+}
+html:not([data-theme="light"]) .modal {
+  background: rgba(22, 26, 34, 0.94);
+  border-color: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65);
 }
 .modal-wide { max-width: 640px; }
 .modal-narrow { max-width: 420px; }
@@ -3707,6 +3835,20 @@ html[data-theme="light"] #searchModal .search-modal-query-btn {
   border-color: color-mix(in srgb, var(--outline-variant, #acb3b7) 44%, transparent);
   background: rgba(255, 255, 255, 0.88);
 }
+html:not([data-theme="light"]) #searchModal .search-modal-toolbar {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  background: rgba(22, 26, 34, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+html:not([data-theme="light"]) #searchModal .search-modal-query-input {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(16, 20, 28, 0.85);
+}
+html:not([data-theme="light"]) #searchModal .search-modal-query-btn {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(26, 30, 38, 0.9);
+}
 
 /* 검색 결과 */
 .search-results { padding: 12px 20px; overflow-y: auto; max-height: 60vh; }
@@ -3986,6 +4128,9 @@ html[data-theme="light"] .search-item-clickable:hover {
 }
 html[data-theme="light"] .modal-work-hub.ech-workhub-shell {
   border-color: color-mix(in srgb, var(--outline-variant, #acb3b7) 35%, transparent);
+}
+html:not([data-theme="light"]) .modal-work-hub.ech-workhub-shell {
+  border-color: rgba(255, 255, 255, 0.1);
 }
 .modal-work-hub .modal-body {
   flex: 1 1 auto;
@@ -5585,6 +5730,14 @@ html[data-theme="light"] .user-mgmt-split {
   box-shadow: 0 14px 32px rgba(44, 52, 55, 0.06);
   background: rgba(255, 255, 255, 0.56);
 }
+html:not([data-theme="light"]) .user-mgmt-split {
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.4);
+  background: rgba(22, 26, 34, 0.55);
+}
+html:not([data-theme="light"]) .user-org-panel {
+  background: linear-gradient(180deg, rgba(26, 30, 38, 0.95) 0%, rgba(19, 22, 30, 0.9) 100%);
+}
 
 /* 좌측: 조직 선택 패널 */
 .user-org-panel {
@@ -5783,6 +5936,16 @@ html[data-theme="light"] .admin-insight-card {
   background: rgba(255, 255, 255, 0.78);
   box-shadow: 0 8px 20px rgba(44, 52, 55, 0.05);
 }
+html:not([data-theme="light"]) .admin-insight-card {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(26, 30, 38, 0.65);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+html:not([data-theme="light"]) .admin-insight-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, rgba(255, 255, 255, 0.1) 55%);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  transform: translateY(-1px);
+}
 @media (max-width: 600px) {
   .admin-user-edit-grid { grid-template-columns: 1fr; }
 }
@@ -5856,6 +6019,12 @@ html[data-theme="light"] .org-tab-main {
   background: rgba(255, 255, 255, 0.78);
   box-shadow: 0 10px 28px rgba(44, 52, 55, 0.05);
 }
+html:not([data-theme="light"]) .org-tab-rail,
+html:not([data-theme="light"]) .org-tab-main {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(22, 26, 34, 0.75);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
 .org-tab {
   padding: 8px 18px;
   font-size: 13px;
@@ -5908,6 +6077,9 @@ html[data-theme="light"] .org-tab.active {
   box-shadow: none;
 }
 html[data-theme="light"] .org-tab--rail.active {
+  box-shadow: inset 3px 0 0 var(--primary, #4e45e4);
+}
+html:not([data-theme="light"]) .org-tab--rail.active {
   box-shadow: inset 3px 0 0 var(--primary, #4e45e4);
 }
 @media (max-width: 900px) {
@@ -6303,4 +6475,58 @@ html[data-theme="light"] .org-tab--rail.active {
 .orgchart-error {
   padding: 16px; font-size: 13px;
   color: #f87171; text-align: center;
+}
+
+/* ============================================================
+ * 다크 테마 보강 — P1(Primary CTA · 업무허브 · 배포 · 칸반 · 멘션 · 프로필 · 퀵 레일 · 관리자)
+ * ============================================================ */
+html:not([data-theme="light"]) .btn-primary {
+  box-shadow: 0 4px 18px rgba(103, 96, 253, 0.32);
+}
+html:not([data-theme="light"]) .work-hub-panel {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(22, 26, 34, 0.72);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.32);
+}
+html:not([data-theme="light"]) .release-upload-card,
+html:not([data-theme="light"]) .release-panel--main {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(22, 26, 34, 0.72);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+html:not([data-theme="light"]) .kanban-col,
+html:not([data-theme="light"]) .kanban-column {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(22, 26, 34, 0.65);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+html:not([data-theme="light"]) .kanban-card,
+html:not([data-theme="light"]) .kanban-card-item {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(19, 22, 30, 0.82);
+}
+html:not([data-theme="light"]) .mention-suggest {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(22, 26, 34, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.45);
+}
+html:not([data-theme="light"]) .ech-profile-hero .profile-avatar-lg {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.48);
+}
+html:not([data-theme="light"]) .profile-dl--cards .profile-dd-card {
+  background: rgba(19, 22, 30, 0.75);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+html:not([data-theme="light"]) .quick-rail {
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.06);
+}
+html:not([data-theme="light"]) #adminSection .section-toggle-label {
+  color: rgba(165, 180, 252, 0.88);
+}
+html:not([data-theme="light"]) .orgchart-member-card {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(22, 26, 34, 0.75);
 }

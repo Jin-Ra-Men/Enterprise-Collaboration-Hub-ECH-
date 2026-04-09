@@ -2,6 +2,13 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-04-12
+
+### Changed
+- **프론트(다크 테마·디자인 갭)**: `frontend/styles.css` — `html:not([data-theme="light"])` 전역 보강(글로벌 바 blur·인셋 섀도·헤더 검색 포커스, 로그인 카드 글래스, 모달 본체·스크림 blur). ECH 채팅: 헤더·채널명(`#a5b4fc`)·멤버 패널 `top`/글래스·타임라인 그라데이션·날짜 구분선·컴포저 바/글래스 포커스·툴바·힌트. 환영 카드 다크 호버·슬레이트 아이콘 랩. 사이드바 활성 인디케이터 글로우. 관리자(인사이트 카드 호버·패널 헤더)·설정 히어로·사용자 분할·조직 탭 레일/본문·`#searchModal` 툴바·`modal-work-hub` 셸 보더.
+- **프론트(다크 P1)**: `styles.css` 하단 블록 — `.btn-primary` 섀도, `work-hub-panel`, `release-upload-card`·`release-panel--main`, 칸반 컬럼·카드, `mention-suggest` 글래스, 프로필 히어로 아바타·`.profile-dl--cards`, 퀵 레일 인셋, `#adminSection` 라벨, `.orgchart-member-card`.
+- **문서**: `docs/DESIGN_GAP_CHECKLIST.md`(§2·§3·§4·§6)·`docs/FEATURE_SPEC.md`(다크 테스트 기준)·`docs/HANDOVER.md`(다크 톤 안내).
+
 ## 2026-04-11
 
 ### Added

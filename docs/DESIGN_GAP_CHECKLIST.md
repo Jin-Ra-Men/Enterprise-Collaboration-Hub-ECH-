@@ -22,11 +22,11 @@
 
 | 항목 | 메모 |
 |------|------|
-| [ ] **No-Line / 고스트 보더**: 섹션 구분이 톤·여백 위주인지, 불필요한 실선 1px가 남았는지 점검 | 사이드바·카드·테이블 경계 |
+| [x] **No-Line / 고스트 보더**: 섹션 구분이 톤·여백 위주인지, 불필요한 실선 1px가 남았는지 점검 | 사이드바·카드·테이블 경계 — 라이트·다크 공통 토큰 정리(2026-04-12) |
 | [ ] **타이포 스케일**: Inter, 헤드라인/라벨(대문자·자간) 계열이 목업 대비 일관적인지 | `styles.css` 변수·헤딩 클래스 |
-| [ ] **Primary CTA 그라데이션**: 135° `primary` → `primary_container` 느낌이 버튼에 반영됐는지 | `.btn-primary` 등 |
-| [ ] **글래스 모달**: 떠 있는 패널·모달의 blur·반투명 레이어가 목업과 유사한지 | 주요 `modal-overlay` |
-| [ ] **활성 채널 표시**: 좌측 “필 인디케이터 + 은은한 배경” 패턴 적용 여부 | `.sidebar-list` 선택 행 |
+| [x] **Primary CTA 그라데이션**: 135° `primary` → `primary_container` 느낌이 버튼에 반영됐는지 | `.btn-primary` — `var(--grad-btn-primary)` + 라이트/다크 섀도(`styles.css`) |
+| [x] **글래스 모달**: 떠 있는 패널·모달의 blur·반투명 레이어가 목업과 유사한지 | 주요 `modal-overlay` — 다크에서 모달 본체·스크림 blur 보강 |
+| [x] **활성 채널 표시**: 좌측 “필 인디케이터 + 은은한 배경” 패턴 적용 여부 | `.sidebar-item.active` — 다크 인디케이터 글로우 |
 
 ---
 
@@ -36,77 +36,77 @@
 
 | 앱 위치 | 반영 요지 | 체크 |
 |---------|-----------|------|
-| `#appShellTopBar` | 글로벌 바·검색·아이콘 정렬 | [ ] |
-| `#viewWelcome` | 히어로·3열 카드·바로가기·Pro Tip (`.ech-welcome-*`) | [ ] |
-| `#sidebarColumn` | 3열 유동 레이아웃·사이드바 톤 | [ ] |
+| `#appShellTopBar` | 글로벌 바·검색·아이콘 정렬 | [x] 다크 글래스·검색 포커스 |
+| `#viewWelcome` | 히어로·3열 카드·바로가기·Pro Tip (`.ech-welcome-*`) | [x] 다크 카드 호버·슬레이트 아이콘 랩 |
+| `#sidebarColumn` | 3열 유동 레이아웃·사이드바 톤 | [x] 활성 행 글로우(다크) |
 
 ### `(1)` ECH Workspace — Work Management
 
 | 앱 위치 | 체크 |
 |---------|------|
-| `#modalWorkHub` 레이아웃·헤더·닫기 | [ ] |
-| `.work-hub-body--split`(넓은 화면) 업무 목록 ↔ 칸반 2열 비율·스크롤 | [ ] |
-| 업무 탭/칸반 도구 모음이 목업 밀도와 맞는지 | [ ] |
+| `#modalWorkHub` 레이아웃·헤더·닫기 | [x] 다크 패널·셸 보더 |
+| `.work-hub-body--split`(넓은 화면) 업무 목록 ↔ 칸반 2열 비율·스크롤 | [x] 구조 유지·다크 `work-hub-panel` |
+| 업무 탭/칸반 도구 모음이 목업 밀도와 맞는지 | [x] 다크 칸반 컬럼·카드 톤 |
 
 ### `(2)` 워크스페이스 셸 + 멤버/조직 맥락 · `design/ECH채팅`
 
 | 앱 위치 | 체크 |
 |---------|------|
-| `#viewChat`(`data-ech-design-ref="ech-chat"`) · `.ech-chat-header` · `.ech-messages-wrap` · `.ech-composer-glass` | [ ] |
-| `.ech-composer-bar` 입력·첨부·전송 정렬 | [ ] |
-| `#appHeaderSearchInput` + 헤더 검색 동작 | [ ] |
-| `#quickContainer` 퀵 레일·미읽음·`#mentionList` 멘션 목록 밀도 | [ ] |
-| `#memberPanel` 햄버거 메뉴·액션 버튼 줄 | [ ] |
+| `#viewChat`(`data-ech-design-ref="ech-chat"`) · `.ech-chat-header` · `.ech-messages-wrap` · `.ech-composer-glass` | [x] 다크 헤더·타임라인·날짜선·글래스 컴포저 |
+| `.ech-composer-bar` 입력·첨부·전송 정렬 | [x] 다크 컴포저 바·툴바·포커스 |
+| `#appHeaderSearchInput` + 헤더 검색 동작 | [x] 다크 포커스(글로벌 바와 동일 토큰) |
+| `#quickContainer` 퀵 레일·미읽음·`#mentionList` 멘션 목록 밀도 | [x] 다크 퀵 레일 인셋·`mention-suggest` 글래스 |
+| `#memberPanel` 햄버거 메뉴·액션 버튼 줄 | [x] 다크 멤버 패널(이전 스프린트) |
 
 ### `(3)` Enterprise Admin Hub
 
 | 앱 위치 | 체크 |
 |---------|------|
-| `.ech-region--admin` 공통 패널 헤더·배경 | [ ] |
-| 사이드바 관리자 섹션(`#adminSection`) 진입·강조 | [ ] |
-| `#viewReleases` 인사이트 카드·`release-layout`(업로드/목록 2단)·이력 테이블 | [ ] |
+| `.ech-region--admin` 공통 패널 헤더·배경 | [x] 다크 패널 헤더 글래스 |
+| 사이드바 관리자 섹션(`#adminSection`) 진입·강조 | [x] 다크 섹션 라벨(`#adminSection .section-toggle-label`) |
+| `#viewReleases` 인사이트 카드·`release-layout`(업로드/목록 2단)·이력 테이블 | [x] 다크 `release-upload-card`·`release-panel--main` |
 
 ### `(4)` Stratos Pro 상단 네비
 
 | 앱 위치 | 체크 |
 |---------|------|
-| `#appShellTopBar`와 `ECH메인` 목업 상단 바 시각적 일치도 | [ ] |
+| `#appShellTopBar`와 `ECH메인` 목업 상단 바 시각적 일치도 | [x] 다크 글로벌 바(동일 토큰) |
 
 ### `(5)` Organization Directory
 
 | 앱 위치 | 체크 |
 |---------|------|
-| `#viewOrgManagement` 인사이트 카드 + `org-tab-rail` / `org-tab-main` | [ ] |
-| `#modalOrgChart` · `#modalOrgGroupEdit` | [ ] |
+| `#viewOrgManagement` 인사이트 카드 + `org-tab-rail` / `org-tab-main` | [x] 다크 레일·본문·활성 탭 인셋 |
+| `#modalOrgChart` · `#modalOrgGroupEdit` | [x] 다크 `.orgchart-member-card` |
 | `#modalAddMemberPicker` 조직도 오버레이 | [ ] |
 
 ### `(6)` Task & Kanban Management
 
 | 앱 위치 | 체크 |
 |---------|------|
-| `#channelKanbanBoard` 컬럼·카드·빈 상태 | [ ] |
-| `#modalKanbanCardDetail` | [ ] |
+| `#channelKanbanBoard` 컬럼·카드·빈 상태 | [x] 다크 칸반 컬럼·카드 |
+| `#modalKanbanCardDetail` | [x] 공통 `.modal` 다크 토큰 |
 
 ### `(7)` User Management
 
 | 앱 위치 | 체크 |
 |---------|------|
-| `#viewUserManagement` 인사이트 카드·테이블·분할 패널 | [ ] |
-| `#modalAdminUserEdit` | [ ] |
+| `#viewUserManagement` 인사이트 카드·테이블·분할 패널 | [x] 다크 인사이트·분할·조직 패널 |
+| `#modalAdminUserEdit` | [x] 공통 `.modal` 다크 토큰 |
 
 ### `(8)` Enterprise Hub — Settings
 
 | 앱 위치 | 체크 |
 |---------|------|
-| `#viewSettings` Hero + 좌우 2열(`settings-layout`)·반응형 1열 | [ ] |
+| `#viewSettings` Hero + 좌우 2열(`settings-layout`)·반응형 1열 | [x] 다크 히어로·캔버스·설정 카드 |
 
 ### `(9)` 보조 패널 · 프로필형 카드 UI
 
 | 앱 위치 | 체크 |
 |---------|------|
-| `#modalUserProfile` 히어로·부제·`.profile-dl--cards`·푸터 | [ ] |
-| `#searchModal` 통합 검색 결과 레이아웃·타이포 | [ ] |
-| 기타 보조 모달(`#modalThemePicker`, `#modalAppUpdate` 등) | [ ] |
+| `#modalUserProfile` 히어로·부제·`.profile-dl--cards`·푸터 | [x] 다크 아바타·카드 필드 |
+| `#searchModal` 통합 검색 결과 레이아웃·타이포 | [x] 다크 툴바·쿼리 입력 |
+| 기타 보조 모달(`#modalThemePicker`, `#modalAppUpdate` 등) | [x] 공통 `.modal`·`.modal-overlay` 다크 토큰 |
 
 ---
 
@@ -116,13 +116,13 @@
 
 | 화면 | ID / 영역 | 체크 |
 |------|-----------|------|
-| 로그인 | `#loginPage` | [ ] |
-| 스레드 | `#modalThread` | [ ] |
-| 첨부/이미지 허브 | `#modalFileHub`, `#modalImagePreview` | [ ] |
-| 스레드 허브 | `#modalThreadHub` | [ ] |
-| 채널/DM 생성 | `#modalCreateChannel`, `#modalCreateDm`, `#modalAddChannelMembers` | [ ] |
-| 업무 항목 상세 | `#modalWorkItemDetail` | [ ] |
-| 공통 다이얼로그 | `#modalAppDialog`, `#modalImageDownloadChoice` | [ ] |
+| 로그인 | `#loginPage` | [x] 다크 로그인 카드 글래스 |
+| 스레드 | `#modalThread` | [x] 공통 모달 다크 토큰 |
+| 첨부/이미지 허브 | `#modalFileHub`, `#modalImagePreview` | [x] 공통 모달 다크 토큰 |
+| 스레드 허브 | `#modalThreadHub` | [x] 공통 모달 다크 토큰 |
+| 채널/DM 생성 | `#modalCreateChannel`, `#modalCreateDm`, `#modalAddChannelMembers` | [x] 공통 모달 다크 토큰 |
+| 업무 항목 상세 | `#modalWorkItemDetail` | [x] 공통 모달 다크 토큰 |
+| 공통 다이얼로그 | `#modalAppDialog`, `#modalImageDownloadChoice` | [x] 공통 모달 다크 토큰 |
 
 ---
 
@@ -140,6 +140,8 @@
 - 2026-04-10: `(3)`에 `#viewReleases`·`(2)`에 퀵 레일/멘션 행 보강, §4 배포 뷰 검증 안내 추가.
 - 2026-04-11: P0 시각 일괄 개선 — 글로벌 바·모달 스크림·멤버 패널·컴포저 포커스·Primary 버튼·환영 카드 보더·사이드바 섹션 라벨(다크 포함). `DESIGN_SYSTEM.md` §8 MCP+Stitch 절차 추가.
 - 2026-04-11(2): 관리자 인사이트 카드 호버·조직 탭 레일·통합 검색 모달·보조 버튼·컴포저 전송·환영 히어로 섀도.
+- 2026-04-12: 다크 테마 P0 시각 정합 — `styles.css` `html:not([data-theme="light"])`로 채팅·글로벌 바·로그인·모달·관리자·설정·조직·사용자·검색·업무 허브 셸 보강. §2·§3·§4 일부 `[x]` 처리.
+- 2026-04-12(2): 다크 P1 — Primary CTA 섀도, `work-hub-panel`·배포 카드·칸반·`mention-suggest`·프로필 카드·퀵 레일·`#adminSection`·조직도 멤버 카드. §3·§4 추가 `[x]`.
 
 ---
 
