@@ -5,6 +5,7 @@
 ## 2026-04-12
 
 ### Changed
+- **프론트(상단 컨텍스트 중앙정렬·컴포저 라인 정렬)**: 상단 채널 컨텍스트(`appTopbarChannelContext`)를 탑바 절대 중앙 정렬(`left:50%/translateX`)로 보정. 메시지 입력의 서식 툴바(`ech-composer-toolbar`) 제거, 컴포저 패딩을 축소해 좌측 하단 메뉴 라인과 높이감을 맞춤.
 - **프론트(상단바 채널 컨텍스트 이동)**: 채팅방 이름·구성원 수를 채팅 헤더에서 상단 글로벌 바 검색 옆 중앙(`appTopbarChannelContext`)으로 이동. 채널 설정 햄버거(`btnHeaderMenu`)는 상단 우측 아이콘 영역으로 재배치하고 채팅 뷰에서만 노출.
 - **프론트(테마·가독성·프레즌스)**: 테마 2종 추가(`ocean`, `cream`) 및 테마 피커 버튼 확장. 프레즌스 점을 테마 변수(`--presence-*`) 기반으로 재설계해 온라인/자리비움/오프라인 식별성과 대비(링/글로우/크기)를 강화. `index.html`, `app.js`, `styles.css`.
 - **프론트(워크플로우 표시 위치 보정)**: `ensureWorkflowMountedInChatArea()`로 `#modalWorkHub`를 `.chat-area`에 부착해 워크플로우가 메인(가운데 채팅) 영역에서 바로 표시되도록 조정. `styles.css`의 `.view-workflow`를 `flex: 1` 기반으로 수정.
