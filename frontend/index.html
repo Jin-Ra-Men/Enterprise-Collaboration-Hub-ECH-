@@ -183,19 +183,35 @@
           <ul class="sidebar-list mention-list" id="mentionList"></ul>
         </div>
 
-        <!-- 관리자 전용 -->
-        <div class="sidebar-section admin-only hidden" id="adminSection">
+        <!-- 관리자 전용 · design/ECH화면설계 (7) Admin Console 톤 -->
+        <div
+          class="sidebar-section sidebar-section--admin admin-only hidden"
+          id="adminSection"
+          data-ech-design-ref="screen7-admin-rail"
+        >
           <div class="sidebar-section-header">
             <span class="section-toggle section-toggle-static">
               <span class="section-toggle-chevron" aria-hidden="true">▾</span>
               <span class="section-toggle-label">관리자</span>
             </span>
           </div>
-          <ul class="sidebar-list">
-            <li class="sidebar-item" id="navOrgManagement" data-view="orgManagement">🏢 조직 관리</li>
-            <li class="sidebar-item" id="navUserManagement" data-view="userManagement">👤 사용자 관리</li>
-            <li class="sidebar-item" id="navReleases" data-view="releases">🚀 배포 관리</li>
-            <li class="sidebar-item" id="navSettings" data-view="settings">⚙️ 설정</li>
+          <ul class="sidebar-list sidebar-list--admin">
+            <li class="sidebar-item sidebar-item--admin-nav" id="navOrgManagement" data-view="orgManagement">
+              <span class="material-symbols-outlined sidebar-admin-nav-icon" aria-hidden="true">account_tree</span>
+              <span class="item-label">조직 관리</span>
+            </li>
+            <li class="sidebar-item sidebar-item--admin-nav" id="navUserManagement" data-view="userManagement">
+              <span class="material-symbols-outlined sidebar-admin-nav-icon" aria-hidden="true">group</span>
+              <span class="item-label">사용자 관리</span>
+            </li>
+            <li class="sidebar-item sidebar-item--admin-nav" id="navReleases" data-view="releases">
+              <span class="material-symbols-outlined sidebar-admin-nav-icon" aria-hidden="true">rocket_launch</span>
+              <span class="item-label">배포 관리</span>
+            </li>
+            <li class="sidebar-item sidebar-item--admin-nav" id="navSettings" data-view="settings">
+              <span class="material-symbols-outlined sidebar-admin-nav-icon" aria-hidden="true">settings</span>
+              <span class="item-label">설정</span>
+            </li>
           </ul>
         </div>
 

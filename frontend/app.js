@@ -2029,6 +2029,22 @@ function syncTopNavFromMainView() {
   }
 }
 
+function syncAdminSidebarActive(viewId) {
+  const navIds = ["navOrgManagement", "navUserManagement", "navReleases", "navSettings"];
+  const activeFor = {
+    viewOrgManagement: "navOrgManagement",
+    viewUserManagement: "navUserManagement",
+    viewReleases: "navReleases",
+    viewSettings: "navSettings",
+  };
+  const activeNavId = activeFor[viewId];
+  navIds.forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle("active", Boolean(activeNavId) && id === activeNavId);
+  });
+}
+
 function showView(viewId) {
   ["viewWelcome","viewChat","viewReleases","viewSettings","viewUserManagement","viewOrgManagement"].forEach(id => {
     const el = document.getElementById(id);
@@ -2037,6 +2053,7 @@ function showView(viewId) {
   const target = document.getElementById(viewId);
   if (target) target.classList.remove("hidden");
   syncTopNavFromMainView();
+  syncAdminSidebarActive(viewId);
 }
 
 /* ==========================================================================

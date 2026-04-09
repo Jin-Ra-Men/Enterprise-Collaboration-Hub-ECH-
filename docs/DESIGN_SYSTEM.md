@@ -76,11 +76,11 @@ Copy-Item -Force "frontend/design-backup/legacy-design/app.js" "frontend/app.js"
 |------|-----------------|-------------------------|
 | `(1)` | ECH Workspace — Work Management | 업무·칸반 모달 `#modalWorkHub` · `.ech-workhub-shell` · 넓은 뷰에서 `.work-hub-body--split`(업무/칸반 2열) |
 | `(2)` | 워크스페이스 셸 + 조직/멤버 모달 | 채팅 타임라인 `#viewChat` · `.ech-messages-wrap` · 글로벌 검색 `#appShellTopBar` — **채팅 화면 세부 톤은 `design/ECH채팅/` 동기화** |
-| `(3)` | Enterprise Admin Hub | 관리자 뷰 공통 `.ech-region--admin` · 사이드바 관리 메뉴 |
+| `(3)` | Enterprise Admin Hub | 관리자 뷰 공통 `.ech-region--admin` · 사이드바 `#adminSection` (`data-ech-design-ref="screen7-admin-rail"`, `(7)` Admin Console 레일 톤) |
 | `(4)` | Stratos Pro 상단 네비 | `app-shell-topbar` (ECH메인과 동일 계열) |
 | `(5)` | Organization Directory | 조직 관리 `#viewOrgManagement`(인사이트 카드 + `org-layout` 좌측 탭 레일) · 조직도 `#modalOrgChart` |
 | `(6)` | Task & Kanban Management | `#modalWorkHub` 칸반 컬럼 `#channelKanbanBoard` |
-| `(7)` | User Management | 사용자 관리 `#viewUserManagement` (`data-ech-design-ref="screen7-users"`) |
+| `(7)` | User Management | 사용자 관리 `#viewUserManagement` (`data-ech-design-ref="screen7-users"`) · 사이드바 관리 항목 아이콘 레일은 `(3)` `#adminSection`과 공유 |
 | `(8)` | Enterprise Hub — Settings | 앱 설정 `#viewSettings` |
 | `(9)` | (코드만 상이·제목 생략 가능) | 사용자 **프로필 모달** `#modalUserProfile`(`.ech-profile-modal`·히어로·부제·`.profile-dl--cards`)·통합 검색 등 보조 패널 점진 적용 |
 

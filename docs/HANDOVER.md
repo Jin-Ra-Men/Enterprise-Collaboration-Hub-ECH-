@@ -68,6 +68,7 @@
 - **「새 메시지」구분선**: 입력·전송 시 `clearChatReadAnchorUi`; 본인 전송 후 `loadMessages`는 `skipNewMsgsDivider`/`uploadFile` `skipNewMsgsDividerAfterReload`로 재삽입 방지.
 - **업무·칸반**: 비활성 업무 복원/완전 삭제는 **저장 시** `flushWorkHubSave`에서만 API — 목록·상세 공통 `queueWorkItemRestore`/`queueWorkItemPurge`. 업무 **✕(소프트 삭제)** 는 `workHubPendingWorkDeleteIds`에만 넣고 목록에 **삭제 예정** 배지로 남김(`cancelWorkItemDeletePending`). **완전 삭제** 시 서버가 칸반 카드를 먼저 지우므로, `queueWorkItemPurge`·`flushWorkHubSave`의 purge 직후 `clearPendingKanbanStateForWorkItem`/`collectKanbanCardIdsForWorkItem`로 해당 카드 ID를 pending 맵에서 제거(저장 시 잔여 `PUT /kanban/cards/{id}` 실패 방지). 확인창 `#modalAppDialog`는 `z-index: 1350`으로 중첩 모달 위. 사이드바 **내 업무 항목**의 채널 줄은 API `channelName`(DM은 `description` 우선) + 프론트 `displayChannelLabelForWorkSidebar`; 모달 업무 목록 **선택 행**은 `channel-work-item--selected`.
 - **글로벌 바「프로젝트」·환영「업무·칸반」**: 채널이 아직 없을 때 `getDefaultChannelForWorkHub`(공개→비공개→최근 DM)로 한 채널을 고른 뒤 `selectChannel` → `openWorkHubModalForActiveChannel` (`openWorkHubFromTopNav`). 채팅 헤더 `btnOpenWorkHub`는 **반드시 현재 채널**이 있어야 함(기존 안내 유지). 요약은 `docs/FEATURE_SPEC.md`(2026-04-09).
+- **관리자 사이드바**: `#adminSection` 항목은 Material 아이콘 레일이며, 현재 관리 화면은 `showView` → `syncAdminSidebarActive`로 메뉴 `.active`와 동기화된다(`FEATURE_SPEC` 관리자 사이드바 레일 절).
 
 ## 3) 핵심 문서 위치
 - 루트 소개(제품·기능 요약): `README.md`

@@ -880,6 +880,10 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 ---
 
+## 관리자 사이드바 레일 (2026-04-09)
+- `#adminSection`은 `design/ECH화면설계 (7)` Admin Console 톤에 맞춰 상단 구분선·라이트 시 은은한 인디고 틴트(`sidebar-section--admin`), 항목은 Material 아이콘 + 라벨(`sidebar-item--admin-nav`).
+- `showView` 호출 시 `syncAdminSidebarActive(viewId)`로 `viewOrgManagement`·`viewUserManagement`·`viewReleases`·`viewSettings` 중 하나와 사이드바 네 항목의 `.active`를 맞추고, 채팅/환영 등 비관리 뷰에서는 관리 메뉴 활성을 해제한다.
+
 ## 글로벌 바「프로젝트」·환영「업무·칸반」진입 (2026-04-09)
 - 상단 네비 **프로젝트**(`btnTopNavProjects`)와 환영 카드 **업무·칸반** 클릭 시, 이미 채널이 선택되어 있으면 곧바로 업무·칸반 모달(`openWorkHubModalForActiveChannel`)을 연다.
 - 채널이 없을 때는 `lastSidebarChannelsSnapshot` 기준으로 기본 채널을 고른 뒤 `selectChannel` → 모달을 연다. 우선순위: **공개(PUBLIC) → 비공개(PRIVATE) → 최근 활동 시각 기준 DM** (`getDefaultChannelForWorkHub`). 참여 채널이 전혀 없으면 안내 메시지만 표시한다.

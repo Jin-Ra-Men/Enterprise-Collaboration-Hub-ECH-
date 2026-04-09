@@ -63,7 +63,7 @@
 | 앱 위치 | 체크 |
 |---------|------|
 | `.ech-region--admin` 공통 패널 헤더·배경 | [x] 다크 패널 헤더 글래스 |
-| 사이드바 관리자 섹션(`#adminSection`) 진입·강조 | [x] 다크 섹션 라벨(`#adminSection .section-toggle-label`) |
+| 사이드바 관리자 섹션(`#adminSection`) 진입·강조 | [x] 다크 섹션 라벨 · `(7)` 톤: `sidebar-section--admin` 구분선·글래스 틴트, Material 아이콘 레일, `syncAdminSidebarActive`로 현재 관리 뷰와 `.active` 동기화(2026-04-09) |
 | `#viewReleases` 인사이트 카드·`release-layout`(업로드/목록 2단)·이력 테이블 | [x] 다크 `release-upload-card`·`release-panel--main` |
 
 ### `(4)` Stratos Pro 상단 네비
@@ -148,6 +148,7 @@
 - 2026-04-12: 다크 테마 P0 시각 정합 — `styles.css` `html:not([data-theme="light"])`로 채팅·글로벌 바·로그인·모달·관리자·설정·조직·사용자·검색·업무 허브 셸 보강. §2·§3·§4 일부 `[x]` 처리.
 - 2026-04-12(2): 다크 P1 — Primary CTA 섀도, `work-hub-panel`·배포 카드·칸반·`mention-suggest`·프로필 카드·퀵 레일·`#adminSection`·조직도 멤버 카드. §3·§4 추가 `[x]`.
 - 2026-04-09(2): `(4)` 상단 **프로젝트**·환영 **업무·칸반** — 채널 미선택 시 기본 채널 선택 후 업무 허브(`openWorkHubFromTopNav`).
+- 2026-04-09(3): `(3)` `#adminSection` — 아이콘 레일·구역 구분·`showView`와 관리 메뉴 활성 동기화.
 - 2026-04-09: §4 보조 UI — 파일 허브·이미지 프리뷰·테마 피커·멘션 토스트·사용자 검색 목록·공통 다이얼로그·업데이트 안내 라이트 톤 (`styles.css`).
 
 ---
