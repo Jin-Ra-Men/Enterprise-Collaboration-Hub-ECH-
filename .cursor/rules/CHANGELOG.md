@@ -9,6 +9,7 @@
 - **프론트(ECH 화면설계 연동)**: `design/ECH화면설계 (1)~(9)` 구역별 마크업 훅 — 채팅 `#viewChat` (`.ech-region--chat`, `.ech-chat-header`, `.ech-messages-wrap`, `.ech-composer-bar`), 업무·칸반 `#modalWorkHub` (`.ech-workhub-shell`, 모달 폭 960px·라운드), 관리자 뷰 `.ech-region--admin` + `data-ech-design-ref`. `styles.css`에 타임라인 스크롤바·라이트 컴포저 바·관리자 패널 헤더 글래스 보강. `docs/DESIGN_SYSTEM.md` 섹션 6 매핑 표.
 
 ### Changed
+- **문서**: `docs/DESIGN_GAP_CHECKLIST.md` 보강 — `(3)`에 `#viewReleases`, `(2)`에 퀵 레일·멘션 목록 행, §4 배포 뷰 검증 안내, 신규 담당자용 권장 순서(§7). 루트 `README.md`·`docs/DEVELOPER_README.md`에 갭 체크리스트 링크.
 - **프론트(프로필 모달)**: `ECH화면설계 (9)` 카드형에 맞춰 `#modalUserProfile`을 히어로·부제·`.profile-dl--cards`·푸터(DM/닫기)로 정리. `openUserProfile`에서 부제에 부서·직급을 ` · `로 표시. `styles.css`에 `.ech-profile-modal`(overflow)·`.ech-profile-footer`(`.modal-footer`와 중복 테두리 제거) 등 보강. `DESIGN_SYSTEM.md` 매핑(9)·`FEATURE_SPEC.md`·`HANDOVER.md` 반영. 중복된 `.ech-profile-modal.modal` 규칙 정리.
 - **문서**: `index.html`/유틸 변경 시 `npm run build:css` 안내 유지.
 - **프론트(조직 관리 레이아웃)**: `viewOrgManagement`를 `ECH화면설계 (5)`에 맞춰 상단 인사이트 카드 + 좌측 세로 탭 레일(`org-tab-rail`)·우측 본문(`org-tab-main`) 2단으로 재구성. `updateOrgInsightMetrics()`로 현재 탭·표시 항목 수·저장 대기(`orgPendingCountMirror`) 동기화.

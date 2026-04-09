@@ -94,6 +94,7 @@ graph LR
 - RBAC 매트릭스: `./RBAC_MATRIX.md`
 - 인수인계서: `./HANDOVER.md`
 - UI 디자인 시스템·롤백: `./DESIGN_SYSTEM.md`
+- 목업 대비 UI 갭 체크리스트: `./DESIGN_GAP_CHECKLIST.md`
 - DB 스키마 초안: `./sql/postgresql_schema_draft.sql`
 - 기존 DB에 조직 컬럼 추가: `./sql/migrate_users_add_org_columns.sql` (필요 시)
 - 테스트 사용자·부서 시드: `./sql/seed_test_users.sql` (그룹웨어 미연동 시, `./ENVIRONMENT_SETUP.md` 참고)

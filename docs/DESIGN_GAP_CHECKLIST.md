@@ -55,6 +55,7 @@
 | `#viewChat` · `.ech-chat-header` · `.ech-messages-wrap` | [ ] |
 | `.ech-composer-bar` 입력·첨부·전송 정렬 | [ ] |
 | `#appHeaderSearchInput` + 헤더 검색 동작 | [ ] |
+| `#quickContainer` 퀵 레일·미읽음·`#mentionList` 멘션 목록 밀도 | [ ] |
 | `#memberPanel` 햄버거 메뉴·액션 버튼 줄 | [ ] |
 
 ### `(3)` Enterprise Admin Hub
@@ -63,6 +64,7 @@
 |---------|------|
 | `.ech-region--admin` 공통 패널 헤더·배경 | [ ] |
 | 사이드바 관리자 섹션(`#adminSection`) 진입·강조 | [ ] |
+| `#viewReleases` 인사이트 카드·`release-layout`(업로드/목록 2단)·이력 테이블 | [ ] |
 
 ### `(4)` Stratos Pro 상단 네비
 
@@ -110,7 +112,7 @@
 
 ## 4) 매핑 표에 없는 주요 화면
 
-목업 단일 폴더에 대응되지 않지만 동일 토큰으로 맞출 항목입니다.
+목업 단일 폴더에 대응되지 않지만 동일 토큰으로 맞출 항목입니다. (배포 `#viewReleases`는 관리자 허브 성격상 `(3)`과 함께 검증.)
 
 | 화면 | ID / 영역 | 체크 |
 |------|-----------|------|
@@ -135,3 +137,14 @@
 ## 6) 변경 이력 (문서)
 
 - 문서 신설 및 `DESIGN_SYSTEM.md` §7 링크 시 `.cursor/rules/CHANGELOG.md`에 기록합니다.
+- 2026-04-10: `(3)`에 `#viewReleases`·`(2)`에 퀵 레일/멘션 행 보강, §4 배포 뷰 검증 안내 추가.
+
+---
+
+## 7) 다음 작업으로 추천되는 순서 (신규 담당자용)
+
+1. **§2 전역 토큰** 한 바퀴(특히 No-Line·CTA·모달 글래스) — 이후 구역 작업 시 재작업을 줄임.  
+2. **P0**(`§5`) — `#viewChat`, 사이드바, `#appShellTopBar`, `#viewWelcome`.  
+3. **P1** — 관리자 뷰(`#viewUserManagement`, `#viewOrgManagement`, `#viewReleases`, `#viewSettings`) + `#modalWorkHub`, `#modalUserProfile`, `#searchModal`.  
+4. **P2** — §4 보조 모달·로그인.  
+5. 체크 완료 시 해당 행을 `[x]`로 바꾸고, 스크린샷·PR에 구역 ID를 명시하면 추적이 쉬움.
