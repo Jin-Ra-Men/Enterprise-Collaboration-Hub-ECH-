@@ -16,7 +16,7 @@
 
 - **실제 렌더링**: Vanilla CSS — `frontend/styles.css`의 `:root` / `html[data-theme="light"]` 변수.
 - **동일 팔레트 스냅샷**: `frontend/tailwind.config.js` (`colors`, `borderRadius`, `boxShadow`, `fontSize`, `fontFamily`).
-- **빌드 산출물**: `frontend/ech-tailwind.css` — 선택(추가 유틸용). **채널 미선택 시 메인 대시보드**는 `styles.css`의 `.ech-welcome-*` 만으로도 동작하며, Tailwind 파일이 없어도 깨지지 않게 구성합니다. 수정 후 재생성:
+- **빌드 산출물**: `frontend/ech-tailwind.css` — 선택(추가 유틸용). **채널 미선택 시 시작 화면**은 `styles.css`의 `.ech-home-*`(및 레거시 `.ech-welcome-*` 일부)로 동작하며, Tailwind 파일이 없어도 깨지지 않게 구성합니다. 수정 후 재생성:
   ```bash
   cd frontend && npm install && npm run build:css
   ```
@@ -77,7 +77,7 @@ Copy-Item -Force "frontend/design-backup/legacy-design/app.js" "frontend/app.js"
 | `(1)` | ECH Workspace — Work Management | 업무·칸반 모달 `#modalWorkHub` · `.ech-workhub-shell` · 넓은 뷰에서 `.work-hub-body--split`(업무/칸반 2열) |
 | `(2)` | 워크스페이스 셸 + 조직/멤버 모달 | 채팅 타임라인 `#viewChat` · `.ech-messages-wrap` · 글로벌 검색 `#appShellTopBar` — **채팅 화면 세부 톤은 `design/ECH채팅/` 동기화** |
 | `(3)` | Enterprise Admin Hub | 관리자 뷰 공통 `.ech-region--admin` · 사이드바 `#adminSection` (`data-ech-design-ref="screen7-admin-rail"`, `(7)` Admin Console 레일 톤) |
-| `(4)` | Stratos Pro 상단 네비 | `app-shell-topbar` (ECH메인과 동일 계열) |
+| `(4)` | Stratos Pro 상단 네비 | `app-shell-topbar` — **프로젝트·팀** + 로고 홈(`#btnAppShellHome`), 좌측 **업무·칸반** 레일과 역할 분리 |
 | `(5)` | Organization Directory | 조직 관리 `#viewOrgManagement`(인사이트 카드 + `org-layout` 좌측 탭 레일) · 조직도 `#modalOrgChart` |
 | `(6)` | Task & Kanban Management | `#modalWorkHub` 칸반 컬럼 `#channelKanbanBoard` |
 | `(7)` | User Management | 사용자 관리 `#viewUserManagement` (`data-ech-design-ref="screen7-users"`) · 사이드바 관리 항목 아이콘 레일은 `(3)` `#adminSection`과 공유 |

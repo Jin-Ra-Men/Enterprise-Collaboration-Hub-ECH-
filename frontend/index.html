@@ -68,7 +68,7 @@
       <!-- design/ECH메인: 상단 글로벌 바 -->
       <header id="appShellTopBar" class="app-shell-topbar" role="banner" data-ech-design-ref="screen4-topbar">
         <div class="app-shell-topbar-left">
-          <span class="app-shell-brand">ECH</span>
+          <button type="button" class="app-shell-brand" id="btnAppShellHome" title="채널 선택 화면으로" aria-label="홈·채널 선택 화면으로">ECH</button>
           <div class="app-shell-global-search">
             <span class="material-symbols-outlined app-shell-search-glyph" aria-hidden="true">search</span>
             <input
@@ -82,7 +82,6 @@
           </div>
         </div>
         <nav class="app-shell-topbar-nav" aria-label="메인 메뉴">
-          <button type="button" id="btnTopNavDashboard" class="app-shell-nav-link app-shell-nav-link--active">대시보드</button>
           <button type="button" id="btnTopNavProjects" class="app-shell-nav-link">프로젝트</button>
           <button type="button" id="btnTopNavTeam" class="app-shell-nav-link">팀</button>
         </nav>
@@ -105,14 +104,8 @@
       <div class="sidebar-column" id="sidebarColumn">
         <div class="sidebar-slip">
           <aside class="sidebar">
-        <!-- 워크스페이스 헤더 (퀵 레일보다 위 전폭) -->
-        <div class="sidebar-workspace">
-          <div class="sidebar-workspace-brand">
-            <div class="sidebar-workspace-logo" aria-hidden="true">
-              <span class="material-symbols-outlined">corporate_fare</span>
-            </div>
-            <span class="workspace-name">ECH</span>
-          </div>
+        <!-- 상단 바와 브랜드 중복 방지: 조직도 단축만 유지 (design/ECH메인 퀵 레일 정렬) -->
+        <div class="sidebar-workspace sidebar-workspace--tools-only">
           <button id="btnOrgChart" class="btn-workspace-tool" title="조직도" aria-label="조직도 보기">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <rect x="2" y="7" width="6" height="5" rx="1"/><rect x="9" y="2" width="6" height="5" rx="1"/>
@@ -135,6 +128,25 @@
             </button>
             <input id="searchInput" type="search" class="sidebar-search-input" placeholder="검색" />
           </form>
+        </div>
+
+        <div class="sidebar-section sidebar-section--hub-shortcuts">
+          <div class="sidebar-section-header">
+            <span class="section-toggle section-toggle-static">
+              <span class="section-toggle-chevron" aria-hidden="true">▾</span>
+              <span class="section-toggle-label">업무·칸반</span>
+            </span>
+          </div>
+          <ul class="sidebar-list">
+            <li class="sidebar-item sidebar-item--hub-shortcut" id="btnSidebarWorkHubWork" role="button" tabindex="0">
+              <span class="material-symbols-outlined sidebar-hub-icon" aria-hidden="true">assignment</span>
+              <span class="item-label">업무 항목</span>
+            </li>
+            <li class="sidebar-item sidebar-item--hub-shortcut" id="btnSidebarWorkHubKanban" role="button" tabindex="0">
+              <span class="material-symbols-outlined sidebar-hub-icon" aria-hidden="true">view_kanban</span>
+              <span class="item-label">칸반</span>
+            </li>
+          </ul>
         </div>
 
         <!-- 채널 섹션 -->
@@ -165,7 +177,7 @@
           <div class="sidebar-section-header">
             <button type="button" class="section-toggle" data-target="myKanbanList">
               <span class="section-toggle-chevron" aria-hidden="true">▾</span>
-              <span class="section-toggle-label">내 업무 항목</span>
+              <span class="section-toggle-label">담당 업무 목록</span>
             </button>
           </div>
           <ul class="sidebar-list" id="myKanbanList"></ul>
@@ -267,112 +279,21 @@
       <!-- 오른쪽 채팅 영역 -->
       <main class="chat-area">
 
-        <!-- 채널 선택 전 기본 화면 (design/ECH메인 — styles.css .ech-welcome-* 로만 스타일, Tailwind 불필요) -->
+        <!-- 채널 미선택 시: 대시보드형 히어로 대신 슬림 시작 화면(상단 ECH·좌측 메뉴와 역할 분리) -->
         <div id="viewWelcome" class="view-welcome">
           <div class="welcome-dashboard-inner ech-welcome-scroll">
-            <div class="ech-welcome-wrap">
-              <section class="ech-welcome-hero" aria-labelledby="welcomeHeroTitle">
-                <div class="ech-welcome-hero-content">
-                  <div class="ech-welcome-hero-title-row">
-                    <span class="ech-welcome-emoji" aria-hidden="true">👋</span>
-                    <h1 id="welcomeHeroTitle" class="ech-welcome-hero-title">Hello!</h1>
-                  </div>
-                  <p id="welcomeHeroLead" class="ech-welcome-hero-lead">
-                    Enterprise Collaboration Hub에 오신 것을 환영합니다. 왼쪽에서 <strong>채널·DM</strong>을 선택하거나, 아래 모듈로 바로 이동해 보세요.
-                  </p>
-                  <div class="ech-welcome-hero-actions">
-                    <button type="button" id="btnWelcomeFocusChannel" class="ech-welcome-btn ech-welcome-btn--primary">
-                      채널 목록으로
-                    </button>
-                    <button type="button" id="btnWelcomeFocusSearch" class="ech-welcome-btn ech-welcome-btn--ghost">
-                      검색 열기
-                    </button>
-                  </div>
+            <div class="ech-welcome-wrap ech-home-wrap">
+              <section class="ech-home-card" aria-labelledby="welcomeHeroTitle">
+                <h1 id="welcomeHeroTitle" class="ech-home-title">시작하기</h1>
+                <p id="welcomeHeroLead" class="ech-home-lead">
+                  <strong>채널</strong> 또는 <strong>다이렉트 메시지</strong>를 선택하면 대화가 여기에 표시됩니다. 업무·칸반은 왼쪽 <strong>업무·칸반</strong>에서 바로 열 수 있어요.
+                </p>
+                <div class="ech-home-actions">
+                  <button type="button" id="btnWelcomeFocusChannel" class="ech-home-btn ech-home-btn--primary">채널 목록 보기</button>
+                  <button type="button" id="btnWelcomeFocusSearch" class="ech-home-btn ech-home-btn--ghost">검색</button>
+                  <button type="button" id="btnWelcomeOpenOrgChart" class="ech-home-btn ech-home-btn--ghost">조직도</button>
                 </div>
-                <div class="ech-welcome-blob ech-welcome-blob--a" aria-hidden="true"></div>
-                <div class="ech-welcome-blob ech-welcome-blob--b" aria-hidden="true"></div>
-              </section>
-
-              <section class="ech-welcome-block">
-                <div class="ech-welcome-block-head">
-                  <div>
-                    <h2 class="ech-welcome-h2">시작하기</h2>
-                    <p class="ech-welcome-sub">주요 기능을 빠르게 살펴보세요.</p>
-                  </div>
-                  <button type="button" id="btnWelcomeFocusChannel2" class="ech-welcome-link-btn">
-                    <span>채널로 이동</span>
-                    <span class="material-symbols-outlined ech-welcome-icon-sm" aria-hidden="true">arrow_forward</span>
-                  </button>
-                </div>
-                <div class="ech-welcome-cards">
-                  <article id="welcomeCardThreads" role="button" tabindex="0" class="ech-welcome-card ech-welcome-card--threads">
-                    <div class="ech-welcome-card-icon-wrap ech-welcome-card-icon-wrap--primary">
-                      <span class="material-symbols-outlined" aria-hidden="true">chat_bubble</span>
-                    </div>
-                    <h3 class="ech-welcome-h3">스레드·채널</h3>
-                    <p class="ech-welcome-card-desc">채널과 DM에서 대화하고, 스레드로 맥락을 유지합니다.</p>
-                    <div class="ech-welcome-card-footer ech-welcome-card-footer--primary">
-                      <span>채널 열기</span>
-                      <span class="material-symbols-outlined ech-welcome-chevron" aria-hidden="true">chevron_right</span>
-                    </div>
-                  </article>
-                  <article id="welcomeCardKanban" role="button" tabindex="0" class="ech-welcome-card ech-welcome-card--kanban">
-                    <div class="ech-welcome-card-icon-wrap ech-welcome-card-icon-wrap--tertiary">
-                      <span class="material-symbols-outlined" aria-hidden="true">view_kanban</span>
-                    </div>
-                    <h3 class="ech-welcome-h3">업무·칸반</h3>
-                    <p class="ech-welcome-card-desc">채널 업무 허브에서 항목·칸반을 한 모달에서 관리합니다.</p>
-                    <div class="ech-welcome-card-footer ech-welcome-card-footer--tertiary">
-                      <span class="ech-welcome-card-footer-text">참여 채널로 업무 허브 열기</span>
-                      <span class="material-symbols-outlined ech-welcome-chevron" aria-hidden="true">chevron_right</span>
-                    </div>
-                  </article>
-                  <article id="welcomeCardOrg" role="button" tabindex="0" class="ech-welcome-card ech-welcome-card--org">
-                    <div class="ech-welcome-card-icon-wrap ech-welcome-card-icon-wrap--slate">
-                      <span class="material-symbols-outlined" aria-hidden="true">corporate_fare</span>
-                    </div>
-                    <h3 class="ech-welcome-h3">조직·검색</h3>
-                    <p class="ech-welcome-card-desc">조직도와 통합 검색으로 멤버·대화를 찾습니다.</p>
-                    <div class="ech-welcome-card-footer ech-welcome-card-footer--slate">
-                      <span>조직도</span>
-                      <span class="material-symbols-outlined ech-welcome-chevron" aria-hidden="true">chevron_right</span>
-                    </div>
-                  </article>
-                </div>
-              </section>
-
-              <section class="ech-welcome-split">
-                <div class="ech-welcome-split-col">
-                  <h2 class="ech-welcome-h2 ech-welcome-h2--sm">바로가기</h2>
-                  <div class="ech-welcome-list-card">
-                    <div class="ech-welcome-list-row">
-                      <div class="ech-welcome-list-badge" aria-hidden="true">1</div>
-                      <div class="ech-welcome-list-text">
-                        <p class="ech-welcome-list-title">채널을 선택하면 대화가 이 영역에 표시됩니다.</p>
-                        <p class="ech-welcome-list-meta">미읽음은 사이드바 배지로 확인하세요.</p>
-                      </div>
-                    </div>
-                    <div class="ech-welcome-list-row ech-welcome-list-row--border">
-                      <div class="ech-welcome-list-badge ech-welcome-list-badge--tertiary">
-                        <span class="material-symbols-outlined" aria-hidden="true">search</span>
-                      </div>
-                      <div class="ech-welcome-list-text">
-                        <p class="ech-welcome-list-title">상단 검색창 또는 사이드바 검색으로 통합 검색을 실행합니다.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div class="ech-welcome-split-col">
-                  <h2 class="ech-welcome-h2 ech-welcome-h2--sm">즐겨 찾는 채널</h2>
-                  <p class="ech-welcome-sub ech-welcome-sub--solo">자주 쓰는 채널은 퀵 레일에 고정할 수 있습니다.</p>
-                  <div class="ech-welcome-tip">
-                    <span class="material-symbols-outlined ech-welcome-tip-icon" aria-hidden="true">lightbulb</span>
-                    <div>
-                      <p class="ech-welcome-tip-title">Pro Tip</p>
-                      <p class="ech-welcome-tip-body">채널·DM 목록에서 우클릭해 <strong>퀵 레일에 고정</strong>을 켜보세요.</p>
-                    </div>
-                  </div>
-                </div>
+                <p class="ech-home-footnote">미읽음은 사이드바 배지 · 퀵 레일에 채널을 고정해 두면 더 빠르게 이동할 수 있습니다.</p>
               </section>
             </div>
           </div>
@@ -1169,7 +1090,7 @@
           <button class="modal-close" data-modal="modalWorkHub">✕</button>
         </div>
         <div class="modal-body work-hub-body work-hub-body--split">
-          <div class="work-hub-panel">
+          <div class="work-hub-panel" id="workHubPanelWork">
             <h4>업무 항목</h4>
             <p class="work-hub-hint">신규 입력·목록에서 상태 변경 후 <strong>저장</strong>을 누르면 서버에 반영됩니다. 비활성 업무의 <strong>복원</strong>·<strong>완전 삭제</strong>도 목록(또는 상세)에서 선택한 뒤 <strong>저장</strong> 시에만 서버에 반영되며, 예약된 항목은 배지로 표시됩니다.</p>
             <div class="work-hub-panel-body">
@@ -1188,7 +1109,7 @@
               <ul id="channelWorkItemsList" class="channel-work-item-list"></ul>
             </div>
           </div>
-          <div class="work-hub-panel">
+          <div class="work-hub-panel" id="workHubPanelKanban">
             <h4>칸반 보드</h4>
             <p class="work-hub-hint">카드는 <strong>저장된 업무 항목</strong>에만 연결됩니다. 새 업무는 먼저 저장한 뒤 카드를 추가하세요. 컬럼 이동은 편집 후 <strong>저장</strong> 시 반영됩니다.</p>
             <div class="work-hub-panel-body">

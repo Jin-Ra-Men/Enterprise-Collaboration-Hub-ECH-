@@ -44,7 +44,7 @@
 - 로그/감사 포인트: 해당 없음
 - 테스트 기준:
   - 라이트 테마에서 글로벌 바(`app-shell-topbar`)·모달 스크림·채팅 멤버 패널·컴포저(`.ech-composer-glass`) 포커스 링이 과도한 실선 없이(고스트 보더·글래스 계열) 일관되는지 확인
-  - 기본(다크) 테마에서 `html:not([data-theme="light"])` 규칙으로 글로벌 바·헤더 검색 포커스·로그인 카드·모달·채팅 헤더/타임라인/날짜 구분선/컴포저·환영 카드·사이드바 활성 표시·관리자 인사이트·설정·조직·사용자 분할·통합 검색·업무 허브 모달 셸이 라이트와 동일 계열(글래스·인디고 액센트)로 보이는지 확인
+  - 기본(다크) 테마에서 `html:not([data-theme="light"])` 규칙으로 글로벌 바·헤더 검색 포커스·로그인 카드·모달·채팅 헤더/타임라인/날짜 구분선/컴포저·시작 화면(`.ech-home-*`)·사이드바 활성 표시·관리자 인사이트·설정·조직·사용자 분할·통합 검색·업무 허브 모달 셸이 라이트와 동일 계열(글래스·인디고 액센트)로 보이는지 확인
   - 채팅(`#viewChat`)이 `design/ECH채팅`에 맞게 헤더(채널명 인디고·팀원 N명·메뉴 아이콘)·날짜 구분선·말풍선·글래스 컴포저·하단 힌트로 보이는지 확인(툴바 아이콘은 장식, 서식 미구현)
   - 채팅 화면 진입 시 헤더/타임라인/컴포저가 정상 렌더링되는지 확인
   - 업무·칸반 모달 너비/스크롤이 깨지지 않는지 확인
@@ -884,10 +884,11 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 - `#adminSection`은 `design/ECH화면설계 (7)` Admin Console 톤에 맞춰 상단 구분선·라이트 시 은은한 인디고 틴트(`sidebar-section--admin`), 항목은 Material 아이콘 + 라벨(`sidebar-item--admin-nav`).
 - `showView` 호출 시 `syncAdminSidebarActive(viewId)`로 `viewOrgManagement`·`viewUserManagement`·`viewReleases`·`viewSettings` 중 하나와 사이드바 네 항목의 `.active`를 맞추고, 채팅/환영 등 비관리 뷰에서는 관리 메뉴 활성을 해제한다.
 
-## 글로벌 바「프로젝트」·환영「업무·칸반」진입 (2026-04-09)
-- 상단 네비 **프로젝트**(`btnTopNavProjects`)와 환영 카드 **업무·칸반** 클릭 시, 이미 채널이 선택되어 있으면 곧바로 업무·칸반 모달(`openWorkHubModalForActiveChannel`)을 연다.
-- 채널이 없을 때는 `lastSidebarChannelsSnapshot` 기준으로 기본 채널을 고른 뒤 `selectChannel` → 모달을 연다. 우선순위: **공개(PUBLIC) → 비공개(PRIVATE) → 최근 활동 시각 기준 DM** (`getDefaultChannelForWorkHub`). 참여 채널이 전혀 없으면 안내 메시지만 표시한다.
-- 채팅 헤더의 **업무·칸반** 버튼(`btnOpenWorkHub`)은 기존과 같이 **현재 채널이 없으면**「채널을 먼저 선택하세요.」로 유지한다(의도적 채널 맥락).
+## 글로벌 바·시작 화면·업무 허브 진입 (2026-04-09 개정)
+- **대시보드** 상단 탭은 제거. **ECH** 로고는 `#btnAppShellHome` — 클릭 시 `clearActiveChannelAndReload()`로 슬림 시작 화면(`#viewWelcome`, `.ech-home-*`)으로 복귀.
+- 시작 화면은 대형 히어로·3열 카드 대신 **한 카드** 안내(채널 목록 포커스, 검색, 조직도). 로그인 후 제목은 `안녕하세요, {이름}님` 또는 `시작하기`.
+- 상단 **프로젝트**(`btnTopNavProjects`)·좌측 **업무 항목**(`btnSidebarWorkHubWork`)·**칸반**(`btnSidebarWorkHubKanban`)은 `openWorkHubFromTopNav(panelFocus)` — 채널 있으면 바로 모달, 없으면 `getDefaultChannelForWorkHub` → `selectChannel`. 사이드바에서 `"work"`/`"kanban"`이면 `pendingWorkHubPanelFocus`로 `#workHubPanelWork`/`#workHubPanelKanban` 스크롤·`work-hub-panel--flash`.
+- 채팅 헤더 `btnOpenWorkHub`는 **현재 채널 필수**(패널 포커스 없음).
 
 ---
 
@@ -904,9 +905,9 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - 저장 직전 카드별 담당 변경 연산을 정규화해(add/remove 충돌 제거), 담당 해제 후 저장 시 기존 담당이 다시 붙는 현상을 보정
   - 정규화 단계에서 로컬 보드 트리에서 카드를 찾지 못하면 서버 기준 assignee diff가 비어 담당 `DELETE`가 생략될 수 있어, `id`/`cardId` 복합 탐색·pending 맵 키 정규화·카드 미탐색 시 스냅샷 해제 목록 폴백으로 보정
 - 좌측 사이드바:
-  - `내 담당 칸반` 섹션 추가
-  - `GET /api/work-items/sidebar/by-assigned-cards?employeeNo=...&limit=...`로 **내가 칸반 카드 담당으로 지정된 업무 항목** 목록을 조회해 사이드바에 렌더(채널 연동 보드·`kanban_card_assignees` 기준)
-  - 항목 클릭 시 대상 채널 진입 후 `업무 · 칸반` 모달을 열고 해당 카드를 스크롤·강조
+  - **업무·칸반** 고정 진입(`sidebar-section--hub-shortcuts`: 업무 항목 / 칸반)과 별도로 **담당 업무 목록** 섹션(`myKanbanList`)을 둔다.
+  - `GET /api/work-items/sidebar/by-assigned-cards?employeeNo=...&limit=...`로 **내가 칸반 카드 담당으로 지정된 업무 항목** 목록을 조회해 렌더(채널 연동 보드·`kanban_card_assignees` 기준)
+  - 목록 항목 클릭 시 대상 채널 진입 후 `업무 · 칸반` 모달을 열고 해당 카드를 스크롤·강조
 
 ---
 

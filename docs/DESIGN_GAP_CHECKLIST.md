@@ -37,7 +37,7 @@
 | 앱 위치 | 반영 요지 | 체크 |
 |---------|-----------|------|
 | `#appShellTopBar` | 글로벌 바·검색·아이콘 정렬 | [x] 다크 글래스·검색 포커스 |
-| `#viewWelcome` | 히어로·3열 카드·바로가기·Pro Tip (`.ech-welcome-*`) | [x] 다크 카드 호버·슬레이트 아이콘 랩 |
+| `#viewWelcome` | 슬림 시작 카드(`.ech-home-*`) — 상단·좌측과 역할 분리 | [x] 라이트 글래스 카드 · 다크 보더 톤(2026-04-09) |
 | `#sidebarColumn` | 3열 유동 레이아웃·사이드바 톤 | [x] 활성 행 글로우(다크) |
 
 ### `(1)` ECH Workspace — Work Management
@@ -70,8 +70,8 @@
 
 | 앱 위치 | 체크 |
 |---------|------|
-| `#appShellTopBar`와 `ECH메인` 목업 상단 바 시각적 일치도 | [x] 다크 글로벌 바(동일 토큰) · 라이트 상단 메뉴(`대시보드/프로젝트/팀`) 버튼 톤 반영 |
-| `#btnTopNavDashboard` / `#btnTopNavProjects` / `#btnTopNavTeam` 동작(환영·업무 허브·조직도) 및 활성 탭 동기화 | [x] `app.js` 연동(2026-04-09) |
+| `#appShellTopBar`와 `ECH메인` 목업 상단 바 시각적 일치도 | [x] 다크 글로벌 바 · 라이트 상단 **프로젝트/팀** + ECH 홈 버튼 톤(대시보드 탭 없음, 2026-04-09) |
+| `#btnTopNavProjects` / `#btnTopNavTeam`(업무 허브·조직도) 및 활성 탭 동기화 · `#btnAppShellHome` 시작 화면 | [x] 대시보드 탭 제거(2026-04-09) |
 | `#btnTopNavProjects`·환영 업무 카드: 채널 없을 때 기본 채널 자동 선택 후 업무 허브 | [x] `getDefaultChannelForWorkHub`·`openWorkHubFromTopNav`(2026-04-09) |
 
 ### `(5)` Organization Directory
@@ -150,6 +150,7 @@
 - 2026-04-09(2): `(4)` 상단 **프로젝트**·환영 **업무·칸반** — 채널 미선택 시 기본 채널 선택 후 업무 허브(`openWorkHubFromTopNav`).
 - 2026-04-09(3): `(3)` `#adminSection` — 아이콘 레일·구역 구분·`showView`와 관리 메뉴 활성 동기화.
 - 2026-04-09(4): `(3)` 관리 캔버스 — 사이드바 관리 구역 상단 여백·`.view-admin` 패딩·패널 헤더/힌트/인사이트 그리드 리듬(`styles.css`).
+- 2026-04-09(5): `(4)`·ECH메인 — 대시보드 탭 제거·슬림 시작 화면·좌측 업무/칸반 레일·사이드바 브랜드 중복 제거.
 - 2026-04-09: §4 보조 UI — 파일 허브·이미지 프리뷰·테마 피커·멘션 토스트·사용자 검색 목록·공통 다이얼로그·업데이트 안내 라이트 톤 (`styles.css`).
 
 ---

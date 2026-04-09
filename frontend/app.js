@@ -290,6 +290,8 @@ let workHubColumns = [];
 let workHubScopedChannelId = null;
 /** 업무·칸반 모달 내 업무 목록에서 강조할 행 (`data-work-item-id`와 동일 문자열). */
 let workHubSelectedListWorkItemKey = null;
+/** 사이드바「업무 항목」·「칸반」진입 시 모달에서 스크롤할 패널 (`work` | `kanban`). */
+let pendingWorkHubPanelFocus = null;
 
 function getWorkHubChannelId() {
   const scoped = workHubScopedChannelId != null ? Number(workHubScopedChannelId) : null;
@@ -1983,7 +1985,7 @@ function showMain(user) {
   if (welcomeHeroTitleEl) {
     const nm = String(user.name || "").trim();
     const first = nm ? nm.split(/\s+/)[0] : "";
-    welcomeHeroTitleEl.textContent = first ? `안녕하세요, ${first}님!` : "환영합니다!";
+    welcomeHeroTitleEl.textContent = first ? `안녕하세요, ${first}님` : "시작하기";
   }
 
   /** 다른 계정 재로그인 시 이전 세션 프레즌스 캐시 제거 */
@@ -2003,10 +2005,9 @@ function showMain(user) {
   syncTopNavFromMainView();
 }
 
-/** Stratos-style top bar: highlight matches welcome vs. modal (work hub / org chart). */
+/** Stratos-style top bar: 프로젝트(업무 허브) · 팀(조직도)만 강조. 대시보드 없음. */
 function setTopNavActive(key) {
   const pairs = [
-    ["dashboard", "btnTopNavDashboard"],
     ["projects", "btnTopNavProjects"],
     ["team", "btnTopNavTeam"],
   ];
@@ -2019,14 +2020,9 @@ function setTopNavActive(key) {
 }
 
 function syncTopNavFromMainView() {
-  const welcome = document.getElementById("viewWelcome");
-  if (welcome && !welcome.classList.contains("hidden")) {
-    setTopNavActive("dashboard");
-  } else {
-    ["btnTopNavDashboard", "btnTopNavProjects", "btnTopNavTeam"].forEach((bid) => {
-      document.getElementById(bid)?.classList.remove("app-shell-nav-link--active");
-    });
-  }
+  ["btnTopNavProjects", "btnTopNavTeam"].forEach((bid) => {
+    document.getElementById(bid)?.classList.remove("app-shell-nav-link--active");
+  });
 }
 
 function syncAdminSidebarActive(viewId) {
@@ -2160,7 +2156,7 @@ async function loadMyChannels() {
     if (lastWorkSidebarSig !== null && lastWorkSidebarSig !== nextWorkSig) {
       pushActivityToast({
         title: "업무 항목 변경",
-        locationLine: "내 업무 항목",
+        locationLine: "담당 업무 목록",
         preview: "담당 업무·칸반 목록이 갱신되었습니다.",
       });
     }
@@ -2343,6 +2339,16 @@ function getDefaultChannelForWorkHub() {
   return [...list].sort((a, b) => channelActivityTimeMs(b) - channelActivityTimeMs(a))[0];
 }
 
+function focusWorkHubPanel(mode) {
+  if (mode !== "work" && mode !== "kanban") return;
+  const id = mode === "kanban" ? "workHubPanelKanban" : "workHubPanelWork";
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  el.classList.add("work-hub-panel--flash");
+  setTimeout(() => el.classList.remove("work-hub-panel--flash"), 1100);
+}
+
 async function openWorkHubModalForActiveChannel() {
   workHubScopedChannelId = null;
   try {
@@ -2354,15 +2360,28 @@ async function openWorkHubModalForActiveChannel() {
       loadChannelKanbanBoard(),
     ]);
     ensureWorkHubWorkListDeleteBound();
+    const panelFocus = pendingWorkHubPanelFocus;
+    pendingWorkHubPanelFocus = null;
     openModal("modalWorkHub");
+    requestAnimationFrame(() => requestAnimationFrame(() => focusWorkHubPanel(panelFocus)));
   } catch (e) {
+    pendingWorkHubPanelFocus = null;
     await uiAlert(e?.message || "업무/칸반 정보를 불러오지 못했습니다.");
   }
 }
 
-/** Top nav「프로젝트」/ welcome「업무·칸반」: reuse active channel or auto-select a default, then open work hub. */
-async function openWorkHubFromTopNav() {
+/**
+ * Top nav「프로젝트」·슬림 시작 화면·사이드바 업무/칸반: 채널 맥락 후 업무 허브.
+ * @param {"work"|"kanban"|void} panelFocus 사이드바에서 열 때 스크롤할 패널
+ */
+async function openWorkHubFromTopNav(panelFocus) {
+  if (panelFocus === "work" || panelFocus === "kanban") {
+    pendingWorkHubPanelFocus = panelFocus;
+  } else {
+    pendingWorkHubPanelFocus = null;
+  }
   if (!currentUser) {
+    pendingWorkHubPanelFocus = null;
     await uiAlert("로그인이 필요합니다.");
     return;
   }
@@ -2372,6 +2391,7 @@ async function openWorkHubFromTopNav() {
   }
   const ch = getDefaultChannelForWorkHub();
   if (!ch) {
+    pendingWorkHubPanelFocus = null;
     await uiAlert("참여 중인 채널이 없습니다. 채널을 생성하거나 초대를 받은 뒤 다시 시도하세요.");
     return;
   }
@@ -2602,7 +2622,7 @@ function renderMyWorkItemsSidebar(channels) {
   if (!myKanbanListEl) return;
   myKanbanListEl.innerHTML = "";
   if (!Array.isArray(mySidebarWorkItems) || !mySidebarWorkItems.length) {
-    myKanbanListEl.innerHTML = `<li class="sidebar-item sidebar-item-empty">담당 세부업무가 있는 업무 없음</li>`;
+    myKanbanListEl.innerHTML = `<li class="sidebar-item sidebar-item-empty">담당 칸반 카드가 없습니다</li>`;
     return;
   }
   const channelTypeById = new Map((channels || []).map((ch) => [Number(ch.channelId), String(ch.channelType || "PUBLIC")]));
@@ -8461,10 +8481,11 @@ document.getElementById("btnOpenWorkHub")?.addEventListener("click", async () =>
     await uiAlert("채널을 먼저 선택하세요.");
     return;
   }
+  pendingWorkHubPanelFocus = null;
   await openWorkHubModalForActiveChannel();
 });
 
-document.getElementById("btnTopNavDashboard")?.addEventListener("click", () => {
+document.getElementById("btnAppShellHome")?.addEventListener("click", () => {
   void clearActiveChannelAndReload();
 });
 document.getElementById("btnTopNavProjects")?.addEventListener("click", () => {
@@ -8472,6 +8493,19 @@ document.getElementById("btnTopNavProjects")?.addEventListener("click", () => {
 });
 document.getElementById("btnTopNavTeam")?.addEventListener("click", () => {
   document.getElementById("btnOrgChart")?.click();
+});
+document.getElementById("btnSidebarWorkHubWork")?.addEventListener("click", () => {
+  void openWorkHubFromTopNav("work");
+});
+document.getElementById("btnSidebarWorkHubKanban")?.addEventListener("click", () => {
+  void openWorkHubFromTopNav("kanban");
+});
+["btnSidebarWorkHubWork", "btnSidebarWorkHubKanban"].forEach((id) => {
+  document.getElementById(id)?.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    e.preventDefault();
+    document.getElementById(id)?.click();
+  });
 });
 
 document.getElementById("workItemCreateForm")?.addEventListener("submit", (e) => e.preventDefault());
@@ -9529,21 +9563,9 @@ function initEvents() {
       }
     };
     document.getElementById("btnWelcomeFocusChannel")?.addEventListener("click", focusWelcomeChannelSection);
-    document.getElementById("btnWelcomeFocusChannel2")?.addEventListener("click", focusWelcomeChannelSection);
     document.getElementById("btnWelcomeFocusSearch")?.addEventListener("click", focusSearchInputs);
-    document.getElementById("welcomeCardThreads")?.addEventListener("click", focusWelcomeChannelSection);
-    document.getElementById("welcomeCardKanban")?.addEventListener("click", () => {
-      void openWorkHubFromTopNav();
-    });
-    document.getElementById("welcomeCardOrg")?.addEventListener("click", () => {
+    document.getElementById("btnWelcomeOpenOrgChart")?.addEventListener("click", () => {
       document.getElementById("btnOrgChart")?.click();
-    });
-    ["welcomeCardThreads", "welcomeCardKanban", "welcomeCardOrg"].forEach((id) => {
-      document.getElementById(id)?.addEventListener("keydown", (e) => {
-        if (e.key !== "Enter" && e.key !== " ") return;
-        e.preventDefault();
-        document.getElementById(id)?.click();
-      });
     });
     document.getElementById("appHeaderSearchInput")?.addEventListener("input", syncHeaderSearchToSidebar);
     document.getElementById("searchInput")?.addEventListener("input", syncSidebarSearchToHeader);

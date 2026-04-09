@@ -322,12 +322,24 @@ html:not([data-theme="light"]) .app-shell-global-search:focus-within {
   min-width: 0;
   flex: 1;
 }
-.app-shell-brand {
+button.app-shell-brand {
+  font: inherit;
   font-size: 1.125rem;
   font-weight: 800;
   letter-spacing: -0.04em;
   color: var(--text-primary);
   flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  margin: -4px 0;
+  border-radius: 10px;
+  transition: background 0.15s ease;
+}
+button.app-shell-brand:hover {
+  background: var(--surface-tint-hover, rgba(78, 69, 228, 0.08));
+  color: var(--text-primary);
 }
 .app-shell-global-search {
   display: none;
@@ -700,7 +712,7 @@ html[data-theme="light"] .sidebar-edge-toggle {
   overflow: hidden;
   min-height: 0;
 }
-/* 워크스페이스 헤더 — design/ECH메인·ECH채팅: 로고 타일 + 워크스페이스명 */
+/* 워크스페이스 상단 줄 — 기본은 도구만(글로벌 바 ECH와 브랜드 중복 방지) */
 .sidebar-workspace {
   flex-shrink: 0;
   display: flex;
@@ -710,8 +722,11 @@ html[data-theme="light"] .sidebar-edge-toggle {
   min-height: var(--layout-header-height);
   padding: 0 16px;
   border-bottom: 1px solid var(--sidebar-border);
-  cursor: pointer;
+  cursor: default;
   user-select: none;
+}
+.sidebar-workspace--tools-only {
+  justify-content: flex-end;
 }
 .sidebar-workspace-brand {
   display: flex;
@@ -789,6 +804,19 @@ html[data-theme="light"] .sidebar-search-wrap form:focus-within {
 /* 섹션 */
 .sidebar-section { flex-shrink: 0; padding: 4px 0; }
 /* 관리자 구역: 목업 (7) Admin Console — 상단 구분선·레일 밀도 */
+.sidebar-section--hub-shortcuts .sidebar-section-header {
+  padding-bottom: 2px;
+}
+.sidebar-item--hub-shortcut {
+  gap: 10px;
+  font-size: 14px;
+}
+.sidebar-hub-icon {
+  font-size: 20px !important;
+  opacity: 0.9;
+  flex-shrink: 0;
+}
+
 .sidebar-section--admin {
   margin-top: 12px;
   padding-top: 14px;
@@ -1196,6 +1224,91 @@ html[data-theme="light"] .sidebar-user {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+}
+
+/* 슬림 시작 화면 — 상단·좌측과 역할 분리(구 대시보드 히어로 대체) */
+.ech-home-wrap {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: clamp(2rem, 5vw, 3rem) clamp(1.25rem, 3vw, 2rem);
+  box-sizing: border-box;
+}
+.ech-home-card {
+  padding: 1.5rem 1.35rem;
+  border-radius: 1.125rem;
+  border: 1px solid color-mix(in srgb, var(--outline-variant, #acb3b7) 28%, transparent);
+  background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
+  box-shadow: 0 12px 32px rgba(44, 52, 55, 0.06);
+}
+html[data-theme="light"] .ech-home-card {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: none;
+  box-shadow: 0 16px 40px rgba(44, 52, 55, 0.07), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+html:not([data-theme="light"]) .ech-home-card {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(22, 26, 34, 0.65);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+.ech-home-title {
+  margin: 0 0 0.65rem;
+  font-size: clamp(1.25rem, 3.2vw, 1.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+.ech-home-lead {
+  margin: 0 0 1.1rem;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+.ech-home-lead strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+.ech-home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+.ech-home-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.95rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform 0.12s ease, filter 0.12s ease, background 0.12s ease;
+}
+.ech-home-btn--primary {
+  color: #fff;
+  background: var(--grad-btn-primary);
+  box-shadow: 0 6px 18px rgba(78, 69, 228, 0.28);
+}
+.ech-home-btn--primary:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+.ech-home-btn--ghost {
+  color: var(--text-primary);
+  background: transparent;
+  border-color: color-mix(in srgb, var(--outline-variant) 45%, transparent);
+}
+.ech-home-btn--ghost:hover {
+  background: var(--surface-tint-hover, rgba(78, 69, 228, 0.06));
+}
+.ech-home-footnote {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text-muted);
 }
 
 /* ── ECH 메인 대시보드 (design/ECH메인) — Tailwind 파일 없이 동작 ── */
@@ -4587,6 +4700,28 @@ html[data-theme="light"] .work-hub-panel {
 html[data-theme="light"] .work-hub-panel > h4 {
   letter-spacing: var(--ech-tracking-headline, -0.02em);
   font-weight: 800;
+}
+@keyframes ech-work-hub-panel-flash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(78, 69, 228, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 8px rgba(78, 69, 228, 0);
+  }
+}
+.work-hub-panel.work-hub-panel--flash {
+  animation: ech-work-hub-panel-flash 1s ease-out 1;
+}
+html:not([data-theme="light"]) .work-hub-panel.work-hub-panel--flash {
+  animation-name: ech-work-hub-panel-flash-dark;
+}
+@keyframes ech-work-hub-panel-flash-dark {
+  0% {
+    box-shadow: 0 0 0 0 rgba(129, 140, 248, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 8px rgba(129, 140, 248, 0);
+  }
 }
 .work-hub-panel-body {
   display: flex;
