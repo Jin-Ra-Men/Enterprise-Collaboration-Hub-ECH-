@@ -193,7 +193,8 @@ let composerPendingSequence = 0;
 // 스레드(댓글) 모달 상태
 let threadPendingFilesQueue = [];
 let threadPendingSequence = 0;
-let threadPendingFilePreviewUrl = null;
+/** 스레드 입력 대기 첨부 이미지 미리보기 blob URL(항목별) */
+let threadPendingPreviewUrls = [];
 let threadRootMessageId = null;
 // 스레드 모달 내부에서 렌더링 중인지 여부(메인용 댓글 요약 버튼 숨김용)
 let isRenderingThreadModal = false;
@@ -426,10 +427,11 @@ const threadBtnAttachEl = document.getElementById("threadBtnAttach");
 const threadMessageInputEl = document.getElementById("threadMessageInput");
 const threadBtnSendEl = document.getElementById("threadBtnSend");
 const threadFilePreviewEl = document.getElementById("threadFilePreview");
-const threadFilePreviewThumbEl = document.getElementById("threadFilePreviewThumb");
-const threadFilePreviewNameEl = document.getElementById("threadFilePreviewName");
+const threadFilePreviewListEl = document.getElementById("threadFilePreviewList");
 const threadFilePreviewUploadStatusEl = document.getElementById("threadFilePreviewUploadStatus");
 const threadBtnClearFileEl = document.getElementById("threadBtnClearFile");
+const filePreviewEl = document.getElementById("filePreview");
+const filePreviewListEl = document.getElementById("filePreviewList");
 const btnSendEl = document.getElementById("btnSend");
 const filePreviewUploadStatusEl = document.getElementById("filePreviewUploadStatus");
 const replyComposerBannerEl = document.getElementById("replyComposerBanner");
@@ -604,7 +606,8 @@ function trimImageBlobCacheIfNeeded() {
   }
 }
 
-let pendingComposerPreviewUrl = null;
+/** 메인 입력 대기 첨부 이미지 미리보기 blob URL(항목별) */
+let composerPendingPreviewUrls = [];
 let imageLightboxEscapeBound = false;
 
 async function apiFetch(path, opts = {}) {
@@ -4383,23 +4386,111 @@ function clearReplyComposerTarget() {
   if (replyComposerBannerEl) replyComposerBannerEl.classList.add("hidden");
 }
 
+function revokeAllThreadPendingPreviewUrls() {
+  threadPendingPreviewUrls.forEach((u) => {
+    if (u) {
+      try {
+        URL.revokeObjectURL(u);
+      } catch {
+        /* ignore */
+      }
+    }
+  });
+  threadPendingPreviewUrls = [];
+}
+
+function renderThreadPendingPreview(loadSeq) {
+  if (!threadFilePreviewListEl || !threadFilePreviewEl) return;
+  revokeAllThreadPendingPreviewUrls();
+  threadPendingPreviewUrls = new Array(threadPendingFilesQueue.length).fill(null);
+  threadFilePreviewListEl.innerHTML = "";
+  if (threadPendingFilesQueue.length === 0) {
+    threadFilePreviewEl.classList.add("hidden");
+    return;
+  }
+  threadFilePreviewEl.classList.remove("hidden");
+  threadPendingFilesQueue.forEach((file, idx) => {
+    const row = document.createElement("div");
+    row.className = "file-preview-row";
+    row.dataset.index = String(idx);
+    const thumbWrap = document.createElement("div");
+    thumbWrap.className = "file-preview-row-thumb-wrap";
+    const img = document.createElement("img");
+    img.className = "file-preview-row-thumb";
+    img.alt = "";
+    img.decoding = "async";
+    const icon = document.createElement("span");
+    icon.className = "file-preview-row-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = "📎";
+    thumbWrap.appendChild(img);
+    thumbWrap.appendChild(icon);
+    const isImg = String(file.type || "").toLowerCase().startsWith("image/");
+    if (isImg) {
+      icon.classList.add("hidden");
+      img.classList.add("hidden");
+      void buildImagePreviewObjectUrl(file).then((url) => {
+        if (loadSeq !== threadPendingSequence) {
+          try {
+            URL.revokeObjectURL(url);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+        const j = threadPendingFilesQueue.indexOf(file);
+        if (j < 0) {
+          try {
+            URL.revokeObjectURL(url);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+        threadPendingPreviewUrls[j] = url;
+        img.src = url;
+        img.classList.remove("hidden");
+      });
+    } else {
+      img.classList.add("hidden");
+    }
+    const name = document.createElement("span");
+    name.className = "file-preview-row-name";
+    name.textContent = `${file.name} (${fmtSize(file.size)})`;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "file-preview-row-remove btn-clear-file";
+    btn.title = "이 항목 제거";
+    btn.setAttribute("aria-label", "첨부 항목 제거");
+    btn.dataset.removeIndex = String(idx);
+    btn.textContent = "✕";
+    row.appendChild(thumbWrap);
+    row.appendChild(name);
+    row.appendChild(btn);
+    threadFilePreviewListEl.appendChild(row);
+  });
+}
+
+function removeThreadPendingAt(index) {
+  const i = Number(index);
+  if (!Number.isFinite(i) || i < 0 || i >= threadPendingFilesQueue.length) return;
+  threadPendingFilesQueue.splice(i, 1);
+  revokeAllThreadPendingPreviewUrls();
+  if (threadPendingFilesQueue.length === 0) {
+    clearThreadFilePreview();
+    return;
+  }
+  threadPendingSequence++;
+  const mySeq = threadPendingSequence;
+  renderThreadPendingPreview(mySeq);
+}
+
 function clearThreadFilePreview() {
   threadPendingSequence++;
-  if (threadPendingFilePreviewUrl) {
-    try {
-      URL.revokeObjectURL(threadPendingFilePreviewUrl);
-    } catch {
-      /* ignore */
-    }
-  }
-  threadPendingFilePreviewUrl = null;
+  revokeAllThreadPendingPreviewUrls();
   threadPendingFilesQueue = [];
-  if (threadFilePreviewThumbEl) {
-    threadFilePreviewThumbEl.classList.add("hidden");
-    threadFilePreviewThumbEl.removeAttribute("src");
-  }
+  if (threadFilePreviewListEl) threadFilePreviewListEl.innerHTML = "";
   if (threadFilePreviewEl) threadFilePreviewEl.classList.add("hidden");
-  if (threadFilePreviewNameEl) threadFilePreviewNameEl.textContent = "";
   setFilePreviewUploadStatus("thread", "");
 }
 
@@ -4408,55 +4499,18 @@ function setThreadComposerPendingFile(file) {
   setThreadComposerPendingFiles([file]);
 }
 
-function setThreadComposerPendingFiles(files) {
-  const list = normalizePendingFileList(files);
-  if (list.length === 0) return;
+function setThreadComposerPendingFiles(files, { append = false } = {}) {
+  const incoming = normalizePendingFileList(files);
+  const next = append ? [...threadPendingFilesQueue, ...incoming] : incoming;
+  if (next.length === 0) {
+    if (!append) clearThreadFilePreview();
+    return;
+  }
   threadPendingSequence++;
   const mySeq = threadPendingSequence;
-  threadPendingFilesQueue = list;
-  if (threadFilePreviewNameEl) threadFilePreviewNameEl.textContent = formatPendingFilesLabel(list);
+  threadPendingFilesQueue = next;
+  renderThreadPendingPreview(mySeq);
   setFilePreviewUploadStatus("thread", "");
-  const firstImage = list.find((f) => String(f.type || "").toLowerCase().startsWith("image/"));
-  const displayFile = firstImage || list[0];
-  const isImage = String(displayFile.type || "").toLowerCase().startsWith("image/");
-  if (threadFilePreviewThumbEl && threadFilePreviewEl) {
-    if (threadPendingFilePreviewUrl) {
-      try {
-        URL.revokeObjectURL(threadPendingFilePreviewUrl);
-      } catch {
-        /* ignore */
-      }
-    }
-    threadPendingFilePreviewUrl = null;
-    if (isImage) {
-      threadFilePreviewThumbEl.classList.add("hidden");
-      threadFilePreviewThumbEl.removeAttribute("src");
-      void buildImagePreviewObjectUrl(displayFile).then((url) => {
-        if (mySeq !== threadPendingSequence) {
-          try {
-            URL.revokeObjectURL(url);
-          } catch {
-            /* ignore */
-          }
-          return;
-        }
-        if (threadPendingFilePreviewUrl) {
-          try {
-            URL.revokeObjectURL(threadPendingFilePreviewUrl);
-          } catch {
-            /* ignore */
-          }
-        }
-        threadPendingFilePreviewUrl = url;
-        threadFilePreviewThumbEl.src = url;
-        threadFilePreviewThumbEl.classList.remove("hidden");
-      });
-    } else {
-      threadFilePreviewThumbEl.src = "";
-      threadFilePreviewThumbEl.classList.add("hidden");
-    }
-    threadFilePreviewEl.classList.remove("hidden");
-  }
 }
 
 async function jumpToReplyTarget({ replyToKind, replyToMessageId, replyToRootMessageId }) {
@@ -4689,8 +4743,17 @@ if (threadFileInputEl) {
   threadFileInputEl.addEventListener("change", () => {
     const files = normalizePendingFileList(threadFileInputEl.files);
     if (files.length === 0) return;
-    setThreadComposerPendingFiles(files);
+    const append = threadPendingFilesQueue.length > 0;
+    setThreadComposerPendingFiles(files, { append });
     threadFileInputEl.value = "";
+  });
+}
+if (threadFilePreviewEl) {
+  threadFilePreviewEl.addEventListener("click", (e) => {
+    const btn = e.target.closest(".file-preview-row-remove");
+    if (!btn || !threadFilePreviewEl.contains(btn)) return;
+    const idx = Number(btn.dataset.removeIndex);
+    if (Number.isFinite(idx)) removeThreadPendingAt(idx);
   });
 }
 if (threadBtnSendEl) {
@@ -6149,48 +6212,56 @@ function normalizePendingFileList(input) {
   return [];
 }
 
-function formatPendingFilesLabel(files) {
-  if (!files || files.length === 0) return "";
-  if (files.length === 1) {
-    const f = files[0];
-    return `📎 ${f.name} (${fmtSize(f.size)})`;
-  }
-  const head = files
-    .slice(0, 3)
-    .map((f) => f.name)
-    .join(", ");
-  const more = files.length > 3 ? ` 외 ${files.length - 3}개` : "";
-  return `📎 ${files.length}개 파일: ${head}${more}`;
-}
-
 function setComposerPendingFile(file) {
   if (!file) return;
   setComposerPendingFiles([file]);
 }
 
-function setComposerPendingFiles(files) {
-  const list = normalizePendingFileList(files);
-  if (list.length === 0) return;
-  composerPendingSequence++;
-  const mySeq = composerPendingSequence;
-  if (pendingComposerPreviewUrl) {
-    try {
-      URL.revokeObjectURL(pendingComposerPreviewUrl);
-    } catch {
-      /* ignore */
+function revokeAllComposerPreviewUrls() {
+  composerPendingPreviewUrls.forEach((u) => {
+    if (u) {
+      try {
+        URL.revokeObjectURL(u);
+      } catch {
+        /* ignore */
+      }
     }
-    pendingComposerPreviewUrl = null;
+  });
+  composerPendingPreviewUrls = [];
+}
+
+function renderComposerPendingPreview(loadSeq) {
+  if (!filePreviewListEl || !filePreviewEl) return;
+  revokeAllComposerPreviewUrls();
+  composerPendingPreviewUrls = new Array(pendingFilesQueue.length).fill(null);
+  filePreviewListEl.innerHTML = "";
+  if (pendingFilesQueue.length === 0) {
+    filePreviewEl.classList.add("hidden");
+    return;
   }
-  pendingFilesQueue = list;
-  const firstImage = list.find((f) => String(f.type || "").toLowerCase().startsWith("image/"));
-  const displayFile = firstImage || list[0];
-  const thumb = document.getElementById("filePreviewThumb");
-  if (thumb) {
-    if (displayFile.type && displayFile.type.startsWith("image/")) {
-      thumb.classList.add("hidden");
-      thumb.removeAttribute("src");
-      void buildImagePreviewObjectUrl(displayFile).then((url) => {
-        if (mySeq !== composerPendingSequence) {
+  filePreviewEl.classList.remove("hidden");
+  pendingFilesQueue.forEach((file, idx) => {
+    const row = document.createElement("div");
+    row.className = "file-preview-row";
+    row.dataset.index = String(idx);
+    const thumbWrap = document.createElement("div");
+    thumbWrap.className = "file-preview-row-thumb-wrap";
+    const img = document.createElement("img");
+    img.className = "file-preview-row-thumb";
+    img.alt = "";
+    img.decoding = "async";
+    const icon = document.createElement("span");
+    icon.className = "file-preview-row-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = "📎";
+    thumbWrap.appendChild(img);
+    thumbWrap.appendChild(icon);
+    const isImg = String(file.type || "").toLowerCase().startsWith("image/");
+    if (isImg) {
+      icon.classList.add("hidden");
+      img.classList.add("hidden");
+      void buildImagePreviewObjectUrl(file).then((url) => {
+        if (loadSeq !== composerPendingSequence) {
           try {
             URL.revokeObjectURL(url);
           } catch {
@@ -6198,31 +6269,72 @@ function setComposerPendingFiles(files) {
           }
           return;
         }
-        if (pendingComposerPreviewUrl) {
+        const j = pendingFilesQueue.indexOf(file);
+        if (j < 0) {
           try {
-            URL.revokeObjectURL(pendingComposerPreviewUrl);
+            URL.revokeObjectURL(url);
           } catch {
             /* ignore */
           }
+          return;
         }
-        pendingComposerPreviewUrl = url;
-        thumb.src = url;
-        thumb.classList.remove("hidden");
+        composerPendingPreviewUrls[j] = url;
+        img.src = url;
+        img.classList.remove("hidden");
       });
     } else {
-      thumb.classList.add("hidden");
-      thumb.removeAttribute("src");
+      img.classList.add("hidden");
     }
+    const name = document.createElement("span");
+    name.className = "file-preview-row-name";
+    name.textContent = `${file.name} (${fmtSize(file.size)})`;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "file-preview-row-remove btn-clear-file";
+    btn.title = "이 항목 제거";
+    btn.setAttribute("aria-label", "첨부 항목 제거");
+    btn.dataset.removeIndex = String(idx);
+    btn.textContent = "✕";
+    row.appendChild(thumbWrap);
+    row.appendChild(name);
+    row.appendChild(btn);
+    filePreviewListEl.appendChild(row);
+  });
+}
+
+function removeComposerPendingAt(index) {
+  const i = Number(index);
+  if (!Number.isFinite(i) || i < 0 || i >= pendingFilesQueue.length) return;
+  pendingFilesQueue.splice(i, 1);
+  revokeAllComposerPreviewUrls();
+  if (pendingFilesQueue.length === 0) {
+    clearFilePreview();
+    return;
   }
-  document.getElementById("filePreview").classList.remove("hidden");
-  document.getElementById("filePreviewName").textContent = formatPendingFilesLabel(list);
+  composerPendingSequence++;
+  const mySeq = composerPendingSequence;
+  renderComposerPendingPreview(mySeq);
+}
+
+function setComposerPendingFiles(files, { append = false } = {}) {
+  const incoming = normalizePendingFileList(files);
+  const next = append ? [...pendingFilesQueue, ...incoming] : incoming;
+  if (next.length === 0) {
+    if (!append) clearFilePreview();
+    return;
+  }
+  composerPendingSequence++;
+  const mySeq = composerPendingSequence;
+  pendingFilesQueue = next;
+  renderComposerPendingPreview(mySeq);
   setFilePreviewUploadStatus("composer", "");
 }
 
 document.getElementById("fileInput").addEventListener("change", (e) => {
   const files = normalizePendingFileList(e.target?.files);
   if (files.length === 0) return;
-  setComposerPendingFiles(files);
+  const append = pendingFilesQueue.length > 0;
+  setComposerPendingFiles(files, { append });
   e.target.value = "";
 });
 
@@ -6277,7 +6389,7 @@ function handleChatImagePaste(e) {
       ? new File([imageFile], name, { type: mime })
       : imageFile;
   });
-  setComposerPendingFiles(named);
+  setComposerPendingFiles(named, { append: pendingFilesQueue.length > 0 });
 }
 
 const viewChatEl = document.getElementById("viewChat");
@@ -6317,7 +6429,7 @@ if (viewChatEl) {
     if (!dt || !dt.files || dt.files.length === 0) return;
     const files = normalizePendingFileList(dt.files);
     if (files.length === 0) return;
-    setComposerPendingFiles(files);
+    setComposerPendingFiles(files, { append: pendingFilesQueue.length > 0 });
   });
 
   document.addEventListener(
@@ -6331,24 +6443,21 @@ if (viewChatEl) {
 
 document.getElementById("btnClearFile").addEventListener("click", clearFilePreview);
 
+if (filePreviewEl) {
+  filePreviewEl.addEventListener("click", (e) => {
+    const btn = e.target.closest(".file-preview-row-remove");
+    if (!btn || !filePreviewEl.contains(btn)) return;
+    const idx = Number(btn.dataset.removeIndex);
+    if (Number.isFinite(idx)) removeComposerPendingAt(idx);
+  });
+}
+
 function clearFilePreview() {
   composerPendingSequence++;
-  if (pendingComposerPreviewUrl) {
-    try {
-      URL.revokeObjectURL(pendingComposerPreviewUrl);
-    } catch {
-      /* ignore */
-    }
-    pendingComposerPreviewUrl = null;
-  }
+  revokeAllComposerPreviewUrls();
   pendingFilesQueue = [];
-  const thumb = document.getElementById("filePreviewThumb");
-  if (thumb) {
-    thumb.classList.add("hidden");
-    thumb.removeAttribute("src");
-  }
-  document.getElementById("filePreview").classList.add("hidden");
-  document.getElementById("filePreviewName").textContent = "";
+  if (filePreviewListEl) filePreviewListEl.innerHTML = "";
+  if (filePreviewEl) filePreviewEl.classList.add("hidden");
   setFilePreviewUploadStatus("composer", "");
 }
 

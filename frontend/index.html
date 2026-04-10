@@ -386,10 +386,11 @@
               <button type="button" id="replyComposerBannerClose" class="reply-composer-banner-close" title="답글 취소" aria-label="답글 취소">✕</button>
             </div>
             <div id="filePreview" class="file-preview hidden">
-              <img id="filePreviewThumb" class="file-preview-thumb hidden" alt="" decoding="async" />
-              <span id="filePreviewName"></span>
-              <span id="filePreviewUploadStatus" class="file-preview-upload-status" aria-live="polite"></span>
-              <button id="btnClearFile" class="btn-clear-file">✕</button>
+              <div id="filePreviewList" class="file-preview-list" aria-label="전송 대기 첨부"></div>
+              <div class="file-preview-toolbar">
+                <span id="filePreviewUploadStatus" class="file-preview-upload-status" aria-live="polite"></span>
+                <button type="button" id="btnClearFile" class="btn-clear-file btn-clear-all-files" title="대기 첨부 전부 취소" aria-label="대기 첨부 전부 취소">전체 취소</button>
+              </div>
             </div>
             <div class="ech-composer-glass">
               <div class="composer-inner">
@@ -881,10 +882,11 @@
         </div>
         <div class="modal-footer thread-composer">
           <div id="threadFilePreview" class="file-preview hidden">
-            <img id="threadFilePreviewThumb" class="file-preview-thumb hidden" alt="" decoding="async" />
-            <span id="threadFilePreviewName"></span>
-            <span id="threadFilePreviewUploadStatus" class="file-preview-upload-status" aria-live="polite"></span>
-            <button id="threadBtnClearFile" class="btn-clear-file" type="button">✕</button>
+            <div id="threadFilePreviewList" class="file-preview-list" aria-label="전송 대기 첨부"></div>
+            <div class="file-preview-toolbar">
+              <span id="threadFilePreviewUploadStatus" class="file-preview-upload-status" aria-live="polite"></span>
+              <button type="button" id="threadBtnClearFile" class="btn-clear-file btn-clear-all-files" title="대기 첨부 전부 취소" aria-label="대기 첨부 전부 취소">전체 취소</button>
+            </div>
           </div>
           <div class="thread-composer-controls">
             <input id="threadFileInput" type="file" class="hidden" multiple />
