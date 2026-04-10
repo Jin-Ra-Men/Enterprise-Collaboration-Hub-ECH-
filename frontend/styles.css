@@ -3340,6 +3340,21 @@ html[data-theme="light"] .mention-suggest-item.is-active,
 html[data-theme="light"] .mention-suggest-item:hover {
   background: color-mix(in srgb, var(--primary, #4e45e4) 8%, #ffffff 92%);
 }
+html[data-theme="cream"] .mention-suggest {
+  border: none;
+  border-radius: 12px;
+  background: rgba(255, 253, 248, 0.96);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow:
+    0 -8px 36px rgba(82, 65, 45, 0.1),
+    0 -2px 12px rgba(124, 77, 255, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+html[data-theme="cream"] .mention-suggest-item.is-active,
+html[data-theme="cream"] .mention-suggest-item:hover {
+  background: color-mix(in srgb, var(--accent, #7c4dff) 10%, #fff8f0 90%);
+}
 
 .mention-toast-stack {
   position: fixed;
@@ -8054,7 +8069,7 @@ html:not([data-theme="light"]):not([data-theme="cream"]) .kanban-card-item {
   border-color: rgba(255, 255, 255, 0.08);
   background: rgba(19, 22, 30, 0.82);
 }
-html:not([data-theme="light"]) .mention-suggest {
+html:not([data-theme="light"]):not([data-theme="cream"]) .mention-suggest {
   border-color: rgba(255, 255, 255, 0.1);
   background: rgba(22, 26, 34, 0.94);
   backdrop-filter: blur(12px);
