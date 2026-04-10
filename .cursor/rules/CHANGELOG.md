@@ -2,6 +2,13 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 릴리즈 v1.2.3
+
+### Release
+- **버전**: 백엔드·데스크톱 **1.2.3**, Git 태그 **`v1.2.3`**. `backend/build/libs/ech-backend-1.2.3.jar`, `desktop/dist/` NSIS(`ECH-Setup-1.2.3.exe`)·`latest.yml`·`.blockmap`.
+- **GitHub 릴리즈(Windows 에셋)**: 환경변수 `GITHUB_TOKEN`(repo `contents`·`releases` 권한) 설정 후 `powershell -File ./tools/publish-electron-github-release.ps1 v1.2.3`. **백엔드 JAR**은 해당 스크립트에 포함되지 않음 — 릴리즈 페이지에 **수동 첨부**하거나 사내 배포 채널로 전달.
+- **변경 요약**: 크림 라이트 테마에서 워크플로 칸반이 다크 톤으로 보이던 CSS 수정; 사이드바 워크플로 **채널 선택만 연 상태**에서 **담당 업무**를 눌렀을 때 본문이 숨겨지던 문제 수정(통합 검색 업무·칸반 진입 동일). `frontend/styles.css` · `frontend/app.js` · 문서.
+
 ## 릴리즈 v1.2.2
 
 ### Release
