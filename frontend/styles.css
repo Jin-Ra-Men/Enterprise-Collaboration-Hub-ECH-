@@ -448,7 +448,7 @@ html[data-theme="cream"] .app-shell-search-input {
 html[data-theme="cream"] .app-shell-search-input::placeholder {
   color: rgba(63, 53, 43, 0.55);
 }
-html:not([data-theme="light"]) .app-shell-global-search:focus-within {
+html:not([data-theme="light"]):not([data-theme="cream"]) .app-shell-global-search:focus-within {
   background: rgba(26, 30, 38, 0.88);
   box-shadow: inset 0 0 0 2px rgba(103, 96, 253, 0.35), 0 4px 16px rgba(0, 0, 0, 0.35);
 }
@@ -4794,17 +4794,52 @@ html[data-theme="light"] #searchModal .search-modal-query-btn:hover {
 html[data-theme="light"] #searchModal .search-results {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), transparent 48%);
 }
-html:not([data-theme="light"]) #searchModal .search-modal-toolbar {
+html[data-theme="cream"] #searchModal .search-modal-toolbar {
+  border-bottom: none;
+  box-shadow: inset 0 -1px 0 rgba(120, 98, 76, 0.12);
+  background: color-mix(in srgb, #fffefb 80%, var(--bg-chat) 20%);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+html[data-theme="cream"] #searchModal .modal-header h3 {
+  letter-spacing: var(--ech-tracking-headline, -0.02em);
+  font-weight: 800;
+}
+html[data-theme="cream"] #searchModal .search-modal-query-input {
+  border: none;
+  box-shadow: inset 0 0 0 1px rgba(120, 98, 76, 0.2);
+  background: rgba(255, 253, 248, 0.96);
+  border-radius: 10px;
+  color: var(--text-primary);
+}
+html[data-theme="cream"] #searchModal .search-modal-query-input:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 2px rgba(124, 77, 255, 0.38), 0 4px 14px rgba(120, 98, 76, 0.08);
+}
+html[data-theme="cream"] #searchModal .search-modal-query-btn {
+  border: none;
+  background: color-mix(in srgb, #f4ecdf 88%, #ffffff 12%);
+  box-shadow: inset 0 0 0 1px rgba(120, 98, 76, 0.16);
+  border-radius: 10px;
+  color: var(--text-primary);
+}
+html[data-theme="cream"] #searchModal .search-modal-query-btn:hover {
+  background: rgba(124, 77, 255, 0.1);
+}
+html[data-theme="cream"] #searchModal .search-results {
+  background: linear-gradient(180deg, rgba(255, 253, 248, 0.45), transparent 48%);
+}
+html:not([data-theme="light"]):not([data-theme="cream"]) #searchModal .search-modal-toolbar {
   border-bottom-color: rgba(255, 255, 255, 0.08);
   background: rgba(22, 26, 34, 0.72);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
-html:not([data-theme="light"]) #searchModal .search-modal-query-input {
+html:not([data-theme="light"]):not([data-theme="cream"]) #searchModal .search-modal-query-input {
   border-color: rgba(255, 255, 255, 0.12);
   background: rgba(16, 20, 28, 0.85);
 }
-html:not([data-theme="light"]) #searchModal .search-modal-query-btn {
+html:not([data-theme="light"]):not([data-theme="cream"]) #searchModal .search-modal-query-btn {
   border-color: rgba(255, 255, 255, 0.12);
   background: rgba(26, 30, 38, 0.9);
 }
@@ -4836,6 +4871,12 @@ html[data-theme="light"] .search-item {
 }
 html[data-theme="light"] .search-item-clickable:hover {
   background: rgba(78, 69, 228, 0.06);
+}
+html[data-theme="cream"] .search-item {
+  border-bottom-color: rgba(120, 98, 76, 0.14);
+}
+html[data-theme="cream"] .search-item-clickable:hover {
+  background: rgba(124, 77, 255, 0.08);
 }
 .search-item:last-child { border-bottom: none; }
 .search-type-badge {
