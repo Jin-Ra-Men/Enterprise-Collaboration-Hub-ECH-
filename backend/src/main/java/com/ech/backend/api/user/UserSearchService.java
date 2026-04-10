@@ -53,6 +53,7 @@ public class UserSearchService {
 
     /**
      * 회사 → 본부 → 팀(부서) → 사용자 (조직도 UI용).
+     * {@link User#getStatus()} 가 ACTIVE 인 사용자만 포함한다(미사용·INACTIVE 는 제외).
      *
      * @param companyGroupCode {@code org_groups.group_code} (COMPANY 타입). null/빈 값이면 전체.
      */
@@ -110,14 +111,19 @@ public class UserSearchService {
                 : orgGroupMemberRepository.findMembersByMemberGroupTypeAndGroupCodes("TEAM", allGroupCodes);
 
         Map<String, List<User>> usersByGroupCode = new HashMap<>();
-        Set<String> employeeNos = allMembers.isEmpty()
-                ? Set.of()
-                : allMembers.stream().map(m -> m.getUser().getEmployeeNo()).collect(Collectors.toSet());
 
         for (OrgGroupMember m : allMembers) {
-            usersByGroupCode.computeIfAbsent(m.getGroup().getGroupCode(), k -> new ArrayList<>())
-                    .add(m.getUser());
+            User u = m.getUser();
+            if (!isActiveUserForOrgTree(u)) {
+                continue;
+            }
+            usersByGroupCode.computeIfAbsent(m.getGroup().getGroupCode(), k -> new ArrayList<>()).add(u);
         }
+
+        Set<String> employeeNos = usersByGroupCode.values().stream()
+                .flatMap(List::stream)
+                .map(User::getEmployeeNo)
+                .collect(Collectors.toSet());
 
         Map<Long, String> jobLevelByUserId;
         Map<Long, String> jobPositionByUserId;
@@ -170,6 +176,11 @@ public class UserSearchService {
         }
 
         return new OrganizationTreeResponse(companiesResponse);
+    }
+
+    /** 로그인 가능한(ACTIVE) 사용자만 조직도·멤버 피커 트리에 노출한다. */
+    private static boolean isActiveUserForOrgTree(User user) {
+        return user != null && "ACTIVE".equalsIgnoreCase(user.getStatus());
     }
 
     /** 사용자 목록 → UserSearchResponse 변환 + 이름 가나다 정렬 */

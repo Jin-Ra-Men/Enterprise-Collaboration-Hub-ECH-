@@ -7,6 +7,7 @@ import com.ech.backend.domain.org.OrgGroupMember;
 import com.ech.backend.domain.org.OrgGroupMemberRepository;
 import com.ech.backend.domain.org.OrgGroupRepository;
 import com.ech.backend.domain.user.User;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -95,6 +96,25 @@ class UserDirectoryApiTest extends BaseIntegrationTest {
                         division.getGroupCode(),
                         company.getGroupCode() + ";" + division.getGroupCode() + ";" + teamCode
                 )));
+    }
+
+    @Test
+    @DisplayName("미사용(INACTIVE) 사용자는 GET /api/user-directory/organization 응답에 포함되지 않음")
+    void organization_excludes_inactive_users() throws Exception {
+        User inactiveUser = userRepository.findByEmployeeNo(normalEmployeeNo).orElseThrow();
+        inactiveUser.setStatus("INACTIVE");
+        userRepository.saveAndFlush(inactiveUser);
+
+        String body = mockMvc.perform(get("/api/user-directory/organization")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        Assertions.assertFalse(
+                body.contains("\"employeeNo\":\"" + normalEmployeeNo + "\""),
+                "INACTIVE 사용자 사번이 조직도 JSON에 포함되면 안 됨");
     }
 
     @Test

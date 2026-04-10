@@ -10,6 +10,9 @@
 
 ## 2026-04-10
 
+### Fixed
+- **백엔드(조직도 API)**: `GET /api/user-directory/organization` 트리에 **미사용(INACTIVE)** 사용자가 그대로 노출되던 문제를 수정. `UserSearchService.getOrganizationTree`에서 `User.status == ACTIVE` 인 경우만 회사/본부/팀 노드에 포함. 조직도 모달·구성원 추가 피커 동일 API 공유. `UserSearchService.java` · `UserDirectoryApiTest.java`.
+
 ### Added
 - **프론트(대용량 파일 다운로드 진행 표시)**: `Content-Length`가 약 512KB 이상이면 fetch 본문을 스트림으로 읽으며 하단 **`#fileDownloadStatusBar`**에 `다운로드 중… N%`(또는 길이 미상 시 문구만) 표시. 채널 파일 저장/열기·새 탭 열기·ZIP 일괄 저장·브라우저 JPEG 재압축 경로에 적용. `frontend/app.js` · `frontend/index.html` · `frontend/styles.css` · `docs/FEATURE_SPEC.md` · `docs/HANDOVER.md` · `README.md`.
 - **프론트(대기 첨부 미리보기)**: 다중 파일·이미지 선택 시 항목별 **제거(✕)**, 추가 선택·드롭·붙여넣기 시 기존 대기 **누적(append)**. 메인·스레드 동일. `frontend/app.js` · `frontend/index.html` · `frontend/styles.css` · `docs/FEATURE_SPEC.md` · `docs/HANDOVER.md`.
