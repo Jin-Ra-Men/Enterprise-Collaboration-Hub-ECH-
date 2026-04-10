@@ -503,14 +503,6 @@ html:not([data-theme="light"]) .app-shell-global-search:focus-within {
   text-overflow: ellipsis;
   max-width: 320px;
 }
-.app-shell-channel-context .ech-chat-header-meta {
-  justify-content: center;
-  gap: 6px;
-  min-height: 14px;
-}
-.app-shell-channel-context .chat-header-member-line {
-  font-size: 11px;
-}
 button.app-shell-brand {
   font: inherit;
   font-size: 1.125rem;
@@ -2050,7 +2042,7 @@ html[data-theme="light"] .chat-header {
   min-width: 0;
   flex: 1;
 }
-/* design/ECH채팅: 채널명 아래 메타(프레즌스 점 등) */
+/* design/ECH채팅: 채널 헤더 타이틀 블록(레거시 클래스 — 글로벌 탑바는 app-shell-channel-title-row) */
 .ech-chat-header-title-block {
   display: flex;
   flex-direction: column;
@@ -2062,40 +2054,6 @@ html[data-theme="light"] .chat-header {
   align-items: baseline;
   gap: 6px;
   min-width: 0;
-}
-.ech-chat-header-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 16px;
-}
-.ech-chat-header-meta.hidden {
-  display: none !important;
-}
-.ech-chat-header-presence-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--presence-online-color);
-  box-shadow:
-    0 0 0 2px var(--presence-ring-color),
-    0 0 8px var(--presence-online-glow);
-  flex-shrink: 0;
-}
-html[data-theme="light"] .ech-chat-header-presence-dot,
-html[data-theme="cream"] .ech-chat-header-presence-dot {
-  width: 11px;
-  height: 11px;
-  box-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.48),
-    0 0 0 3px var(--bg-elevated, #ffffff),
-    0 2px 6px rgba(15, 23, 42, 0.16);
-}
-.chat-header-member-line {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-muted);
-  letter-spacing: 0.02em;
 }
 .chat-channel-prefix { font-size: 18px; color: var(--text-muted); }
 .chat-header-dm-prefix {

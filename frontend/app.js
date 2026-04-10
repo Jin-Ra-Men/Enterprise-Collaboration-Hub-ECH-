@@ -3105,8 +3105,6 @@ async function selectChannel(channelId, channelName, channelType, options = {}) 
     }
   }
   document.getElementById("chatChannelName").textContent   = channelName;
-  document.getElementById("chatMemberCount").textContent   = "";
-  document.getElementById("chatHeaderMeta")?.classList.add("hidden");
   document.getElementById("memberPanel").classList.add("hidden");
   document.getElementById("memberList").innerHTML = "";
   document.getElementById("btnAddMembersLater")?.classList.add("hidden");
@@ -3347,16 +3345,6 @@ async function loadChannelMembers(channelId) {
     activeChannelMemberCount = members.length;
     syncChannelActionButtons();
     activeChannelMemberOrgLineByEmployeeNo.clear();
-    const countLine = document.getElementById("chatMemberCount");
-    const metaEl = document.getElementById("chatHeaderMeta");
-    if (countLine && metaEl) {
-      countLine.textContent = "";
-      if (members.length > 0) {
-        metaEl.classList.remove("hidden");
-      } else {
-        metaEl.classList.add("hidden");
-      }
-    }
 
     const myEmpMention = currentUser ? String(currentUser.employeeNo || "").trim() : "";
     activeChannelMemberMentionList = members
