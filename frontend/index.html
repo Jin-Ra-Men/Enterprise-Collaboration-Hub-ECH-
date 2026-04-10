@@ -385,6 +385,12 @@
               </div>
               <button type="button" id="replyComposerBannerClose" class="reply-composer-banner-close" title="답글 취소" aria-label="답글 취소">✕</button>
             </div>
+            <div id="filePreview" class="file-preview hidden">
+              <img id="filePreviewThumb" class="file-preview-thumb hidden" alt="" decoding="async" />
+              <span id="filePreviewName"></span>
+              <span id="filePreviewUploadStatus" class="file-preview-upload-status" aria-live="polite"></span>
+              <button id="btnClearFile" class="btn-clear-file">✕</button>
+            </div>
             <div class="ech-composer-glass">
               <div class="composer-inner">
                 <button type="button" class="composer-attach-btn" id="btnAttach" title="파일·이미지 첨부(다중 선택 가능)">
@@ -398,12 +404,6 @@
               </div>
             </div>
             <p class="ech-composer-footnote">Enter로 전송 · Shift+Enter로 줄바꿈</p>
-            <div id="filePreview" class="file-preview hidden">
-              <img id="filePreviewThumb" class="file-preview-thumb hidden" alt="" decoding="async" />
-              <span id="filePreviewName"></span>
-              <span id="filePreviewUploadStatus" class="file-preview-upload-status" aria-live="polite"></span>
-              <button id="btnClearFile" class="btn-clear-file">✕</button>
-            </div>
           </div>
         </div>
 
@@ -880,17 +880,17 @@
           <div id="threadCommentsContainer" class="thread-comments"></div>
         </div>
         <div class="modal-footer thread-composer">
-          <div class="thread-composer-controls">
-            <input id="threadFileInput" type="file" class="hidden" multiple />
-            <button id="threadBtnAttach" type="button" class="composer-attach-btn" title="파일·이미지 첨부">📎</button>
-            <textarea id="threadMessageInput" class="composer-input" rows="1" placeholder="댓글 입력… Enter 전송 · Shift+Enter 줄바꿈 · @멘션" autocomplete="off"></textarea>
-            <button id="threadBtnSend" type="button" class="composer-send-btn" title="전송">➤</button>
-          </div>
           <div id="threadFilePreview" class="file-preview hidden">
             <img id="threadFilePreviewThumb" class="file-preview-thumb hidden" alt="" decoding="async" />
             <span id="threadFilePreviewName"></span>
             <span id="threadFilePreviewUploadStatus" class="file-preview-upload-status" aria-live="polite"></span>
             <button id="threadBtnClearFile" class="btn-clear-file" type="button">✕</button>
+          </div>
+          <div class="thread-composer-controls">
+            <input id="threadFileInput" type="file" class="hidden" multiple />
+            <button id="threadBtnAttach" type="button" class="composer-attach-btn" title="파일·이미지 첨부">📎</button>
+            <textarea id="threadMessageInput" class="composer-input" rows="1" placeholder="댓글 입력… Enter 전송 · Shift+Enter 줄바꿈 · @멘션" autocomplete="off"></textarea>
+            <button id="threadBtnSend" type="button" class="composer-send-btn" title="전송">➤</button>
           </div>
         </div>
       </div>

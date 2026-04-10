@@ -2573,27 +2573,6 @@ html[data-theme="light"] .msg-row.msg-mine .msg-content-row:has(.msg-text) .msg-
   justify-content: flex-end;
   flex-wrap: wrap;
 }
-/* 첨부(이미지·파일): 텍스트와 동일하게 본문 옆 하단에 시각·일괄저장 */
-.msg-content-row.msg-attachment-time-inline {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 8px 10px;
-  width: 100%;
-  max-width: min(100%, 420px);
-}
-.msg-row.msg-mine .msg-content-row.msg-attachment-time-inline {
-  flex-direction: row-reverse;
-  justify-content: flex-start;
-}
-.msg-row.msg-other .msg-content-row.msg-attachment-time-inline {
-  justify-content: flex-start;
-}
-.msg-attachment-time-inline .msg-attachment-primary {
-  flex: 0 1 auto;
-  min-width: 0;
-  max-width: 100%;
-}
 .msg-row.msg-mine .msg-content-row.msg-attachment-list-wrap {
   text-align: right;
 }
@@ -2894,16 +2873,10 @@ html:not([data-theme="light"]) .msg-date-pill {
   align-items: center;
   gap: 8px;
 }
-.msg-attachment-time-inline .msg-attachment-list-footer {
-  margin-top: 0;
-  flex-shrink: 0;
-  align-self: flex-end;
-}
-.msg-row.msg-mine .msg-attachment-time-inline .msg-time {
-  padding-bottom: 6px;
-}
-.msg-row.msg-other .msg-attachment-time-inline .msg-time {
-  padding-bottom: 4px;
+/* 첨부 메타(시각): 이미지·파일 아래 한 줄 — 왼쪽 정렬(첫 썸네일 기준과 맞춤) */
+.msg-attachment-meta-below.msg-attachment-list-footer {
+  width: 100%;
+  box-sizing: border-box;
 }
 .msg-attach-card {
   background: var(--bg-elevated);
@@ -2962,20 +2935,12 @@ html:not([data-theme="light"]) .msg-date-pill {
   align-items: center;
   gap: 8px 12px;
   margin-top: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  justify-content: space-between;
+}
+.msg-attachment-group-footer:not(:has(.msg-time)) {
   justify-content: flex-end;
-}
-.msg-attachment-time-inline .msg-attachment-group-footer {
-  margin-top: 0;
-  flex-shrink: 0;
-  align-self: flex-end;
-}
-/* 본인: DOM 순서 일괄저장·시각 → 시각이 버튼 왼쪽(말풍선 쪽), 묶음은 오른쪽 정렬 유지 */
-.msg-row.msg-mine .msg-attachment-group-footer {
-  flex-direction: row-reverse;
-  justify-content: flex-start;
-}
-.msg-row.msg-other .msg-attachment-group-footer {
-  justify-content: flex-start;
 }
 .btn-attach-batch-dl {
   padding: 4px 10px;
@@ -3130,13 +3095,15 @@ html[data-theme="light"] .image-preview-caption {
 .composer {
   position: relative;
   min-height: var(--layout-footer-height);
-  height: var(--layout-footer-height);
+  height: auto;
   padding: 8px 14px;
   background: var(--bg-elevated);
   flex-shrink: 0;
   border-top: 1px solid var(--border-subtle);
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
 }
 html[data-theme="light"] .ech-composer-bar.composer {
   padding: 8px 14px;
@@ -3542,13 +3509,15 @@ html[data-theme="light"] .ech-composer-bar {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  margin-top: 6px;
+  margin-top: 0;
   padding: 6px 10px;
   background: var(--bg-input);
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
   font-size: 13px;
   color: var(--text-primary);
+  width: 100%;
+  box-sizing: border-box;
 }
 .file-preview-thumb {
   width: 48px;
@@ -4293,7 +4262,16 @@ html[data-theme="light"] .thread-comment-replies {
   flex-direction: column;
   gap: 10px;
 }
-.thread-composer { flex: 1 1 auto; }
+.thread-composer {
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 8px;
+}
+.thread-composer .file-preview {
+  width: 100%;
+}
 .thread-composer-controls {
   display: flex;
   align-items: center;
