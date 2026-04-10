@@ -3946,17 +3946,21 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
     const imageEntries = [{ msg, meta: fileMeta }];
     const gridInner = buildImageGridHtml(imageEntries);
     listBlock = `
-        <div class="msg-content-row msg-attachment-list-wrap">
-          <div class="msg-attachment-image-bundle">
-            <div class="msg-attachment-image-grid">${gridInner}</div>
+        <div class="msg-content-row msg-attachment-list-wrap msg-attachment-time-inline">
+          <div class="msg-attachment-primary">
+            <div class="msg-attachment-image-bundle">
+              <div class="msg-attachment-image-grid">${gridInner}</div>
+            </div>
           </div>
           <div class="msg-attachment-list-footer">${timeHtml}</div>
         </div>`;
   } else {
     const cardHtml = buildAttachmentCardHtml(fileMeta, { messageId: mid, rootId: rootForCard });
     listBlock = `
-        <div class="msg-content-row msg-attachment-list-wrap">
-          <div class="msg-attachment-list-inner">${cardHtml}</div>
+        <div class="msg-content-row msg-attachment-list-wrap msg-attachment-time-inline">
+          <div class="msg-attachment-primary">
+            <div class="msg-attachment-list-inner">${cardHtml}</div>
+          </div>
           <div class="msg-attachment-list-footer">${timeHtml}</div>
         </div>`;
   }
@@ -4068,8 +4072,10 @@ function createFileAttachmentGroupRowFromMsgs(msgs, { showAvatar, showTime }) {
   }
 
   const stripHtml = `
-        <div class="msg-content-row msg-attachment-list-wrap msg-attachment-group-wrap">
-          ${bodyParts.join("")}
+        <div class="msg-content-row msg-attachment-list-wrap msg-attachment-group-wrap msg-attachment-time-inline">
+          <div class="msg-attachment-primary">
+            ${bodyParts.join("")}
+          </div>
           <div class="msg-attachment-group-footer">
             <button type="button" class="btn-attach-batch-dl">일괄저장</button>
             ${timeHtml}

@@ -5,6 +5,7 @@
 ## 2026-04-10
 
 ### Changed
+- **프론트(채팅 시각 표시 통일)**: 이미지·파일 첨부 행에서 시각(·일괄저장)이 본문 **아래**가 아니라 텍스트 메시지와 같이 **본문 옆·하단 정렬**(`msg-attachment-time-inline`, `msg-attachment-primary` 래퍼). `frontend/app.js` · `frontend/styles.css` · `docs/FEATURE_SPEC.md` · `docs/HANDOVER.md`.
 - **프론트(조직도 모달)**: 헤더 **새로고침** 버튼 제거. 모달 오픈 시 로그인 사용자의 **최하위 소속**(팀 소속 사번 일치 → `department`와 팀명 일치 → 본부/회사 직속 순) 노드를 자동 선택·우측 구성원 표시·좌측 스크롤. `frontend/index.html` · `frontend/styles.css` · `frontend/app.js` · `docs/FEATURE_SPEC.md` · `docs/HANDOVER.md`.
 
 ## 2026-04-12
