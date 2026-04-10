@@ -2050,7 +2050,7 @@ html[data-theme="light"] .chat-header {
   min-width: 0;
   flex: 1;
 }
-/* design/ECH채팅: 채널명 + 팀원 수 메타 */
+/* design/ECH채팅: 채널명 아래 메타(프레즌스 점 등) */
 .ech-chat-header-title-block {
   display: flex;
   flex-direction: column;
@@ -2081,6 +2081,15 @@ html[data-theme="light"] .chat-header {
     0 0 0 2px var(--presence-ring-color),
     0 0 8px var(--presence-online-glow);
   flex-shrink: 0;
+}
+html[data-theme="light"] .ech-chat-header-presence-dot,
+html[data-theme="cream"] .ech-chat-header-presence-dot {
+  width: 11px;
+  height: 11px;
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.48),
+    0 0 0 3px var(--bg-elevated, #ffffff),
+    0 2px 6px rgba(15, 23, 42, 0.16);
 }
 .chat-header-member-line {
   font-size: 10px;
@@ -6199,9 +6208,6 @@ html[data-theme="light"] .work-pending-badge--delete {
   background: var(--presence-online-color);
   box-shadow: 0 0 0 2px var(--presence-ring-color), 0 0 8px var(--presence-online-glow);
 }
-html[data-theme="light"] .presence-online {
-  box-shadow: 0 0 0 2px var(--presence-ring-color), 0 0 9px 1px var(--presence-online-glow);
-}
 .presence-away {
   background: var(--presence-away-color);
   box-shadow: 0 0 0 2px var(--presence-ring-color), 0 0 8px var(--presence-away-glow);
@@ -6209,6 +6215,57 @@ html[data-theme="light"] .presence-online {
 .presence-offline {
   background: var(--presence-offline-color);
   box-shadow: 0 0 0 2px var(--presence-ring-color), 0 0 6px var(--presence-offline-glow);
+}
+
+/* 밝은 테마(light, cream): 프레즌스 점이 연한 배경에서 잘 보이도록 외곽선·그림자 강화 */
+html[data-theme="light"] .presence-dot,
+html[data-theme="cream"] .presence-dot {
+  width: 11px;
+  height: 11px;
+  border: 2px solid rgba(30, 41, 59, 0.38);
+  box-sizing: border-box;
+}
+html[data-theme="light"] .presence-online,
+html[data-theme="cream"] .presence-online {
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.52),
+    0 0 0 3px var(--bg-chat),
+    0 2px 5px rgba(15, 23, 42, 0.18);
+}
+html[data-theme="light"] .presence-away,
+html[data-theme="cream"] .presence-away {
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.48),
+    0 0 0 3px var(--bg-chat),
+    0 2px 5px rgba(15, 23, 42, 0.16);
+}
+html[data-theme="light"] .presence-offline,
+html[data-theme="cream"] .presence-offline {
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.42),
+    0 0 0 3px var(--bg-chat),
+    0 1px 4px rgba(15, 23, 42, 0.14);
+}
+html[data-theme="light"] .sidebar-dm-presence-wrap .presence-dot,
+html[data-theme="cream"] .sidebar-dm-presence-wrap .presence-dot {
+  width: 9px;
+  height: 9px;
+}
+html[data-theme="light"] .member-avatar-wrap .presence-dot,
+html[data-theme="cream"] .member-avatar-wrap .presence-dot {
+  width: 10px;
+  height: 10px;
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.52),
+    0 0 0 3px var(--bg-chat);
+}
+html[data-theme="light"] .msg-avatar-wrap .presence-dot,
+html[data-theme="cream"] .msg-avatar-wrap .presence-dot {
+  width: 11px;
+  height: 11px;
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.52),
+    0 0 0 3px var(--bg-chat);
 }
 
 /* 메시지 발신자 클릭 */
@@ -7913,8 +7970,13 @@ html:not([data-theme="light"]) .org-tab--rail.active {
   z-index: 1;
   box-shadow: 0 0 0 2px var(--bg-elevated);
 }
+html[data-theme="light"] .orgchart-member-avatar-wrap .presence-dot,
 html[data-theme="cream"] .orgchart-member-avatar-wrap .presence-dot {
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.94);
+  width: 10px;
+  height: 10px;
+  box-shadow:
+    0 0 0 1px rgba(15, 23, 42, 0.5),
+    0 0 0 3px var(--bg-elevated);
 }
 .orgchart-member-avatar {
   width: 34px; height: 34px; flex-shrink: 0;

@@ -3350,11 +3350,10 @@ async function loadChannelMembers(channelId) {
     const countLine = document.getElementById("chatMemberCount");
     const metaEl = document.getElementById("chatHeaderMeta");
     if (countLine && metaEl) {
+      countLine.textContent = "";
       if (members.length > 0) {
-        countLine.textContent = `팀원 ${members.length}명`;
         metaEl.classList.remove("hidden");
       } else {
-        countLine.textContent = "";
         metaEl.classList.add("hidden");
       }
     }
