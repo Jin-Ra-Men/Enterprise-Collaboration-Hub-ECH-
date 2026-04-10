@@ -5112,7 +5112,8 @@ html[data-theme="light"] .thread-hub-hint {
 .modal-work-hub.ech-workhub-shell {
   border-radius: 1rem;
 }
-html[data-theme="light"] .modal-work-hub.ech-workhub-shell {
+html[data-theme="light"] .modal-work-hub.ech-workhub-shell,
+html[data-theme="cream"] .modal-work-hub.ech-workhub-shell {
   border: none;
   box-shadow:
     0 28px 72px rgba(44, 52, 55, 0.14),
@@ -5171,7 +5172,8 @@ html[data-theme="cream"] .work-hub-panel {
   box-shadow: 0 8px 24px rgba(81, 67, 53, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   border-radius: 12px;
 }
-html[data-theme="light"] .work-hub-panel-head h4 {
+html[data-theme="light"] .work-hub-panel-head h4,
+html[data-theme="cream"] .work-hub-panel-head h4 {
   letter-spacing: var(--ech-tracking-headline, -0.02em);
   font-weight: 800;
 }
@@ -5186,7 +5188,7 @@ html[data-theme="light"] .work-hub-panel-head h4 {
 .work-hub-panel.work-hub-panel--flash {
   animation: ech-work-hub-panel-flash 1s ease-out 1;
 }
-html:not([data-theme="light"]) .work-hub-panel.work-hub-panel--flash {
+html:not([data-theme="light"]):not([data-theme="cream"]) .work-hub-panel.work-hub-panel--flash {
   animation-name: ech-work-hub-panel-flash-dark;
 }
 @keyframes ech-work-hub-panel-flash-dark {
@@ -5251,7 +5253,8 @@ html:not([data-theme="light"]) .work-hub-panel.work-hub-panel--flash {
 .ech-workflow-scope.hidden {
   display: none;
 }
-html[data-theme="light"] .ech-workflow-scope {
+html[data-theme="light"] .ech-workflow-scope,
+html[data-theme="cream"] .ech-workflow-scope {
   color: color-mix(in srgb, var(--text-secondary) 92%, var(--accent) 8%);
 }
 .workflow-topbar {
@@ -5382,6 +5385,10 @@ html[data-theme="light"] .workflow-section {
   background: color-mix(in srgb, #f0f4f7 70%, #ffffff 30%);
   border: 1px solid rgba(172, 179, 183, 0.35);
 }
+html[data-theme="cream"] .workflow-section {
+  background: color-mix(in srgb, var(--bg-app) 58%, #ffffff 42%);
+  border: 1px solid rgba(120, 98, 76, 0.22);
+}
 .work-hub-hint {
   margin: 0 0 10px;
   font-size: 12px;
@@ -5503,18 +5510,21 @@ html[data-theme="light"] .workflow-section {
   border-color: color-mix(in srgb, var(--accent, #6366f1) 22%, var(--border-subtle));
   box-shadow: 0 4px 14px rgba(44, 52, 55, 0.06);
 }
-html[data-theme="light"] .channel-work-item {
+html[data-theme="light"] .channel-work-item,
+html[data-theme="cream"] .channel-work-item {
   border: none;
   box-shadow:
     0 6px 18px rgba(44, 52, 55, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
-html[data-theme="light"] .channel-work-item:hover {
+html[data-theme="light"] .channel-work-item:hover,
+html[data-theme="cream"] .channel-work-item:hover {
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--accent) 14%, transparent),
     0 8px 22px rgba(44, 52, 55, 0.08);
 }
-html[data-theme="light"] .channel-work-item-inactive {
+html[data-theme="light"] .channel-work-item-inactive,
+html[data-theme="cream"] .channel-work-item-inactive {
   box-shadow:
     inset 3px 0 0 rgba(245, 158, 11, 0.55),
     0 6px 18px rgba(44, 52, 55, 0.06),
@@ -5560,7 +5570,8 @@ html[data-theme="light"] .channel-work-item-inactive {
     0 2px 10px color-mix(in srgb, var(--accent) 18%, transparent);
   background: color-mix(in srgb, var(--accent) 14%, var(--bg-elevated));
 }
-html[data-theme="light"] .channel-work-item--selected {
+html[data-theme="light"] .channel-work-item--selected,
+html[data-theme="cream"] .channel-work-item--selected {
   background: color-mix(in srgb, var(--accent) 12%, #ffffff);
   box-shadow:
     0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent),
@@ -5625,7 +5636,9 @@ html[data-theme="light"] .channel-work-item--selected {
   background: var(--bg-elevated);
 }
 html[data-theme="light"] .kanban-col,
-html[data-theme="light"] .kanban-column {
+html[data-theme="light"] .kanban-column,
+html[data-theme="cream"] .kanban-col,
+html[data-theme="cream"] .kanban-column {
   border: none;
   background: color-mix(in srgb, #ffffff 88%, var(--surface-container-low, #f0f4f7) 12%);
   box-shadow:
@@ -5633,8 +5646,17 @@ html[data-theme="light"] .kanban-column {
     inset 0 1px 0 rgba(255, 255, 255, 0.95);
   border-radius: 12px;
 }
+html[data-theme="cream"] .kanban-col,
+html[data-theme="cream"] .kanban-column {
+  background: color-mix(in srgb, #ffffff 82%, var(--bg-app) 18%);
+  box-shadow:
+    0 6px 20px rgba(81, 67, 53, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
 html[data-theme="light"] .kanban-col-title,
-html[data-theme="light"] .kanban-column-title {
+html[data-theme="light"] .kanban-column-title,
+html[data-theme="cream"] .kanban-col-title,
+html[data-theme="cream"] .kanban-column-title {
   letter-spacing: 0.1em;
   font-weight: 800;
   font-size: 11px;
@@ -5653,15 +5675,27 @@ html[data-theme="light"] .kanban-column-title {
   background: var(--bg-chat);
 }
 html[data-theme="light"] .kanban-card,
-html[data-theme="light"] .kanban-card-item {
+html[data-theme="light"] .kanban-card-item,
+html[data-theme="cream"] .kanban-card,
+html[data-theme="cream"] .kanban-card-item {
   border: 1px solid transparent;
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 2px 10px rgba(44, 52, 55, 0.06);
   border-radius: 12px;
 }
-html[data-theme="light"] .kanban-card-item:hover {
+html[data-theme="cream"] .kanban-card,
+html[data-theme="cream"] .kanban-card-item {
+  border: 1px solid rgba(120, 98, 76, 0.12);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 2px 10px rgba(81, 67, 53, 0.06);
+}
+html[data-theme="light"] .kanban-card-item:hover,
+html[data-theme="cream"] .kanban-card-item:hover {
   border-color: color-mix(in srgb, var(--accent) 14%, transparent);
   box-shadow: 0 6px 18px rgba(44, 52, 55, 0.09);
+}
+html[data-theme="cream"] .kanban-card-item:hover {
+  box-shadow: 0 6px 18px rgba(81, 67, 53, 0.1);
 }
 .kanban-card-title {
   font-size: 13px;
@@ -5738,7 +5772,8 @@ html[data-theme="light"] .kanban-card-item:hover {
   color: var(--text-secondary);
   border: 1px solid var(--border-subtle);
 }
-html[data-theme="light"] .kanban-column-count {
+html[data-theme="light"] .kanban-column-count,
+html[data-theme="cream"] .kanban-column-count {
   background: rgba(255, 255, 255, 0.75);
   border-color: color-mix(in srgb, var(--border-subtle) 80%, transparent);
 }
@@ -7984,14 +8019,14 @@ html:not([data-theme="light"]):not([data-theme="cream"]) .release-panel--main {
   background: rgba(22, 26, 34, 0.72);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
 }
-html:not([data-theme="light"]) .kanban-col,
-html:not([data-theme="light"]) .kanban-column {
+html:not([data-theme="light"]):not([data-theme="cream"]) .kanban-col,
+html:not([data-theme="light"]):not([data-theme="cream"]) .kanban-column {
   border-color: rgba(255, 255, 255, 0.1);
   background: rgba(22, 26, 34, 0.65);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
 }
-html:not([data-theme="light"]) .kanban-card,
-html:not([data-theme="light"]) .kanban-card-item {
+html:not([data-theme="light"]):not([data-theme="cream"]) .kanban-card,
+html:not([data-theme="light"]):not([data-theme="cream"]) .kanban-card-item {
   border-color: rgba(255, 255, 255, 0.08);
   background: rgba(19, 22, 30, 0.82);
 }
