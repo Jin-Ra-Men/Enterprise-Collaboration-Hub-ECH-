@@ -873,6 +873,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - **테마 선택**: 로그인 사용자 영역의 톱니바퀴 버튼으로 팝업을 열어 `다크`(기본 다크·보라) / `화이트`(라이트·인디고) / `오션 다크`(심야 블루 계열) / `크림 라이트`(웜 뉴트럴 계열) 선택. 즉시 적용되며 기본 테마(`다크/화이트`)는 `PUT /api/auth/me/theme`로 사용자별 DB(`users.theme_preference`)에 저장
   - `크림 라이트`는 헤더바/채팅 본문/컴포저에 다크 그라데이션을 사용하지 않고 밝은 크림 톤을 유지한다(상단 검색/내비 텍스트 가독성 우선).
   - `크림 라이트`의 조직도 모달(`modalOrgChart`)·테마 설정 모달(`modalThemePicker`)·관리자 사이드바(`#adminSection`)는 다크 모달 톤을 사용하지 않고 라이트 크림 표면/약한 그림자 기준을 유지한다.
+  - 사용자 프로필 모달(`modalUserProfile`, `.profile-dl--cards .profile-dd-card`)도 `cream`에서 다크 전용(`:not([data-theme="light"])`) 필드 배경이 적용되지 않도록 분리하고, 라이트 계열 표면·테두리로 표시한다.
   - `크림 라이트`의 워크플로우 패널(`.work-hub-panel`)·관리자 헤더(`.admin-panel-header`)·관리자 인사이트 카드(`.admin-insight-card`)도 다크 분기 스타일에서 제외한다.
 - 상태 전이/예외 케이스:
   - 중복 멤버 추가 시 서버 검증 메시지를 시스템 메시지로 노출

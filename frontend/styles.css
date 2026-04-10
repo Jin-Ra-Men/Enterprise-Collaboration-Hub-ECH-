@@ -6233,9 +6233,15 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
   font-size: 14px;
   line-height: 1.45;
 }
-html[data-theme="light"] .profile-dl--cards .profile-dd-card {
+html[data-theme="light"] .profile-dl--cards .profile-dd-card,
+html[data-theme="cream"] .profile-dl--cards .profile-dd-card {
   background: color-mix(in srgb, var(--surface-container-low, #f0f4f7) 85%, #fff 15%);
   border-color: color-mix(in srgb, var(--outline-variant, #acb3b7) 30%, transparent);
+}
+/* cream: 위 공통보다 모달·토큰 톤에 맞게 표면만 미세 조정(가독성은 라이트와 동일 계열 유지) */
+html[data-theme="cream"] .profile-dl--cards .profile-dd-card {
+  background: color-mix(in srgb, #ffffff 88%, var(--bg-input) 12%);
+  border-color: rgba(120, 98, 76, 0.22);
 }
 /* `.modal-footer`에 이미 상단 구분선·패딩이 있음 — 중복 제거 */
 .ech-profile-footer {
@@ -7833,11 +7839,11 @@ html:not([data-theme="light"]) .mention-suggest {
   -webkit-backdrop-filter: blur(12px);
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.45);
 }
-html:not([data-theme="light"]) .ech-profile-hero .profile-avatar-lg {
+html:not([data-theme="light"]):not([data-theme="cream"]) .ech-profile-hero .profile-avatar-lg {
   border-color: rgba(255, 255, 255, 0.12);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.48);
 }
-html:not([data-theme="light"]) .profile-dl--cards .profile-dd-card {
+html:not([data-theme="light"]):not([data-theme="cream"]) .profile-dl--cards .profile-dd-card {
   background: rgba(19, 22, 30, 0.75);
   border-color: rgba(255, 255, 255, 0.1);
 }
