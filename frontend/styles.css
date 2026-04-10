@@ -130,13 +130,14 @@ html[data-theme="light"] {
   --msg-bubble-mine-bg: linear-gradient(135deg, #4e45e4 0%, #6760fd 100%);
   --msg-bubble-mine-border: transparent;
   --msg-bubble-mine-fg: #fbf7ff;
-  --presence-online-color: #16a34a;
-  --presence-away-color: #d97706;
-  --presence-offline-color: #64748b;
+  /* 온라인=선명한 초록 / 오프라인=연한 회색(어두운 점과 구분) */
+  --presence-online-color: #22c55e;
+  --presence-away-color: #ea580c;
+  --presence-offline-color: #e2e8f0;
   --presence-ring-color: #f7f9fb;
-  --presence-online-glow: rgba(22, 163, 74, 0.36);
-  --presence-away-glow: rgba(217, 119, 6, 0.28);
-  --presence-offline-glow: rgba(100, 116, 139, 0.22);
+  --presence-online-glow: rgba(34, 197, 94, 0.42);
+  --presence-away-glow: rgba(234, 88, 12, 0.32);
+  --presence-offline-glow: rgba(148, 163, 184, 0.2);
 
   /* design/ECH메인 + DESIGN.md (Atmospheric) — 라이트 전용 토큰 */
   --ghost-outline: rgba(172, 179, 183, 0.15);
@@ -220,13 +221,13 @@ html[data-theme="cream"] {
   --msg-bubble-other-border: rgba(120, 98, 76, 0.18);
   --msg-bubble-mine-bg: linear-gradient(135deg, #7c4dff 0%, #9d7bff 100%);
   --msg-bubble-mine-border: transparent;
-  --presence-online-color: #15803d;
+  --presence-online-color: #16a34a;
   --presence-away-color: #c2410c;
-  --presence-offline-color: #64748b;
+  --presence-offline-color: #d6cfc4;
   --presence-ring-color: #faf7f0;
-  --presence-online-glow: rgba(21, 128, 61, 0.3);
-  --presence-away-glow: rgba(194, 65, 12, 0.26);
-  --presence-offline-glow: rgba(100, 116, 139, 0.2);
+  --presence-online-glow: rgba(22, 163, 74, 0.38);
+  --presence-away-glow: rgba(194, 65, 12, 0.28);
+  --presence-offline-glow: rgba(120, 113, 108, 0.18);
 }
 
 html[data-theme="cream"] .app-shell-topbar {
@@ -6175,34 +6176,36 @@ html[data-theme="light"] .work-pending-badge--delete {
   box-shadow: 0 0 0 2px var(--presence-ring-color), 0 0 6px var(--presence-offline-glow);
 }
 
-/* 밝은 테마(light, cream): 프레즌스 점이 연한 배경에서 잘 보이도록 외곽선·그림자 강화 */
+/* 밝은 테마(light, cream): 온라인=진한 링·그림자 / 오프라인=밝은 채우기·옅은 링(초록과 명확히 구분) */
 html[data-theme="light"] .presence-dot,
 html[data-theme="cream"] .presence-dot {
   width: 11px;
   height: 11px;
-  border: 2px solid rgba(30, 41, 59, 0.38);
   box-sizing: border-box;
 }
 html[data-theme="light"] .presence-online,
 html[data-theme="cream"] .presence-online {
+  border: 2px solid rgba(21, 128, 61, 0.45);
   box-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.52),
+    0 0 0 1px rgba(22, 101, 52, 0.35),
     0 0 0 3px var(--bg-chat),
-    0 2px 5px rgba(15, 23, 42, 0.18);
+    0 2px 6px rgba(22, 163, 74, 0.28);
 }
 html[data-theme="light"] .presence-away,
 html[data-theme="cream"] .presence-away {
+  border: 2px solid rgba(180, 83, 9, 0.45);
   box-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.48),
+    0 0 0 1px rgba(154, 52, 18, 0.35),
     0 0 0 3px var(--bg-chat),
-    0 2px 5px rgba(15, 23, 42, 0.16);
+    0 2px 5px rgba(234, 88, 12, 0.22);
 }
 html[data-theme="light"] .presence-offline,
 html[data-theme="cream"] .presence-offline {
+  border: 2px solid rgba(148, 163, 184, 0.85);
   box-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.42),
+    0 0 0 1px rgba(100, 116, 139, 0.35),
     0 0 0 3px var(--bg-chat),
-    0 1px 4px rgba(15, 23, 42, 0.14);
+    0 1px 3px rgba(15, 23, 42, 0.06);
 }
 html[data-theme="light"] .sidebar-dm-presence-wrap .presence-dot,
 html[data-theme="cream"] .sidebar-dm-presence-wrap .presence-dot {
@@ -6213,16 +6216,46 @@ html[data-theme="light"] .member-avatar-wrap .presence-dot,
 html[data-theme="cream"] .member-avatar-wrap .presence-dot {
   width: 10px;
   height: 10px;
+}
+html[data-theme="light"] .member-avatar-wrap .presence-online,
+html[data-theme="cream"] .member-avatar-wrap .presence-online {
   box-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.52),
+    0 0 0 1px rgba(22, 101, 52, 0.4),
+    0 0 0 3px var(--bg-chat);
+}
+html[data-theme="light"] .member-avatar-wrap .presence-away,
+html[data-theme="cream"] .member-avatar-wrap .presence-away {
+  box-shadow:
+    0 0 0 1px rgba(180, 83, 9, 0.42),
+    0 0 0 3px var(--bg-chat);
+}
+html[data-theme="light"] .member-avatar-wrap .presence-offline,
+html[data-theme="cream"] .member-avatar-wrap .presence-offline {
+  box-shadow:
+    0 0 0 1px rgba(100, 116, 139, 0.4),
     0 0 0 3px var(--bg-chat);
 }
 html[data-theme="light"] .msg-avatar-wrap .presence-dot,
 html[data-theme="cream"] .msg-avatar-wrap .presence-dot {
   width: 11px;
   height: 11px;
+}
+html[data-theme="light"] .msg-avatar-wrap .presence-online,
+html[data-theme="cream"] .msg-avatar-wrap .presence-online {
   box-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.52),
+    0 0 0 1px rgba(22, 101, 52, 0.4),
+    0 0 0 3px var(--bg-chat);
+}
+html[data-theme="light"] .msg-avatar-wrap .presence-away,
+html[data-theme="cream"] .msg-avatar-wrap .presence-away {
+  box-shadow:
+    0 0 0 1px rgba(180, 83, 9, 0.42),
+    0 0 0 3px var(--bg-chat);
+}
+html[data-theme="light"] .msg-avatar-wrap .presence-offline,
+html[data-theme="cream"] .msg-avatar-wrap .presence-offline {
+  box-shadow:
+    0 0 0 1px rgba(100, 116, 139, 0.4),
     0 0 0 3px var(--bg-chat);
 }
 
@@ -7932,8 +7965,23 @@ html[data-theme="light"] .orgchart-member-avatar-wrap .presence-dot,
 html[data-theme="cream"] .orgchart-member-avatar-wrap .presence-dot {
   width: 10px;
   height: 10px;
+}
+html[data-theme="light"] .orgchart-member-avatar-wrap .presence-online,
+html[data-theme="cream"] .orgchart-member-avatar-wrap .presence-online {
   box-shadow:
-    0 0 0 1px rgba(15, 23, 42, 0.5),
+    0 0 0 1px rgba(22, 101, 52, 0.4),
+    0 0 0 3px var(--bg-elevated);
+}
+html[data-theme="light"] .orgchart-member-avatar-wrap .presence-away,
+html[data-theme="cream"] .orgchart-member-avatar-wrap .presence-away {
+  box-shadow:
+    0 0 0 1px rgba(180, 83, 9, 0.42),
+    0 0 0 3px var(--bg-elevated);
+}
+html[data-theme="light"] .orgchart-member-avatar-wrap .presence-offline,
+html[data-theme="cream"] .orgchart-member-avatar-wrap .presence-offline {
+  box-shadow:
+    0 0 0 1px rgba(100, 116, 139, 0.4),
     0 0 0 3px var(--bg-elevated);
 }
 .orgchart-member-avatar {

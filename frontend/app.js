@@ -158,6 +158,8 @@ const PRESENCE_IDLE_AWAY_MS = 5 * 60 * 1000;
 let presenceIdleAwayTimerId = null;
 let presenceUserActivityBound = false;
 let presenceActivityRafId = null;
+/** 사이드바에서 직접 선택한 자리비움 — 동작 감지로 온라인으로 바꾸지 않음(자동 무활동 자리비움만 해제 가능) */
+let presenceManualAway = false;
 
 /** 본인 전용 DM(나에게 쓰기) 표시명 — API name/description과 맞춤 */
 const SELF_DM_LABEL = "나에게 쓰기";
@@ -881,7 +883,7 @@ function schedulePresenceIdleAway() {
     if (me !== emp) return;
     const st = presenceByEmployeeNo.get(emp) || "OFFLINE";
     if (st === "ONLINE") {
-      emitMyPresenceStatus("AWAY");
+      emitMyPresenceStatus("AWAY", { manual: false });
     }
   }, PRESENCE_IDLE_AWAY_MS);
 }
@@ -900,7 +902,8 @@ function syncPresenceIdleTimerWithMyStatus() {
 }
 
 /**
- * 사용자 입력·포인터·휠·스크롤·탭 복귀 등 감지 시: 자리비움이면 온라인으로, 온라인이면 무활동 타이머 리셋.
+ * 사용자 입력·포인터·휠·스크롤·탭 복귀 등 감지 시: 온라인이면 무활동 타이머 리셋.
+ * 자리비움은 **자동(무활동)**일 때만 활동으로 온라인 복귀 — **직접 설정한 자리비움**은 유지.
  * `document.hidden`일 때는 창이 백그라운드인 경우로 보고 타이머만 두고(5분 후 자리비움) 여기서는 처리하지 않음.
  */
 function onPresenceUserActivity() {
@@ -913,6 +916,7 @@ function onPresenceUserActivity() {
     if (!emp) return;
     const st = presenceByEmployeeNo.get(emp) || "OFFLINE";
     if (st === "AWAY") {
+      if (presenceManualAway) return;
       emitMyPresenceStatus("ONLINE");
     } else {
       schedulePresenceIdleAway();
@@ -931,13 +935,22 @@ function initPresenceUserActivityListeners() {
   document.addEventListener("scroll", bump, { capture: true, passive: true });
 }
 
-/** 본인 프레즌스 전송(온라인 / 자리비움). 서버·타 사용자에 `presence:update` 반영 */
-function emitMyPresenceStatus(status) {
+/**
+ * 본인 프레즌스 전송(온라인 / 자리비움). 서버·타 사용자에 `presence:update` 반영.
+ * @param {"ONLINE"|"AWAY"} status
+ * @param {{ manual?: boolean }} [opts] — AWAY일 때 `manual: true`면 메뉴에서 선택한 자리비움(활동으로 해제 안 함).
+ */
+function emitMyPresenceStatus(status, opts = {}) {
   const raw = String(status ?? "").trim().toUpperCase();
   if (raw !== "ONLINE" && raw !== "AWAY") return;
   if (!currentUser?.employeeNo) return;
   const emp = String(currentUser.employeeNo).trim();
   if (!emp) return;
+  if (raw === "AWAY") {
+    presenceManualAway = opts.manual === true;
+  } else {
+    presenceManualAway = false;
+  }
   closeSidebarPresenceMenu();
   if (!socket?.connected) {
     console.warn("[presence] 소켓 미연결 — 상태가 서버에 반영되지 않을 수 있습니다.");
@@ -5258,6 +5271,7 @@ function initSocket() {
 
   socket.on("connect", async () => {
     realtimeConnectErrorToasted = false;
+    presenceManualAway = false;
     if (currentUser?.employeeNo) {
       socket.emit("presence:set", { employeeNo: currentUser.employeeNo, status: "ONLINE" });
     }
@@ -5272,6 +5286,7 @@ function initSocket() {
   });
 
   socket.on("reconnect", async () => {
+    presenceManualAway = false;
     if (currentUser?.employeeNo) {
       socket.emit("presence:set", { employeeNo: currentUser.employeeNo, status: "ONLINE" });
     }
@@ -10019,7 +10034,7 @@ function initEvents() {
       e.preventDefault();
       e.stopPropagation();
       const st = opt.getAttribute("data-presence-status") || opt.dataset.presenceStatus;
-      if (st) emitMyPresenceStatus(st);
+      if (st) emitMyPresenceStatus(st, { manual: st === "AWAY" });
     });
     document.addEventListener("click", (e) => {
       const menuEl = document.getElementById("sidebarPresenceMenu");
