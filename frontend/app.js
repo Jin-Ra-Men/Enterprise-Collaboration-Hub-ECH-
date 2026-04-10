@@ -433,7 +433,6 @@ const threadBtnSendEl = document.getElementById("threadBtnSend");
 const threadFilePreviewEl = document.getElementById("threadFilePreview");
 const threadFilePreviewListEl = document.getElementById("threadFilePreviewList");
 const threadFilePreviewUploadStatusEl = document.getElementById("threadFilePreviewUploadStatus");
-const threadBtnClearFileEl = document.getElementById("threadBtnClearFile");
 const filePreviewEl = document.getElementById("filePreview");
 const filePreviewListEl = document.getElementById("filePreviewList");
 const btnSendEl = document.getElementById("btnSend");
@@ -4850,9 +4849,6 @@ async function sendThreadComment() {
 if (threadBtnAttachEl && threadFileInputEl) {
   threadBtnAttachEl.addEventListener("click", () => threadFileInputEl.click());
 }
-if (threadBtnClearFileEl) {
-  threadBtnClearFileEl.addEventListener("click", clearThreadFilePreview);
-}
 if (replyComposerBannerCloseEl) {
   replyComposerBannerCloseEl.addEventListener("click", () => clearReplyComposerTarget());
 }
@@ -6586,8 +6582,6 @@ if (viewChatEl) {
     true
   );
 }
-
-document.getElementById("btnClearFile").addEventListener("click", clearFilePreview);
 
 if (filePreviewEl) {
   filePreviewEl.addEventListener("click", (e) => {

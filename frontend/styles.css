@@ -3631,11 +3631,6 @@ html[data-theme="light"] .ech-composer-bar {
   min-width: 5em;
   flex: 1 1 auto;
 }
-.btn-clear-all-files {
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-}
 .file-preview-thumb {
   width: 48px;
   height: 48px;
