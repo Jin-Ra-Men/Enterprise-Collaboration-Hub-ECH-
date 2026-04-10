@@ -10797,6 +10797,7 @@ async function loadOrgChart() {
 
 function openOrgChartModal() {
   openModal("modalOrgChart");
+  void fetchPresenceSnapshot().then(() => refreshPresenceDots());
   void loadOrgChart();
 }
 
@@ -10872,13 +10873,20 @@ function renderOrgChartMembers(team) {
   }
 
   grid.innerHTML = users.map(u => {
+    const emp = String(u.employeeNo ?? "").trim();
     const initial = (u.name ?? "?").charAt(0);
+    const pr = presenceByEmployeeNo.get(emp) || "OFFLINE";
+    const prCl = presenceCssClass(pr);
+    const prTip = presenceTitle(pr);
     const badges  = [u.jobLevel, u.jobTitle]
       .filter(Boolean)
       .map(b => `<span class="orgchart-badge">${escHtml(b)}</span>`)
       .join("");
-    return `<div class="orgchart-member-card" data-emp="${escHtml(u.employeeNo ?? "")}" title="프로필 보기">
-      <div class="orgchart-member-avatar">${escHtml(initial)}</div>
+    return `<div class="orgchart-member-card" data-emp="${escHtml(emp)}" title="프로필 보기">
+      <div class="orgchart-member-avatar-wrap">
+        <div class="orgchart-member-avatar">${escHtml(initial)}</div>
+        <span class="presence-dot ${prCl}" data-presence-user="${escHtml(emp)}" title="${escHtml(prTip)}"></span>
+      </div>
       <div class="orgchart-member-info">
         <div class="orgchart-member-name">${escHtml(u.name ?? "-")}</div>
         <div class="orgchart-member-emp">${escHtml(u.employeeNo ?? "")}</div>
@@ -10886,6 +10894,7 @@ function renderOrgChartMembers(team) {
       ${badges ? `<div class="orgchart-member-badges">${badges}</div>` : ""}
     </div>`;
   }).join("");
+  refreshPresenceDots();
 }
 
 document.getElementById("orgChartMemberGrid").addEventListener("click", (e) => {
