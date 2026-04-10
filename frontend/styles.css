@@ -132,11 +132,11 @@ html[data-theme="light"] {
   --msg-bubble-mine-fg: #fbf7ff;
   /* 온라인=선명한 초록 / 오프라인=연한 회색(어두운 점과 구분) */
   --presence-online-color: #22c55e;
-  --presence-away-color: #ea580c;
+  --presence-away-color: #eab308;
   --presence-offline-color: #e2e8f0;
   --presence-ring-color: #f7f9fb;
   --presence-online-glow: rgba(34, 197, 94, 0.42);
-  --presence-away-glow: rgba(234, 88, 12, 0.32);
+  --presence-away-glow: rgba(234, 179, 8, 0.38);
   --presence-offline-glow: rgba(148, 163, 184, 0.2);
 
   /* design/ECH메인 + DESIGN.md (Atmospheric) — 라이트 전용 토큰 */
@@ -222,11 +222,11 @@ html[data-theme="cream"] {
   --msg-bubble-mine-bg: linear-gradient(135deg, #7c4dff 0%, #9d7bff 100%);
   --msg-bubble-mine-border: transparent;
   --presence-online-color: #16a34a;
-  --presence-away-color: #c2410c;
+  --presence-away-color: #ca8a04;
   --presence-offline-color: #d6cfc4;
   --presence-ring-color: #faf7f0;
   --presence-online-glow: rgba(22, 163, 74, 0.38);
-  --presence-away-glow: rgba(194, 65, 12, 0.28);
+  --presence-away-glow: rgba(202, 138, 4, 0.34);
   --presence-offline-glow: rgba(120, 113, 108, 0.18);
 }
 
@@ -6193,11 +6193,11 @@ html[data-theme="cream"] .presence-online {
 }
 html[data-theme="light"] .presence-away,
 html[data-theme="cream"] .presence-away {
-  border: 2px solid rgba(180, 83, 9, 0.45);
+  border: 2px solid rgba(161, 98, 7, 0.52);
   box-shadow:
-    0 0 0 1px rgba(154, 52, 18, 0.35),
+    0 0 0 1px rgba(133, 77, 14, 0.38),
     0 0 0 3px var(--bg-chat),
-    0 2px 5px rgba(234, 88, 12, 0.22);
+    0 2px 5px rgba(234, 179, 8, 0.28);
 }
 html[data-theme="light"] .presence-offline,
 html[data-theme="cream"] .presence-offline {
@@ -6226,7 +6226,7 @@ html[data-theme="cream"] .member-avatar-wrap .presence-online {
 html[data-theme="light"] .member-avatar-wrap .presence-away,
 html[data-theme="cream"] .member-avatar-wrap .presence-away {
   box-shadow:
-    0 0 0 1px rgba(180, 83, 9, 0.42),
+    0 0 0 1px rgba(161, 98, 7, 0.48),
     0 0 0 3px var(--bg-chat);
 }
 html[data-theme="light"] .member-avatar-wrap .presence-offline,
@@ -6249,7 +6249,7 @@ html[data-theme="cream"] .msg-avatar-wrap .presence-online {
 html[data-theme="light"] .msg-avatar-wrap .presence-away,
 html[data-theme="cream"] .msg-avatar-wrap .presence-away {
   box-shadow:
-    0 0 0 1px rgba(180, 83, 9, 0.42),
+    0 0 0 1px rgba(161, 98, 7, 0.48),
     0 0 0 3px var(--bg-chat);
 }
 html[data-theme="light"] .msg-avatar-wrap .presence-offline,
@@ -7975,7 +7975,7 @@ html[data-theme="cream"] .orgchart-member-avatar-wrap .presence-online {
 html[data-theme="light"] .orgchart-member-avatar-wrap .presence-away,
 html[data-theme="cream"] .orgchart-member-avatar-wrap .presence-away {
   box-shadow:
-    0 0 0 1px rgba(180, 83, 9, 0.42),
+    0 0 0 1px rgba(161, 98, 7, 0.48),
     0 0 0 3px var(--bg-elevated);
 }
 html[data-theme="light"] .orgchart-member-avatar-wrap .presence-offline,
