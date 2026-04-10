@@ -2148,16 +2148,13 @@ html:not([data-theme="light"]):not([data-theme="cream"]) .btn-header-icon:hover 
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
 }
+/* 채널 상세 패널: 글로벌 탑바 아래 `.ech-region--chat`만 차지하므로 top 오프셋 없음(구 인-채팅 헤더 76px 규칙 제거) */
 html:not([data-theme="light"]):not([data-theme="cream"]) .ech-region--chat .member-panel {
-  top: 76px;
   border-left-color: rgba(255, 255, 255, 0.08);
   background: rgba(22, 26, 34, 0.94);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   box-shadow: -12px 0 36px rgba(0, 0, 0, 0.45);
-}
-html:not([data-theme="light"]):not([data-theme="cream"]) .ech-region--chat:has(#chatHeaderMeta.hidden) .member-panel {
-  top: 64px;
 }
 html:not([data-theme="light"]):not([data-theme="cream"]) .member-panel-header {
   border-bottom-color: rgba(255, 255, 255, 0.08);
@@ -2166,11 +2163,11 @@ html:not([data-theme="light"]):not([data-theme="cream"]) .member-panel-header {
 /* 멤버 패널: 헤더 고정, 나머지(알림~멤버~하단 액션)는 한 덩어리로 세로 스크롤 */
 .member-panel {
   position: absolute;
-  top: var(--layout-header-height);
+  top: 0;
   right: 0;
   bottom: 0;
   width: 300px;
-  max-width: min(300px, 100vw);
+  max-width: min(300px, 100%);
   background: var(--bg-elevated);
   border-left: 1px solid var(--border-subtle);
   z-index: 100;
@@ -2186,13 +2183,6 @@ html[data-theme="light"] .member-panel {
   -webkit-backdrop-filter: blur(16px);
   box-shadow: -8px 0 28px rgba(44, 52, 55, 0.05);
 }
-/* ECH채팅 헤더가 2줄(제목+팀원)일 때 높이에 맞춤 */
-html[data-theme="light"] .ech-region--chat .member-panel {
-  top: 76px;
-}
-html[data-theme="light"] .ech-region--chat:has(#chatHeaderMeta.hidden) .member-panel {
-  top: 64px;
-}
 /* 크림 라이트: 멤버 패널(채널 상세) — 라이트와 동일 톤(다크 전용 규칙 오염 방지) */
 html[data-theme="cream"] .member-panel {
   border-left: 1px solid color-mix(in srgb, var(--outline-variant, #acb3b7) 22%, transparent);
@@ -2200,12 +2190,6 @@ html[data-theme="cream"] .member-panel {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   box-shadow: -8px 0 28px rgba(81, 67, 53, 0.1);
-}
-html[data-theme="cream"] .ech-region--chat .member-panel {
-  top: 76px;
-}
-html[data-theme="cream"] .ech-region--chat:has(#chatHeaderMeta.hidden) .member-panel {
-  top: 64px;
 }
 html[data-theme="cream"] .member-panel-header {
   border-bottom-color: color-mix(in srgb, var(--outline-variant, #acb3b7) 20%, transparent);
@@ -2217,6 +2201,15 @@ html[data-theme="cream"] .member-panel-member-heading {
 html[data-theme="cream"] .member-panel-actions-bottom {
   border-top-color: color-mix(in srgb, var(--outline-variant, #acb3b7) 18%, transparent);
 }
+
+/* 좁은 뷰포트: 우측 드로어가 채팅 열 전체 폭을 쓰도록(빈 여백·비정렬 완화) */
+@media (max-width: 640px) {
+  .ech-region--chat .member-panel {
+    width: 100%;
+    max-width: none;
+  }
+}
+
 .member-panel-scroll {
   flex: 1 1 auto;
   min-height: 0;
