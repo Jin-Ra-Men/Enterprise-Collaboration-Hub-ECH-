@@ -953,21 +953,26 @@ function emitMyPresenceStatus(status) {
   }
 }
 
-/** DM 줄 왼쪽·채팅 헤더: 상대 사번이 있으면 프레즌스 점(없으면 기본 ●) */
+/** DM 줄 왼쪽·글로벌 탑바: 접두만(프레즌스 점 없음). 사이드바·퀵레일은 `dmSidebarLeadingHtml` 기본 동작. */
 function updateChatHeaderDmPresence() {
   const prefixEl = document.getElementById("chatChannelPrefix");
   if (!prefixEl) return;
   if (String(activeChannelType || "").toUpperCase() !== "DM") return;
   prefixEl.className = "chat-channel-prefix chat-header-dm-prefix";
-  prefixEl.innerHTML = dmSidebarLeadingHtml(activeDmPeerEmployeeNos);
+  prefixEl.innerHTML = dmSidebarLeadingHtml(activeDmPeerEmployeeNos, { showPresence: false });
   refreshPresenceDots();
 }
 
-function dmSidebarLeadingHtml(peerEmployeeNos) {
+/**
+ * @param {string[]} peerEmployeeNos
+ * @param {{ showPresence?: boolean }} [options] — `showPresence: false` 이면 DM 표식만(탑바 등).
+ */
+function dmSidebarLeadingHtml(peerEmployeeNos, options) {
+  const showPresence = options?.showPresence !== false;
   const peers = Array.isArray(peerEmployeeNos)
     ? peerEmployeeNos.map((e) => String(e || "").trim()).filter(Boolean)
     : [];
-  if (peers.length === 0) {
+  if (!showPresence || peers.length === 0) {
     return `<span class="item-icon dm-type-icon" aria-hidden="true" title="다이렉트 메시지">●</span>`;
   }
   const maxDots = 3;

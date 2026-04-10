@@ -11,7 +11,7 @@
 ## 2026-04-10
 
 ### Changed
-- **프론트(글로벌 바·프레즌스)**: 라이트·크림 라이트 테마에서 프레즌스 점에 어두운 외곽선·배경 대비 링·약한 그림자를 두어 연한 배경에서도 식별하기 쉽게 함(사이드바 DM·멤버 패널·메시지 아바타·조직도 등). 글로벌 탑바 채널 컨텍스트는 **채널명(·접두)만** 표시 — **「팀원 N명」** 및 탑바 **프레즌스 초록 점** 메타 줄 제거. `frontend/styles.css` · `frontend/app.js` · `frontend/index.html`.
+- **프론트(글로벌 바·프레즌스)**: 라이트·크림 라이트 테마에서 프레즌스 점에 어두운 외곽선·배경 대비 링·약한 그림자를 두어 연한 배경에서도 식별하기 쉽게 함(사이드바 DM·멤버 패널·메시지 아바타·조직도 등). 글로벌 탑바 채널 컨텍스트는 **채널명(·접두)만** 표시 — **「팀원 N명」** 및 탑바 **프레즌스 초록 점** 메타 줄 제거. DM 채널도 탑바 접두에 **프레즌스 점 없이** DM 표식만(`dmSidebarLeadingHtml` 옵션). `frontend/styles.css` · `frontend/app.js` · `frontend/index.html`.
 
 ### Fixed
 - **백엔드(조직도 API)**: `GET /api/user-directory/organization` 트리에 **미사용(INACTIVE)** 사용자가 그대로 노출되던 문제를 수정. `UserSearchService.getOrganizationTree`에서 `User.status == ACTIVE` 인 경우만 회사/본부/팀 노드에 포함. 조직도 모달·구성원 추가 피커 동일 API 공유. `UserSearchService.java` · `UserDirectoryApiTest.java`.
