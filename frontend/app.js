@@ -3006,7 +3006,9 @@ function renderMyWorkItemsSidebar(channels) {
       try {
         await Promise.all([loadWorkHubChannelMembersForAssignee(), loadChannelWorkItems(), loadChannelKanbanBoard()]);
         ensureWorkHubWorkListDeleteBound();
+        workflowNeedsChannelPick = false;
         openWorkflowPage();
+        renderWorkflowChannelPicker();
         setTimeout(() => {
           applyWorkHubWorkListSelection();
           const rowEl = document.querySelector(`#channelWorkItemsList .channel-work-item[data-work-item-id="${wid}"]`);
@@ -9839,7 +9841,9 @@ async function handleSearchResultClick(item) {
       loadChannelKanbanBoard(),
     ]);
     ensureWorkHubWorkListDeleteBound();
+    workflowNeedsChannelPick = false;
     openWorkflowPage();
+    renderWorkflowChannelPicker();
     requestAnimationFrame(() => {
       const row = document.querySelector(`#channelWorkItemsList [data-work-item-id="${id}"]`);
       if (row) {
@@ -9869,7 +9873,9 @@ async function handleSearchResultClick(item) {
       loadChannelKanbanBoard(),
     ]);
     ensureWorkHubWorkListDeleteBound();
+    workflowNeedsChannelPick = false;
     openWorkflowPage();
+    renderWorkflowChannelPicker();
     requestAnimationFrame(() => {
       const cardEl = document.querySelector(`#channelKanbanBoard .kanban-card-item[data-kanban-card-id="${id}"]`);
       if (cardEl) {

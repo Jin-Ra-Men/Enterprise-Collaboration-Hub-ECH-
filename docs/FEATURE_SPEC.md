@@ -933,7 +933,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 - 좌측 사이드바:
   - **워크플로우** 고정 진입(`sidebar-section--hub-shortcuts`)과 별도로 **담당 업무 목록** 섹션(`myKanbanList`)을 둔다.
   - `GET /api/work-items/sidebar/by-assigned-cards?employeeNo=...&limit=...`로 **내가 칸반 카드 담당으로 지정된 업무 항목** 목록을 조회해 렌더(채널 연동 보드·`kanban_card_assignees` 기준)
-  - 목록 항목 클릭 시 채팅 채널 전환 없이 `workHubScopedChannelId`로 **워크플로우** 모달을 열고 해당 행·카드를 스크롤·강조
+  - 목록 항목 클릭 시 채팅 채널 전환 없이 `workHubScopedChannelId`로 **워크플로우** 모달을 열고 해당 행·카드를 스크롤·강조. 이때 사이드바 **워크플로우**로만 먼저 연 **채널 선택 UI**(`workflowNeedsChannelPick`)가 떠 있었다면 채널이 목록에서 확정되므로 플래그를 해제하고 `renderWorkflowChannelPicker()`로 업무·칸반 본문을 표시한다(상단 `연결:`만 바뀌고 본문이 숨겨진 채로 남는 버그 방지).
 
 ---
 
