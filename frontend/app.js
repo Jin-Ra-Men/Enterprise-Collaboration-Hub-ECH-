@@ -153,6 +153,12 @@ async function saveThemePreference(theme) {
 /** employeeNo(string) -> ONLINE | AWAY | OFFLINE */
 const presenceByEmployeeNo = new Map();
 
+/** 5분간 입력·포인터·스크롤 등 동작이 없으면 자동 자리비움; 자리비움 중 활동 시 자동 온라인 */
+const PRESENCE_IDLE_AWAY_MS = 5 * 60 * 1000;
+let presenceIdleAwayTimerId = null;
+let presenceUserActivityBound = false;
+let presenceActivityRafId = null;
+
 /* ── 전역 상태 ── */
 let socket         = null;
 let currentUser    = null;
@@ -783,6 +789,7 @@ async function fetchPresenceSnapshot() {
       const emp = String(p.employeeNo || "").trim();
       if (emp) presenceByEmployeeNo.set(emp, String(p.status || "OFFLINE").toUpperCase());
     });
+    syncPresenceIdleTimerWithMyStatus();
   } catch (e) {
     const name = e && e.name;
     const msg = e && e.message;
@@ -845,6 +852,76 @@ function toggleSidebarPresenceMenu() {
   btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
 }
 
+function clearPresenceIdleAwayTimer() {
+  if (presenceIdleAwayTimerId != null) {
+    clearTimeout(presenceIdleAwayTimerId);
+    presenceIdleAwayTimerId = null;
+  }
+}
+
+/** 온라인일 때만 5분 후 자동 자리비움 예약 */
+function schedulePresenceIdleAway() {
+  clearPresenceIdleAwayTimer();
+  if (!currentUser?.employeeNo) return;
+  const emp = String(currentUser.employeeNo).trim();
+  if (!emp) return;
+  presenceIdleAwayTimerId = setTimeout(() => {
+    presenceIdleAwayTimerId = null;
+    if (!currentUser?.employeeNo) return;
+    const me = String(currentUser.employeeNo).trim();
+    if (me !== emp) return;
+    const st = presenceByEmployeeNo.get(emp) || "OFFLINE";
+    if (st === "ONLINE") {
+      emitMyPresenceStatus("AWAY");
+    }
+  }, PRESENCE_IDLE_AWAY_MS);
+}
+
+/** 서버 스냅샷/업데이트로 본인 상태가 바뀐 뒤 무활동 타이머 정합 */
+function syncPresenceIdleTimerWithMyStatus() {
+  if (!currentUser?.employeeNo) return;
+  const emp = String(currentUser.employeeNo).trim();
+  if (!emp) return;
+  const st = presenceByEmployeeNo.get(emp) || "OFFLINE";
+  if (st === "ONLINE") {
+    schedulePresenceIdleAway();
+  } else {
+    clearPresenceIdleAwayTimer();
+  }
+}
+
+/**
+ * 사용자 입력·포인터·휠·스크롤·탭 복귀 등 감지 시: 자리비움이면 온라인으로, 온라인이면 무활동 타이머 리셋.
+ * `document.hidden`일 때는 창이 백그라운드인 경우로 보고 타이머만 두고(5분 후 자리비움) 여기서는 처리하지 않음.
+ */
+function onPresenceUserActivity() {
+  if (!currentUser?.employeeNo) return;
+  if (typeof document !== "undefined" && document.hidden) return;
+  if (presenceActivityRafId != null) return;
+  presenceActivityRafId = requestAnimationFrame(() => {
+    presenceActivityRafId = null;
+    const emp = String(currentUser.employeeNo).trim();
+    if (!emp) return;
+    const st = presenceByEmployeeNo.get(emp) || "OFFLINE";
+    if (st === "AWAY") {
+      emitMyPresenceStatus("ONLINE");
+    } else {
+      schedulePresenceIdleAway();
+    }
+  });
+}
+
+function initPresenceUserActivityListeners() {
+  if (presenceUserActivityBound) return;
+  presenceUserActivityBound = true;
+  const opts = { capture: true, passive: true };
+  const bump = () => onPresenceUserActivity();
+  ["pointerdown", "keydown", "wheel", "touchstart"].forEach((ev) => {
+    window.addEventListener(ev, bump, opts);
+  });
+  document.addEventListener("scroll", bump, { capture: true, passive: true });
+}
+
 /** 본인 프레즌스 전송(온라인 / 자리비움). 서버·타 사용자에 `presence:update` 반영 */
 function emitMyPresenceStatus(status) {
   const raw = String(status ?? "").trim().toUpperCase();
@@ -860,6 +937,11 @@ function emitMyPresenceStatus(status) {
   }
   presenceByEmployeeNo.set(emp, raw);
   refreshPresenceDots();
+  if (raw === "ONLINE") {
+    schedulePresenceIdleAway();
+  } else {
+    clearPresenceIdleAwayTimer();
+  }
 }
 
 /** DM 줄 왼쪽·채팅 헤더: 상대 사번이 있으면 프레즌스 점(없으면 기본 ●) */
@@ -2029,6 +2111,7 @@ function avatarInitials(name) {
  * 화면 전환
  * ========================================================================== */
 function showLogin() {
+  clearPresenceIdleAwayTimer();
   loginPage.classList.remove("hidden");
   mainApp.classList.add("hidden");
   applyTheme("light", { persistLocal: false });
@@ -2090,6 +2173,7 @@ function showMain(user) {
   initSocket();
   loadMyChannels();
   initEvents();
+  initPresenceUserActivityListeners();
   syncTopNavFromMainView();
 }
 
@@ -4990,6 +5074,7 @@ function initSocket() {
       if (emp) presenceByEmployeeNo.set(emp, String(p.status || "OFFLINE").toUpperCase());
     });
     refreshPresenceDots();
+    syncPresenceIdleTimerWithMyStatus();
   });
 
   socket.on("presence:update", (p) => {
@@ -4997,6 +5082,9 @@ function initSocket() {
     if (!emp) return;
     presenceByEmployeeNo.set(emp, String(p.status || "OFFLINE").toUpperCase());
     refreshPresenceDots();
+    if (currentUser?.employeeNo && emp === String(currentUser.employeeNo).trim()) {
+      syncPresenceIdleTimerWithMyStatus();
+    }
   });
 
   socket.on("disconnect", (reason) => {
@@ -9798,7 +9886,10 @@ function scheduleSidebarAndPresenceSync() {
 
 window.addEventListener("focus", scheduleSidebarAndPresenceSync);
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") scheduleSidebarAndPresenceSync();
+  if (document.visibilityState === "visible") {
+    onPresenceUserActivity();
+    scheduleSidebarAndPresenceSync();
+  }
 });
 
 /* ==========================================================================

@@ -756,6 +756,7 @@
 - 목적: 온라인/자리비움/오프라인 상태를 실시간 확인
 - 사용자: 모든 사용자(조회), Admin/Manager(관리 화면 활용)
 - 관련 화면/경로: 채팅 메시지·멤버 패널·**조직도 모달**(`modalOrgChart`, 우측 멤버 카드 아바타 우하단 `data-presence-user`)에서 프레즌스 점, 프론트는 `presence:set` 후 서버가 해당 소켓에만 `presence:snapshot`(전체 목록)을 내려 주고, 보조로 `GET /presence`·`presence:update`로 맞춤; 조직도 열 때 `fetchPresenceSnapshot()`로 HTTP 스냅샷을 한 번 보강하고 멤버 목록 렌더 후 `refreshPresenceDots()` 호출. 창 포커스·탭 복귀 시 재동기화(이미 **자리비움**이면 복귀 후에도 `AWAY` 유지). **좌측 하단** 본인 상태 줄 클릭 시 팝업에서 **온라인 / 자리비움(노란 점)** 선택 → `presence:set`
+- **자동 자리비움(클라이언트)**: 로그인 후 **온라인**이면 **5분**(`PRESENCE_IDLE_AWAY_MS`)간 창·탭이 보이는 상태에서 포인터/키보드/휠/스크롤 등 사용자 동작이 없으면 자동으로 `presence:set` **AWAY**. **자리비움** 중 동일한 동작이 감지되거나 숨겨진 탭이 다시 보이면(`visibilitychange` → `visible`) 자동 **ONLINE**으로 복귀하고 무활동 타이머를 다시 맞춘다. 백그라운드 탭(`document.hidden`)에서는 동작으로 타이머를 리셋하지 않으며, 서버 스냅샷·업데이트로 본인 상태가 바뀌면 `syncPresenceIdleTimerWithMyStatus()`로 타이머를 정합한다.
 - 관련 API:
   - `GET /presence` (현재 Presence 목록 조회)
 - 관련 Socket 이벤트:
@@ -775,6 +776,7 @@
   - 상태 변경 이벤트 수신
   - 잘못된 payload 오류 이벤트
   - `/presence` 목록 조회 일관성
+  - 5분 무입력(포인터·키·휠·스크롤 없음) 후 자동 AWAY, AWAY 상태에서 동작 시 자동 ONLINE
 - 비고:
   - 구현 파일:
     - `realtime/src/server.js`

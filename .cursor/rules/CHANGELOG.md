@@ -10,6 +10,7 @@
 - **프론트(채널 상세 패널 레이아웃)**: 글로벌 탑바만 있는 현재 구조에서 멤버 패널(햄버거·채널 상세)이 구 **인-채팅 헤더** 높이(`top: 76px`/`64px`)를 따라 상단에 빈 공간이 생기고 높이가 어긋나던 문제를 수정. `.ech-region--chat .member-panel`은 `top: 0`부터 `bottom: 0`까지 채우도록 통일하고, `#chatHeaderMeta` 기반 `:has()` 보정 규칙은 제거. `max-width`는 `100vw` 대신 채팅 열 기준 `100%`. `@media (max-width: 640px)`에서 패널 폭을 채팅 열 전체(`100%`)로 확장. `frontend/styles.css`.
 
 ### Changed
+- **프론트(프레즌스 자동 자리비움)**: 로그인 후 온라인이면 5분간 포인터·키보드·휠·스크롤 등 동작이 없을 때 자동 `AWAY`, 자리비움 중 동작·탭 복귀 시 자동 `ONLINE`. 서버 스냅샷/본인 `presence:update` 시 무활동 타이머 정합. 로그인 화면 전환 시 타이머 해제. `frontend/app.js` · `docs/FEATURE_SPEC.md` · `docs/HANDOVER.md`.
 - **프론트(조직도 프레즌스)**: 조직도 모달 우측 멤버 카드 아바타에 채팅·멤버 패널과 동일한 프레즌스 점(`data-presence-user`) 표시, 모달 열 때 `fetchPresenceSnapshot()`으로 스냅샷 보강·렌더 후 `refreshPresenceDots()`. `frontend/app.js` · `frontend/styles.css` · `docs/FEATURE_SPEC.md` · `docs/HANDOVER.md`.
 - **프론트(DM 멤버 패널)**: DM에서는 채널 생성자에 대한 `관리자` 배지와 멤버 `내보내기` 버튼을 표시하지 않음(우클릭 컨텍스트는 기존과 같이 DM에서 비활성). `frontend/app.js` · `docs/FEATURE_SPEC.md` · `docs/HANDOVER.md`.
 - **프론트(크림 라이트 채널 상세·테마 설정 모달)**: `html:not([data-theme="light"])` 다크 전용 규칙이 `cream`에도 적용되며 멤버 패널(채널 상세)·ECH 채팅 헤더가 어둡게 보이던 문제를 `:not([data-theme="cream"])`로 분리. 크림 전용 멤버 패널 표면/구분선을 라이트 톤으로 추가. `#modalThemePicker`에 크림 전용 모달·헤더·본문·닫기 버튼 오버라이드를 추가해 테마 옵션창이 다크 톤으로 비치지 않도록 보강. `frontend/styles.css`.
