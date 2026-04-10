@@ -2,6 +2,13 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 릴리즈 v1.2.4
+
+### Release
+- **버전**: 백엔드·데스크톱 **1.2.4**, Git 태그 **`v1.2.4`**. `backend/build/libs/ech-backend-1.2.4.jar`, `desktop/dist/` NSIS(`ECH-Setup-1.2.4.exe`)·`latest.yml`·`.blockmap`.
+- **GitHub 릴리즈(Windows 에셋)**: 환경변수 `GITHUB_TOKEN`(repo `contents`·`releases` 권한) 설정 후 `powershell -File ./tools/publish-electron-github-release.ps1 v1.2.4`. **백엔드 JAR**은 해당 스크립트에 포함되지 않음 — 릴리즈 페이지에 **수동 첨부**하거나 사내 배포 채널로 전달.
+- **변경 요약**: 크림 라이트 테마 정리 — `@` 멘션 자동완성·글로벌/통합 검색·조직도·구성원 피커·칸반 등에서 `cream`이 다크 보강을 따라가던 문제를 수정하고 톤 통일. 채팅 본인 말풍선 멘션·DM 표시 가독성, 워크플로 담당 업무 진입·수동 자리비움·조직도 미활성 사용자 API 등(상세는 아래 `2026-04-10` 및 이전 항목). `frontend/styles.css` · `frontend/app.js` · `backend` · 문서.
+
 ## 릴리즈 v1.2.3
 
 ### Release

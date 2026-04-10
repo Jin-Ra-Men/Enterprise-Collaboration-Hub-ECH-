@@ -9,7 +9,7 @@
 > **Java & Node.js 기반의 고성능 사내 협업 플랫폼**
 > 실시간 소통부터 관리자 관제까지, 사내 인프라를 최대로 활용한 통합 협업 솔루션입니다.
 
-> **배포 버전(데스크톱·백엔드 JAR):** **1.2.3** (Git 태그 `v1.2.3`). 변경 요약은 `../.cursor/rules/CHANGELOG.md` 참고.
+> **배포 버전(데스크톱·백엔드 JAR):** **1.2.4** (Git 태그 `v1.2.4`). 변경 요약은 `../.cursor/rules/CHANGELOG.md` 참고.
 
 ---
 
@@ -269,5 +269,6 @@ npm start
 - **Windows 시작 시 실행**: 설치본(NSIS)에서 트레이 아이콘 **우클릭** → **Windows 시작 시 실행** 체크. Electron `app.setLoginItemSettings`(Windows에서는 사용자 시작 프로그램에 등록). 개발 모드(`electron .`)에서는 항목이 비활성이다. `window.electronAPI.getOpenAtLogin` / `setOpenAtLogin`으로 동일 설정을 렌더러에서 읽고 바꿀 수 있음(선택 UI 연동용).
 - **설치 위치(Windows)**: NSIS **`perMachine`** 으로 **`%PROGRAMFILES%\ECH\`** 에 전역 설치(UAC). 선택 설정 `ech-server.json`은 `ECH.exe` 옆 또는 **`%ProgramData%\ECH\ech-server.json`** 에 둘 수 있음(자세한 절차: `./DEPLOYMENT_WINDOWS.md`).
 
-- Windows 설치 파일(NSIS): `desktop`에서 `npm run build:win` → `desktop/dist/ECH Setup {version}.exe`(버전은 `desktop/package.json`의 `version`). Electron은 `file://`로 UI를 열므로 API/소켓은 기본 **`http://localhost:8080`**, **`http://localhost:3001`** 로 붙습니다(백엔드·Realtime을 로컬에서 띄워야 로그인 가능). 다른 호스트를 쓰려면 `index.html`의 `<meta name="ech-api-base">` / `<meta name="ech-realtime-url">` 또는 `localStorage` `ech_realtime_url` 로 지정합니다.
+- Windows 설치 파일(NSIS): `desktop`에서 `npm run build:win` → `desktop/dist/ECH-Setup-{version}.exe`(버전은 `desktop/package.json`의 `version`)·`latest.yml`·`.blockmap`. Electron은 `file://`로 UI를 열므로 API/소켓은 기본 **`http://localhost:8080`**, **`http://localhost:3001`** 로 붙습니다(백엔드·Realtime을 로컬에서 띄워야 로그인 가능). 다른 호스트를 쓰려면 `index.html`의 `<meta name="ech-api-base">` / `<meta name="ech-realtime-url">` 또는 `localStorage` `ech_realtime_url` 로 지정합니다.
+- **빌드 실패(`app.asar` 사용 중)**: ECH·다른 Electron 인스턴스를 종료한 뒤 `desktop/dist`를 비우고 다시 시도. 계속되면 출력만 다른 폴더로 빌드한 뒤 설치 파일을 `dist`로 복사: `npx electron-builder --win nsis --publish never --config.directories.output=dist-build-temp` → 생성된 `ECH-Setup-*.exe` 등을 `dist/`로 옮김.
 - **자동 업데이트**: 패키지 실행 시 `electron-updater`가 GitHub Releases(`build.publish`의 owner/repo)를 조회합니다. 릴리즈 에셋에 **`latest.yml`**과 설치 파일(및 가능하면 **`*.exe.blockmap`**)을 함께 올려야 합니다. `tools/publish-electron-github-release.ps1`로 일괄 업로드할 수 있습니다(`GITHUB_TOKEN` 필요). 새 버전 다운로드가 끝나면 **메인 창 모달**에서 안내 후 **확인** 시 설치·재시작합니다. **내부망**에서는 GitHub 대신 사내 백엔드 `/desktop-updates/` 를 쓰는 방식이며, 설명·절차는 `./DEPLOYMENT_WINDOWS.md` **「데스크톱 앱 자동 업데이트(내부망)」** 를 본다. GitHub 릴리즈에 **Source code (zip/tar)** 가 함께 보이는 것은 **GitHub가 태그마다 자동으로 붙이는 항목**이며, 위 스크립트가 소스 zip을 따로 올리는 것이 아닙니다. 이미지 크게 보기: 서버에 미리보기가 있으면 먼저 압축 JPEG를 보여 주고 **원본 보기**로 전환할 수 있습니다(채팅 인라인·파일 허브·검색 공통).
