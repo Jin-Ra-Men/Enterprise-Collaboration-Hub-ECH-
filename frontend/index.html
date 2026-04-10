@@ -330,6 +330,10 @@
                       <span class="material-symbols-outlined" aria-hidden="true">badge</span>
                       <span>내 프로필 확인</span>
                     </button>
+                    <button type="button" class="ech-welcome-quick-action-btn" id="btnWelcomeQuickSelfDm">
+                      <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
+                      <span>나에게 쓰기</span>
+                    </button>
                   </div>
                 </div>
               </section>
@@ -966,6 +970,7 @@
         </div>
         <div class="modal-footer">
           <button class="btn-cancel" data-modal="modalCreateDm">취소</button>
+          <button type="button" class="btn-secondary" id="btnOpenSelfDmOnly">나에게 쓰기</button>
           <button class="btn-primary" id="btnConfirmCreateDm">대화 시작</button>
         </div>
       </div>
@@ -1297,7 +1302,7 @@
           <div class="modal-footer ech-profile-footer">
             <button type="button" class="btn-primary ech-profile-btn-dm" id="btnProfileDm">
               <span class="material-symbols-outlined ech-profile-btn-icon" aria-hidden="true">chat_bubble</span>
-              DM 보내기
+              <span id="btnProfileDmLabel">DM 보내기</span>
             </button>
             <button type="button" class="btn-cancel ech-profile-btn-close" data-modal="modalUserProfile">닫기</button>
           </div>

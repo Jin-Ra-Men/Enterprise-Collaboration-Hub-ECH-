@@ -159,6 +159,9 @@ let presenceIdleAwayTimerId = null;
 let presenceUserActivityBound = false;
 let presenceActivityRafId = null;
 
+/** 본인 전용 DM(나에게 쓰기) 표시명 — API name/description과 맞춤 */
+const SELF_DM_LABEL = "나에게 쓰기";
+
 /* ── 전역 상태 ── */
 let socket         = null;
 let currentUser    = null;
@@ -1033,10 +1036,14 @@ async function openUserProfile(employeeNo) {
       }
     }
     const dmBtn = document.getElementById("btnProfileDm");
+    const dmLabelEl = document.getElementById("btnProfileDmLabel");
     if (dmBtn) {
       const self = String(profileViewEmployeeNo) === String(currentUser.employeeNo || "").trim();
-      dmBtn.disabled = self;
-      dmBtn.title = self ? "자기 자신과는 DM을 시작할 수 없습니다." : "";
+      dmBtn.disabled = false;
+      if (dmLabelEl) {
+        dmLabelEl.textContent = self ? SELF_DM_LABEL : "DM 보내기";
+      }
+      dmBtn.title = self ? "본인 전용 메모 방으로 이동합니다." : "";
     }
     openModal("modalUserProfile");
   } catch (e) {
@@ -1052,13 +1059,46 @@ function openCurrentUserProfile() {
   void openUserProfile(emp);
 }
 
+/** 본인 전용 DM(메모·북마크) — 서버는 dmPeer에 본인 사번을 넣으면 단일 멤버 채널로 생성 */
+async function openOrCreateSelfDm() {
+  if (!currentUser) return;
+  const emp = String(currentUser.employeeNo || "").trim();
+  if (!emp) return;
+  try {
+    const res = await apiFetch("/api/channels", {
+      method: "POST",
+      body: JSON.stringify({
+        workspaceKey: WS_KEY,
+        name: SELF_DM_LABEL,
+        description: SELF_DM_LABEL,
+        channelType: "DM",
+        createdByEmployeeNo: currentUser.employeeNo,
+        dmPeerEmployeeNos: [emp],
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      await uiAlert("DM 생성 실패: " + (json.error?.message || ""));
+      return;
+    }
+    const channelId = json.data?.channelId;
+    closeModal("modalUserProfile");
+    closeModal("modalCreateDm");
+    await loadMyChannels();
+    selectChannel(channelId, SELF_DM_LABEL, "DM");
+  } catch (e) {
+    console.error(e);
+    await uiAlert("DM 생성 중 오류 발생");
+  }
+}
+
 /** 프로필·기타에서 동일 플로우로 DM 채널 생성 후 입장 */
 async function startDmWithUser(peerEmployeeNo, displayName) {
   if (!currentUser) return;
   const peer = String(peerEmployeeNo || "").trim();
   if (!peer) return;
   if (peer === String(currentUser.employeeNo || "").trim()) {
-    await uiAlert("자기 자신과는 DM을 할 수 없습니다.");
+    await openOrCreateSelfDm();
     return;
   }
   const dmName =
@@ -3163,6 +3203,19 @@ function syncChannelActionButtons() {
   document.getElementById("btnCloseChannel")?.classList.toggle("hidden", isDm || !isCreator);
 }
 
+/** API 멤버 배열에서 동일 사번 중복 행 제거(본인 DM 등) */
+function dedupeChannelMembersByEmp(members) {
+  const seen = new Set();
+  const out = [];
+  for (const m of members || []) {
+    const emp = String(m.employeeNo || "").trim();
+    if (!emp || seen.has(emp)) continue;
+    seen.add(emp);
+    out.push(m);
+  }
+  return out;
+}
+
 async function loadChannelMembers(channelId) {
   try {
     const res  = await apiFetch(`/api/channels/${channelId}`);
@@ -3175,7 +3228,7 @@ async function loadChannelMembers(channelId) {
     }
     const creatorEmp = String(json.data?.createdByEmployeeNo || "").trim();
     activeChannelCreatorEmployeeNo = creatorEmp || null;
-    const members = json.data?.members || [];
+    const members = dedupeChannelMembersByEmp(json.data?.members || []);
     activeChannelMemberCount = members.length;
     syncChannelActionButtons();
     activeChannelMemberOrgLineByEmployeeNo.clear();
@@ -6579,6 +6632,10 @@ document.getElementById("btnConfirmCreateDm").addEventListener("click", async ()
   }
 });
 
+document.getElementById("btnOpenSelfDmOnly")?.addEventListener("click", () => {
+  void openOrCreateSelfDm();
+});
+
 function threadHubPreviewFromTimelineItem(item) {
   const fp = tryParseFilePayload({
     text: item.text,
@@ -9788,6 +9845,9 @@ function initEvents() {
     document.getElementById("btnWelcomeQuickOrgChart")?.addEventListener("click", openWelcomeOrgChart);
     document.getElementById("btnWelcomeQuickTheme")?.addEventListener("click", openWelcomeThemePicker);
     document.getElementById("btnWelcomeQuickProfile")?.addEventListener("click", openWelcomeMyProfile);
+    document.getElementById("btnWelcomeQuickSelfDm")?.addEventListener("click", () => {
+      void openOrCreateSelfDm();
+    });
     document.getElementById("appHeaderSearchInput")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();

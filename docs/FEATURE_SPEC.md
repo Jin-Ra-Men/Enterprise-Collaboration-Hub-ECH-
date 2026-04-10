@@ -150,6 +150,7 @@
 - 관련 Socket 이벤트: 추후 `channel:join`과 연계 예정
 - 입력/출력:
   - 생성 입력: `workspaceKey`, `name`, `description`, `channelType`(`PUBLIC`|`PRIVATE`|`DM`), 선택 `createdByEmployeeNo`(구 클라이언트용·**실제 생성자는 Bearer JWT의 사원번호**), 선택 `dmPeerEmployeeNos`(DM일 때 상대 **사원번호** 목록 — 서버가 내부 고유 `name`(`__dm__…`)과 표시용 `description`을 구성하고, 동일 참가자 조합이면 기존 채널 반환 후 누락 멤버만 추가)
+  - **나에게 쓰기**: `dmPeerEmployeeNos`에 **본인 사번**을 포함하면 참가자 집합이 본인만 남는 DM(단일 멤버)이 되며, 표시명은 `나에게 쓰기`로 맞춘다. `GET /api/channels/{id}` 멤버 목록은 동일 사번 **중복 행을 제거**해 한 줄만 내려준다.
   - 참여 입력: `employeeNo`, `memberRole` (`JoinChannelRequest`)
   - 출력: 채널 기본 정보 + 멤버 목록(`members`: `employeeNo`, `name`, `department`, `jobLevel`, `jobPosition`, `jobTitle`, `memberRole`, `joinedAt` — `ChannelMemberResponse`)
 - 상태 전이/예외 케이스:

@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -135,6 +136,11 @@ public class ChannelService {
                             .collect(Collectors.joining(", "));
             if (displayLabel.isBlank()) {
                 displayLabel = "DM";
+            }
+            /* 단일 참가자(본인만) DM = 나에게 쓰기 — 라벨이 비어 있거나 기본 DM일 때 */
+            if (distinctSorted.size() == 1 && Objects.equals(distinctSorted.get(0), creatorEmpNo)
+                    && ("DM".equals(displayLabel) || displayLabel.isBlank())) {
+                displayLabel = "나에게 쓰기";
             }
             if (displayLabel.length() > 2000) {
                 displayLabel = displayLabel.substring(0, 2000);
@@ -714,13 +720,43 @@ public class ChannelService {
             }
         }
         if (labels.isEmpty()) {
+            if (members.size() == 1) {
+                return "나에게 쓰기";
+            }
             return "DM";
         }
         return String.join(", ", labels);
     }
 
+    /** 동일 사번이 중복 멤버 행으로 내려오는 경우(레거시/데이터 편차) API 응답은 한 명만 노출 */
+    private static List<ChannelMember> dedupeChannelMembersByEmployeeNo(List<ChannelMember> members) {
+        if (members == null || members.isEmpty()) {
+            return List.of();
+        }
+        if (members.size() == 1) {
+            return members;
+        }
+        Map<String, ChannelMember> byEmp = new LinkedHashMap<>();
+        for (ChannelMember cm : members) {
+            if (cm == null || cm.getUser() == null) {
+                continue;
+            }
+            String emp = cm.getUser().getEmployeeNo();
+            if (emp == null) {
+                continue;
+            }
+            emp = emp.trim();
+            if (emp.isEmpty()) {
+                continue;
+            }
+            byEmp.putIfAbsent(emp, cm);
+        }
+        return List.copyOf(byEmp.values());
+    }
+
     private ChannelResponse toResponse(Channel channel, List<ChannelMember> members) {
-        List<String> employeeNos = members.stream()
+        List<ChannelMember> uniqueMembers = dedupeChannelMembersByEmployeeNo(members);
+        List<String> employeeNos = uniqueMembers.stream()
                 .map(m -> m.getUser().getEmployeeNo())
                 .distinct()
                 .toList();
@@ -730,7 +766,7 @@ public class ChannelService {
         Map<String, String> positionByEmp = membershipDisplayByEmp("JOB_POSITION", employeeNos);
         Map<String, String> titleByEmp = membershipDisplayByEmp("JOB_TITLE", employeeNos);
 
-        List<ChannelMemberResponse> memberResponses = members.stream()
+        List<ChannelMemberResponse> memberResponses = uniqueMembers.stream()
                 .map(member -> {
                     String emp = member.getUser().getEmployeeNo();
                     return new ChannelMemberResponse(
