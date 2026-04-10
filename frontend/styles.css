@@ -2866,6 +2866,23 @@ html:not([data-theme="light"]) .msg-date-pill {
   gap: 8px;
   align-items: stretch;
 }
+/* 파일 카드 열: 이미지 번들과 동일 최대 폭·본인 우측 정렬 → 아래 시각 줄과 이미지와 동일하게 맞춤 */
+.msg-attachment-list-wrap > .msg-attachment-list-inner {
+  max-width: min(100%, 360px);
+  width: 100%;
+  box-sizing: border-box;
+}
+.msg-row.msg-mine .msg-attachment-list-wrap > .msg-attachment-list-inner {
+  margin-left: auto;
+}
+.msg-attachment-group-wrap .msg-attachment-group-cards {
+  max-width: min(100%, 360px);
+  width: 100%;
+  box-sizing: border-box;
+}
+.msg-row.msg-mine .msg-attachment-group-wrap .msg-attachment-group-cards {
+  margin-left: auto;
+}
 .msg-attachment-list-footer {
   margin-top: 6px;
   display: flex;
@@ -2873,10 +2890,15 @@ html:not([data-theme="light"]) .msg-date-pill {
   align-items: center;
   gap: 8px;
 }
-/* 첨부 메타(시각): 이미지·파일 아래 한 줄 — 왼쪽 정렬(첫 썸네일 기준과 맞춤) */
-.msg-attachment-meta-below.msg-attachment-list-footer {
+/* 첨부 메타(시각): 이미지·파일 아래 한 줄 — 본인 말풍선의 text-align 우회, .msg-time 인라인 여백 제거 */
+.msg-attachment-meta-below.msg-attachment-list-footer,
+.msg-attachment-group-footer.msg-attachment-meta-below {
   width: 100%;
   box-sizing: border-box;
+  text-align: left;
+}
+.msg-attachment-meta-below .msg-time {
+  margin-left: 0;
 }
 .msg-attach-card {
   background: var(--bg-elevated);

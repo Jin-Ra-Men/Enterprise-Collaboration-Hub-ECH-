@@ -5,6 +5,7 @@
 ## 2026-04-10
 
 ### Changed
+- **프론트(채팅 파일 첨부 시각 정렬)**: 비이미지 파일 카드 열을 이미지 번들과 동일 **최대 폭 360px**·본인 **우측 정렬**로 통일하고, `.msg-content-row .msg-time` 여백·`text-align` 상속을 `.msg-attachment-meta-below`에서 제거해 이미지와 같은 시각 푸터로 보이게 함. `frontend/styles.css` · `docs/FEATURE_SPEC.md` · `docs/HANDOVER.md`.
 - **프론트(채팅 첨부 시각·컴포저 미리보기)**: 첨부 메시지는 시각을 썸네일/카드 **아래**에 두고, 묶음이면 **일괄저장**과 같은 줄에서 시각 **왼쪽**·버튼 **오른쪽**(`msg-attachment-meta-below`, `space-between`). 전송 전 파일 미리보기 `#filePreview`·`#threadFilePreview`는 입력창 **오른쪽**이 아니라 **바로 위**에 오도록 마크업 순서·컴포저 세로 스택 조정. `frontend/app.js` · `frontend/index.html` · `frontend/styles.css` · `docs/FEATURE_SPEC.md` · `docs/HANDOVER.md`.
 - **프론트(조직도 모달)**: 헤더 **새로고침** 버튼 제거. 모달 오픈 시 로그인 사용자의 **최하위 소속**(팀 소속 사번 일치 → `department`와 팀명 일치 → 본부/회사 직속 순) 노드를 자동 선택·우측 구성원 표시·좌측 스크롤. `frontend/index.html` · `frontend/styles.css` · `frontend/app.js` · `docs/FEATURE_SPEC.md` · `docs/HANDOVER.md`.
 
