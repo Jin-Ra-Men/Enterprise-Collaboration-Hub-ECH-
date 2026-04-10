@@ -5,6 +5,7 @@
 ## 2026-04-12
 
 ### Fixed
+- **프론트(본인 아바타 → 프로필)**: 글로벌 바 `#appHeaderAvatar`·사이드바 하단 `#sidebarAvatar` 클릭 시 본인 프로필 모달이 열리도록 `openCurrentUserProfile` 연결. 마크업을 `button.user-avatar`로 정리하고 포커스 링·상단 아바타 커서 보정. `frontend/app.js` · `frontend/index.html` · `frontend/styles.css` · `docs/FEATURE_SPEC.md` · `docs/HANDOVER.md`.
 - **프론트(크림 라이트 사용자 프로필 모달)**: `html:not([data-theme="light"])` 다크 전용 규칙이 `cream`에도 적용되어 프로필 정보 카드(`.profile-dl--cards .profile-dd-card`)가 어두운 배경·저대비로 보이던 문제를 `:not([data-theme="cream"])`로 분리하고, 크림에서 라이트 계열 표면을 지정. `frontend/styles.css` · `docs/FEATURE_SPEC.md` · `docs/HANDOVER.md`.
 - **프론트(채널 상세 패널 레이아웃)**: 글로벌 탑바만 있는 현재 구조에서 멤버 패널(햄버거·채널 상세)이 구 **인-채팅 헤더** 높이(`top: 76px`/`64px`)를 따라 상단에 빈 공간이 생기고 높이가 어긋나던 문제를 수정. `.ech-region--chat .member-panel`은 `top: 0`부터 `bottom: 0`까지 채우도록 통일하고, `#chatHeaderMeta` 기반 `:has()` 보정 규칙은 제거. `max-width`는 `100vw` 대신 채팅 열 기준 `100%`. `@media (max-width: 640px)`에서 패널 폭을 채팅 열 전체(`100%`)로 확장. `frontend/styles.css`.
 

@@ -963,6 +963,13 @@ async function openUserProfile(employeeNo) {
   }
 }
 
+/** 상단바·사이드바 본인 아바타 → 프로필 모달(웰컴「내 프로필 확인」과 동일) */
+function openCurrentUserProfile() {
+  const emp = String(currentUser?.employeeNo || "").trim();
+  if (!emp) return;
+  void openUserProfile(emp);
+}
+
 /** 프로필·기타에서 동일 플로우로 DM 채널 생성 후 입장 */
 async function startDmWithUser(peerEmployeeNo, displayName) {
   if (!currentUser) return;
@@ -2190,6 +2197,13 @@ loginForm.addEventListener("submit", async (e) => {
 themeSettingsBtn?.addEventListener("click", () => {
   syncThemeOptions();
   openModal("modalThemePicker");
+});
+
+sidebarAvatar?.addEventListener("click", () => {
+  openCurrentUserProfile();
+});
+document.getElementById("appHeaderAvatar")?.addEventListener("click", () => {
+  openCurrentUserProfile();
 });
 
 function showLoginError(msg) {
@@ -9678,9 +9692,7 @@ function initEvents() {
       themeSettingsBtn?.click();
     };
     const openWelcomeMyProfile = () => {
-      const emp = String(currentUser?.employeeNo || "").trim();
-      if (!emp) return;
-      openUserProfile(emp);
+      openCurrentUserProfile();
     };
     document.getElementById("btnWelcomeQuickWorkflow")?.addEventListener("click", openWelcomeWorkflow);
     document.getElementById("btnWelcomeQuickCreateChannel")?.addEventListener("click", openWelcomeCreateChannel);

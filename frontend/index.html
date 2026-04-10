@@ -93,22 +93,21 @@
         </div>
         <nav class="app-shell-topbar-nav" aria-label="메인 메뉴">
           <button type="button" id="btnTopNavProjects" class="app-shell-nav-link">워크플로우</button>
-          <button type="button" id="btnTopNavTeam" class="app-shell-nav-link">팀</button>
+          <button type="button" id="btnTopNavTeam" class="app-shell-nav-link">조직도</button>
         </nav>
         <div class="app-shell-topbar-right">
           <button type="button" class="app-shell-icon-btn hidden" id="btnHeaderMenu" title="채널 메뉴" aria-label="채널 메뉴">
             <span class="material-symbols-outlined" aria-hidden="true">menu</span>
           </button>
-          <button type="button" class="app-shell-icon-btn" id="btnAppHeaderNotifications" title="알림" aria-label="알림">
-            <span class="material-symbols-outlined" aria-hidden="true">notifications</span>
+          <button
+            type="button"
+            class="user-avatar app-shell-header-avatar"
+            id="appHeaderAvatar"
+            title="내 프로필"
+            aria-label="내 프로필 열기"
+          >
+            ?
           </button>
-          <button type="button" class="app-shell-icon-btn" id="btnAppHeaderHelp" title="도움말" aria-label="도움말">
-            <span class="material-symbols-outlined" aria-hidden="true">help</span>
-          </button>
-          <button type="button" class="app-shell-icon-btn" id="btnAppHeaderTheme" title="테마 설정" aria-label="테마 설정">
-            <span class="material-symbols-outlined" aria-hidden="true">settings</span>
-          </button>
-          <div class="user-avatar app-shell-header-avatar" id="appHeaderAvatar">?</div>
         </div>
       </header>
 
@@ -123,18 +122,10 @@
           </nav>
           <div class="sidebar-main">
         <div class="sidebar-section sidebar-section--hub-shortcuts">
-          <div class="sidebar-section-header">
-            <span class="section-toggle section-toggle-static">
-              <span class="section-toggle-chevron" aria-hidden="true">▾</span>
-              <span class="section-toggle-label">워크플로우</span>
-            </span>
-          </div>
-          <ul class="sidebar-list">
-            <li class="sidebar-item sidebar-item--hub-shortcut" id="btnSidebarWorkflow" role="button" tabindex="0">
-              <span class="material-symbols-outlined sidebar-hub-icon" aria-hidden="true">account_tree</span>
-              <span class="item-label">워크플로우</span>
-            </li>
-          </ul>
+          <button type="button" class="sidebar-item sidebar-item--hub-shortcut" id="btnSidebarWorkflow">
+            <span class="material-symbols-outlined sidebar-hub-icon" aria-hidden="true">account_tree</span>
+            <span class="item-label">워크플로우</span>
+          </button>
         </div>
 
         <!-- 채널 섹션 -->
@@ -220,7 +211,7 @@
 
         <!-- 사용자 프로필 (프레즌스 메뉴는 행 기준으로 위로 뜨도록 이 블록에 둠 — user-info overflow 제한 회피) -->
         <div class="sidebar-user sidebar-user-presence-host">
-          <div class="user-avatar" id="sidebarAvatar">?</div>
+          <button type="button" class="user-avatar" id="sidebarAvatar" title="내 프로필" aria-label="내 프로필 열기">?</button>
           <div class="user-info">
             <span class="user-name" id="sidebarUserName">-</span>
             <button
@@ -267,21 +258,80 @@
       <!-- 오른쪽 채팅 영역 -->
       <main class="chat-area">
 
-        <!-- 채널 미선택 시: 대시보드형 히어로 대신 슬림 시작 화면(상단 ECH·좌측 메뉴와 역할 분리) -->
+        <!-- 채널 미선택 시: 즉시 실행 가능한 기능 중심 웰컴 화면 -->
         <div id="viewWelcome" class="view-welcome">
           <div class="welcome-dashboard-inner ech-welcome-scroll">
-            <div class="ech-welcome-wrap ech-home-wrap">
-              <section class="ech-home-card" aria-labelledby="welcomeHeroTitle">
-                <h1 id="welcomeHeroTitle" class="ech-home-title">시작하기</h1>
-                <p id="welcomeHeroLead" class="ech-home-lead">
-                  <strong>채널</strong> 또는 <strong>다이렉트 메시지</strong>를 선택하면 대화가 여기에 표시됩니다. 왼쪽 <strong>워크플로우</strong>에서 해당 대화방에 연결된 업무·칸반을 열 수 있어요.
-                </p>
-                <div class="ech-home-actions">
-                  <button type="button" id="btnWelcomeFocusChannel" class="ech-home-btn ech-home-btn--primary">채널 목록 보기</button>
-                  <button type="button" id="btnWelcomeFocusSearch" class="ech-home-btn ech-home-btn--ghost">검색</button>
-                  <button type="button" id="btnWelcomeOpenOrgChart" class="ech-home-btn ech-home-btn--ghost">조직도</button>
+            <div class="ech-welcome-wrap">
+              <section class="ech-welcome-hero" aria-labelledby="welcomeHeroTitle">
+                <div class="ech-welcome-hero-content">
+                  <div class="ech-welcome-hero-title-row">
+                    <span class="ech-welcome-emoji" aria-hidden="true">👋</span>
+                    <h1 id="welcomeHeroTitle" class="ech-welcome-hero-title">안녕하세요</h1>
+                  </div>
+                  <p id="welcomeHeroLead" class="ech-welcome-hero-lead">
+                    지금 바로 사용할 수 있는 기능을 모아 두었습니다.<br />
+                    필요한 작업을 선택해 바로 이동하세요.
+                  </p>
                 </div>
-                <p class="ech-home-footnote">미읽음은 사이드바 배지 · 퀵 레일에 채널을 고정해 두면 더 빠르게 이동할 수 있습니다.</p>
+                <span class="ech-welcome-blob ech-welcome-blob--a" aria-hidden="true"></span>
+                <span class="ech-welcome-blob ech-welcome-blob--b" aria-hidden="true"></span>
+              </section>
+
+              <section class="ech-welcome-block" aria-label="바로 실행 카드">
+                <div class="ech-welcome-cards">
+                  <button type="button" class="ech-welcome-card ech-welcome-card--threads" id="btnWelcomeQuickWorkflow">
+                    <span class="ech-welcome-card-icon-wrap ech-welcome-card-icon-wrap--primary">
+                      <span class="material-symbols-outlined" aria-hidden="true">account_tree</span>
+                    </span>
+                    <h3 class="ech-welcome-h3">워크플로우</h3>
+                    <p class="ech-welcome-card-desc">채널/DM을 선택해 업무·칸반을 바로 시작합니다.</p>
+                    <span class="ech-welcome-card-footer ech-welcome-card-footer--primary">
+                      <span class="ech-welcome-card-footer-text">열기</span>
+                      <span class="ech-welcome-chevron" aria-hidden="true">›</span>
+                    </span>
+                  </button>
+                  <button type="button" class="ech-welcome-card ech-welcome-card--kanban" id="btnWelcomeQuickCreateChannel">
+                    <span class="ech-welcome-card-icon-wrap ech-welcome-card-icon-wrap--tertiary">
+                      <span class="material-symbols-outlined" aria-hidden="true">tag</span>
+                    </span>
+                    <h3 class="ech-welcome-h3">채널 만들기</h3>
+                    <p class="ech-welcome-card-desc">새 프로젝트/팀 채널을 즉시 생성할 수 있습니다.</p>
+                    <span class="ech-welcome-card-footer ech-welcome-card-footer--tertiary">
+                      <span class="ech-welcome-card-footer-text">새 채널</span>
+                      <span class="ech-welcome-chevron" aria-hidden="true">›</span>
+                    </span>
+                  </button>
+                  <button type="button" class="ech-welcome-card ech-welcome-card--org" id="btnWelcomeQuickCreateDm">
+                    <span class="ech-welcome-card-icon-wrap ech-welcome-card-icon-wrap--slate">
+                      <span class="material-symbols-outlined" aria-hidden="true">chat</span>
+                    </span>
+                    <h3 class="ech-welcome-h3">DM 시작</h3>
+                    <p class="ech-welcome-card-desc">1:1 또는 그룹 DM 대화를 바로 열 수 있습니다.</p>
+                    <span class="ech-welcome-card-footer ech-welcome-card-footer--slate">
+                      <span class="ech-welcome-card-footer-text">DM 만들기</span>
+                      <span class="ech-welcome-chevron" aria-hidden="true">›</span>
+                    </span>
+                  </button>
+                </div>
+              </section>
+
+              <section class="ech-welcome-split" aria-label="추가 빠른 기능">
+                <div class="ech-welcome-split-col">
+                  <div class="ech-welcome-quick-actions">
+                    <button type="button" class="ech-welcome-quick-action-btn" id="btnWelcomeQuickOrgChart">
+                      <span class="material-symbols-outlined" aria-hidden="true">apartment</span>
+                      <span>조직도 열기</span>
+                    </button>
+                    <button type="button" class="ech-welcome-quick-action-btn" id="btnWelcomeQuickTheme">
+                      <span class="material-symbols-outlined" aria-hidden="true">palette</span>
+                      <span>테마 설정</span>
+                    </button>
+                    <button type="button" class="ech-welcome-quick-action-btn" id="btnWelcomeQuickProfile">
+                      <span class="material-symbols-outlined" aria-hidden="true">badge</span>
+                      <span>내 프로필 확인</span>
+                    </button>
+                  </div>
+                </div>
               </section>
             </div>
           </div>
@@ -1058,6 +1108,14 @@
               <span class="work-hub-panel-kicker">Workflow</span>
               <h4>워크플로우</h4>
             </div>
+            <div id="workflowChannelPicker" class="workflow-channel-picker hidden">
+              <p class="workflow-channel-picker-title">워크플로우를 열 채널/DM을 선택하세요</p>
+              <p class="workflow-channel-picker-hint">사이드바 워크플로우 진입 시 먼저 대상 대화방을 선택합니다.</p>
+              <div class="workflow-channel-picker-row">
+                <select id="workflowChannelSelect" aria-label="워크플로우 대상 채널 선택"></select>
+                <button type="button" class="btn-primary btn-sm" id="btnWorkflowOpenChannel">워크플로우 열기</button>
+              </div>
+            </div>
             <p class="ech-workflow-scope hidden" id="workHubChannelContext" aria-live="polite"></p>
             <div class="workflow-topbar">
               <div class="workflow-topbar-search">
@@ -1073,6 +1131,7 @@
                 <span>New Task</span>
               </button>
             </div>
+            <div id="workflowContent">
             <div class="workflow-section" id="workHubPanelWork">
               <div class="workflow-section-head">
                 <span class="workflow-section-kicker">Tasks</span>
@@ -1127,6 +1186,7 @@
                 </form>
                 <div id="channelKanbanBoard" class="channel-kanban-board"></div>
               </div>
+            </div>
             </div>
           </div>
         </div>
@@ -1304,8 +1364,8 @@
         </div>
         <div class="modal-body">
           <div class="theme-picker-options" role="group" aria-label="화면 테마 선택">
-            <button type="button" class="theme-option-btn" data-theme="dark">검정</button>
-            <button type="button" class="theme-option-btn" data-theme="light">하양</button>
+            <button type="button" class="theme-option-btn" data-theme="dark">다크</button>
+            <button type="button" class="theme-option-btn" data-theme="light">화이트</button>
             <button type="button" class="theme-option-btn" data-theme="ocean">오션 다크</button>
             <button type="button" class="theme-option-btn" data-theme="cream">크림 라이트</button>
           </div>

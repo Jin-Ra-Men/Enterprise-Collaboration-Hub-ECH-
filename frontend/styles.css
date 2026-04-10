@@ -638,7 +638,7 @@ html[data-theme="light"] .app-shell-nav-link--active {
   height: 32px;
   font-size: 12px;
   margin-left: 4px;
-  cursor: default;
+  cursor: pointer;
 }
 html[data-theme="light"] .app-shell-header-avatar.user-avatar {
   border-radius: 50%;
@@ -1294,6 +1294,19 @@ html[data-theme="light"] .sidebar-user {
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
   cursor: pointer;
+}
+button.user-avatar {
+  border: none;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  box-sizing: border-box;
+  appearance: none;
+  -webkit-appearance: none;
+}
+button.user-avatar:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
 }
 .user-info { flex: 1; overflow: hidden; min-width: 0; }
 .user-name { display: block; font-size: 14px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
