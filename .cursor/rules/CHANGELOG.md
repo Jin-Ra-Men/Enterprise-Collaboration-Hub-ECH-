@@ -2,6 +2,12 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 릴리즈 v1.2.0
+
+### Release
+- **버전**: 백엔드·데스크톱 **1.2.0**, Git 태그 **`v1.2.0`**. `backend/build/libs/ech-backend-1.2.0.jar`, `desktop/dist/` NSIS(`ECH-Setup-1.2.0.exe`)·`latest.yml`·`.blockmap`.
+- **GitHub 릴리즈(Windows 에셋)**: 환경변수 `GITHUB_TOKEN`(repo `contents`·`releases` 권한) 설정 후 `powershell -File ./tools/publish-electron-github-release.ps1 v1.2.0`. **백엔드 JAR**은 해당 스크립트에 포함되지 않음 — 릴리즈 페이지에 **수동 첨부**하거나 사내 배포 채널로 전달.
+
 ## 2026-04-10
 
 ### Added
