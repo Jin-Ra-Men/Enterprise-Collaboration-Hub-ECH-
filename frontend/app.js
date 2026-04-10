@@ -10920,10 +10920,123 @@ function updatePendingChildPaths(parentCode, parentDisplayPath) {
  * ========================================================================== */
 let orgChartData = null;
 
-document.getElementById("btnOrgChartRefresh").addEventListener("click", () => {
-  orgChartData = null;
-  loadOrgChart();
-});
+/** @returns {{ nodeLabel: string, nodeMembers: Array } | null} */
+function getOrgChartNodeMembers(nodeType, coName, divName, teamName) {
+  if (!orgChartData) return null;
+  let nodeLabel = "";
+  let nodeMembers = null;
+
+  if (nodeType === "team") {
+    for (const co of (orgChartData.companies ?? [])) {
+      if (co.name !== coName) continue;
+      for (const div of (co.divisions ?? [])) {
+        if (div.name !== divName) continue;
+        const team = (div.teams ?? []).find(t => t.name === teamName);
+        if (team) { nodeLabel = team.name; nodeMembers = team.users ?? []; }
+        break;
+      }
+      if (nodeMembers) break;
+    }
+  } else if (nodeType === "division") {
+    for (const co of (orgChartData.companies ?? [])) {
+      if (co.name !== coName) continue;
+      const div = (co.divisions ?? []).find(d => d.name === divName);
+      if (div) {
+        nodeLabel   = div.name;
+        nodeMembers = div.directMembers ?? [];
+      }
+      break;
+    }
+  } else if (nodeType === "company") {
+    const co = (orgChartData.companies ?? []).find(c => c.name === coName);
+    if (co) { nodeLabel = co.name; nodeMembers = co.directMembers ?? []; }
+  }
+
+  if (nodeMembers === null) return null;
+  return { nodeLabel, nodeMembers };
+}
+
+function applyOrgChartNodeSelection(btn) {
+  if (!btn || !orgChartData) return;
+  const nodeType = btn.dataset.nodeType;
+  const coName   = btn.dataset.co;
+  const divName  = btn.dataset.div;
+  const teamName = btn.dataset.team;
+  const sel = getOrgChartNodeMembers(nodeType, coName, divName, teamName);
+  if (!sel) return;
+
+  document.querySelectorAll(".orgchart-node-btn.is-selected")
+    .forEach(el => el.classList.remove("is-selected"));
+  btn.classList.add("is-selected");
+
+  renderOrgChartMembers({ name: sel.nodeLabel, users: sel.nodeMembers });
+}
+
+/**
+ * 현재 사용자 소속 최하위 조직(팀 우선, 없으면 본부/회사 직속)에 맞는 트리 버튼을 찾는다.
+ * 조직 피커(loadOrgPicker)와 동일한 우선순위: 팀 소속(사번) → department === 팀명 → 본부 직속 → 회사 직속.
+ */
+function findDefaultOrgChartNodeButton(scrollEl, data) {
+  if (!scrollEl || !data || !currentUser) return null;
+  const myEmp = String(currentUser.employeeNo || "").trim();
+  const companies = data.companies ?? [];
+
+  const memberHasEmp = (users) =>
+    (users || []).some((u) => String(u.employeeNo || "").trim() === myEmp && myEmp !== "");
+
+  for (const co of companies) {
+    for (const div of (co.divisions ?? [])) {
+      for (const team of (div.teams ?? [])) {
+        if (memberHasEmp(team.users)) {
+          for (const btn of scrollEl.querySelectorAll(".orgchart-team-btn.orgchart-node-btn")) {
+            if (btn.dataset.co === co.name && btn.dataset.div === div.name && btn.dataset.team === team.name) {
+              return btn;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (currentUser.department) {
+    const myDept = String(currentUser.department);
+    for (const co of companies) {
+      for (const div of (co.divisions ?? [])) {
+        for (const team of (div.teams ?? [])) {
+          if (String(team.name || "") === myDept) {
+            for (const btn of scrollEl.querySelectorAll(".orgchart-team-btn.orgchart-node-btn")) {
+              if (btn.dataset.co === co.name && btn.dataset.div === div.name && btn.dataset.team === team.name) {
+                return btn;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  for (const co of companies) {
+    for (const div of (co.divisions ?? [])) {
+      if (memberHasEmp(div.directMembers)) {
+        for (const btn of scrollEl.querySelectorAll(".orgchart-div-name-btn.orgchart-node-btn")) {
+          if (btn.dataset.co === co.name && btn.dataset.div === div.name) {
+            return btn;
+          }
+        }
+      }
+    }
+  }
+
+  for (const co of companies) {
+    if (memberHasEmp(co.directMembers)) {
+      for (const btn of scrollEl.querySelectorAll(".orgchart-company-label.orgchart-node-btn")) {
+        if (btn.dataset.co === co.name) return btn;
+      }
+    }
+  }
+
+  return null;
+}
 
 async function loadOrgChart() {
   const scroll = document.getElementById("orgChartTreeScroll");
@@ -11006,6 +11119,12 @@ function renderOrgChartTree(data) {
     parts.push(`</div>`);
   }
   scroll.innerHTML = parts.join("");
+
+  const defaultBtn = findDefaultOrgChartNodeButton(scroll, data);
+  if (defaultBtn) {
+    applyOrgChartNodeSelection(defaultBtn);
+    defaultBtn.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
 }
 
 function renderOrgChartMembers(team) {
@@ -11072,45 +11191,5 @@ document.getElementById("orgChartTreeScroll").addEventListener("click", (e) => {
   const btn = e.target.closest(".orgchart-node-btn");
   if (!btn) return;
 
-  const nodeType = btn.dataset.nodeType;
-  const coName   = btn.dataset.co;
-  const divName  = btn.dataset.div;
-  const teamName = btn.dataset.team;
-
-  let nodeLabel   = "";
-  let nodeMembers = null;
-
-  if (nodeType === "team") {
-    for (const co of (orgChartData.companies ?? [])) {
-      if (co.name !== coName) continue;
-      for (const div of (co.divisions ?? [])) {
-        if (div.name !== divName) continue;
-        const team = (div.teams ?? []).find(t => t.name === teamName);
-        if (team) { nodeLabel = team.name; nodeMembers = team.users ?? []; }
-        break;
-      }
-      if (nodeMembers) break;
-    }
-  } else if (nodeType === "division") {
-    for (const co of (orgChartData.companies ?? [])) {
-      if (co.name !== coName) continue;
-      const div = (co.divisions ?? []).find(d => d.name === divName);
-      if (div) {
-        nodeLabel   = div.name;
-        nodeMembers = div.directMembers ?? [];
-      }
-      break;
-    }
-  } else if (nodeType === "company") {
-    const co = (orgChartData.companies ?? []).find(c => c.name === coName);
-    if (co) { nodeLabel = co.name; nodeMembers = co.directMembers ?? []; }
-  }
-
-  if (nodeMembers === null) return;
-
-  document.querySelectorAll(".orgchart-node-btn.is-selected")
-    .forEach(el => el.classList.remove("is-selected"));
-  btn.classList.add("is-selected");
-
-  renderOrgChartMembers({ name: nodeLabel, users: nodeMembers });
+  applyOrgChartNodeSelection(btn);
 });

@@ -2,6 +2,11 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-04-10
+
+### Changed
+- **프론트(조직도 모달)**: 헤더 **새로고침** 버튼 제거. 모달 오픈 시 로그인 사용자의 **최하위 소속**(팀 소속 사번 일치 → `department`와 팀명 일치 → 본부/회사 직속 순) 노드를 자동 선택·우측 구성원 표시·좌측 스크롤. `frontend/index.html` · `frontend/styles.css` · `frontend/app.js` · `docs/FEATURE_SPEC.md` · `docs/HANDOVER.md`.
+
 ## 2026-04-12
 
 ### Fixed

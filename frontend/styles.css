@@ -7622,7 +7622,6 @@ html:not([data-theme="light"]) .org-tab--rail.active {
   flex-shrink: 0;
 }
 .orgchart-modal-header h3 { margin: 0; flex: 1; font-size: 16px; font-weight: 700; }
-.orgchart-refresh-btn { margin-right: 4px; }
 
 .orgchart-body {
   display: flex;
