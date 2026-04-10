@@ -5,7 +5,11 @@
 ## 2026-04-10
 
 ### Added
+- **프론트(대용량 파일 다운로드 진행 표시)**: `Content-Length`가 약 512KB 이상이면 fetch 본문을 스트림으로 읽으며 하단 **`#fileDownloadStatusBar`**에 `다운로드 중… N%`(또는 길이 미상 시 문구만) 표시. 채널 파일 저장/열기·새 탭 열기·ZIP 일괄 저장·브라우저 JPEG 재압축 경로에 적용. `frontend/app.js` · `frontend/index.html` · `frontend/styles.css` · `docs/FEATURE_SPEC.md` · `docs/HANDOVER.md`.
 - **프론트(대기 첨부 미리보기)**: 다중 파일·이미지 선택 시 항목별 **제거(✕)** 및 **전체 취소**, 추가 선택·드롭·붙여넣기 시 기존 대기 **누적(append)**. 메인·스레드 동일. `frontend/app.js` · `frontend/index.html` · `frontend/styles.css` · `docs/FEATURE_SPEC.md` · `docs/HANDOVER.md`.
+
+### Fixed
+- **프론트(파일 전송 취소)**: 전송 중 **전체 취소** 등으로 대기를 비울 때 진행 중이던 `XMLHttpRequest` 업로드를 **`abort()`**하고, 이미지 압축 대기 중 취소는 **`fileUploadSessionId`**로 감지해 이후 업로드 단계를 건너뜀. 순차 전송 루프는 스냅샷 기준으로 취소 시 중단. `frontend/app.js` · `docs/FEATURE_SPEC.md` · `docs/HANDOVER.md`.
 
 ### Changed
 - **프론트(채팅 파일 첨부 시각 정렬)**: 비이미지 파일 카드 열을 이미지 번들과 동일 **최대 폭 360px**·본인 **우측 정렬**로 통일하고, `.msg-content-row .msg-time` 여백·`text-align` 상속을 `.msg-attachment-meta-below`에서 제거해 이미지와 같은 시각 푸터로 보이게 함. `frontend/styles.css` · `docs/FEATURE_SPEC.md` · `docs/HANDOVER.md`.

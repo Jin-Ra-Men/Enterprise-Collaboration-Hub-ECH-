@@ -190,6 +190,10 @@ let lastChannelWorkItemsForHub = [];
 /** 메인 입력창 대기 첨부(다중 이미지·파일) */
 let pendingFilesQueue = [];
 let composerPendingSequence = 0;
+/** 전체 취소 시 이미지 압축 단계까지 중단하기 위한 세션 */
+let fileUploadSessionId = 0;
+/** 진행 중인 파일 업로드 XHR(취소 시 abort) */
+let activeFileUploadXhr = null;
 // 스레드(댓글) 모달 상태
 let threadPendingFilesQueue = [];
 let threadPendingSequence = 0;
@@ -1319,7 +1323,18 @@ async function downloadChannelFile(fileId, filename, channelId, variant = "origi
       );
       return;
     }
-    const blob = await res.blob();
+    const total = parseInt(res.headers.get("Content-Length") || "0", 10) || 0;
+    const showProgress = total >= LARGE_FILE_DOWNLOAD_INDICATOR_BYTES;
+    let blob;
+    if (showProgress) {
+      showFileDownloadStatus(total ? "다운로드 중… 0%" : "다운로드 중…");
+      blob = await responseToBlobWithProgress(res, (ratio) => {
+        if (ratio == null) showFileDownloadStatus("다운로드 중…");
+        else showFileDownloadStatus(`다운로드 중… ${Math.round(ratio * 100)}%`);
+      });
+    } else {
+      blob = await res.blob();
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -1333,6 +1348,8 @@ async function downloadChannelFile(fileId, filename, channelId, variant = "origi
   } catch (e) {
     console.error(e);
     await uiAlert("다운로드 중 오류가 발생했습니다.");
+  } finally {
+    hideFileDownloadStatus();
   }
 }
 
@@ -1373,13 +1390,29 @@ async function batchDownloadChannelImageFiles(channelId, metas) {
   try {
     const zip = new JSZipCtor();
     const used = new Set();
+    let zipIdx = 0;
+    const zipTotal = metas.filter((m) => Number.isFinite(Number(m?.id ?? m?.fileId))).length;
     for (const m of metas) {
       const fid = Number(m?.id ?? m?.fileId);
       if (!Number.isFinite(fid)) continue;
-      const blob = await fetchChannelFileBlob(ch, fid, "original");
+      zipIdx += 1;
+      const blob = await fetchChannelFileBlob(ch, fid, "original", (ratio) => {
+        if (ratio == null) {
+          showFileDownloadStatus(
+            zipTotal > 1 ? `일괄 저장: 파일 ${zipIdx}/${zipTotal} 다운로드 중…` : "다운로드 중…"
+          );
+        } else {
+          showFileDownloadStatus(
+            zipTotal > 1
+              ? `일괄 저장: 파일 ${zipIdx}/${zipTotal} ${Math.round(ratio * 100)}%`
+              : `다운로드 중… ${Math.round(ratio * 100)}%`
+          );
+        }
+      });
       const entryName = uniqueZipEntryName(used, m?.originalFilename || "file");
       zip.file(entryName, blob);
     }
+    showFileDownloadStatus("ZIP 압축 중…");
     const outBlob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
     const url = URL.createObjectURL(outBlob);
     const a = document.createElement("a");
@@ -1396,10 +1429,12 @@ async function batchDownloadChannelImageFiles(channelId, metas) {
   } catch (e) {
     console.error(e);
     await uiAlert("ZIP 압축 중 오류가 발생했습니다.");
+  } finally {
+    hideFileDownloadStatus();
   }
 }
 
-async function fetchChannelFileBlob(channelId, fileId, variant = "original") {
+async function fetchChannelFileBlob(channelId, fileId, variant = "original", onProgress) {
   const ch = channelId != null ? channelId : activeChannelId;
   if (!ch || !currentUser) throw new Error("no channel");
   const v = variant === "preview" ? "preview" : "original";
@@ -1411,12 +1446,21 @@ async function fetchChannelFileBlob(channelId, fileId, variant = "original") {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error?.message || "download failed");
   }
+  const total = parseInt(res.headers.get("Content-Length") || "0", 10) || 0;
+  const track =
+    typeof onProgress === "function" && total >= LARGE_FILE_DOWNLOAD_INDICATOR_BYTES;
+  if (track) {
+    return responseToBlobWithProgress(res, onProgress);
+  }
   return res.blob();
 }
 
 async function openChannelFileBlobInNewTab(channelId, fileId, filename, variant = "original") {
   try {
-    const blob = await fetchChannelFileBlob(channelId, fileId, variant);
+    const blob = await fetchChannelFileBlob(channelId, fileId, variant, (ratio) => {
+      if (ratio == null) showFileDownloadStatus("열기 위해 받는 중…");
+      else showFileDownloadStatus(`열기 위해 받는 중… ${Math.round(ratio * 100)}%`);
+    });
     const url = URL.createObjectURL(blob);
     const w = window.open(url, "_blank", "noopener,noreferrer");
     if (!w) await uiAlert("팝업이 차단되었습니다. 브라우저에서 팝업을 허용해 주세요.");
@@ -1430,13 +1474,18 @@ async function openChannelFileBlobInNewTab(channelId, fileId, filename, variant 
   } catch (e) {
     console.error(e);
     await uiAlert("파일을 열 수 없습니다.");
+  } finally {
+    hideFileDownloadStatus();
   }
 }
 
 async function saveChannelFileAndOpenInNewTab(channelId, fileId, filename, variant = "original") {
   const fn = filename || "download";
   try {
-    const blob = await fetchChannelFileBlob(channelId, fileId, variant);
+    const blob = await fetchChannelFileBlob(channelId, fileId, variant, (ratio) => {
+      if (ratio == null) showFileDownloadStatus("다운로드 중…");
+      else showFileDownloadStatus(`다운로드 중… ${Math.round(ratio * 100)}%`);
+    });
     const electronApi = typeof window !== "undefined" ? window.electronAPI : null;
     if (electronApi && typeof electronApi.saveFileAndOpenWithDefaultApp === "function") {
       const buf = await blob.arrayBuffer();
@@ -1474,6 +1523,8 @@ async function saveChannelFileAndOpenInNewTab(channelId, fileId, filename, varia
   } catch (e) {
     console.error(e);
     await uiAlert("파일을 저장/열기에 실패했습니다.");
+  } finally {
+    hideFileDownloadStatus();
   }
 }
 
@@ -1515,6 +1566,54 @@ function isImageContentType(contentType, filename) {
 
 /** 약 512KB 이상 이미지 다운로드 시 원본/압축 선택 */
 const LARGE_IMAGE_DOWNLOAD_BYTES = 512 * 1024;
+/** 이 크기 이상이면 다운로드 진행률(스트림) 및 하단 상태 표시 */
+const LARGE_FILE_DOWNLOAD_INDICATOR_BYTES = 512 * 1024;
+
+function showFileDownloadStatus(text) {
+  const el = document.getElementById("fileDownloadStatusBar");
+  if (!el) return;
+  el.textContent = text || "";
+  el.classList.remove("hidden");
+}
+
+function hideFileDownloadStatus() {
+  const el = document.getElementById("fileDownloadStatusBar");
+  if (!el) return;
+  el.textContent = "";
+  el.classList.add("hidden");
+}
+
+/**
+ * Fetch Response 본문을 스트림으로 읽으며 진행률 콜백(대용량 다운로드용).
+ * 호출 후 `res.blob()`을 따로 호출하면 안 됩니다.
+ * @param {Response} res
+ * @param {(ratio: number | null) => void} [onProgress] — 알려진 총량이 있으면 0~1, 없으면 null
+ */
+async function responseToBlobWithProgress(res, onProgress) {
+  const body = res.body;
+  if (!body || typeof body.getReader !== "function") {
+    return res.blob();
+  }
+  const lenHeader = res.headers.get("Content-Length");
+  const total = lenHeader ? parseInt(lenHeader, 10) : 0;
+  const reader = body.getReader();
+  const chunks = [];
+  let loaded = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value && value.byteLength) {
+      chunks.push(value);
+      loaded += value.byteLength;
+      if (typeof onProgress === "function") {
+        if (total > 0) onProgress(loaded / total);
+        else onProgress(null);
+      }
+    }
+  }
+  const ct = res.headers.get("Content-Type") || "";
+  return new Blob(chunks, { type: ct });
+}
 const DOWNLOAD_COMPRESS_MAX_EDGE = 4096;
 const DOWNLOAD_COMPRESS_JPEG_QUALITY = 0.85;
 
@@ -1624,7 +1723,19 @@ async function downloadChannelFileCompressedAsJpeg(fileId, filename, channelId) 
       await uiAlert(msg || "다운로드에 실패했습니다.");
       return;
     }
-    const blob = await res.blob();
+    const total = parseInt(res.headers.get("Content-Length") || "0", 10) || 0;
+    const showDl = total >= LARGE_FILE_DOWNLOAD_INDICATOR_BYTES;
+    let blob;
+    if (showDl) {
+      showFileDownloadStatus(total ? "원본 받는 중… 0%" : "원본 받는 중…");
+      blob = await responseToBlobWithProgress(res, (ratio) => {
+        if (ratio == null) showFileDownloadStatus("원본 받는 중…");
+        else showFileDownloadStatus(`원본 받는 중… ${Math.round(ratio * 100)}%`);
+      });
+    } else {
+      blob = await res.blob();
+    }
+    showFileDownloadStatus("압축본 만드는 중…");
     let bmp;
     try {
       bmp = await createImageBitmap(blob);
@@ -1667,6 +1778,8 @@ async function downloadChannelFileCompressedAsJpeg(fileId, filename, channelId) 
   } catch (e) {
     console.error(e);
     await uiAlert("압축본 저장 중 오류가 발생했습니다.");
+  } finally {
+    hideFileDownloadStatus();
   }
 }
 
@@ -4486,6 +4599,8 @@ function removeThreadPendingAt(index) {
 }
 
 function clearThreadFilePreview() {
+  fileUploadSessionId += 1;
+  abortActiveFileUpload();
   threadPendingSequence++;
   revokeAllThreadPendingPreviewUrls();
   threadPendingFilesQueue = [];
@@ -4684,11 +4799,12 @@ async function sendThreadComment() {
   try {
     // 댓글 파일이 있으면 먼저 업로드(텍스트가 있으면 모달은 즉시 리로드하지 않음)
     if (threadPendingFilesQueue.length > 0) {
-      const n = threadPendingFilesQueue.length;
+      const filesToUpload = threadPendingFilesQueue.slice();
+      const n = filesToUpload.length;
       for (let i = 0; i < n; i++) {
         const isLast = i === n - 1;
         const reloadMode = text ? "none" : isLast ? "thread" : "none";
-        await uploadFile(threadPendingFilesQueue[i], {
+        const up = await uploadFile(filesToUpload[i], {
           parentMessageId: rootId,
           threadKind: "COMMENT",
           reloadMode,
@@ -4697,6 +4813,7 @@ async function sendThreadComment() {
           batchTotal: n,
           skipNewMsgsDividerAfterReload: true,
         });
+        if (up && up.canceled) return;
       }
       clearThreadFilePreview();
       if (!text) {
@@ -5950,10 +6067,11 @@ async function sendMessage() {
     const parentMessageId = replyComposerTargetMessageId;
 
     if (pendingFilesQueue.length > 0) {
-      const n = pendingFilesQueue.length;
+      const filesToUpload = pendingFilesQueue.slice();
+      const n = filesToUpload.length;
       for (let i = 0; i < n; i++) {
         const isLast = i === n - 1;
-        await uploadFile(pendingFilesQueue[i], {
+        const up = await uploadFile(filesToUpload[i], {
           parentMessageId,
           threadKind: "REPLY",
           reloadMode: isLast ? "timeline" : "none",
@@ -5961,6 +6079,7 @@ async function sendMessage() {
           batchTotal: n,
           skipNewMsgsDividerAfterReload: true,
         });
+        if (up && up.canceled) return;
       }
       clearFilePreview();
       if (!preparedText) {
@@ -6001,15 +6120,17 @@ async function sendMessage() {
 
   // 파일이 있으면 파일 먼저 업로드(다중 시 순차, 마지막만 타임라인 갱신)
   if (pendingFilesQueue.length > 0) {
-    const n = pendingFilesQueue.length;
+    const filesToUpload = pendingFilesQueue.slice();
+    const n = filesToUpload.length;
     for (let i = 0; i < n; i++) {
       const isLast = i === n - 1;
-      await uploadFile(pendingFilesQueue[i], {
+      const up = await uploadFile(filesToUpload[i], {
         reloadMode: isLast ? "timeline" : "none",
         batchIndex: i + 1,
         batchTotal: n,
         skipNewMsgsDividerAfterReload: true,
       });
+      if (up && up.canceled) return;
     }
     clearFilePreview();
     if (!preparedText) {
@@ -6182,12 +6303,21 @@ async function maybeCompressImageForUpload(file) {
 function uploadFileWithProgress(url, formData, token, onProgress) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    activeFileUploadXhr = xhr;
     xhr.open("POST", url);
     xhr.setRequestHeader("Authorization", `Bearer ${token}`);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && typeof onProgress === "function") onProgress(e.loaded / e.total);
     };
+    const cleanup = () => {
+      if (activeFileUploadXhr === xhr) activeFileUploadXhr = null;
+    };
     xhr.onload = () => {
+      cleanup();
+      if (xhr.status === 0) {
+        resolve({ ok: false, status: 0, json: {}, canceled: true });
+        return;
+      }
       let json = {};
       try {
         json = JSON.parse(xhr.responseText || "{}");
@@ -6198,11 +6328,27 @@ function uploadFileWithProgress(url, formData, token, onProgress) {
         ok: xhr.status >= 200 && xhr.status < 300,
         status: xhr.status,
         json,
+        canceled: false,
       });
     };
-    xhr.onerror = () => reject(new Error("network"));
+    xhr.onerror = () => {
+      cleanup();
+      reject(new Error("network"));
+    };
+    xhr.onabort = () => {
+      cleanup();
+      resolve({ ok: false, status: 0, json: {}, canceled: true });
+    };
     xhr.send(formData);
   });
+}
+
+function abortActiveFileUpload() {
+  try {
+    activeFileUploadXhr?.abort();
+  } catch {
+    /* ignore */
+  }
 }
 
 function normalizePendingFileList(input) {
@@ -6453,6 +6599,8 @@ if (filePreviewEl) {
 }
 
 function clearFilePreview() {
+  fileUploadSessionId += 1;
+  abortActiveFileUpload();
   composerPendingSequence++;
   revokeAllComposerPreviewUrls();
   pendingFilesQueue = [];
@@ -6476,6 +6624,7 @@ async function uploadFile(
 ) {
   if (!activeChannelId || !currentUser || !file) return;
 
+  const mySession = fileUploadSessionId;
   const ctx = progressContext === "thread" ? "thread" : "composer";
   const sendBtn = ctx === "thread" ? threadBtnSendEl : btnSendEl;
   const batchPrefix =
@@ -6502,6 +6651,10 @@ async function uploadFile(
     await new Promise((r) => requestAnimationFrame(() => r()));
 
     const prepared = await maybeCompressImageForUpload(file);
+    if (mySession !== fileUploadSessionId) {
+      appendSystemMsg("파일 업로드가 취소되었습니다.");
+      return { canceled: true };
+    }
     setFilePreviewUploadStatus(ctx, batchPrefix + "업로드 중… 0%");
 
     const formData = new FormData();
@@ -6512,9 +6665,14 @@ async function uploadFile(
       formData.append("preview", prepared, pvName);
     }
 
-    const { ok, json } = await uploadFileWithProgress(uploadUrl, formData, token, (p) => {
+    const { ok, json, canceled } = await uploadFileWithProgress(uploadUrl, formData, token, (p) => {
       setFilePreviewUploadStatus(ctx, batchPrefix + `업로드 중 ${Math.round(p * 100)}%`);
     });
+
+    if (canceled) {
+      appendSystemMsg("파일 업로드가 취소되었습니다.");
+      return { canceled: true };
+    }
 
     if (!ok) {
       appendSystemMsg(`파일 업로드 실패: ${json.error?.message || "오류"}`);
@@ -6539,6 +6697,10 @@ async function uploadFile(
       refreshChannelFileHubData(activeChannelId),
     ]);
   } catch (e) {
+    if (mySession !== fileUploadSessionId) {
+      appendSystemMsg("파일 업로드가 취소되었습니다.");
+      return { canceled: true };
+    }
     console.warn(e);
     appendSystemMsg("파일 업로드 중 서버 오류");
   } finally {

@@ -3372,6 +3372,29 @@ html[data-theme="light"] .mention-suggest-item:hover {
   max-width: 460px;
   pointer-events: none;
 }
+
+/* 대용량 파일 다운로드 진행(하단 중앙, 멘션 토스트와 겹치지 않게 좌측 배치) */
+.file-download-status-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 1210;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.35;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+  pointer-events: none;
+  text-align: center;
+}
+.file-download-status-bar.hidden {
+  display: none;
+}
 .mention-toast-stack .mention-toast {
   pointer-events: auto;
 }
