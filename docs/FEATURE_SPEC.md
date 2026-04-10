@@ -180,7 +180,7 @@
 ---
 
 ## 좌측 퀵 레일(미읽음)·사이드바 접기
-- 목적: 퀵 레일은 **채널/DM 목록과 동일한 세로 구간**(`.sidebar-body`) 상단에 두고, 그 아래로 **워크플로우** 단축·채널/DM 목록이 이어지게 함(구 **워크스페이스 상단 줄**·조직도 단축 버튼은 제거; 조직도는 상단 **팀**·환영 화면에서 진입). **통합 검색**은 상단 글로벌 바 `appHeaderSearchInput`만 사용(사이드바 중복 검색 제거). 퀵에는 **미읽음을 최상단(배지)**으로 올리고, **최근 대화**도 항상 표시(상한 `QUICK_RAIL_MAX_ITEMS`). 사이드바는 **돌출 탭**으로 접어 **퀵 64px만** 남기고 나머지(목록·프로필)는 숨김.
+- 목적: 퀵 레일은 **채널/DM 목록과 동일한 세로 구간**(`.sidebar-body`) 상단에 두고, 그 아래로 채널/DM 목록이 이어지게 함(구 **워크스페이스 상단 줄**·조직도 단축 버튼은 제거; 조직도는 상단 **조직도** 메뉴·환영 화면에서 진입). 사이드바 **워크플로우** 단축은 퀵 레일 바로 아래(사이드바 본문 최상단)에 배치한다. **통합 검색**은 상단 글로벌 바 `appHeaderSearchInput`만 사용(사이드바 중복 검색 제거). 퀵에는 **미읽음을 최상단(배지)**으로 올리고, **최근 대화**도 항상 표시(상한 `QUICK_RAIL_MAX_ITEMS`). 사이드바는 **돌출 탭**으로 접어 **퀵 64px만** 남기고 나머지(목록·프로필)는 숨김.
 - 사용자: 일반 채팅 사용자
 - 관련 화면/경로: `frontend/index.html` `.sidebar` → `.sidebar-body`(`#quickContainer`·`#quickRailScroll` + `.sidebar-main`); `#btnSidebarEdgeToggle`; `frontend/app.js` `renderQuickUnreadList`·`QUICK_RAIL_MAX_ITEMS`·`compareQuickRailChannel`; `frontend/styles.css` `.sidebar-body`·`.sidebar-main`·`.quick-rail`·`.sidebar-column`(324px 펼침)
 - 관련 API: `GET /api/channels` (`unreadCount`, **`lastMessageAt`**, `createdAt` 폴백 정렬)
@@ -846,18 +846,20 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 - 관련 API:
   - `GET /api/user-directory/organization` (조직도 트리 데이터)
   - `POST /api/channels/{channelId}/members` (채널 생성 후 추가 멤버 등록)
-  - 멤버 패널: 채널 개설자에게만 타 멤버 **내보내기** 버튼 노출 (`DELETE .../members?targetEmployeeNo=`)
+  - 멤버 패널: **PUBLIC/PRIVATE** 채널에서 개설자에게만 타 멤버 **내보내기** 버튼 노출 (`DELETE .../members?targetEmployeeNo=`) — **DM**에서는 내보내기 버튼·멤버 행 우클릭 내보내기 메뉴를 표시하지 않음
   - `GET /api/channels/{channelId}/files?employeeNo=...`
   - `GET /api/channels/{channelId}/files/{fileId}/download?employeeNo=...`
 - 입력/출력:
   - **통합 피커**: 채널 생성·DM 생성·구성원 추가 모두 **동일한 `+` 버튼 기반 팝업**(`modalAddMemberPicker`)을 사용합니다. 팝업에서 좌측 조직도(회사>본부>팀) + 우측 검색/결과로 사용자 선택 후 상위 모달의 선택 태그에 반영됩니다. 구성원 추가 `+`는 텍스트 대신 **SVG 십자**(`btn-picker-plus-icon`)로 그려 버튼 박스 안에 시각 중심을 맞춤.
   - **사이드바 조직도 모달**(`modalOrgChart`)·**구성원 추가 피커**·**관리자 사용자 관리** 표 모두 동일 정렬: 직책에 `팀장` 포함 시 최상단 → `jobLevel`(또는 관리자 화면의 직급 표시명) 문자열 기준 부장→차장→과장→대리→사원→인턴→기타 → 동일 조건은 이름 가나다(`sortOrgDirectoryMembers`).
   - 멤버 패널: `department`·`jobLevel`을 한 줄 요약, `jobPosition`·`jobTitle`은 값이 있을 때만 추가 표시
-  - 멤버 패널: 개설자 사번(`createdByEmployeeNo`)과 일치하는 멤버에 `개설자` 배지 표시
+  - 멤버 패널: **PUBLIC/PRIVATE**에서 개설자 사번(`createdByEmployeeNo`)과 일치하는 멤버에 `관리자` 배지 표시 — **DM**에서는 미표시
   - 파일 업로드 성공 시: **비이미지**는 메시지 행 안에 **카드 리스트**(아이콘·파일명·크기 + **저장** / **저장 후 열기**만; **뷰어로 열기 없음**). **저장 후 열기**: **브라우저**에서는 먼저 **다운로드**(`<a download>`) 후 짧은 지연 뒤 blob **새 탭** 열기. **ECH 데스크톱(Electron)** 에서는 **저장 대화상자**로 경로를 고른 뒤 디스크에 쓰고 `shell.openPath`로 **OS 기본 앱** 실행(임시 폴더에 먼저 열지 않음). IPC `ech-save-file-and-open-default-app` / `electronAPI.saveFileAndOpenWithDefaultApp`. **이미지**는 같은 묶음 안에서 **2열 그리드** 썸네일 — **이미지 1장만**일 때는 그리드 한 칸이 아니라 **전체 폭**을 쓰도록 CSS(`:only-child` → `grid-column: 1 / -1`). 썸네일 클릭 시 `openChannelImageLightbox`. **연속 FILE 메시지**(같은 분·같은 발신자·스레드 댓글 없음)는 `tryConsumeFileAttachmentGroup` → `createFileAttachmentGroupRowFromMsgs`로 **한 말풍선**에 묶고, **일괄저장**은 **JSZip**으로 **ZIP 한 파일** 다운로드(`batchDownloadChannelImageFiles`; CDN `jszip`). **FILE 메시지 직후** 다음 타임라인 메시지는 **항상 아바타 행**을 새로 띄움(`shouldShowAvatarForMessage`에서 이전이 FILE이면 true, 실시간 `appendMessageRealtime`에서 직전 행이 `msg-has-attachment`면 아바타 표시)
   - **연속 이미지(같은 분·같은 발신자)**: 서버는 파일별 `FILE` 메시지로 저장하되, 타임라인에서는 **2장 이상**이면 **2열 그리드**로 묶어 표시(스레드 댓글이 달린 메시지는 묶지 않음). 하단 **일괄저장**은 **ZIP**(`attachments-{channelId}-{timestamp}.zip`)
   - **DM 채팅 헤더**: `#chatChannelPrefix`에 사이드바 DM 목록과 동일하게 `dmSidebarLeadingHtml` 기반 **프레즌스 점**(그룹 DM은 최대 3명 + `+N`). 멤버 API 로드 후 `updateChatHeaderDmPresence`로 갱신
 - **상단 채널 컨텍스트**: 채팅방 이름·구성원 수(`chatChannelName`, `chatMemberCount`)는 채팅창 헤더 대신 상단 글로벌 바 중앙 `#appTopbarChannelContext`에 표시되며, 채널 설정 햄버거(`btnHeaderMenu`)는 상단 우측 아이콘 영역에서 채팅 뷰일 때만 표시
+- **중앙 정렬 기준**: `#appTopbarChannelContext`의 중앙 기준은 상단바 전체 폭이 아니라 `chat-area` 중심축을 따른다(사이드바 펼침/접힘 폭을 고려해 오프셋 보정).
+- **상단 검색 폭 기준**: `appHeaderSearchInput` 래퍼(`.app-shell-global-search`)는 사이드바 폭(324px) 기준선 밖으로 튀어나오지 않도록 축소된 고정폭(236px)으로 유지한다.
   - **대용량 첨부·이미지(프론트)**: 미리보기는 큰 이미지를 다운스케일한 blob URL로 표시해 UI 멈춤을 줄임; 약 **2MB 초과** 이미지는 업로드 전 최대 변 길이 4096px·JPEG 재압축(애니 GIF는 원본 유지); 업로드는 `XMLHttpRequest`로 **진행률** 표시, 성공 후 타임라인·파일 허브 갱신은 병렬 처리(`buildImagePreviewObjectUrl`, `maybeCompressImageForUpload`, `uploadFileWithProgress`)
   - **줄바꿈**: 메인·스레드 입력은 **`textarea`** — **Enter** 전송, **Shift+Enter** 개행; 서버에 저장된 본문의 줄바꿈은 타임라인에서 `<br>` 로 표시(`formatMessageWithMentions` 후 `\n` 치환)
   - **본인 말풍선**: 발신자가 로그인 사용자와 같으면 **오른쪽 정렬**·**아바타·이름 행 숨김**(`msg-mine`·`msg-body--mine`), 텍스트·파일·이미지 첨부 행 공통. **시각**은 본문·첨부 푸터에서 **말풍선(콘텐츠)의 왼쪽**에 오도록 배치(텍스트는 `inline-flex`+`row-reverse`, 첨부 푸터는 `flex-start`/그룹은 `row-reverse`). **텍스트 줄**은 배경 말풍선(보라 톤/라이트는 인디고 틴트)·테두리·그림자로 구역을 구분하고, 본인 말풍선 **안쪽 본문은 좌측 정렬**로 읽기 쉽게 맞춤
@@ -868,7 +870,10 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - **스레드 댓글**: 스레드 입력의 파일 input도 `multiple`이며, 선택한 파일을 큐에 두고 순차 업로드(메인 채팅과 동일한 업로드·갱신 패턴)
   - **날짜 구분선**: 초기 목록(`renderMessages`)과 동일하게 로컬 날짜가 바뀔 때 pill 표시. **실시간**(`appendMessageRealtime`)은 마지막 DOM 형제가 시스템 메시지여도 뒤에서 마지막 채팅 행·이전 날짜 키를 찾아 구분선·같은 분 묶음을 맞춤; `channel:system`은 서버 `createdAt`이 있을 때 구분선 정합
   - UI: CSS 변수 기반 **다크·보라 액센트** 톤(모달·관리자·검색·조직도 블록 포함)
-  - **테마 선택**: 로그인 사용자 영역의 톱니바퀴 버튼으로 팝업을 열어 `검정`(기본 다크·보라) / `하양`(라이트·인디고) / `오션 다크`(심야 블루 계열) / `크림 라이트`(웜 뉴트럴 계열) 선택. 즉시 적용되며 기본 테마(`검정/하양`)는 `PUT /api/auth/me/theme`로 사용자별 DB(`users.theme_preference`)에 저장
+  - **테마 선택**: 로그인 사용자 영역의 톱니바퀴 버튼으로 팝업을 열어 `다크`(기본 다크·보라) / `화이트`(라이트·인디고) / `오션 다크`(심야 블루 계열) / `크림 라이트`(웜 뉴트럴 계열) 선택. 즉시 적용되며 기본 테마(`다크/화이트`)는 `PUT /api/auth/me/theme`로 사용자별 DB(`users.theme_preference`)에 저장
+  - `크림 라이트`는 헤더바/채팅 본문/컴포저에 다크 그라데이션을 사용하지 않고 밝은 크림 톤을 유지한다(상단 검색/내비 텍스트 가독성 우선).
+  - `크림 라이트`의 조직도 모달(`modalOrgChart`)·테마 설정 모달(`modalThemePicker`)·관리자 사이드바(`#adminSection`)는 다크 모달 톤을 사용하지 않고 라이트 크림 표면/약한 그림자 기준을 유지한다.
+  - `크림 라이트`의 워크플로우 패널(`.work-hub-panel`)·관리자 헤더(`.admin-panel-header`)·관리자 인사이트 카드(`.admin-insight-card`)도 다크 분기 스타일에서 제외한다.
 - 상태 전이/예외 케이스:
   - 중복 멤버 추가 시 서버 검증 메시지를 시스템 메시지로 노출
   - 사이드바에는 별도 **로그아웃** 버튼이 없음(세션 종료는 브라우저/앱 탭·창 종료 또는 `localStorage`/쿠키 삭제 등 운영 정책에 따름)
@@ -888,8 +893,18 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 ## 글로벌 바·시작 화면·워크플로우 진입 (2026-04-09 개정, 2026-04-09 워크플로우 명칭 통합)
 - **대시보드** 상단 탭은 제거. **ECH** 로고는 `#btnAppShellHome` — 클릭 시 `clearActiveChannelAndReload()`로 슬림 시작 화면(`#viewWelcome`, `.ech-home-*`)으로 복귀.
-- 시작 화면은 대형 히어로·3열 카드 대신 **한 카드** 안내(채널 목록 포커스, 상단 검색, 조직도). 로그인 후 제목은 `안녕하세요, {이름}님` 또는 `시작하기`.
-- 상단 **워크플로우**(`btnTopNavProjects`)·좌측 **워크플로우**(`btnSidebarWorkflow`)는 `openWorkHubFromTopNav(panelFocus)` — 채널 있으면 바로 모달, 없으면 `getDefaultChannelForWorkHub` → `selectChannel`. 기본 사이드 진입은 업무 섹션으로 스크롤(`pendingWorkHubPanelFocus`·`#workHubPanelWork`).
+- 시작 화면은 기능형 웰컴 대시보드로 제공한다. 상단 히어로는 `👋` 인사 + `안녕하세요, {이름}님`을 표시하고, 기존 `채널 목록 보기/검색/조직도` 버튼은 제거한다.
+- 시작 화면의 즉시 실행 액션: 워크플로우 열기(사이드바 진입과 동일한 채널 선택 플로우), 채널 만들기, DM 만들기, 조직도 열기, 테마 설정, 내 프로필 보기.
+- 웰컴 히어로 상단 CTA 버튼은 노출하지 않으며, 추가 기능 액션(`조직도 열기`, `테마 설정`, `내 프로필 확인`)은 하단에서 가로 3버튼으로 정렬한다.
+- 웰컴 카드 영역의 제목/설명 보조 문구는 제거하고 액션 카드만 바로 노출한다.
+- 웰컴 히어로 리드 문구는 2줄로 고정한다(`지금 바로 사용할 수 있는 기능을 모아 두었습니다.` / `필요한 작업을 선택해 바로 이동하세요.`).
+- `cream` 테마는 헤더바·퀵레일을 과도하게 어둡게/강한 그림자로 두지 않는다. 퀵레일은 라이트 베이지 계열 배경, 헤더 그림자는 얕은 레벨로 유지한다.
+- `cream` 테마의 웰컴 상단 카드(`워크플로우`, `채널 만들기`, `DM 시작`)는 그림자를 쓰지 않고 얇은 보더 중심으로 표시한다.
+- 사이드바 `워크플로우`는 접기/펼치기 섹션이 아니라 단일 버튼(`button#btnSidebarWorkflow`)으로 노출한다.
+- 단일 버튼 `워크플로우`는 구조를 섹션화하지 않고, 리스트 아이템과 동일한 시각 리듬(행 높이/패딩/아이콘 강도/여백)으로 맞춘다.
+- 상단 **워크플로우**(`btnTopNavProjects`)는 `openWorkHubFromTopNav(panelFocus)`로 동작 — 채널 안에 있을 때는 해당 채널 워크플로우로 바로 진입하고, 채널 미선택 상태에서는 사이드바와 동일하게 채널/DM 선택 UI(`workflowChannelPicker`)를 먼저 표시한다.
+- 좌측 **워크플로우**(`btnSidebarWorkflow`)는 `openWorkflowPickerFromSidebar()`로 동작 — 워크플로우 페이지 안에서 채널/DM 선택 패널(`workflowChannelPicker`)을 먼저 보여주고, 사용자가 선택한 대상에 대해서만 워크플로우를 연다.
+- 워크플로우의 칸반 보드(`channel-kanban-board`)는 컬럼 고정폭을 쓰지 않고 3개 컬럼이 가용 영역을 균등 분할한다. 큰 화면에서는 우측 빈 여백 없이 채워지고, 작은 화면에서도 보드 자체 가로 스크롤 없이 뷰포트 안에서 맞춰 표시한다.
 - 통합 검색은 **상단** `appHeaderSearchInput`만 사용(사이드바 검색 필드 제거).
 - 채팅 헤더 `btnOpenWorkHub`는 **현재 채널 필수**(패널 포커스 없음).
 

@@ -294,6 +294,7 @@ let workHubScopedChannelId = null;
 let workHubSelectedListWorkItemKey = null;
 /** 사이드바·내비「워크플로우」진입 시 스크롤할 섹션 (`work` | `kanban`). */
 let pendingWorkHubPanelFocus = null;
+let workflowNeedsChannelPick = false;
 
 function getWorkHubChannelId() {
   const scoped = workHubScopedChannelId != null ? Number(workHubScopedChannelId) : null;
@@ -334,6 +335,47 @@ function openWorkflowPage() {
   ensureWorkflowMountedInChatArea();
   showView("modalWorkHub");
   syncWorkHubChannelContext();
+}
+function formatWorkflowChannelLabel(ch) {
+  const ct = String(ch?.channelType || "").toUpperCase();
+  const base = ct === "DM" && ch?.description ? String(ch.description) : String(ch?.name || "이름 없음");
+  return ct === "DM" ? `DM · ${base}` : `# ${base}`;
+}
+function renderWorkflowChannelPicker() {
+  const picker = document.getElementById("workflowChannelPicker");
+  const content = document.getElementById("workflowContent");
+  const scope = document.getElementById("workHubChannelContext");
+  const sel = document.getElementById("workflowChannelSelect");
+  const footerActions = document.querySelector("#modalWorkHub .work-hub-footer");
+  if (!picker || !content || !scope || !sel) return;
+  if (!workflowNeedsChannelPick) {
+    picker.classList.add("hidden");
+    content.classList.remove("hidden");
+    footerActions?.classList.remove("hidden");
+    return;
+  }
+  picker.classList.remove("hidden");
+  content.classList.add("hidden");
+  scope.classList.add("hidden");
+  footerActions?.classList.add("hidden");
+  const list = Array.isArray(lastSidebarChannelsSnapshot) ? [...lastSidebarChannelsSnapshot] : [];
+  list.sort((a, b) => channelActivityTimeMs(b) - channelActivityTimeMs(a));
+  sel.innerHTML = list.length
+    ? list
+        .map((ch) => {
+          const cid = Number(ch.channelId || 0);
+          if (!cid) return "";
+          const ct = String(ch.channelType || "").toUpperCase();
+          return `<option value="${cid}" data-channel-type="${escHtml(ct)}">${escHtml(formatWorkflowChannelLabel(ch))}</option>`;
+        })
+        .join("")
+    : `<option value="">선택 가능한 채널이 없습니다</option>`;
+}
+async function openWorkflowPickerFromSidebar() {
+  workflowNeedsChannelPick = true;
+  clearWorkHubScopedChannel();
+  openWorkflowPage();
+  renderWorkflowChannelPicker();
 }
 function ensureWorkflowMountedInChatArea() {
   const workflowEl = document.getElementById("modalWorkHub");
@@ -2024,7 +2066,7 @@ function showMain(user) {
   if (welcomeHeroTitleEl) {
     const nm = String(user.name || "").trim();
     const first = nm ? nm.split(/\s+/)[0] : "";
-    welcomeHeroTitleEl.textContent = first ? `안녕하세요, ${first}님` : "시작하기";
+    welcomeHeroTitleEl.textContent = first ? `안녕하세요, ${first}님` : "안녕하세요";
   }
 
   /** 다른 계정 재로그인 시 이전 세션 프레즌스 캐시 제거 */
@@ -2397,6 +2439,7 @@ function focusWorkHubPanel(mode) {
 }
 
 async function openWorkHubModalForActiveChannel() {
+  workflowNeedsChannelPick = false;
   workHubScopedChannelId = null;
   try {
     clearWorkHubPendingMaps();
@@ -2410,6 +2453,7 @@ async function openWorkHubModalForActiveChannel() {
     const panelFocus = pendingWorkHubPanelFocus;
     pendingWorkHubPanelFocus = null;
     openWorkflowPage();
+    renderWorkflowChannelPicker();
     requestAnimationFrame(() => requestAnimationFrame(() => focusWorkHubPanel(panelFocus)));
   } catch (e) {
     pendingWorkHubPanelFocus = null;
@@ -2436,16 +2480,9 @@ async function openWorkHubFromTopNav(panelFocus) {
     await openWorkHubModalForActiveChannel();
     return;
   }
-  const ch = getDefaultChannelForWorkHub();
-  if (!ch) {
-    pendingWorkHubPanelFocus = null;
-    await uiAlert("참여 중인 채널이 없습니다. 채널을 생성하거나 초대를 받은 뒤 다시 시도하세요.");
-    return;
-  }
-  const ct = String(ch.channelType || "").toUpperCase();
-  const displayName = ct === "DM" && ch.description ? ch.description : ch.name;
-  await selectChannel(ch.channelId, displayName, ch.channelType);
-  await openWorkHubModalForActiveChannel();
+  // 채널 미선택 상태에서 상단 워크플로우 진입 시에는 자동 채널 선택 대신
+  // 사이드바 워크플로우와 동일하게 채널/DM 선택 UI를 먼저 보여준다.
+  await openWorkflowPickerFromSidebar();
 }
 
 function setSidebarCollapsedUi(collapsed) {
@@ -3081,6 +3118,8 @@ async function loadChannelMembers(channelId) {
     const addBtn = document.getElementById("btnAddMembersLater");
     if (addBtn) addBtn.classList.toggle("hidden", !canAddMembers);
 
+    const isDmChannel = String(activeChannelType || "").toUpperCase() === "DM";
+
     const normalizeOrgValueForDisplay = (v) => {
       const s = v == null ? "" : String(v).trim();
       if (!s) return "";
@@ -3113,10 +3152,11 @@ async function loadChannelMembers(channelId) {
         jobTitle
           ? `<span class="member-duty-txt">${escHtml(jobTitle)}</span>`
           : "";
-      const showKick = canKickOthers && emp !== "" && emp !== creatorEmp;
-      const ownerBadgeHtml = emp !== "" && emp === creatorEmp
-        ? `<span class="member-role-badge owner">관리자</span>`
-        : "";
+      const showKick = !isDmChannel && canKickOthers && emp !== "" && emp !== creatorEmp;
+      const ownerBadgeHtml =
+        !isDmChannel && emp !== "" && emp === creatorEmp
+          ? `<span class="member-role-badge owner">관리자</span>`
+          : "";
       const kickBtnHtml = showKick
         ? `<button type="button" class="btn-member-kick" data-kick-emp="${escHtml(emp)}" data-kick-name="${escHtml(m.name || emp)}" title="채널에서 내보내기">내보내기</button>`
         : "";
@@ -8563,12 +8603,20 @@ function closeWorkflowPageToMain() {
   else showView("viewWelcome");
 }
 document.getElementById("btnSidebarWorkflow")?.addEventListener("click", () => {
-  void openWorkHubFromTopNav("work");
+  void openWorkflowPickerFromSidebar();
 });
-document.getElementById("btnSidebarWorkflow")?.addEventListener("keydown", (e) => {
-  if (e.key !== "Enter" && e.key !== " ") return;
-  e.preventDefault();
-  document.getElementById("btnSidebarWorkflow")?.click();
+document.getElementById("btnWorkflowOpenChannel")?.addEventListener("click", async () => {
+  const sel = document.getElementById("workflowChannelSelect");
+  const cid = Number(sel?.value || 0);
+  if (!cid) {
+    await uiAlert("채널 또는 DM을 먼저 선택하세요.");
+    return;
+  }
+  const ch = (lastSidebarChannelsSnapshot || []).find((x) => Number(x.channelId) === cid);
+  const ct = String(ch?.channelType || "PUBLIC").toUpperCase();
+  const displayName = ct === "DM" && ch?.description ? ch.description : ch?.name || "";
+  await selectChannel(cid, displayName, ct);
+  await openWorkHubModalForActiveChannel();
 });
 document.getElementById("btnCloseWorkflowPage")?.addEventListener("click", closeWorkflowPageToMain);
 document.getElementById("btnCloseWorkflowPageFooter")?.addEventListener("click", closeWorkflowPageToMain);
@@ -9614,35 +9662,37 @@ function initEvents() {
 
   if (!welcomeDashboardShellBound) {
     welcomeDashboardShellBound = true;
-    const focusWelcomeChannelSection = () => {
-      const channelList = document.getElementById("channelList");
-      const btn = document.querySelector("#channelSectionHeader .section-toggle");
-      if (channelList && btn) {
-        channelList.classList.remove("hidden");
-        syncSectionToggleChevron(btn, channelList);
-      }
-      channelList?.querySelector(".sidebar-item")?.focus?.();
+    const openWelcomeWorkflow = () => {
+      void openWorkflowPickerFromSidebar();
     };
-    const focusSearchInputs = () => {
-      const hi = document.getElementById("appHeaderSearchInput");
-      if (hi) {
-        hi.focus();
-        hi.select?.();
-      }
+    const openWelcomeCreateChannel = () => {
+      document.getElementById("btnCreateChannel")?.click();
     };
-    document.getElementById("btnWelcomeFocusChannel")?.addEventListener("click", focusWelcomeChannelSection);
-    document.getElementById("btnWelcomeFocusSearch")?.addEventListener("click", focusSearchInputs);
-    document.getElementById("btnWelcomeOpenOrgChart")?.addEventListener("click", () => {
+    const openWelcomeCreateDm = () => {
+      document.getElementById("btnCreateDm")?.click();
+    };
+    const openWelcomeOrgChart = () => {
       openOrgChartModal();
-    });
+    };
+    const openWelcomeThemePicker = () => {
+      themeSettingsBtn?.click();
+    };
+    const openWelcomeMyProfile = () => {
+      const emp = String(currentUser?.employeeNo || "").trim();
+      if (!emp) return;
+      openUserProfile(emp);
+    };
+    document.getElementById("btnWelcomeQuickWorkflow")?.addEventListener("click", openWelcomeWorkflow);
+    document.getElementById("btnWelcomeQuickCreateChannel")?.addEventListener("click", openWelcomeCreateChannel);
+    document.getElementById("btnWelcomeQuickCreateDm")?.addEventListener("click", openWelcomeCreateDm);
+    document.getElementById("btnWelcomeQuickOrgChart")?.addEventListener("click", openWelcomeOrgChart);
+    document.getElementById("btnWelcomeQuickTheme")?.addEventListener("click", openWelcomeThemePicker);
+    document.getElementById("btnWelcomeQuickProfile")?.addEventListener("click", openWelcomeMyProfile);
     document.getElementById("appHeaderSearchInput")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
         void submitWorkspaceSearchFromHeader();
       }
-    });
-    document.getElementById("btnAppHeaderTheme")?.addEventListener("click", () => {
-      themeSettingsBtn?.click();
     });
   }
 }

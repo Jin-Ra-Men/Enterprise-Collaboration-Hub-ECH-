@@ -26,7 +26,7 @@
 2. Backend 실행: `cd backend && gradlew.bat bootRun` (Windows)
 3. **Windows 배치(선택)**: 저장소 루트 **`start-ech-dev.bat`** — `curl`로 `:8080/api/health`·`:3001/health` 확인 후 미기동 서비스만 새 콘솔에서 실행. 단독: `tools/start-ech-backend.bat`, `tools/start-ech-realtime.bat` (`docs/ENVIRONMENT_SETUP.md` 5-2절).
 4. 프론트 확인: **`http://localhost:8080/`** (백엔드가 `index.html` / `styles.css` / `app.js` 만 정적 제공). `file://` 로 `frontend/index.html` 을 열면 API·쿠키·CORS 이슈가 날 수 있음.
-   - UI 테마(검정/하양)는 로그인 후 사용자 영역의 톱니바퀴 팝업에서 변경하며, 서버 `PUT /api/auth/me/theme`로 `users.theme_preference`에 저장됩니다(로그아웃/재로그인 후에도 사용자별 유지). `localStorage ech_theme`는 초기 페인트(FoUC 완화)용 캐시로 함께 사용합니다.
+   - UI 테마(다크/화이트)는 로그인 후 사용자 영역의 톱니바퀴 팝업에서 변경하며, 서버 `PUT /api/auth/me/theme`로 `users.theme_preference`에 저장됩니다(로그아웃/재로그인 후에도 사용자별 유지). `localStorage ech_theme`는 초기 페인트(FoUC 완화)용 캐시로 함께 사용합니다.
 5. 환경 설정 상세: `docs/ENVIRONMENT_SETUP.md`
 
 ## 2-0-2-1) 초기 로그인 비밀번호(미설정 사용자)
@@ -60,6 +60,7 @@
 
 ## 3-0-3) 프론트 UX 메모 (2026-04-06)
 - **DM 채팅 헤더**: `#chatChannelPrefix`는 DM일 때 멤버 로드 후 상대(그룹 DM은 최대 3명 + `+N`) **프레즌스 점**을 사이드바 DM과 동일 규칙으로 표시(`frontend/app.js` `updateChatHeaderDmPresence`, `dmSidebarLeadingHtml`).
+- **DM 멤버 패널**: DM에서는 채널 생성자에 대한 `관리자` 배지와 멤버 `내보내기` 버튼을 표시하지 않는다(`loadChannelMembers`). PUBLIC/PRIVATE 채널 멤버 패널은 기존과 동일.
 - **이미지 다운로드**: 약 **512KB 이상**·GIF/SVG 제외 시 원본 vs JPEG 압축 선택 모달; 압축은 브라우저에서 `GET .../download` blob → 캔버스(최대 변 4096px) 저장(서버 전용 압축 API 없음).
 - **데스크톱 GitHub 릴리즈 에셋 업로드**: 로컬에서 `cd desktop && npm run build:win` 후 `desktop/dist`에 `latest.yml`·`ECH-Setup-{version}.exe`·`.blockmap` 생성. `GITHUB_TOKEN`(repo releases 권한) 설정 뒤 `powershell -File ./tools/publish-electron-github-release.ps1 v1.1.3` — 태그·릴리즈 생성 및 에셋 업로드(`README.md`·`docs/DEVELOPER_README.md` 자동 업데이트 절차 참고).
 - **이미지 크게 보기·모아보기 성능**: 서버 `preview_*`가 있으면 라이트박스는 먼저 `/preview`로 표시 후 **원본 보기** 선택 가능(`openChannelImageLightbox`). 파일 허브 이미지 탭 썸네일은 보이는 셀만 로드(IntersectionObserver).
@@ -67,7 +68,21 @@
 - **채팅 입력·말풍선**: `#messageInput`·`#threadMessageInput`은 **`textarea`** — Enter 전송·Shift+Enter 개행, 타임라인은 `\n`→`<br>`; 본인 메시지는 `msg-mine` 오른쪽·아바타 생략·**시각은 말풍선 콘텐츠 왼쪽**(텍스트 `row-reverse`, 첨부 푸터 정렬). **텍스트 줄**은 CSS 말풍선(`--msg-bubble-*`)으로 가독성 확보; 채널 전환 시 `composerDraftByChannelId`로 미전송 입력·답글 대상·대기 첨부 복원, 로그아웃 시 `clearSession`에서 맵 비움.
 - **「새 메시지」구분선**: 입력·전송 시 `clearChatReadAnchorUi`; 본인 전송 후 `loadMessages`는 `skipNewMsgsDivider`/`uploadFile` `skipNewMsgsDividerAfterReload`로 재삽입 방지.
 - **업무·칸반**: 비활성 업무 복원/완전 삭제는 **저장 시** `flushWorkHubSave`에서만 API — 목록·상세 공통 `queueWorkItemRestore`/`queueWorkItemPurge`. 업무 **✕(소프트 삭제)** 는 `workHubPendingWorkDeleteIds`에만 넣고 목록에 **삭제 예정** 배지로 남김(`cancelWorkItemDeletePending`). **완전 삭제** 시 서버가 칸반 카드를 먼저 지우므로, `queueWorkItemPurge`·`flushWorkHubSave`의 purge 직후 `clearPendingKanbanStateForWorkItem`/`collectKanbanCardIdsForWorkItem`로 해당 카드 ID를 pending 맵에서 제거(저장 시 잔여 `PUT /kanban/cards/{id}` 실패 방지). 확인창 `#modalAppDialog`는 `z-index: 1350`으로 중첩 모달 위. 사이드바 **내 업무 항목**의 채널 줄은 API `channelName`(DM은 `description` 우선) + 프론트 `displayChannelLabelForWorkSidebar`; 모달 업무 목록 **선택 행**은 `channel-work-item--selected`.
-- **글로벌 바·업무 허브**: **대시보드** 탭은 없음. **ECH**(`#btnAppShellHome`)은 시작 화면 복귀. **프로젝트**·좌측 **업무 항목**/**칸반**은 `openWorkHubFromTopNav`·`pendingWorkHubPanelFocus`로 모달 패널 포커스. 채널 미선택 시 `getDefaultChannelForWorkHub` 후 `selectChannel`. 채팅 헤더 `btnOpenWorkHub`는 현재 채널 필수. `docs/FEATURE_SPEC.md` 글로벌 바·시작 화면 절.
+- **글로벌 바·업무 허브**: **대시보드** 탭은 없음. **ECH**(`#btnAppShellHome`)은 시작 화면 복귀. **프로젝트**·좌측 **업무 항목**/**칸반**은 `openWorkHubFromTopNav`·`pendingWorkHubPanelFocus`로 모달 패널 포커스. 상단 `워크플로우`는 채널 미선택 상태에서 자동 채널 진입하지 않고 `workflowChannelPicker`를 먼저 표시한다(채널 선택 시에만 진입). 채팅 헤더 `btnOpenWorkHub`는 현재 채널 필수. `docs/FEATURE_SPEC.md` 글로벌 바·시작 화면 절.
+- **시작 화면 액션 카드**: `#viewWelcome`은 단일 안내 버튼 묶음 대신 즉시 실행 가능한 카드형 액션으로 동작한다. 제공 액션은 워크플로우 열기(`openWorkflowPickerFromSidebar`), 채널 만들기(`btnCreateChannel` click), DM 만들기(`btnCreateDm` click), 조직도(`openOrgChartModal`), 테마(`themeSettingsBtn` click), 내 프로필(`openUserProfile(currentUser.employeeNo)`).
+- **웰컴 액션 배치**: 히어로 상단 CTA 버튼은 사용하지 않는다. `조직도 열기`·`테마 설정`·`내 프로필 확인`은 하단 `ech-welcome-quick-actions`에서 가로 3버튼으로 노출한다(좁은 화면에서는 1열).
+- **웰컴 보조 문구 최소화**: 카드 영역 제목/설명 텍스트(`바로 실행 가능한 기능` 등)는 노출하지 않고, 액션 카드만 즉시 보이게 유지한다.
+- **크림 라이트 가독성 보강**: `html[data-theme="cream"]`에서 텍스트/사이드바/퀵레일 변수 대비를 높이고 상단바 보더·검색 placeholder 대비를 강화했다(`--text-*`, `--sidebar-*`, `--quick-rail-*`). 추가로 헤더/퀵레일의 톤을 밝게 되돌리고 과한 음영을 축소(`--quick-rail-bg` 라이트 베이지, `--topbar-ambient-indigo`/`--header-ambient` 약화).
+- **웰컴 카드 마감(크림/다크 계열)**: `cream` 웰컴 카드 그림자는 제거하고 보더 중심으로 표시한다. 카드 hover의 좌측 컬러 라인은 카드 내부로 클리핑되도록 `overflow: hidden` 유지. `dark`/`ocean`의 하단 빠른 액션 버튼은 상단 흰 inset 하이라이트 없이 단색 음영+보더로 정리.
+- **크림 라이트 헤더/채팅 배경 정책**: 크림은 `html:not([data-theme="light"])` 계열의 다크 톤(상단바·타임라인·컴포저 그라데이션)을 그대로 쓰지 않도록 전용 오버라이드가 있다. 상단 헤더와 채팅 본문은 밝은 크림/화이트 계열로 렌더링한다.
+- **크림 라이트 모달/관리자 정책**: 조직도 모달·테마 설정 모달·관리자 사이드바는 크림 테마에서 다크 표면을 사용하지 않는다. `modal-overlay`/`.modal`/`.theme-option-btn`/`#adminSection`/`.orgchart-*`에 전용 라이트 오버라이드로 톤을 통일한다.
+- **크림 라이트 워크플로우/관리자 본문 정책**: `work-hub-panel`, `admin-panel-header`, `admin-insight-card`는 다크 공통 분기(`html:not([data-theme="light"])`)에서 `cream`을 제외해 어두운 배경이 재적용되지 않도록 유지한다.
+- **상단 내비/우측 아이콘 단순화**: 상단 메뉴 `btnTopNavTeam` 라벨은 `팀`이 아닌 `조직도`를 사용한다. 우측 보조 아이콘(알림/도움말/테마)은 제거하고, 채팅 뷰에서만 노출되는 햄버거(`btnHeaderMenu`)와 사용자 아바타만 유지한다.
+- **상단 채널 컨텍스트 중앙축**: `appTopbarChannelContext`는 상단바 전체 중앙이 아닌 채팅 영역 중앙에 맞춰 보정한다. 사이드바가 펼침(324px)/접힘(64px)일 때 각각 다른 `left` 오프셋을 적용한다.
+- **상단 검색 입력 폭**: 헤더 검색 박스(`.app-shell-global-search`)는 사이드바 폭을 넘어서 보이지 않도록 236px 기준 폭으로 유지한다.
+- **사이드바 워크플로우 위치**: `btnSidebarWorkflow`가 포함된 `sidebar-section--hub-shortcuts`는 퀵 레일 바로 아래, 사이드바 본문 최상단에 배치한다.
+- **사이드바 워크플로우 단순화**: `sidebar-section--hub-shortcuts` 내부는 접기 헤더 없이 단일 버튼(`button#btnSidebarWorkflow`)만 둔다.
+- **사이드바 워크플로우 시각 리듬**: 단일 버튼이지만 `sidebar-item`과 동일 밀도(패딩·폰트·아이콘·마진)로 유지해 `내 업무 목록`/`멘션` 사이에서 어색한 독립 카드처럼 보이지 않게 한다.
 - **관리자 사이드바**: `#adminSection` 항목은 Material 아이콘 레일이며, 현재 관리 화면은 `showView` → `syncAdminSidebarActive`로 메뉴 `.active`와 동기화된다(`FEATURE_SPEC` 관리자 사이드바 레일 절).
 
 ## 3) 핵심 문서 위치
@@ -465,7 +480,9 @@ Stop-Process -Id <PID> -Force
 - 좌측 사이드바:
   - `내 담당 칸반` 섹션(`myKanbanList`)을 추가해 담당 카드 목록을 채널/DM 목록과 같은 영역에서 제공
   - 데이터 소스: `GET /api/work-items/sidebar/by-assigned-cards?employeeNo=...&limit=...`(내가 담당인 칸반 카드가 하나라도 있는 업무 항목)
-- 클릭 동작: 채널 진입 -> 워크플로우 페이지 오픈 -> 대상 카드 스크롤/강조
+- 클릭 동작:
+  - `내 담당 칸반` 행 클릭: 채널 진입 -> 워크플로우 페이지 오픈 -> 대상 카드 스크롤/강조
+  - 사이드바 `워크플로우` 버튼 클릭: 워크플로우 페이지 내 `workflowChannelPicker`에서 채널/DM 선택 -> 선택 대상 워크플로우 로드
 
 ---
 
@@ -483,6 +500,8 @@ Stop-Process -Id <PID> -Force
 - **다크 기본 테마**: `:root`의 `--text-secondary` / `--text-muted`를 약간 밝게 조정해 보조 텍스트 대비를 올림. 범용 보조 문구는 `.muted`.
 - **내 업무 항목 동기화**: `flushWorkHubSave()` 성공 시 `scheduleRefreshMyChannels()`로 사이드바 담당 업무 목록을 갱신한다.
 - **채널 전환 없이 워크플로우만**: 사이드바 행 클릭 시 `selectChannel`을 호출하지 않고 `workHubScopedChannelId`만 설정한 뒤 `loadWorkHubChannelMembersForAssignee` / `loadChannelWorkItems` / `loadChannelKanbanBoard`가 `getWorkHubChannelId()`로 해당 채널 API를 호출한다. 채팅 패널의 `activeChannelId`는 그대로. 워크플로우 페이지 닫기(`btnCloseWorkflowPage*`) 시 `clearWorkHubScopedChannel()`. 헤더 `📋`로 열 때는 `workHubScopedChannelId = null`로 현재 채널 기준.
+- **사이드바 워크플로우 진입 분리**: `btnSidebarWorkflow`는 `openWorkflowPickerFromSidebar()`를 호출하며, 이 경로는 즉시 API 로드하지 않고 먼저 선택 UI를 표시한다. 사용자가 `btnWorkflowOpenChannel`로 대상을 확정하면 `selectChannel(...)` 후 `openWorkHubModalForActiveChannel()`로 진입한다.
+- **칸반 반응형 폭 정책**: `#channelKanbanBoard .kanban-column`은 고정 `px` 폭을 사용하지 않고 `flex: 1 1 0`으로 3컬럼 균등 분할한다. 목적은 큰 화면 우측 빈공간 제거와 작은 화면 가로 스크롤 방지(보드 자체 `overflow-x: hidden`).
 - **칸반 DnD·status**: 카드를 다른 컬럼으로 끌어 놓을 수 있으며(`boardEl.querySelector(".kanban-card-dragging")`), 드롭 시 출발·도착 컬럼에 대해 `syncKanbanBoardPartial`로 임시 `columnId`/`sortOrder`를 갱신하고, 미저장 신규 카드는 `syncKanbanDraftsOrderFromDom`. 저장 시 `statusForKanbanColumnId(targetColumnId)`로 `PUT`/`POST`에 `status`를 포함한다.
 
 ---
