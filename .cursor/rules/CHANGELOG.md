@@ -5,6 +5,31 @@
 ## 2026-04-12
 
 ### Changed
+- **프론트(크림 라이트 채널 상세·테마 설정 모달)**: `html:not([data-theme="light"])` 다크 전용 규칙이 `cream`에도 적용되며 멤버 패널(채널 상세)·ECH 채팅 헤더가 어둡게 보이던 문제를 `:not([data-theme="cream"])`로 분리. 크림 전용 멤버 패널 표면/구분선을 라이트 톤으로 추가. `#modalThemePicker`에 크림 전용 모달·헤더·본문·닫기 버튼 오버라이드를 추가해 테마 옵션창이 다크 톤으로 비치지 않도록 보강. `frontend/styles.css`.
+- **프론트(상단 워크플로우 진입 조건 수정)**: 채널 미선택 상태에서 우측 상단 `워크플로우` 클릭 시 특정 채널로 자동 이동하지 않고, 사이드바와 동일하게 `workflowChannelPicker`(채널/DM 선택 UI)를 먼저 표시하도록 변경. 채널 내에서는 기존처럼 즉시 해당 채널 워크플로우로 진입. `frontend/app.js`.
+- **프론트(크림 테마 관리자 4개 뷰 다크 분기 제외)**: 설정/배포/조직/사용자 관리 영역의 다크 공통 스타일(`settings-*`, `release-*`, `org-tab-*`, `user-*`)에 `:not([data-theme="cream"])`를 적용해 `cream`에서 어두운 패널이 재적용되던 문제를 수정. `frontend/styles.css`.
+- **프론트(크림 테마 워크플로우/관리자 다크 분기 분리)**: `cream`에서 워크플로우 패널(`.work-hub-panel`)·관리자 헤더(`.admin-panel-header`)·인사이트 카드(`.admin-insight-card`)가 다크 스타일을 따르지 않도록 전용 라이트 오버라이드를 추가. 크림 표면/약한 그림자 기준으로 가독성을 복원. `frontend/styles.css`.
+- **프론트(크림 테마 모달 다크 오버라이드 충돌 수정)**: 다크 공통 규칙 `html:not([data-theme="light"]) .modal-overlay/.modal`에 `:not([data-theme="cream"])`를 추가해 `cream` 모달이 다시 어두워지던 우선순위 충돌을 해소. 테마 설정 팝업/조직도 모달이 크림 라이트 톤으로 유지되도록 수정. `frontend/styles.css`.
+- **프론트(워크플로우 버튼 상단 여백 추가 보정)**: 사이드바 최상단 `워크플로우` 버튼이 여전히 위에 붙어 보이던 간격을 추가 조정(`.sidebar-section--hub-shortcuts` margin `14px 0 8px`)해 시각적 균형을 개선. `frontend/styles.css`.
+- **프론트(사이드바 섹션 간격 미세조정)**: 워크플로우 버튼이 최상단에서 딱 붙어 보이지 않도록 `sidebar-section--hub-shortcuts` 상단/하단 마진을 확장하고, 전체 섹션 간 간격(`.sidebar-section + .sidebar-section`)을 소폭 추가해 세로 정렬 리듬을 정리. `frontend/styles.css`.
+- **프론트(사이드바 워크플로우 최상단 이동)**: `btnSidebarWorkflow` 블록(`sidebar-section--hub-shortcuts`)을 `sidebar-main` 최상단(퀵 레일 바로 아래)으로 이동. 동작은 동일하며 위치만 변경. `frontend/index.html`.
+- **프론트(사이드바 워크플로우 버튼 리듬 보정)**: 단일 버튼 구조는 유지하면서 `btnSidebarWorkflow`의 폰트/패딩/아이콘 강도/섹션 간격을 일반 사이드바 리스트 항목과 동일한 밀도로 조정해 시각적 이질감을 완화. `frontend/styles.css`.
+- **프론트(크림 라이트 모달/관리자 톤 정합)**: `cream` 테마에서 조직도 모달(`modalOrgChart`)·테마 설정 모달(`modalThemePicker`)·관리자 사이드바(`#adminSection`)가 다크 톤을 타지 않도록 전용 라이트 오버라이드 추가. 모달 배경/스크림/버튼/카드 그림자를 크림 컨셉으로 완화하고 관리자 라벨 대비를 개선. `frontend/styles.css`.
+- **프론트(상단 검색폭 정렬 보정)**: 상단 헤더 좌측 검색 입력(`.app-shell-global-search`)의 기본 폭을 축소(`320px -> 236px`)해 사이드바(324px) 폭보다 우측으로 튀어나오지 않도록 정렬. `frontend/styles.css`.
+- **프론트(채널 정보 중앙축 정렬 보정)**: 상단 채널 정보(`appTopbarChannelContext`)의 기준점을 상단바 전체가 아닌 채팅 영역 중심축으로 보정. 사이드바 펼침(324px)/접힘(64px) 상태별 `left` 오프셋을 적용해 채널명·인원수와 메시지창의 정중앙 정렬이 일치하도록 수정. `frontend/styles.css`.
+- **프론트(웰컴 카드/워크플로우 버튼 정리)**: `cream` 테마에서 웰컴 카드와 하단 빠른 액션 버튼의 그림자를 완전히 제거. 웰컴 카드 hover 좌측 보라 라인이 카드 외곽으로 튀어나오지 않도록 `overflow: hidden` 적용. 사이드바 워크플로우는 접기 헤더 없이 단일 버튼(`button#btnSidebarWorkflow`)으로 단순화하고 키보드 보조 핸들러 중복을 제거. `frontend/index.html`, `frontend/styles.css`, `frontend/app.js`.
+- **프론트(웰컴 카드 그림자 톤 보정)**: `cream` 테마에서 웰컴 상단 카드(`워크플로우/채널 만들기/DM 시작`)의 하단 그림자를 제거하고 얇은 보더만 유지. `dark`/`ocean` 계열에서 하단 3버튼(`ech-welcome-quick-action-btn`)의 상단 흰 하이라이트(inset)를 제거해 더 단정한 버튼 톤으로 조정. `frontend/styles.css`.
+- **프론트(크림 라이트 상단 헤더/채팅 밝기 복원)**: 크림 테마에서 상단 헤더바가 다크 규칙에 끌려가며 어두워지던 문제를 전용 오버라이드로 수정. 상단 검색/내비 텍스트 대비를 올리고, 채팅 본문·컴포저의 다크 그라데이션을 라이트 크림 톤으로 교체해 가독성을 복원. `frontend/styles.css`.
+- **프론트(크림 라이트 헤더/퀵레일 톤 완화)**: `cream` 테마에서 헤더바·퀵레일을 더 밝은 배경으로 조정하고 과한 음영을 축소(`--topbar-ambient-indigo`, `--header-ambient` 약화). 퀵레일 배경을 다크에서 라이트 베이지(`--quick-rail-bg`)로 변경하고 active/pinned 인셋 강조도 약화. `frontend/styles.css`.
+- **프론트(웰컴 문구 줄바꿈/테마 라벨/크림 가독성)**: 웰컴 히어로 리드 문구를 2줄로 분리(`br`)하고, 테마 피커 라벨 `검정/하양`을 `다크/화이트`로 변경. `cream` 테마에 사이드바/상단바/텍스트 대비 변수(`--sidebar-search-*`, `--sidebar-item-*`, `--text-*`, `--quick-rail-*`)를 보강해 가독성을 개선. `frontend/index.html`, `frontend/styles.css`.
+- **프론트(웰컴 섹션 문구 제거)**: 웰컴 본문 카드 영역의 안내 문구 `바로 실행 가능한 기능` / `채널 선택 없이도 바로 열 수 있는 화면들입니다.`를 제거하고 카드만 노출되도록 정리. `frontend/index.html`.
+- **프론트(웰컴 히어로/추가 액션 정리)**: 웰컴 히어로 상단 버튼(`워크플로우 열기`, `채널 만들기`)을 제거. 하단 추가 기능(조직도 열기/테마 설정/내 프로필 확인)은 세로 리스트에서 가로 3버튼(`ech-welcome-quick-actions`)으로 변경. `frontend/index.html`, `frontend/styles.css`, `frontend/app.js`.
+- **프론트(채널 미선택 웰컴 개편)**: `#viewWelcome`을 단일 안내 카드에서 기능형 대시보드로 변경. 상단은 `👋 안녕하세요, {이름}님` 인사/히어로, 기존 `채널 목록 보기·검색·조직도` 버튼은 제거하고 즉시 실행 가능한 액션(워크플로우 열기, 채널 만들기, DM 만들기, 조직도, 테마, 내 프로필) 카드/버튼으로 재구성. `frontend/index.html`, `frontend/app.js`.
+- **프론트(사이드바 워크플로우 위치 조정)**: 사이드바 `워크플로우` 섹션(`sidebar-section--hub-shortcuts`, `btnSidebarWorkflow`)을 상단 고정 위치에서 `멘션` 섹션 바로 위로 이동. `frontend/index.html`.
+- **프론트(상단 메뉴/아이콘 정리)**: 상단 내비 `btnTopNavTeam`의 라벨을 `팀`에서 `조직도`로 변경. 상단 우측 보조 아이콘 버튼(알림/도움말/테마)을 제거해 헤더 우측 영역을 단순화. `frontend/index.html`.
+- **프론트(워크플로우 채널 선택 모드 액션 숨김)**: 사이드바 워크플로우 진입 시 표시되는 채널 선택 단계(`workflowNeedsChannelPick=true`)에서는 하단 액션 푸터(`.work-hub-footer`)를 숨기고, 채널 선택 후 실제 워크플로우 화면에서만 `저장/닫기` 버튼이 보이도록 변경. `frontend/app.js`.
+- **프론트(워크플로우 칸반 반응형 폭)**: `#channelKanbanBoard`의 컬럼 고정폭(`320px`)을 제거하고 3개 컬럼이 가용 폭을 균등 분할(`flex: 1 1 0`)하도록 조정. 큰 화면 우측 여백을 제거하고 작은 화면에서도 가로 스크롤 없이 보드가 화면 폭에 맞게 표시되도록 수정. `frontend/styles.css`.
+- **프론트(사이드바 워크플로우 채널 선택 단계)**: 사이드바 `워크플로우` 진입 시 즉시 로드 대신 채널/DM 선택 패널(`workflowChannelPicker`)을 먼저 표시하고, 선택 후 해당 채널 워크플로우를 로드하도록 변경. 채널 내부 `📋` 진입은 기존처럼 즉시 현재 채널 워크플로우를 연다. `frontend/index.html`, `frontend/app.js`, `frontend/styles.css`.
 - **프론트(하단 라인 완전 정렬)**: `.composer` 높이를 `--layout-footer-height`로 고정하고(`height`+`min-height`), 하단 안내문 `.ech-composer-footnote`를 숨겨 좌측 하단 프로필 바와 수평 라인을 동일하게 고정.
 - **프론트(상단 컨텍스트 중앙정렬·컴포저 라인 정렬)**: 상단 채널 컨텍스트(`appTopbarChannelContext`)를 탑바 절대 중앙 정렬(`left:50%/translateX`)로 보정. 메시지 입력의 서식 툴바(`ech-composer-toolbar`) 제거, 컴포저 패딩을 축소해 좌측 하단 메뉴 라인과 높이감을 맞춤.
 - **프론트(상단바 채널 컨텍스트 이동)**: 채팅방 이름·구성원 수를 채팅 헤더에서 상단 글로벌 바 검색 옆 중앙(`appTopbarChannelContext`)으로 이동. 채널 설정 햄버거(`btnHeaderMenu`)는 상단 우측 아이콘 영역으로 재배치하고 채팅 뷰에서만 노출.
