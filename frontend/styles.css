@@ -130,10 +130,10 @@ html[data-theme="light"] {
   --msg-bubble-mine-bg: linear-gradient(135deg, #4e45e4 0%, #6760fd 100%);
   --msg-bubble-mine-border: transparent;
   --msg-bubble-mine-fg: #fbf7ff;
-  /* 온라인=선명한 초록 / 오프라인=연한 회색(어두운 점과 구분) */
+  /* 온라인=선명한 초록 / 오프라인=단색 중간 회색(링 없이도 구분) */
   --presence-online-color: #22c55e;
   --presence-away-color: #eab308;
-  --presence-offline-color: #e2e8f0;
+  --presence-offline-color: #94a3b8;
   --presence-ring-color: #f7f9fb;
   --presence-online-glow: rgba(34, 197, 94, 0.42);
   --presence-away-glow: rgba(234, 179, 8, 0.38);
@@ -223,7 +223,7 @@ html[data-theme="cream"] {
   --msg-bubble-mine-border: transparent;
   --presence-online-color: #16a34a;
   --presence-away-color: #ca8a04;
-  --presence-offline-color: #d6cfc4;
+  --presence-offline-color: #a8a29e;
   --presence-ring-color: #faf7f0;
   --presence-online-glow: rgba(22, 163, 74, 0.38);
   --presence-away-glow: rgba(202, 138, 4, 0.34);
@@ -6176,36 +6176,26 @@ html[data-theme="light"] .work-pending-badge--delete {
   box-shadow: 0 0 0 2px var(--presence-ring-color), 0 0 6px var(--presence-offline-glow);
 }
 
-/* 밝은 테마(light, cream): 온라인=진한 링·그림자 / 오프라인=밝은 채우기·옅은 링(초록과 명확히 구분) */
+/* 밝은 테마(light, cream): 단색 원만 — 글로우·이중 링 제거, 표면과 구분은 얇은 한 겹 링만 */
 html[data-theme="light"] .presence-dot,
 html[data-theme="cream"] .presence-dot {
-  width: 11px;
-  height: 11px;
+  width: 10px;
+  height: 10px;
   box-sizing: border-box;
+  border: none;
+  box-shadow: 0 0 0 2px var(--bg-sidebar);
 }
 html[data-theme="light"] .presence-online,
 html[data-theme="cream"] .presence-online {
-  border: 2px solid rgba(21, 128, 61, 0.45);
-  box-shadow:
-    0 0 0 1px rgba(22, 101, 52, 0.35),
-    0 0 0 3px var(--bg-chat),
-    0 2px 6px rgba(22, 163, 74, 0.28);
+  background: var(--presence-online-color);
 }
 html[data-theme="light"] .presence-away,
 html[data-theme="cream"] .presence-away {
-  border: 2px solid rgba(161, 98, 7, 0.52);
-  box-shadow:
-    0 0 0 1px rgba(133, 77, 14, 0.38),
-    0 0 0 3px var(--bg-chat),
-    0 2px 5px rgba(234, 179, 8, 0.28);
+  background: var(--presence-away-color);
 }
 html[data-theme="light"] .presence-offline,
 html[data-theme="cream"] .presence-offline {
-  border: 2px solid rgba(148, 163, 184, 0.85);
-  box-shadow:
-    0 0 0 1px rgba(100, 116, 139, 0.35),
-    0 0 0 3px var(--bg-chat),
-    0 1px 3px rgba(15, 23, 42, 0.06);
+  background: var(--presence-offline-color);
 }
 html[data-theme="light"] .sidebar-dm-presence-wrap .presence-dot,
 html[data-theme="cream"] .sidebar-dm-presence-wrap .presence-dot {
@@ -6216,47 +6206,13 @@ html[data-theme="light"] .member-avatar-wrap .presence-dot,
 html[data-theme="cream"] .member-avatar-wrap .presence-dot {
   width: 10px;
   height: 10px;
-}
-html[data-theme="light"] .member-avatar-wrap .presence-online,
-html[data-theme="cream"] .member-avatar-wrap .presence-online {
-  box-shadow:
-    0 0 0 1px rgba(22, 101, 52, 0.4),
-    0 0 0 3px var(--bg-chat);
-}
-html[data-theme="light"] .member-avatar-wrap .presence-away,
-html[data-theme="cream"] .member-avatar-wrap .presence-away {
-  box-shadow:
-    0 0 0 1px rgba(161, 98, 7, 0.48),
-    0 0 0 3px var(--bg-chat);
-}
-html[data-theme="light"] .member-avatar-wrap .presence-offline,
-html[data-theme="cream"] .member-avatar-wrap .presence-offline {
-  box-shadow:
-    0 0 0 1px rgba(100, 116, 139, 0.4),
-    0 0 0 3px var(--bg-chat);
+  box-shadow: 0 0 0 2px var(--bg-elevated);
 }
 html[data-theme="light"] .msg-avatar-wrap .presence-dot,
 html[data-theme="cream"] .msg-avatar-wrap .presence-dot {
   width: 11px;
   height: 11px;
-}
-html[data-theme="light"] .msg-avatar-wrap .presence-online,
-html[data-theme="cream"] .msg-avatar-wrap .presence-online {
-  box-shadow:
-    0 0 0 1px rgba(22, 101, 52, 0.4),
-    0 0 0 3px var(--bg-chat);
-}
-html[data-theme="light"] .msg-avatar-wrap .presence-away,
-html[data-theme="cream"] .msg-avatar-wrap .presence-away {
-  box-shadow:
-    0 0 0 1px rgba(161, 98, 7, 0.48),
-    0 0 0 3px var(--bg-chat);
-}
-html[data-theme="light"] .msg-avatar-wrap .presence-offline,
-html[data-theme="cream"] .msg-avatar-wrap .presence-offline {
-  box-shadow:
-    0 0 0 1px rgba(100, 116, 139, 0.4),
-    0 0 0 3px var(--bg-chat);
+  box-shadow: 0 0 0 2px var(--bg-chat);
 }
 
 /* 메시지 발신자 클릭 */
@@ -7965,24 +7921,7 @@ html[data-theme="light"] .orgchart-member-avatar-wrap .presence-dot,
 html[data-theme="cream"] .orgchart-member-avatar-wrap .presence-dot {
   width: 10px;
   height: 10px;
-}
-html[data-theme="light"] .orgchart-member-avatar-wrap .presence-online,
-html[data-theme="cream"] .orgchart-member-avatar-wrap .presence-online {
-  box-shadow:
-    0 0 0 1px rgba(22, 101, 52, 0.4),
-    0 0 0 3px var(--bg-elevated);
-}
-html[data-theme="light"] .orgchart-member-avatar-wrap .presence-away,
-html[data-theme="cream"] .orgchart-member-avatar-wrap .presence-away {
-  box-shadow:
-    0 0 0 1px rgba(161, 98, 7, 0.48),
-    0 0 0 3px var(--bg-elevated);
-}
-html[data-theme="light"] .orgchart-member-avatar-wrap .presence-offline,
-html[data-theme="cream"] .orgchart-member-avatar-wrap .presence-offline {
-  box-shadow:
-    0 0 0 1px rgba(100, 116, 139, 0.4),
-    0 0 0 3px var(--bg-elevated);
+  box-shadow: 0 0 0 2px var(--bg-elevated);
 }
 .orgchart-member-avatar {
   width: 34px; height: 34px; flex-shrink: 0;
