@@ -2,6 +2,20 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 릴리즈 v1.2.5
+
+### Release
+- **버전**: 백엔드·데스크톱 **1.2.5**, Git 태그 **`v1.2.5`**. `backend/build/libs/cstalk-backend-1.2.5.jar`, `desktop/dist/` NSIS **`CSTalk-Setup-1.2.5.exe`**·`latest.yml`·(권장) `.blockmap`.
+- **GitHub 릴리즈(Windows 에셋)**: 환경변수 `GITHUB_TOKEN` 설정 후 `powershell -File ./tools/publish-electron-github-release.ps1 v1.2.5`. 백엔드 JAR은 스크립트에 포함되지 않음.
+- **이번 패키지에 포함된 2026-04-12 작업(커밋 해시)**:
+  - `6904efe` — 제품명 **CSTalk**·도메인 **`cstalk.co.kr`** 반영
+  - `c5eccec` — Windows 데스크톱 아이콘·`icon:build` 파이프라인
+  - `bbc6b09` — NSIS 설치 시 레거시 **ECH** 무인 제거 후 CSTalk 설치
+  - `0036ebe` — 멘션 OS 알림: 작업 표시줄 깜빡임·토스트 장시간 표시
+  - `89d6ed0` — 담당 업무 변경 **OS 알림** 경로 추가
+  - `f08df77` — 담당 업무 알림을 멘션과 동일 수준으로 강조
+- **백엔드 Java 소스**: 위 날짜 구간에서 **비즈니스 로직 변경 없음**(버전 정렬·배포 산출물명만 1.2.5). 웹 UI는 `frontend/app.js` 등 정적 파일 배포가 필요.
+
 ## 2026-04-12
 
 ### Added
