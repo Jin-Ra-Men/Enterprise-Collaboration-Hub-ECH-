@@ -70,6 +70,9 @@
 
 ## 2026-04-12
 
+### Added
+- **데스크톱(Windows 아이콘)**: CS 로고 기반 `desktop/assets/icon.png`·`icon.ico` 갱신. 원본 `desktop/assets/icon-source-cs.png`, 흰 배경 제거 후 512×512 정사각 PNG로 맞춘 뒤 ICO까지 한 번에 만들려면 `npm run icon:build`(`scripts/build-desktop-icon.mjs`, devDependency `sharp`). `docs/DEVELOPER_README.md`.
+
 ### Fixed
 - **프론트(본인 아바타 → 프로필)**: 글로벌 바 `#appHeaderAvatar`·사이드바 하단 `#sidebarAvatar` 클릭 시 본인 프로필 모달이 열리도록 `openCurrentUserProfile` 연결. 마크업을 `button.user-avatar`로 정리하고 포커스 링·상단 아바타 커서 보정. `frontend/app.js` · `frontend/index.html` · `frontend/styles.css` · `docs/FEATURE_SPEC.md` · `docs/HANDOVER.md`.
 - **프론트(크림 라이트 사용자 프로필 모달)**: `html:not([data-theme="light"])` 다크 전용 규칙이 `cream`에도 적용되어 프로필 정보 카드(`.profile-dl--cards .profile-dd-card`)가 어두운 배경·저대비로 보이던 문제를 `:not([data-theme="cream"])`로 분리하고, 크림에서 라이트 계열 표면을 지정. `frontend/styles.css` · `docs/FEATURE_SPEC.md` · `docs/HANDOVER.md`.

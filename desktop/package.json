@@ -9,6 +9,7 @@
   },
   "scripts": {
     "prebuild:win": "node scripts/generate-icon-ico.mjs",
+    "icon:build": "node scripts/build-desktop-icon.mjs && node scripts/generate-icon-ico.mjs",
     "start": "electron .",
     "build:win": "electron-builder --win nsis --publish never"
   },
@@ -18,7 +19,8 @@
   "devDependencies": {
     "electron": ">=20.0.0",
     "electron-builder": "latest",
-    "png-to-ico": "^3.0.1"
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.34.5"
   },
   "build": {
     "appId": "com.ech.desktop",

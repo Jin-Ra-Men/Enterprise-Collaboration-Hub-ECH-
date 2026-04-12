@@ -265,7 +265,7 @@ npm start
 
 - Electron으로 실행하면 브라우저 `Notification` 권한 요청 없이도 OS 알림을 띄우도록 구성되어 있습니다(Windows 알림센터 기준).
 - **첨부「저장 후 열기」**: 데스크톱에서는 **저장 대화상자**로 경로를 고른 뒤 디스크에 쓰고 `shell.openPath`로 **OS 기본 연결 앱**으로 연다(임시 폴더에 먼저 열지 않음). **브라우저만** 쓸 때는 **다운로드** 후 짧은 지연 뒤 blob **새 탭**으로 연다.
-- **단일 인스턴스**: 이미 실행 중이면 두 번째 실행은 프로세스가 뜨지 않고 기존 창이 포커스됩니다. **아이콘(Windows)**: `npm run build:win` 시 `prebuild:win`이 `assets/icon.png`(정사각)로부터 **`assets/icon.ico`** 를 만들고, 설치본·작업 표시줄·창·트레이는 **`.ico` 우선**(PNG만 쓰면 EXE 아이콘이 Electron 기본으로 남을 수 있음).
+- **단일 인스턴스**: 이미 실행 중이면 두 번째 실행은 프로세스가 뜨지 않고 기존 창이 포커스됩니다. **아이콘(Windows)**: 원본은 `assets/icon-source-cs.png`(제공 로고). 흰 배경 제거·512×512 정사각 PNG로 맞춘 뒤 `icon.png`·`icon.ico`를 한 번에 만들려면 `npm run icon:build`. `npm run build:win`만 실행할 때는 `prebuild:win`이 **`assets/icon.png`** 로부터 **`assets/icon.ico`** 만 재생성한다. 설치본·작업 표시줄·창·트레이는 **`.ico` 우선**(PNG만 쓰면 EXE 아이콘이 Electron 기본으로 남을 수 있음).
 - **Windows 시작 시 실행**: 설치본(NSIS)에서 트레이 아이콘 **우클릭** → **Windows 시작 시 실행** 체크. Electron `app.setLoginItemSettings`(Windows에서는 사용자 시작 프로그램에 등록). 개발 모드(`electron .`)에서는 항목이 비활성이다. `window.electronAPI.getOpenAtLogin` / `setOpenAtLogin`으로 동일 설정을 렌더러에서 읽고 바꿀 수 있음(선택 UI 연동용).
 - **설치 위치(Windows)**: NSIS **`perMachine`** 으로 **`%PROGRAMFILES%\ECH\`** 에 전역 설치(UAC). 선택 설정 `ech-server.json`은 `ECH.exe` 옆 또는 **`%ProgramData%\ECH\ech-server.json`** 에 둘 수 있음(자세한 절차: `./DEPLOYMENT_WINDOWS.md`).
 
