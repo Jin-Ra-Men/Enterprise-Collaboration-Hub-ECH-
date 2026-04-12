@@ -238,7 +238,7 @@
 - 현재 보고 있는 채널은 신규 일반 메시지 토스트 대상에서 제외(기존과 동일).
 - UI: `#channelList` / `#dmList` / `#quickRailScroll`의 `.channel-item` **우클릭** → `#channelSidebarContextMenu`(`알림 끄기`↔`알림 켜기`, `채팅방 나가기`). 채널·DM 상단 햄버거(멤버 패널) `#btnHeaderNotifyToggle`에서 동일 토글. 음소거 시 목록 행에 **벨+슬래시** 아이콘(`notifyMutedBellSvg`) 표시.
 - 햄버거 패널 순서(위→아래): 알림 끄기/켜기 → 첨부파일 → 업무/칸반 → 이름 변경 → **멤버 목록** 제목 → 멤버 리스트 → 구성원 추가 → 채팅방 나가기 → 채널 폐쇄.
-- 비고: 업무 사이드바 변경 등 `pushActivityToast`는 별도 정책(채널 음소거와 무관할 수 있음).
+- 비고: 업무 사이드바 변경 등 `pushActivityToast`는 채널 음소거와 무관. 백그라운드일 때 **OS 알림**(`showOsNotificationIfAllowed`, 태그 `ech_os_work_sidebar`)·앱 내 토스트를 쓰며, Electron에서는 OS 알림 후 인앱 토스트는 생략(`isEchElectronClient`).
 
 ---
 

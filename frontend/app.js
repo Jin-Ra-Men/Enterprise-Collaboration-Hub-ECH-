@@ -5690,6 +5690,21 @@ function openChannelSidebarContextMenu(clientX, clientY, channelId, channelName,
 
 /** 일반 활동 알림(업무 사이드바 변경 등). */
 function pushActivityToast({ title, locationLine, preview, onClick }) {
+  const titleStr = String(title || "알림");
+  const loc = String(locationLine || "").trim();
+  const prev = String(preview || "").trim();
+  const bodyLine = [loc, prev].filter(Boolean).join(" — ") || prev || loc || titleStr;
+
+  // OS notification when window/ tab is in background (same rule as messages; Electron + browser with permission).
+  showOsNotificationIfAllowed({
+    tag: "ech_os_work_sidebar",
+    title: titleStr,
+    body: bodyLine,
+    onClick: typeof onClick === "function" ? onClick : undefined,
+  });
+
+  if (isEchElectronClient()) return;
+
   const stack = document.getElementById("mentionToastStack");
   if (!stack) return;
   const toast = document.createElement("button");
