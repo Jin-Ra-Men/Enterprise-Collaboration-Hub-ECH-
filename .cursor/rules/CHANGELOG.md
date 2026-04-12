@@ -6,6 +6,7 @@
 
 ### Added
 - **Windows 데스크톱(NSIS)**: 레거시 **ECH** 설치 제거 후 CSTalk 설치 — `desktop/nsis/installer.nsh`의 `customInit`에서 `Uninstall ECH.exe` 무인 실행(기본 경로: `%ProgramFiles%\ECH\`, `%ProgramFiles(x86)%` 대응, `%LOCALAPPDATA%\Programs\ECH\`). `desktop/package.json` → `build.nsis.include`.
+- **Electron 멘션 OS 알림**: 백그라운드일 때 멘션만 작업 표시줄 아이콘 깜빡임(`BrowserWindow.flashFrame`)·토스트 자동 닫힘 완화(`timeoutType: never`, Windows/Linux). `desktop/main.js`, `frontend/app.js` `showOsNotificationIfAllowed`·`pushMentionToast`.
 
 ### Changed
 - **제품명·브랜딩**: 표시명을 **CSTalk**로 통일(웹 로그인·글로벌 바, Electron 창 제목·트레이, 로그 프리픽스 `[CSTalk]` 등). Java 패키지 `com.ech`·CSS 접두 `ech-*`·`ech_*` localStorage 키는 호환을 위해 유지.

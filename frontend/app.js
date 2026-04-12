@@ -5504,7 +5504,7 @@ function isEchElectronClient() {
   return typeof window !== "undefined" && typeof window.electronAPI?.showOsNotification === "function";
 }
 
-function showOsNotificationIfAllowed({ tag, title, body, onClick }) {
+function showOsNotificationIfAllowed({ tag, title, body, onClick, kind }) {
   if (!tag) tag = String(Date.now());
 
   // Background-only rule.
@@ -5530,7 +5530,9 @@ function showOsNotificationIfAllowed({ tag, title, body, onClick }) {
         }
       });
     }
-    window.electronAPI.showOsNotification({ tag: String(tag), title: String(title || ""), body: String(body || "") });
+    const payload = { tag: String(tag), title: String(title || ""), body: String(body || "") };
+    if (kind === "mention") payload.kind = "mention";
+    window.electronAPI.showOsNotification(payload);
     return;
   }
 
@@ -5969,6 +5971,7 @@ function pushMentionToast(p) {
       tag: `ech_os_mention_${cid}_${midNumForOs}`,
       title: "새 멘션",
       body: `${senderText}: ${preview || "(내용 없음)"}`,
+      kind: "mention",
       onClick: () =>
         selectChannel(cid, channelName, channelType, {
           targetMessageId: midNumForOs,
@@ -5979,6 +5982,7 @@ function pushMentionToast(p) {
       tag: `ech_os_mention_${cid}_${Date.now()}`,
       title: "새 멘션",
       body: `${senderText}: ${preview || "(내용 없음)"}`,
+      kind: "mention",
       onClick: () => selectChannel(cid, channelName, channelType),
     });
   }

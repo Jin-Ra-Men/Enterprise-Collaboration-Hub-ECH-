@@ -229,6 +229,7 @@
   - 멘션 삽입 후 전송 시 피멘션자 소켓에 `mention:notify` 수신
   - 토스트 클릭 시 `selectChannel`로 동일 채널 오픈
 - 비고: 구현 `MentionParser`, `MentionNotificationService`, `RealtimeBroadcastClient.notifyMentions`, `realtime/src/db.js` 멘션 헬퍼, `POST /internal/notify-mentions`. 멘션 토스트 DOM은 **`#mainApp` 밖(body 직계)** 에 두어 `.app-layout { overflow:hidden }` 에 잘리지 않게 함. 프론트 Socket.io URL은 기본 `{페이지와 동일 hostname}:3001`로 자동(REST는 `window.location.origin`), `meta ech-realtime-url` / `localStorage ech_realtime_url`로 덮어쓰기 가능 — `localhost` 고정과 `127.0.0.1` 접속 불일치 시 멘션·프레즌스가 동시에 안 되는 전형 원인
+- **CSTalk 데스크톱(Electron) OS 알림**: 창이 백그라운드(비포커스·숨김)일 때만 `showOsNotificationIfAllowed`가 동작. **멘션**(`pushMentionToast`, `kind: mention`)은 Windows에서 작업 표시줄 버튼 깜빡임(`mainWindow.flashFrame`)·토스트 자동 소멸 완화(`Notification` `timeoutType: never`, Linux 동일). 일반 신규 메시지(`pushNewMessageToast`)는 기본 짧은 표시 유지.
 
 ### 채팅방별 알림 끄기·신규 메시지 토스트
 - 목적: 참여 중인 다른 채널/DM에 신규 메시지가 오면 우하단 토스트(`pushNewMessageToast`)로 안내하되, 사용자가 방마다 **일반 메시지 토스트만** 끌 수 있게 함(서버 저장 없음, 브라우저 `localStorage`).
