@@ -1,4 +1,4 @@
-# ECH 로컬 개발 환경 설정 가이드
+# CSTalk 로컬 개발 환경 설정 가이드
 
 ## 1) 필수 버전
 - Java: 17+
@@ -25,7 +25,7 @@
 
 ### 4-1) 브라우저에 `xhr poll error`, `Failed to fetch`, `[ECH] Realtime connect_error` 가 나올 때
 - **원인**: 프론트가 붙는 URL(기본 `http://<페이지호스트>:3001`)에 **Realtime(Node) 프로세스가 없음**이 가장 흔합니다.
-- **조치**: 터미널에서 `realtime` 폴더로 이동 후 `npm run dev` 가 떠 있는지 확인합니다. 콘솔에 `ECH realtime server listening on http://0.0.0.0:3001` 유사 로그가 보여야 합니다.
+- **조치**: 터미널에서 `realtime` 폴더로 이동 후 `npm run dev` 가 떠 있는지 확인합니다. 콘솔에 `CSTalk realtime server listening on http://0.0.0.0:3001` 유사 로그가 보여야 합니다.
 - **점검**: 브라우저나 터미널에서 `GET http://localhost:3001/health` — `status: ok` JSON이면 HTTP 수신은 정상입니다.
 - (선택) 바인딩 주소: 환경변수 `SOCKET_HOST`(기본 `0.0.0.0`), 포트: `SOCKET_PORT`(기본 `3001`).
 
@@ -53,7 +53,7 @@ SOCKET_PORT=3001
 조직도 연동 전에는 `docs/sql/seed_test_users.sql`로 **테스트 부서·사용자·관리자 1명**을 넣을 수 있습니다.
 
 - 포함 내용: `운영본부`(ADMIN), `테스트부서`·`개발1팀`·`개발2팀`·`인사총무팀`·`영업1팀`·`기획전략팀`·`보안감사팀`, 부서 `NULL` 1명, `INACTIVE` 1명 등.
-- 관리자: 사번 `ECH-ADM-001`, 이메일 `admin.ech@ech-test.local`, 역할 `ADMIN`.
+- 관리자: 사번 `CSTalk-ADM-001`, 이메일 `admin@cstalk-test.local`, 역할 `ADMIN`.
 - 사번(`employee_no`) 기준 **UPSERT**이므로 같은 파일을 여러 번 실행해도 최신 값으로 맞춰집니다.
 
 실행 예 (Windows에서 `psql` 경로는 설치 위치에 맞게 조정):

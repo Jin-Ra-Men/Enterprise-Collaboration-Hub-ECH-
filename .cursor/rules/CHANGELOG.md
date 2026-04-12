@@ -2,6 +2,18 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-04-12
+
+### Changed
+- **제품명·브랜딩**: 표시명을 **CSTalk**로 통일(웹 로그인·글로벌 바, Electron 창 제목·트레이, 로그 프리픽스 `[CSTalk]` 등). Java 패키지 `com.ech`·CSS 접두 `ech-*`·`ech_*` localStorage 키는 호환을 위해 유지.
+- **운영 도메인 예시**: 기본 데스크톱 `serverUrl`·문서·배포 스크립트의 사이트 호스트를 **`cstalk.co.kr`**(예: `http://cstalk.co.kr:8080`) 기준으로 갱신. hosts 파일 예시 동일.
+- **Windows 데스크톱**: `desktop/package.json` — `productName` **CSTalk**, `appId` `com.cstalk.desktop`, NSIS 산출물 **`CSTalk-Setup-${version}.exe`**, 패키지 `name` `cstalk-desktop`. 선택 설정 파일 **`cstalk-server.json`**(기존 `ech-server.json`·`%ProgramData%\ECH\` 경로는 `main.js`에서 호환 로드). 임시 열기 폴더 `%TEMP%\cstalk-open`.
+- **백엔드 산출물**: `settings.gradle`·`bootJar` 파일명 **`cstalk-backend-{version}.jar`**, `spring.application.name` **`cstalk-backend`**, 헬스 `service` 필드·Hikari 풀명·첨부 로그 프리픽스 갱신.
+- **Realtime**: PM2 앱명 **`cstalk-realtime`**, 헬스/콘솔 `service` 식별자·기동 로그 문구 정리. `deploy/pm2.ecosystem.config.cjs` 기본 경로 `C:/CSTalk/...`.
+- **배포 패키지**: `deploy/CSTalk-deploy.zip`, 서버 스크립트·`DEPLOYMENT_WINDOWS.md` 등 설치 경로 예시 **`C:\CSTalk`**, Windows 서비스 표시명 **CSTalk-Backend** / **CSTalk-Realtime** 등.
+- **문서**: `README.md`, `docs/DEVELOPER_README.md`, `HANDOVER`, `FEATURE_SPEC`, `DEPLOY`, `MONITORING`, `ENVIRONMENT_SETUP`, `DESIGN_SYSTEM`, 테스트 조직 샘플(`TestOrgUserProvider`) 등 명칭·예시 URL 반영.
+- **`.gitignore`**: 배포 ZIP 무시 목록에 `deploy/CSTalk-deploy.zip` 및 기존 로컬 산출물명 `deploy/ECH-deploy.zip` 병기.
+
 ## 릴리즈 v1.2.4
 
 ### Release

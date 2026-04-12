@@ -2,7 +2,7 @@
 #Requires -RunAsAdministrator
 <#
 .SYNOPSIS
-  ECH DB 서버 자동 세팅 (192.168.11.179)
+  CSTalk DB 서버 자동 세팅 (192.168.11.179)
 .DESCRIPTION
   - PostgreSQL 설치 확인 / 안내
   - DB·사용자 생성
@@ -32,7 +32,7 @@ Clear-Host
 Write-Host @"
 
   ╔═══════════════════════════════════════════╗
-  ║   ECH — DB 서버 자동 세팅                 ║
+  ║   CSTalk — DB 서버 자동 세팅                 ║
   ║   대상: 192.168.11.179 (이 서버)          ║
   ╚═══════════════════════════════════════════╝
 
@@ -275,7 +275,7 @@ if ($pgService) {
 # ════════════════════════════════════════════
 Title "6단계 — 방화벽 설정 (포트 5432)"
 
-$ruleName = "ECH-PostgreSQL-5432"
+$ruleName = "CSTalk-PostgreSQL-5432"
 $existing = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
 if ($existing) {
     Warn "방화벽 규칙 '$ruleName' 이미 존재 — 업데이트합니다."

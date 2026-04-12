@@ -88,7 +88,7 @@ const server = http.createServer((req, res) => {
         res.end(
           JSON.stringify({
             status: "ok",
-            service: "ech-realtime",
+            service: "cstalk-realtime",
             db: "ok",
             pool: stats,
             connections: socketIdToEmployeeNo.size,
@@ -100,7 +100,7 @@ const server = http.createServer((req, res) => {
         res.end(
           JSON.stringify({
             status: "error",
-            service: "ech-realtime",
+            service: "cstalk-realtime",
             db: "error",
             message: err.message,
           })
@@ -376,7 +376,7 @@ io.on("connection", (socket) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`ECH realtime server listening on http://${HOST}:${PORT}`);
+  console.log(`CSTalk realtime server listening on http://${HOST}:${PORT}`);
 });
 
 async function gracefulShutdown(signal) {

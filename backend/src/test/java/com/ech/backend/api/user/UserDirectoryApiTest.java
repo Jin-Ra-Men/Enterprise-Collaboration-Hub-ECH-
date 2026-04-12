@@ -36,7 +36,7 @@ class UserDirectoryApiTest extends BaseIntegrationTest {
         orgGroupRepository.deleteAll();
 
         String companyCodeNormalized = "GENERAL";
-        String companyDisplayName = "ECH 통합테스트";
+        String companyDisplayName = "CSTalk 통합테스트";
         String companyGroupCode = OrgGroupCodes.companyCode(companyCodeNormalized);
         OrgGroup company = findOrCreateCompany(companyGroupCode, companyDisplayName);
 

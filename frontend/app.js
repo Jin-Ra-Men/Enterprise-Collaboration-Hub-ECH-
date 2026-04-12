@@ -1,5 +1,5 @@
 /* ==========================================================================
- * ECH Frontend — app.js  (Slack-inspired)
+ * CSTalk Frontend — app.js  (Slack-inspired)
  * - 로그인/로그아웃 (JWT, sessionStorage)
  * - 사이드바: 내 채널 목록 / DM 목록
  * - 채팅: 메시지 내역 로드 + Socket.io 실시간 수신/전송
@@ -66,7 +66,7 @@ const API_BASE = resolveApiBase();
 const SOCKET_URL = resolveSocketUrl();
 const TOKEN_KEY  = "ech_token";
 const USER_KEY   = "ech_user";
-const WS_KEY     = "ECH"; // 기본 워크스페이스 키
+const WS_KEY     = "CSTalk"; // 기본 워크스페이스 키
 /** 타임라인 API 한 번에 요청하는 최대 행 수(서버 상한 200) */
 const TIMELINE_PAGE_LIMIT = 100;
 /** 하단 근처에 있을 때만 오래된 DOM 노드를 정리(위로 히스토리 탐색 중에는 유지) */
@@ -792,7 +792,7 @@ async function fetchPresenceSnapshot() {
   try {
     const res = await fetch(`${SOCKET_URL}/presence`, { cache: "no-store" });
     if (!res.ok) {
-      console.warn("[ECH] 프레즌스 HTTP 오류", SOCKET_URL, "status=", res.status);
+      console.warn("[CSTalk] 프레즌스 HTTP 오류", SOCKET_URL, "status=", res.status);
       return;
     }
     const json = await res.json();
@@ -805,7 +805,7 @@ async function fetchPresenceSnapshot() {
     const name = e && e.name;
     const msg = e && e.message;
     console.warn(
-      "[ECH] 프레즌스 스냅샷 실패 —",
+      "[CSTalk] 프레즌스 스냅샷 실패 —",
       SOCKET_URL,
       name ? `${name}: ${msg}` : msg || e,
       "| 대개 원인: Realtime 서버 미기동(포트 3001). 저장소 `realtime`에서 `npm install` 후 `npm run dev` 실행."
@@ -5262,7 +5262,7 @@ function initSocket() {
   });
 
   socket.on("connect_error", (err) => {
-    console.warn("[ECH] Realtime connect_error", SOCKET_URL, err?.message || err);
+    console.warn("[CSTalk] Realtime connect_error", SOCKET_URL, err?.message || err);
     if (!realtimeConnectErrorToasted) {
       realtimeConnectErrorToasted = true;
       pushRealtimeNoticeToast(
@@ -10150,7 +10150,7 @@ async function tryAdAutoLogin() {
     });
     const json = await res.json().catch(() => ({}));
     if (!res.ok || json.success === false) {
-      console.warn("[ECH] AD 자동 로그인 실패:", json.error?.message || res.status);
+      console.warn("[CSTalk] AD 자동 로그인 실패:", json.error?.message || res.status);
       return false;
     }
     const { token, ...user } = json.data;
@@ -10158,7 +10158,7 @@ async function tryAdAutoLogin() {
     showMain(user);
     return true;
   } catch (e) {
-    console.warn("[ECH] AD 자동 로그인 오류:", e?.message || e);
+    console.warn("[CSTalk] AD 자동 로그인 오류:", e?.message || e);
     return false;
   }
 }

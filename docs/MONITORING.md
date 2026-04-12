@@ -66,7 +66,7 @@ GET http://localhost:3001/health
 ```json
 {
   "status": "ok",
-  "service": "ech-realtime",
+  "service": "cstalk-realtime",
   "db": "ok",
   "pool": { "total": 3, "idle": 2, "waiting": 0 },
   "connections": 42
@@ -254,7 +254,7 @@ k6 run --env BASE_URL=http://localhost:8080 tools/k6/message-stress-test.js
 ### Backend 응답 없음
 
 1. 헬스체크: `curl http://localhost:8080/api/auth/me`
-2. 로그 확인: `journalctl -u ech-backend -n 200 --no-pager`
+2. 로그 확인: `journalctl -u cstalk-backend -n 200 --no-pager`
 3. JVM 힙 덤프 (OOM 의심): `jmap -dump:live,format=b,file=heap.hprof <pid>`
 4. 프로세스 재시작
 5. 이상 에러 로그 기록
@@ -262,8 +262,8 @@ k6 run --env BASE_URL=http://localhost:8080 tools/k6/message-stress-test.js
 ### Realtime 서버 응답 없음
 
 1. 헬스체크: `curl http://localhost:3001/health`
-2. PM2 로그: `pm2 logs ech-realtime --lines 100`
-3. 재시작: `pm2 restart ech-realtime`
+2. PM2 로그: `pm2 logs cstalk-realtime --lines 100`
+3. 재시작: `pm2 restart cstalk-realtime`
 4. 클라이언트 자동 재연결 여부 확인 (최대 15초 간격으로 자동 재시도)
 
 ### DB 연결 실패

@@ -12,6 +12,6 @@ public class HealthController {
 
     @GetMapping
     public ApiResponse<Map<String, String>> health() {
-        return ApiResponse.success(Map.of("status", "ok", "service", "ech-backend"));
+        return ApiResponse.success(Map.of("status", "ok", "service", "cstalk-backend"));
     }
 }

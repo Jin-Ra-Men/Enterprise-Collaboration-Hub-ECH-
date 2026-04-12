@@ -10,25 +10,27 @@ if (!gotTheLock) {
 } else {
 if (process.platform === "win32") {
   try {
-    app.setAppUserModelId("com.ech.desktop");
+    app.setAppUserModelId("com.cstalk.desktop");
   } catch {
     /* ignore */
   }
 }
-const DEFAULT_SERVER_URL = "http://ech.co.kr:8080";
+const DEFAULT_SERVER_URL = "http://cstalk.co.kr:8080";
 
 /** 창 제목: 패키지 버전은 `app.getVersion()`(package.json / 빌드 산출물). */
 function getWindowTitle() {
-  return `ECH — Enterprise Collaboration Hub — v${app.getVersion()}`;
+  return `CSTalk — v${app.getVersion()}`;
 }
 
 /**
  * 선택 설정: serverUrl, updateBaseUrl(자동업데이트 전용 베이스 URL)
- * 1) ECH.exe와 같은 폴더의 ech-server.json
- * 2) Program Files 설치 시 사용자가 쓰기 어려울 수 있어 %ProgramData%\ECH\ech-server.json 도 지원
+ * 1) CSTalk.exe와 같은 폴더의 cstalk-server.json (구 ech-server.json 호환)
+ * 2) %ProgramData%\CSTalk\cstalk-server.json (구 %ProgramData%\ECH\ech-server.json 호환)
  */
-function readEchServerJson() {
+function readCstalkServerJson() {
   const candidates = [
+    path.join(path.dirname(process.execPath), "cstalk-server.json"),
+    path.join(process.env.PROGRAMDATA || "C:\\ProgramData", "CSTalk", "cstalk-server.json"),
     path.join(path.dirname(process.execPath), "ech-server.json"),
     path.join(process.env.PROGRAMDATA || "C:\\ProgramData", "ECH", "ech-server.json"),
   ];
@@ -121,7 +123,7 @@ function buildTrayMenu() {
             path: process.execPath,
           });
         } catch (e) {
-          console.warn("[ECH] setLoginItemSettings failed:", e?.message || e);
+          console.warn("[CSTalk] setLoginItemSettings failed:", e?.message || e);
         }
       },
     },
@@ -141,7 +143,7 @@ function createTray() {
   const icon = createTrayNativeImage(iconPath);
 
   tray = new Tray(icon);
-  tray.setToolTip(`ECH v${app.getVersion()}`);
+  tray.setToolTip(`CSTalk v${app.getVersion()}`);
 
   tray.setContextMenu(buildTrayMenu());
   tray.on("right-click", () => {
@@ -166,7 +168,7 @@ function createMainWindow() {
     },
   });
 
-  const cfg = readEchServerJson();
+  const cfg = readCstalkServerJson();
   const serverUrl = (cfg.serverUrl && String(cfg.serverUrl).trim())
     ? String(cfg.serverUrl).trim().replace(/\/$/, "")
     : DEFAULT_SERVER_URL;
@@ -200,7 +202,7 @@ function createMainWindow() {
 function setupAutoUpdater() {
   if (!app.isPackaged) return;
   try {
-    const cfg = readEchServerJson();
+    const cfg = readCstalkServerJson();
     let genericBase = null;
     if (cfg.updateBaseUrl && String(cfg.updateBaseUrl).trim()) {
       genericBase = String(cfg.updateBaseUrl).trim().replace(/\/?$/, "/");
@@ -215,7 +217,7 @@ function setupAutoUpdater() {
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
     autoUpdater.on("error", (err) => {
-      console.warn("[ECH] autoUpdater error:", err?.message || err);
+      console.warn("[CSTalk] autoUpdater error:", err?.message || err);
     });
     autoUpdater.on("update-downloaded", (info) => {
       const version = info?.version != null ? String(info.version) : "";
@@ -238,7 +240,7 @@ function setupAutoUpdater() {
       void autoUpdater.checkForUpdates();
     }, 6 * 60 * 60 * 1000);
   } catch (e) {
-    console.warn("[ECH] autoUpdater init failed:", e?.message || e);
+    console.warn("[CSTalk] autoUpdater init failed:", e?.message || e);
   }
 }
 
@@ -263,7 +265,7 @@ ipcMain.handle("ech-install-update", () => {
     app.isQuitting = true;
     autoUpdater.quitAndInstall(false, true);
   } catch (e) {
-    console.warn("[ECH] quitAndInstall failed:", e?.message || e);
+    console.warn("[CSTalk] quitAndInstall failed:", e?.message || e);
   }
   return true;
 });
@@ -287,7 +289,7 @@ ipcMain.handle("ech-set-open-at-login", (_, enabled) => {
     });
     return true;
   } catch (e) {
-    console.warn("[ECH] ech-set-open-at-login failed:", e?.message || e);
+    console.warn("[CSTalk] ech-set-open-at-login failed:", e?.message || e);
     return false;
   }
 });
@@ -310,7 +312,7 @@ ipcMain.handle("ech-open-temp-file-default-app", async (_, payload) => {
       return { ok: false, error: "invalid buffer" };
     }
     const base = safeOpenBasename(filename);
-    const dir = path.join(os.tmpdir(), "ech-open");
+    const dir = path.join(os.tmpdir(), "cstalk-open");
     await fs.promises.mkdir(dir, { recursive: true });
     const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     const fp = path.join(dir, `${unique}-${base}`);
@@ -321,7 +323,7 @@ ipcMain.handle("ech-open-temp-file-default-app", async (_, payload) => {
     }
     return { ok: true };
   } catch (e) {
-    console.warn("[ECH] ech-open-temp-file-default-app failed:", e?.message || e);
+    console.warn("[CSTalk] ech-open-temp-file-default-app failed:", e?.message || e);
     return { ok: false, error: String(e?.message || e) };
   }
 });
@@ -359,7 +361,7 @@ ipcMain.handle("ech-save-file-and-open-default-app", async (_, payload) => {
     }
     return { ok: true };
   } catch (e) {
-    console.warn("[ECH] ech-save-file-and-open-default-app failed:", e?.message || e);
+    console.warn("[CSTalk] ech-save-file-and-open-default-app failed:", e?.message || e);
     return { ok: false, error: String(e?.message || e) };
   }
 });

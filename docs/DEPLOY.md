@@ -1,4 +1,4 @@
-# ECH 배포 절차 및 롤백 가이드
+# CSTalk 배포 절차 및 롤백 가이드
 
 ## 목차
 1. [사전 요구사항](#사전-요구사항)
@@ -80,11 +80,11 @@ cd backend
 ./gradlew bootJar
 
 # 2. 실행 (JAR)
-java -jar build/libs/ech-backend-*.jar \
+java -jar build/libs/cstalk-backend-*.jar \
   --spring.config.location=file:./.env
 
 # 또는 환경 변수 직접 지정
-DB_HOST=localhost DB_USER=ech_user ... java -jar build/libs/ech-backend-*.jar
+DB_HOST=localhost DB_USER=ech_user ... java -jar build/libs/cstalk-backend-*.jar
 ```
 
 기동 시 `DataInitializer`가 실행되어 테스트 계정 및 기본 설정값이 자동 생성된다.
@@ -153,7 +153,7 @@ curl -X POST http://localhost:8080/api/admin/releases \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -F "version=v1.2.0" \
   -F "description=버그 수정 및 성능 개선" \
-  -F "file=@build/libs/ech-backend-v1.2.0.jar"
+  -F "file=@build/libs/cstalk-backend-v1.2.0.jar"
 
 # 릴리즈 활성화
 curl -X POST http://localhost:8080/api/admin/releases/{releaseId}/activate \
@@ -165,7 +165,7 @@ curl -X POST http://localhost:8080/api/admin/releases/{releaseId}/activate \
 ### 서버 재시작 (PM2)
 
 ```bash
-pm2 restart ech-backend
+pm2 restart cstalk-backend
 ```
 
 또는 `current-version.txt` 파일을 외부 스크립트에서 감지하여 자동 재시작하도록 구성할 수 있다.

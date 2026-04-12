@@ -1068,12 +1068,12 @@ psql -h localhost -U ech_user -d ech -f docs/sql/seed_test_users.sql
 
 | 사번 | 이메일 | 이름 | 부서 | 역할 |
 |------|--------|------|------|------|
-| ECH-ADM-001 | admin.ech@ech-test.local | 시스템 관리자 | 운영본부 | ADMIN |
-| ECH-TST-001~003 | (생략) | 김테스트 외 | 테스트부서 | MEMBER/MANAGER |
-| ECH-DEV-001~005 | (생략) | 이개발 외 | 개발1팀/2팀 | MEMBER/MANAGER |
-| ECH-HR-001 | (생략) | 정인사 | 인사총무팀 | MEMBER |
-| ECH-SAL-001 | (생략) | 강영업 | 영업1팀 | MEMBER |
-| ECH-INA-001 | (생략) | 퇴사처리유저 | 인사총무팀 | MEMBER (INACTIVE) |
+| CSTalk-ADM-001 | admin@cstalk-test.local | 시스템 관리자 | 운영본부 | ADMIN |
+| CSTalk-TST-001~003 | (생략) | 김테스트 외 | 테스트부서 | MEMBER/MANAGER |
+| CSTalk-DEV-001~005 | (생략) | 이개발 외 | 개발1팀/2팀 | MEMBER/MANAGER |
+| CSTalk-HR-001 | (생략) | 정인사 | 인사총무팀 | MEMBER |
+| CSTalk-SAL-001 | (생략) | 강영업 | 영업1팀 | MEMBER |
+| CSTalk-INA-001 | (생략) | 퇴사처리유저 | 인사총무팀 | MEMBER (INACTIVE) |
 
 ### 서버 기동 시 자동 시드 (DataInitializer)
 

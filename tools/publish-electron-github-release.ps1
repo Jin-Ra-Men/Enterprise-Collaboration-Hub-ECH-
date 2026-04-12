@@ -31,21 +31,21 @@ if ($ymlRaw -notmatch '(?m)^path:\s*(.+)\s*$') {
   throw "Could not parse installer filename from path: in $ymlPath"
 }
 $installerName = $Matches[1].Trim()
-# electron-builder may list a URL-safe name in latest.yml while the on-disk NSIS file keeps spaces (e.g. "ECH Setup 0.0.4.exe").
+# electron-builder may list a URL-safe name in latest.yml while the on-disk NSIS file keeps spaces (e.g. "CSTalk Setup 0.0.4.exe").
 $installerPath = Join-Path $distDir $installerName
 if (-not (Test-Path -LiteralPath $installerPath)) {
-  $spaced = Join-Path $distDir "ECH Setup $ver.exe"
+  $spaced = Join-Path $distDir "CSTalk Setup $ver.exe"
   if (Test-Path -LiteralPath $spaced) {
     $installerPath = $spaced
   } else {
-    throw "Installer not found: expected '$installerName' or 'ECH Setup $ver.exe' under $distDir"
+    throw "Installer not found: expected '$installerName' or 'CSTalk Setup $ver.exe' under $distDir"
   }
 }
 
 $blockmapAssetName = "$installerName.blockmap"
 $blockmapPath = Join-Path $distDir $blockmapAssetName
 if (-not (Test-Path -LiteralPath $blockmapPath)) {
-  $spacedBm = Join-Path $distDir "ECH Setup $ver.exe.blockmap"
+  $spacedBm = Join-Path $distDir "CSTalk Setup $ver.exe.blockmap"
   if (Test-Path -LiteralPath $spacedBm) {
     $blockmapPath = $spacedBm
   }
@@ -76,7 +76,7 @@ if (-not $rel) {
     tag_name         = $tag
     name             = $tag
     target_commitish = "main"
-    body             = "ECH desktop (Electron) Windows NSIS + auto-update metadata (version $ver)."
+    body             = "CSTalk desktop (Electron) Windows NSIS + auto-update metadata (version $ver)."
     draft            = $false
     prerelease       = $false
   }

@@ -1,10 +1,10 @@
-# ECH 인수인계서
+# CSTalk 인수인계서
 
-이 문서는 **프로젝트를 처음 맡는 개발자**와 **운영·관리 관점에서 시스템을 파악해야 하는 담당자**가, 저장소 문서만으로 ECH가 무엇인지·어떻게 돌아가는지 빠르게 이해하도록 정리합니다.  
+이 문서는 **프로젝트를 처음 맡는 개발자**와 **운영·관리 관점에서 시스템을 파악해야 하는 담당자**가, 저장소 문서만으로 CSTalk가 무엇인지·어떻게 돌아가는지 빠르게 이해하도록 정리합니다.  
 (Git 커밋 절차·메시지 규칙 등 버전 관리 세부는 `.cursor/rules/core-rules.mdc` 등을 참고합니다.)
 
 ## 1) 시스템 개요
-- 프로젝트: Enterprise Collaboration Hub (ECH)
+- 프로젝트: CSTalk
 - 모티브: Slack, Flow, Teams
 - 주요 구성:
   - Backend: Spring Boot
@@ -40,10 +40,10 @@
 - **GitHub 릴리즈에 보이는 “Source code (zip/tar.gz)”**: GitHub가 **태그 시점의 저장소 스냅샷**을 **자동으로 붙이는 항목**이며, `publish-electron-github-release.ps1`로 올리는 **설치 exe·`latest.yml`·blockmap**과는 별개입니다. 공개 저장소에서는 누구나 소스를 받을 수 있으므로 **민감하면 Private 저장소** 또는 **내부망 `desktop-updates/`만** 쓰는 배포를 권장합니다. **표준 GitHub 기능만으로는 비활성화·삭제가 어렵습니다.**
 - 업로드 스크립트: `powershell -File ./tools/publish-electron-github-release.ps1` (환경변수 `GITHUB_TOKEN`). 인자 생략 시 태그는 `package.json`의 `version`에 맞춘 `v{version}`
 - 첫 업데이터 포함 빌드는 사용자가 **한 번** 새 설치 파일로 수동 설치해야 할 수 있음
-- **내부망(PC가 GitHub 접속 불가)**: `electron-updater` 기본값은 GitHub Releases라 자동 업데이트가 동작하지 않는다. 대응: (1) 설치 프로그램 옆 `ech-server.json`에 `serverUrl`(또는 `updateBaseUrl`)을 내부 백엔드로 두면, 업데이트 메타는 `http://{백엔드}/desktop-updates/latest.yml` 에서 받는다. (2) WEB 서버에 `C:\ECH\releases\desktop\`(또는 `DESKTOP_UPDATE_DIR`)에 `latest.yml`과 `ECH-Setup-{version}.exe`를 배포한다. 백엔드는 `DesktopUpdateResourceConfig`로 해당 디렉터리를 `/desktop-updates/**` 로 노출한다.
+- **내부망(PC가 GitHub 접속 불가)**: `electron-updater` 기본값은 GitHub Releases라 자동 업데이트가 동작하지 않는다. 대응: (1) 설치 프로그램 옆 `cstalk-server.json`(구 `ech-server.json`)에 `serverUrl`(또는 `updateBaseUrl`)을 내부 백엔드로 두면, 업데이트 메타는 `http://{백엔드}/desktop-updates/latest.yml` 에서 받는다. (2) WEB 서버에 `C:\CSTalk\releases\desktop\`(또는 `DESKTOP_UPDATE_DIR`)에 `latest.yml`과 `CSTalk-Setup-{version}.exe`를 배포한다. 백엔드는 `DesktopUpdateResourceConfig`로 해당 디렉터리를 `/desktop-updates/**` 로 노출한다.
 - **단일 인스턴스·아이콘**: `main.js`에서 `app.requestSingleInstanceLock()`으로 중복 실행을 막고, 재실행 시 기존 창 포커스. Windows는 EXE/작업 표시줄에 **`assets/icon.ico`** 임베드가 안정적이며, `prebuild:win`(`scripts/generate-icon-ico.mjs`)이 `icon.png`에서 ICO를 생성한다. 런타임은 Windows에서 `.ico`를 우선 로드하고 `app.setAppUserModelId('com.ech.desktop')`를 설정한다.
 - **Windows 시작 시 실행**: 설치본에서 트레이 **우클릭** → **Windows 시작 시 실행**(`app.setLoginItemSettings`). 개발 모드에서는 비활성. `preload`에 `getOpenAtLogin` / `setOpenAtLogin`(웹 UI 연동 선택).
-- **설치 경로(NSIS)**: `package.json` `build.nsis.perMachine: true` — 기본 **`%PROGRAMFILES%\ECH\`**. `ech-server.json`은 exe 옆 또는 **`%ProgramData%\ECH\ech-server.json`** (`readEchServerJson` 순서).
+- **설치 경로(NSIS)**: `package.json` `build.nsis.perMachine: true` — 기본 **`%PROGRAMFILES%\CSTalk\`**. `cstalk-server.json`은 exe 옆 또는 **`%ProgramData%\CSTalk\cstalk-server.json`** (`readCstalkServerJson` 순서, 구 `ech-server.json` 경로 호환).
 
 ## 2-1) 개발자 / 운영·관리자 — 무엇부터 보면 되나
 - **개발자**
@@ -53,7 +53,7 @@
   - Java는 `backend/`, 실시간은 `realtime/`(Express 없이 `http`+Socket.io), 데모 UI 소스는 `frontend/`(로컬에서는 `bootRun` 시 8080에서 위 3개 파일만 서빙, **`/**` 전체를 정적으로 열지 않음** — `/api/**` 가 리소스 핸들러에 먹히는 404 방지).
 - **운영·관리자**
   - 구성 요소: Java API 서버, Node 실시간 서버, PostgreSQL, (첨부는 외부 스토리지 연동 전제).
-  - **첨부 저장 경로**: DB `app_settings` 의 `file.storage.base-dir` 이 `FILE_STORAGE_DIR` 보다 우선한다. 업로드 전부 실패 시 해당 값·폴더 권한·기동 로그 `[ECH] file storage` 를 확인. 절차: `docs/DEPLOYMENT_WINDOWS.md`(트러블슈팅·SQL 예시). UNC 사용 시 **백엔드 프로세스** 기준 쓰기 여부는 관리자 `GET /api/admin/storage/probe` 로 확인(대화형 PowerShell 성공과 불일치할 수 있음).
+  - **첨부 저장 경로**: DB `app_settings` 의 `file.storage.base-dir` 이 `FILE_STORAGE_DIR` 보다 우선한다. 업로드 전부 실패 시 해당 값·폴더 권한·기동 로그 `[CSTalk] file storage` 를 확인. 절차: `docs/DEPLOYMENT_WINDOWS.md`(트러블슈팅·SQL 예시). UNC 사용 시 **백엔드 프로세스** 기준 쓰기 여부는 관리자 `GET /api/admin/storage/probe` 로 확인(대화형 PowerShell 성공과 불일치할 수 있음).
   - 가용성 확인: Backend `GET /api/health`, Realtime `GET /health`(DB 연계 여부 포함).
   - 인증·RBAC·감사·배포(WAR 업로드·롤백 등)는 로드맵 **Phase 3** 및 아래 **7)**에 예정 범위가 정리되어 있습니다.
   - 다중 서버로 Realtime을 늘릴 경우 Presence는 현재 메모리 기반이므로 공유 저장소(예: Redis) 검토가 필요합니다(아래 **6) Realtime 메모**).
@@ -62,13 +62,13 @@
 - **DM 채팅 헤더**: `#chatChannelPrefix`는 DM일 때 멤버 로드 후 상대(그룹 DM은 최대 3명 + `+N`) **프레즌스 점**을 사이드바 DM과 동일 규칙으로 표시(`frontend/app.js` `updateChatHeaderDmPresence`, `dmSidebarLeadingHtml`).
 - **DM 멤버 패널**: DM에서는 채널 생성자에 대한 `관리자` 배지와 멤버 `내보내기` 버튼을 표시하지 않는다(`loadChannelMembers`). PUBLIC/PRIVATE 채널 멤버 패널은 기존과 동일.
 - **이미지 다운로드**: 약 **512KB 이상**·GIF/SVG 제외 시 원본 vs JPEG 압축 선택 모달; 압축은 브라우저에서 `GET .../download` blob → 캔버스(최대 변 4096px) 저장(서버 전용 압축 API 없음). **약 512KB 이상** 바이너리 수신 시 `ReadableStream`으로 읽으며 하단 **`#fileDownloadStatusBar`**에 진행 표시(`responseToBlobWithProgress`).
-- **데스크톱 GitHub 릴리즈 에셋 업로드**: 로컬에서 `cd desktop && npm run build:win` 후 `desktop/dist`에 `latest.yml`·`ECH-Setup-{version}.exe`·`.blockmap` 생성. `GITHUB_TOKEN`(repo releases 권한) 설정 뒤 `powershell -File ./tools/publish-electron-github-release.ps1 v1.2.4` — 태그·릴리즈 생성 및 에셋 업로드(`README.md`·`docs/DEVELOPER_README.md` 자동 업데이트 절차 참고).
+- **데스크톱 GitHub 릴리즈 에셋 업로드**: 로컬에서 `cd desktop && npm run build:win` 후 `desktop/dist`에 `latest.yml`·`CSTalk-Setup-{version}.exe`·`.blockmap` 생성. `GITHUB_TOKEN`(repo releases 권한) 설정 뒤 `powershell -File ./tools/publish-electron-github-release.ps1 v1.2.4` — 태그·릴리즈 생성 및 에셋 업로드(`README.md`·`docs/DEVELOPER_README.md` 자동 업데이트 절차 참고).
 - **이미지 크게 보기·모아보기 성능**: 서버 `preview_*`가 있으면 라이트박스는 먼저 `/preview`로 표시 후 **원본 보기** 선택 가능(`openChannelImageLightbox`). 파일 허브 이미지 탭 썸네일은 보이는 셀만 로드(IntersectionObserver).
 - **채팅 첨부(다중·DnD)**: 메인 채팅 `#viewChat`에 파일 **드래그 앤 드롭**, 첨부 `<input type="file" multiple>`(메인·스레드), 클립보드 이미지 **여러 장** 붙여넣기 → `pendingFilesQueue` / `threadPendingFilesQueue`로 미리보기 후 순차 업로드. **전송 중 대기 비우기**(항목별 ✕로 모두 제거해 `clearFilePreview` 등이 호출될 때)는 `activeFileUploadXhr.abort()` + `fileUploadSessionId`(압축 단계 포함)로 네트워크 전송을 끊고 이후 단계를 건너뜀. 다른 모달이 열려 있으면 채팅 드롭은 처리하지 않음(`isModalOverlayBlockingChatDrop`). **연속 FILE 첨부 메시지**(같은 분·같은 발신자, 스레드 댓글 없음)는 타임라인에서 `tryConsumeFileAttachmentGroup` → `createFileAttachmentGroupRowFromMsgs`로 **한 묶음** + **일괄저장**은 **JSZip**으로 **ZIP 한 번**(`batchDownloadChannelImageFiles`; `index.html`에 jszip CDN). **이미지**는 `buildImageGridHtml`·`wireImageGridThumbs`로 **2열 그리드** 썸네일(1장만이면 그리드 전체 폭 사용), 클릭 시 `openChannelImageLightbox`; **비이미지**는 `buildAttachmentCardHtml`·`wireAttachmentCardActions`로 **카드**(저장·저장 후 열기만). **저장 후 열기**(`saveChannelFileAndOpenInNewTab`): 브라우저는 다운로드 후 새 탭; **Electron**은 `ech-save-file-and-open-default-app` → **저장 대화상자** 후 디스크 저장 + `shell.openPath`. **FILE 직후** 다음 메시지는 아바타 새 행(`shouldShowAvatarForMessage`·실시간 `appendMessageRealtime`). 이미지+문서 혼합 묶음은 그리드 위·카드 아래로 같은 말풍선에 배치.
 - **채팅 입력·말풍선**: `#messageInput`·`#threadMessageInput`은 **`textarea`** — Enter 전송·Shift+Enter 개행, 타임라인은 `\n`→`<br>`; 본인 텍스트는 시각이 말풍선 **옆**(`row-reverse`), **첨부 메시지**는 시각·일괄저장이 썸네일/카드 **아래 한 줄**(시각 왼쪽·일괄저장 오른쪽). **파일 카드** 열은 이미지 번들과 같이 **최대 360px**·본인은 우측 정렬로 시각 푸터를 이미지와 맞춘다. **전송 전 첨부 미리보기** `#filePreview` / `#threadFilePreview`는 각각 입력창 **위**에 두고, 목록은 항목별 제거(✕)·추가 선택 시 **기존 대기에 누적**. **텍스트 줄**은 CSS 말풍선(`--msg-bubble-*`)으로 가독성 확보; 채널 전환 시 `composerDraftByChannelId`로 미전송 입력·답글 대상·대기 첨부 복원, 로그아웃 시 `clearSession`에서 맵 비움.
 - **「새 메시지」구분선**: 입력·전송 시 `clearChatReadAnchorUi`; 본인 전송 후 `loadMessages`는 `skipNewMsgsDivider`/`uploadFile` `skipNewMsgsDividerAfterReload`로 재삽입 방지.
 - **업무·칸반**: 비활성 업무 복원/완전 삭제는 **저장 시** `flushWorkHubSave`에서만 API — 목록·상세 공통 `queueWorkItemRestore`/`queueWorkItemPurge`. 업무 **✕(소프트 삭제)** 는 `workHubPendingWorkDeleteIds`에만 넣고 목록에 **삭제 예정** 배지로 남김(`cancelWorkItemDeletePending`). **완전 삭제** 시 서버가 칸반 카드를 먼저 지우므로, `queueWorkItemPurge`·`flushWorkHubSave`의 purge 직후 `clearPendingKanbanStateForWorkItem`/`collectKanbanCardIdsForWorkItem`로 해당 카드 ID를 pending 맵에서 제거(저장 시 잔여 `PUT /kanban/cards/{id}` 실패 방지). 확인창 `#modalAppDialog`는 `z-index: 1350`으로 중첩 모달 위. 사이드바 **내 업무 항목**의 채널 줄은 API `channelName`(DM은 `description` 우선) + 프론트 `displayChannelLabelForWorkSidebar`; 모달 업무 목록 **선택 행**은 `channel-work-item--selected`.
-- **글로벌 바·업무 허브**: **대시보드** 탭은 없음. **ECH**(`#btnAppShellHome`)은 시작 화면 복귀. **프로젝트**·좌측 **업무 항목**/**칸반**은 `openWorkHubFromTopNav`·`pendingWorkHubPanelFocus`로 모달 패널 포커스. 상단 `워크플로우`는 채널 미선택 상태에서 자동 채널 진입하지 않고 `workflowChannelPicker`를 먼저 표시한다(채널 선택 시에만 진입). 채팅 헤더 `btnOpenWorkHub`는 현재 채널 필수. `docs/FEATURE_SPEC.md` 글로벌 바·시작 화면 절.
+- **글로벌 바·업무 허브**: **대시보드** 탭은 없음. **CSTalk**(`#btnAppShellHome`)은 시작 화면 복귀. **프로젝트**·좌측 **업무 항목**/**칸반**은 `openWorkHubFromTopNav`·`pendingWorkHubPanelFocus`로 모달 패널 포커스. 상단 `워크플로우`는 채널 미선택 상태에서 자동 채널 진입하지 않고 `workflowChannelPicker`를 먼저 표시한다(채널 선택 시에만 진입). 채팅 헤더 `btnOpenWorkHub`는 현재 채널 필수. `docs/FEATURE_SPEC.md` 글로벌 바·시작 화면 절.
 - **시작 화면 액션 카드**: `#viewWelcome`은 단일 안내 버튼 묶음 대신 즉시 실행 가능한 카드형 액션으로 동작한다. 제공 액션은 워크플로우 열기(`openWorkflowPickerFromSidebar`), 채널 만들기(`btnCreateChannel` click), DM 만들기(`btnCreateDm` click), 조직도(`openOrgChartModal`), 테마(`themeSettingsBtn` click), 내 프로필(`openCurrentUserProfile` / 웰컴 버튼 `btnWelcomeQuickProfile`), **나에게 쓰기**(`openOrCreateSelfDm` / `btnWelcomeQuickSelfDm` — 본인 전용 DM).
 - **본인 아바타(상단·사이드바)**: `#appHeaderAvatar`·`#sidebarAvatar`는 `button.user-avatar`이며 클릭 시 `openCurrentUserProfile()` → `GET /api/users/profile` 후 `#modalUserProfile`(웰컴「내 프로필 확인」과 동일).
 - **웰컴 액션 배치**: 히어로 상단 CTA 버튼은 사용하지 않는다. `조직도 열기`·`테마 설정`·`내 프로필 확인`은 하단 `ech-welcome-quick-actions`에서 가로 3버튼으로 노출한다(좁은 화면에서는 1열).
@@ -163,7 +163,7 @@
   - `GET /api/health`
 - 채널 도메인:
   - Realtime(Node `:3001`): `message:new`는 `io.to(channelId)` 브로드캐스트 — 클라이언트는 **참여 중인 채널마다** `channel:join`을 보내야 수신한다(프론트 `joinAllChannelSocketRooms`·`loadMyChannels` 후·소켓 재연결 시). 멘션은 소켓 직접 `mention:notify`라 join 범위와 무관
-  - `GET /api/channels?employeeNo=...` — 내 채널/DM 목록. DM은 요약 `description`을 **조회자(employeeNo)를 제외한 멤버** 이름(없으면 사번)으로 계산; **`unreadCount`** 는 읽음 포인터 메시지보다 타임라인상 **더 최신**인 **루트**만 센다(`created_at`·`id` 기준, `MessageRepository.countRootMessagesNewerThanCursor`); **`lastMessageAt`** 는 채널별 루트 메시지 최신 시각(JSON ISO); **`dmPeerEmployeeNos`** 는 DM만 조회자 제외 멤버 **사번** 배열(사이드바 DM 프레즌스 점). 프론트는 `loadMessages`·실시간 수신 시 `POST .../read-state/mark-latest-root`로 **최신 루트까지 읽음**(대량 히스토리에서도 배지 즉시 해제), 채널 전환·스크롤 시 `localStorage` `ech_chat_scroll_v1_{employeeNo}`에 **스크롤 비율** 저장·복원; **퀵 레일**은 ECH 헤더 아래·검색~목록과 같은 세로 구간(`#quickContainer`·`#quickRailScroll`); **미읽음 우선·최근 대화** 최대 15개·미읽음만 배지(`compareQuickRailChannel`). **퀵 고정**: 우클릭 `퀵 레일에 고정` → `ech_quick_rail_pinned_{employeeNo}`에 ID 순서 저장·재렌더 시 앞쪽 고정(새 메시지로 순서 안 밀림), 나가기 시 ID 제거. 좌측 패널 펼침 **324px**(64+260), 접힘 **64px**(퀵만); **접기**는 `#btnSidebarEdgeToggle`·`ech_sidebar_collapsed`
+  - `GET /api/channels?employeeNo=...` — 내 채널/DM 목록. DM은 요약 `description`을 **조회자(employeeNo)를 제외한 멤버** 이름(없으면 사번)으로 계산; **`unreadCount`** 는 읽음 포인터 메시지보다 타임라인상 **더 최신**인 **루트**만 센다(`created_at`·`id` 기준, `MessageRepository.countRootMessagesNewerThanCursor`); **`lastMessageAt`** 는 채널별 루트 메시지 최신 시각(JSON ISO); **`dmPeerEmployeeNos`** 는 DM만 조회자 제외 멤버 **사번** 배열(사이드바 DM 프레즌스 점). 프론트는 `loadMessages`·실시간 수신 시 `POST .../read-state/mark-latest-root`로 **최신 루트까지 읽음**(대량 히스토리에서도 배지 즉시 해제), 채널 전환·스크롤 시 `localStorage` `ech_chat_scroll_v1_{employeeNo}`에 **스크롤 비율** 저장·복원; **퀵 레일**은 CSTalk 헤더 아래·검색~목록과 같은 세로 구간(`#quickContainer`·`#quickRailScroll`); **미읽음 우선·최근 대화** 최대 15개·미읽음만 배지(`compareQuickRailChannel`). **퀵 고정**: 우클릭 `퀵 레일에 고정` → `ech_quick_rail_pinned_{employeeNo}`에 ID 순서 저장·재렌더 시 앞쪽 고정(새 메시지로 순서 안 밀림), 나가기 시 ID 제거. 좌측 패널 펼침 **324px**(64+260), 접힘 **64px**(퀵만); **접기**는 `#btnSidebarEdgeToggle`·`ech_sidebar_collapsed`
   - `POST /api/channels` — 생성자는 JWT에서 식별: **`uid` 클레임(= `users.id`) 우선**, 없으면 사원번호, 레거시 토큰은 숫자-only subject를 DB id로 폴백(숫자 사번과 충돌 시 재로그인 권장). body는 `workspaceKey`, `name`, `channelType` 등, 선택 `createdByEmployeeNo`(하위 호환), DM 시 `dmPeerEmployeeNos` (`CreateChannelRequest`)
   - 동일 1:1 DM 조합은 기존 채널을 우선 재사용(레거시 내부명 편차가 있어도 멤버 조합 기준으로 재사용)
   - `GET /api/channels/{channelId}`
@@ -408,7 +408,7 @@
   - 무결성 검증 실패 파일은 즉시 폐기
   - 활성화 실패 시 복구 절차(자동 또는 수동) 문서화 필요
 
-## 8) 로컬·개발 환경 서버 재시작 (ECH 구성요소)
+## 8) 로컬·개발 환경 서버 재시작 (CSTalk 구성요소)
 
 ### 구성요소·포트
 | 구성요소 | 포트 | 역할 |

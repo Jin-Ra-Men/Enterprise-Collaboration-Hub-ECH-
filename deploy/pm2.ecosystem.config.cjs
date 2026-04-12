@@ -1,5 +1,5 @@
 /**
- * PM2 Ecosystem Config — ECH Realtime Server
+ * PM2 Ecosystem Config — CSTalk Realtime Server
  * 사용법: pm2 start pm2.ecosystem.config.cjs
  *        pm2 save && pm2-windows-service install (Windows 서비스 등록)
  *
@@ -8,11 +8,11 @@
 module.exports = {
   apps: [
     {
-      name: "ech-realtime",
+      name: "cstalk-realtime",
       script: "src/server.js",
 
       // WEB 서버에 실제로 배포한 경로로 수정
-      cwd: "C:/ECH/realtime",
+      cwd: "C:/CSTalk/realtime",
 
       instances: 1,
       autorestart: true,
@@ -20,8 +20,8 @@ module.exports = {
       max_memory_restart: "300M",
 
       // 로그 파일 경로
-      out_file: "C:/ECH/logs/realtime-out.log",
-      error_file: "C:/ECH/logs/realtime-error.log",
+      out_file: "C:/CSTalk/logs/realtime-out.log",
+      error_file: "C:/CSTalk/logs/realtime-error.log",
       merge_logs: true,
       log_date_format: "YYYY-MM-DD HH:mm:ss",
 

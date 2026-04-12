@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.ech'
-// 배포 시 JAR: build/libs/ech-backend-{version}.jar — 릴리즈마다 여기만 올리면 파일명이 바뀜
+// 배포 시 JAR: build/libs/cstalk-backend-{version}.jar — 릴리즈마다 여기만 올리면 파일명이 바뀜
 version = '1.2.4'
 
 java {
@@ -37,5 +37,5 @@ tasks.named('test') {
 }
 
 tasks.named('bootJar') {
-    archiveFileName = "ech-backend-${version}.jar"
+    archiveFileName = "cstalk-backend-${version}.jar"
 }

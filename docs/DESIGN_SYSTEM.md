@@ -1,4 +1,4 @@
-# ECH 디자인 시스템 (Atmospheric / Stitch)
+# CSTalk 디자인 시스템 (Atmospheric / Stitch)
 
 이 문서는 `design/` 폴더의 **ECH메인**·**ECH화면설계 (1)~(9)** 참고물과 실제 앱(`frontend/`)을 어떻게 맞추는지, 그리고 **이전 디자인으로 되돌리는 방법**을 정리합니다.
 

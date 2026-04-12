@@ -2,7 +2,7 @@
 #Requires -RunAsAdministrator
 <#
 .SYNOPSIS
-  ECH WEB 서버 자동 세팅 (192.168.11.168)
+  CSTalk WEB 서버 자동 세팅 (192.168.11.168)
 .DESCRIPTION
   - Java 17 / Node.js 설치 확인 및 자동 설치 (winget)
   - NSSM 다운로드 및 Spring Boot Windows 서비스 등록
@@ -10,7 +10,7 @@
   - 시스템 환경변수 등록
   - Windows 방화벽 포트 8080 / 3001 개방
 .USAGE
-  1. ECH-deploy.zip 을 C:\ECH-deploy\ 에 압축 해제
+  1. CSTalk-deploy.zip 을 C:\CSTalk-deploy\ 에 압축 해제
   2. PowerShell (관리자) 에서:  .\setup-web-server.ps1
 #>
 
@@ -38,7 +38,7 @@ Clear-Host
 Write-Host @"
 
   ╔═══════════════════════════════════════════╗
-  ║   ECH — WEB 서버 자동 세팅               ║
+  ║   CSTalk — WEB 서버 자동 세팅               ║
   ║   대상: 192.168.11.168 (이 서버)         ║
   ╚═══════════════════════════════════════════╝
 
@@ -65,12 +65,12 @@ if ($JWT_SECRET.Length -lt 16) { Fatal "JWT_SECRET 은 16자 이상이어야 합
 $REALTIME_TOKEN = Ask "내부 통신 토큰 (Realtime ↔ Backend 공유 비밀값)"
 if (-not $REALTIME_TOKEN) { Fatal "내부 통신 토큰은 필수입니다." }
 
-$INSTALL_DIR    = Ask "설치 경로" "C:\ECH"
+$INSTALL_DIR    = Ask "설치 경로" "C:\CSTalk"
 
 Write-Host ""
 Info "─── 파일 저장소 설정 ───"
-Info "  첨부파일을 이 서버(로컬)에 저장하려면: C:\ECH\storage (기본)"
-Info "  DB 서버(네트워크)에 저장하려면 : \\\\192.168.11.179\ECHStorage"
+Info "  첨부파일을 이 서버(로컬)에 저장하려면: C:\CSTalk\storage (기본)"
+Info "  DB 서버(네트워크)에 저장하려면 : \\\\192.168.11.179\CSTalkStorage"
 $FILE_STORAGE_INPUT = Ask "파일 저장 경로 (로컬 또는 UNC)" "$INSTALL_DIR\storage"
 
 # UNC 경로 여부 판별
@@ -86,9 +86,9 @@ if ($isUncStorage) {
 
   사전 작업:
     1. DB 서버(192.168.11.179)에서 폴더 공유:
-       - C:\ECHStorage 폴더 생성
+       - C:\CSTalkStorage 폴더 생성
        - 마우스 우클릭 → 속성 → 공유 → 고급 공유
-       - 공유 이름: ECHStorage, 권한: Everyone 또는 아래 계정에 전체 권한
+       - 공유 이름: CSTalkStorage, 권한: Everyone 또는 아래 계정에 전체 권한
     2. 이 서버(WEB)와 DB 서버 양쪽에 동일한 로컬 계정 생성:
        net user echsvc <비밀번호> /add
        net localgroup Administrators echsvc /add  (또는 최소 권한)
@@ -294,9 +294,9 @@ if ($nodeOk) {
 Title "4단계 — 파일 배포"
 
 # backend JAR
-$jarSrc = Join-Path $scriptDir "backend\ech-backend.jar"
-if (-not (Test-Path $jarSrc)) { Fatal "JAR 파일이 없습니다: $jarSrc`nbuild-package.ps1 을 먼저 실행하고 ECH-deploy.zip 을 복사하세요." }
-Copy-Item $jarSrc "$INSTALL_DIR\backend\ech-backend.jar" -Force
+$jarSrc = Join-Path $scriptDir "backend\cstalk-backend.jar"
+if (-not (Test-Path $jarSrc)) { Fatal "JAR 파일이 없습니다: $jarSrc`nbuild-package.ps1 을 먼저 실행하고 CSTalk-deploy.zip 을 복사하세요." }
+Copy-Item $jarSrc "$INSTALL_DIR\backend\cstalk-backend.jar" -Force
 Ok "백엔드 JAR 복사"
 
 # frontend 파일 복사 (백엔드 AppDirectory 기준 ../frontend = $INSTALL_DIR\frontend)
@@ -334,7 +334,7 @@ if (Test-Path "$INSTALL_DIR\realtime\node_modules\socket.io") {
         Write-Host @"
 
   [!!] npm install 실패 — 인터넷 없는 서버에서는 개발 PC에서 아래를 실행 후
-       ECH-deploy.zip 을 다시 만들어야 합니다:
+       CSTalk-deploy.zip 을 다시 만들어야 합니다:
 
        .\deploy\build-package.ps1   (node_modules 자동 포함)
 
@@ -417,7 +417,7 @@ if (-not (Test-Path $nssmPath)) {
   해결 방법 (택1):
 
   A) 개발 PC 에서 build-package.ps1 을 다시 실행하면 tools\nssm.exe 가
-     ECH-deploy.zip 에 자동 포함됩니다. ZIP 을 다시 받아 압축 해제 후 재실행하세요.
+     CSTalk-deploy.zip 에 자동 포함됩니다. ZIP 을 다시 받아 압축 해제 후 재실행하세요.
 
   B) 인터넷 되는 PC 에서 아래 URL 다운로드 후 이 서버에 복사:
      https://nssm.cc/release/nssm-2.24.zip
@@ -432,7 +432,7 @@ if (-not (Test-Path $nssmPath)) {
 }
 
 # 기존 서비스 제거
-$svcName = "ECH-Backend"
+$svcName = "CSTalk-Backend"
 $existing = Get-Service $svcName -ErrorAction SilentlyContinue
 if ($existing) {
     Stop-Service $svcName -Force -ErrorAction SilentlyContinue
@@ -467,7 +467,7 @@ $jvmArgs = (
     "-DMAX_UPLOAD_SIZE=500MB",
     "-DMAX_REQUEST_SIZE=500MB",
     "-DEXPOSE_ERROR_DETAIL=false",
-    "-jar `"$INSTALL_DIR\backend\ech-backend.jar`""
+    "-jar `"$INSTALL_DIR\backend\cstalk-backend.jar`""
 ) -join " "
 
 & "$nssmPath" install $svcName "$javaExe" | Out-Null
@@ -478,7 +478,7 @@ $jvmArgs = (
 & "$nssmPath" set $svcName AppRotateFiles 1 | Out-Null
 & "$nssmPath" set $svcName AppRotateBytes 10485760 | Out-Null
 & "$nssmPath" set $svcName Start SERVICE_AUTO_START | Out-Null
-& "$nssmPath" set $svcName DisplayName "ECH Backend (Spring Boot)" | Out-Null
+& "$nssmPath" set $svcName DisplayName "CSTalk Backend (Spring Boot)" | Out-Null
 
 # UNC 경로 사용 시: 네트워크 접근 가능한 계정으로 서비스 실행
 if ($isUncStorage -and $SVC_ACCOUNT_USER -and $SVC_ACCOUNT_PASS) {
@@ -513,7 +513,7 @@ foreach ($k in $vars.Keys) {
 Start-Service $svcName
 Start-Sleep -Seconds 5
 $st = (Get-Service $svcName).Status
-if ($st -eq "Running") { Ok "ECH-Backend 서비스 시작 완료" }
+if ($st -eq "Running") { Ok "CSTalk-Backend 서비스 시작 완료" }
 else { Warn "서비스 상태: $st — 잠시 후 확인하세요 (Spring Boot 초기 기동에 10~20초 소요)" }
 
 # ════════════════════════════════════════════
@@ -532,7 +532,7 @@ if (-not $nodeExe) { Fatal "node.exe 를 찾을 수 없습니다. Node.js 설치
 Ok "node.exe 경로: $nodeExe"
 
 # 기존 서비스 제거
-$rtSvcName = "ECH-Realtime"
+$rtSvcName = "CSTalk-Realtime"
 $rtExisting = Get-Service $rtSvcName -ErrorAction SilentlyContinue
 if ($rtExisting) {
     Stop-Service $rtSvcName -Force -ErrorAction SilentlyContinue
@@ -557,7 +557,7 @@ $rtWorkDir   = "$INSTALL_DIR\realtime"
 & "$nssmPath" set $rtSvcName AppRotateFiles 1 | Out-Null
 & "$nssmPath" set $rtSvcName AppRotateBytes 10485760 | Out-Null
 & "$nssmPath" set $rtSvcName Start SERVICE_AUTO_START | Out-Null
-& "$nssmPath" set $rtSvcName DisplayName "ECH Realtime (Socket.IO)" | Out-Null
+& "$nssmPath" set $rtSvcName DisplayName "CSTalk Realtime (Socket.IO)" | Out-Null
 # 서비스 재시작 정책 (오류 시 자동 재시작)
 & "$nssmPath" set $rtSvcName AppRestartDelay 3000 | Out-Null
 
@@ -574,7 +574,7 @@ $rtVars = [ordered]@{
 foreach ($k in $rtVars.Keys) {
     & "$nssmPath" set $rtSvcName AppEnvironmentExtra "+$k=$($rtVars[$k])" | Out-Null
 }
-Ok "ECH-Realtime 서비스 등록 완료"
+Ok "CSTalk-Realtime 서비스 등록 완료"
 Info "  실행 파일 : $nodeExeAbs"
 Info "  스크립트  : $serverJsAbs"
 Info "  작업 디렉 : $rtWorkDir"
@@ -595,7 +595,7 @@ try {
 }
 Start-Sleep -Seconds 3
 $rtSt = (Get-Service $rtSvcName -ErrorAction SilentlyContinue).Status
-if ($rtSt -eq "Running") { Ok "ECH-Realtime 서비스 시작 완료" }
+if ($rtSt -eq "Running") { Ok "CSTalk-Realtime 서비스 시작 완료" }
 else { Warn "서비스 상태: $rtSt — 수동 진단: & `"$nodeExeAbs`" `"$serverJsAbs`"" }
 
 # ════════════════════════════════════════════
@@ -604,8 +604,8 @@ else { Warn "서비스 상태: $rtSt — 수동 진단: & `"$nodeExeAbs`" `"$ser
 Title "8단계 — 방화벽 포트 개방"
 
 @(
-    @{Name="ECH-Backend-8080";  Port=8080; Desc="ECH Backend (Spring Boot)"},
-    @{Name="ECH-Realtime-3001"; Port=3001; Desc="ECH Realtime (Socket.IO)"}
+    @{Name="CSTalk-Backend-8080";  Port=8080; Desc="CSTalk Backend (Spring Boot)"},
+    @{Name="CSTalk-Realtime-3001"; Port=3001; Desc="CSTalk Realtime (Socket.IO)"}
 ) | ForEach-Object {
     $r = $_
     $ex = Get-NetFirewallRule -DisplayName $r.Name -ErrorAction SilentlyContinue
@@ -649,18 +649,18 @@ Write-Host @"
   ║  로그     : $($INSTALL_DIR)\logs\                             ║
   ╠══════════════════════════════════════════════════════════════╣
   ║  클라이언트 PC hosts 파일에 추가:                              ║
-  ║  192.168.11.168    ech.co.kr                                 ║
+  ║  192.168.11.168    cstalk.co.kr                                 ║
   ║                                                              ║
-  ║  브라우저 접속: http://ech.co.kr:8080                         ║
+  ║  브라우저 접속: http://cstalk.co.kr:8080                         ║
   ╚══════════════════════════════════════════════════════════════╝
 
   서비스 관리 명령:
-    Start-Service ECH-Backend       # 백엔드 시작
-    Stop-Service ECH-Backend        # 백엔드 중지
-    Restart-Service ECH-Backend     # 백엔드 재시작
-    Start-Service ECH-Realtime      # 리얼타임 시작
-    Stop-Service ECH-Realtime       # 리얼타임 중지
-    Restart-Service ECH-Realtime    # 리얼타임 재시작
+    Start-Service CSTalk-Backend       # 백엔드 시작
+    Stop-Service CSTalk-Backend        # 백엔드 중지
+    Restart-Service CSTalk-Backend     # 백엔드 재시작
+    Start-Service CSTalk-Realtime      # 리얼타임 시작
+    Stop-Service CSTalk-Realtime       # 리얼타임 중지
+    Restart-Service CSTalk-Realtime    # 리얼타임 재시작
 
 "@ -ForegroundColor Green
 

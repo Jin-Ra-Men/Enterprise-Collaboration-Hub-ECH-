@@ -6,7 +6,7 @@
     <!-- 배포 시 비워두면 페이지 origin / 호스트:3001 자동 추론. 필요 시 값만 채움 -->
     <meta name="ech-api-base" content="" />
     <meta name="ech-realtime-url" content="" />
-    <title>ECH — Enterprise Collaboration Hub</title>
+    <title>CSTalk</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -43,14 +43,14 @@
     <div id="loginPage" class="login-page">
       <div class="login-card">
         <div class="login-logo">
-          <div class="login-logo-icon">ECH</div>
-          <h1 class="login-title">Enterprise Collaboration Hub</h1>
+          <div class="login-logo-icon">CSTalk</div>
+          <h1 class="login-title">CSTalk</h1>
           <p class="login-subtitle">사내 협업 플랫폼</p>
         </div>
         <form id="loginForm" class="login-form" novalidate>
           <div class="form-group">
             <label for="loginId">사원번호 또는 이메일</label>
-            <input id="loginId" type="text" placeholder="예) ECH-ADM-001 또는 email@ech.com" autocomplete="username" required />
+            <input id="loginId" type="text" placeholder="예) CSTalk-ADM-001 또는 email@cstalk.co.kr" autocomplete="username" required />
           </div>
           <div class="form-group">
             <label for="loginPassword">비밀번호</label>
@@ -68,7 +68,7 @@
       <!-- design/ECH메인: 상단 글로벌 바 -->
       <header id="appShellTopBar" class="app-shell-topbar" role="banner" data-ech-design-ref="screen4-topbar">
         <div class="app-shell-topbar-left">
-          <button type="button" class="app-shell-brand" id="btnAppShellHome" title="채널 선택 화면으로" aria-label="홈·채널 선택 화면으로">ECH</button>
+          <button type="button" class="app-shell-brand" id="btnAppShellHome" title="채널 선택 화면으로" aria-label="홈·채널 선택 화면으로">CSTalk</button>
           <div class="app-shell-global-search">
             <span class="material-symbols-outlined app-shell-search-glyph" aria-hidden="true">search</span>
             <input
@@ -108,7 +108,7 @@
       </header>
 
       <div class="app-shell-body">
-      <!-- 채널/DM 사이드바(워크스페이스 ECH 단독 상단 · 퀵 레일은 검색~목록과 같은 세로 구간) + 돌출 접기 탭 -->
+      <!-- 채널/DM 사이드바(워크스페이스 CSTalk 단독 상단 · 퀵 레일은 검색~목록과 같은 세로 구간) + 돌출 접기 탭 -->
       <div class="sidebar-column" id="sidebarColumn">
         <div class="sidebar-slip">
           <aside class="sidebar">

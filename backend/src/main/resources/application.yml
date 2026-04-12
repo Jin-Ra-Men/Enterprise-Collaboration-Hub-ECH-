@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: ech-backend
+    name: cstalk-backend
   servlet:
     multipart:
       # WAR/JAR 업로드를 위한 파일 크기 제한 (운영 환경에서 조정 가능)
@@ -27,7 +27,7 @@ spring:
       # 커넥션 검증 쿼리 (드라이버가 지원하지 않을 때 폴백)
       connection-test-query: SELECT 1
       # 커넥션 풀 이름 (모니터링에서 식별)
-      pool-name: ECH-HikariPool
+      pool-name: CSTalk-HikariPool
       # 느린 커넥션 획득 경고 임계치 (5초)
       keepalive-time: 300000
   web:
@@ -42,7 +42,7 @@ spring:
 
 jwt:
   # 운영 환경에서는 반드시 32자 이상의 무작위 값으로 교체할 것
-  secret: ${JWT_SECRET:ECH-dev-jwt-secret-key-change-in-prod}
+  secret: ${JWT_SECRET:CSTalk-dev-jwt-secret-key-change-in-prod}
   # 기본 8시간 (28800000 ms)
   expiration-ms: ${JWT_EXPIRATION_MS:28800000}
 
@@ -51,7 +51,7 @@ app:
   expose-error-detail: ${EXPOSE_ERROR_DETAIL:true}
   # 릴리즈 파일 저장 디렉토리 (운영 환경에서 절대 경로 지정 권장)
   releases-dir: ${APP_RELEASES_DIR:./releases}
-  # Electron 자동 업데이트 파일(latest.yml, ECH-Setup-*.exe). 비우면 {releases-dir}/desktop
+  # Electron 자동 업데이트 파일(latest.yml, CSTalk-Setup-*.exe). 비우면 {releases-dir}/desktop
   desktop-update-dir: ${DESKTOP_UPDATE_DIR:}
   # 첨부파일 저장 기본 경로 (DB app_settings 에서 덮어쓸 수 있음)
   file-storage-dir: ${FILE_STORAGE_DIR:D:/testStorage}

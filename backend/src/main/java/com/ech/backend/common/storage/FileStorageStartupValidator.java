@@ -27,16 +27,16 @@ public class FileStorageStartupValidator {
     public void validateOnReady() {
         String baseDir = appSettingsService.getFileStorageDir();
         if (baseDir == null || baseDir.isBlank()) {
-            log.error("[ECH] file storage dir is blank — channel file uploads will fail.");
+            log.error("[CSTalk] file storage dir is blank — channel file uploads will fail.");
             return;
         }
         FileStorageAccessProbe.Result r = FileStorageAccessProbe.probe(baseDir);
         Path root = r.resolvedAbsolutePath();
         if (r.writable()) {
-            log.info("[ECH] file storage ready: {}", root);
+            log.info("[CSTalk] file storage ready: {}", root);
         } else {
             log.error(
-                    "[ECH] file storage NOT writable: {} — {}. For UNC shares, run the backend service "
+                    "[CSTalk] file storage NOT writable: {} — {}. For UNC shares, run the backend service "
                             + "as a domain/local account that has share permissions, not Local System. "
                             + "Admin: GET /api/admin/storage/probe",
                     root,

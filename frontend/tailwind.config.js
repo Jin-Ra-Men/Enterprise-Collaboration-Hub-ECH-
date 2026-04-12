@@ -1,5 +1,5 @@
 /**
- * ECH 디자인 시스템 (Stitch / design/ECH메인·ECH화면설계 공통 팔레트)
+ * CSTalk 디자인 시스템 (Stitch / design/ECH메인·ECH화면설계 공통 팔레트)
  * — Vanilla CSS는 `styles.css`의 CSS 변수와 동일 토큰을 사용합니다.
  * — `npx tailwindcss` 도입 시 content 경로로 빌드 가능.
  */

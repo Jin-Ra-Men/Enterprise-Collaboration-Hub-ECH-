@@ -1,4 +1,4 @@
-# ECH RBAC 역할-권한 매트릭스 (Phase 3-2)
+# CSTalk RBAC 역할-권한 매트릭스 (Phase 3-2)
 
 이 문서는 현재 API 기준 최소 RBAC 정책을 정의합니다.
 

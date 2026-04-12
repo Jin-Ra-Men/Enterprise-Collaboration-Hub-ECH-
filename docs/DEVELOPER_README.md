@@ -4,7 +4,7 @@
 
 ---
 
-# 🌐 Enterprise Collaboration Hub (ECH)
+# 🌐 CSTalk
 
 > **Java & Node.js 기반의 고성능 사내 협업 플랫폼**
 > 실시간 소통부터 관리자 관제까지, 사내 인프라를 최대로 활용한 통합 협업 솔루션입니다.
@@ -14,7 +14,7 @@
 ---
 
 ## 📌 프로젝트 개요 (Overview)
-**ECH**는 기존 시스템의 안정성과 최신 협업 툴의 기민함을 결합한 프로젝트입니다. Java의 견고한 비즈니스 로직 처리와 Node.js의 빠른 실시간성을 활용하여 가볍고 끊김 없는 사용자 경험을 제공하는 것을 목표로 합니다.
+**CSTalk**는 기존 시스템의 안정성과 최신 협업 툴의 기민함을 결합한 프로젝트입니다. Java의 견고한 비즈니스 로직 처리와 Node.js의 빠른 실시간성을 활용하여 가볍고 끊김 없는 사용자 경험을 제공하는 것을 목표로 합니다.
 또한 Slack, Flow, Teams를 모티브로 하여 채널 중심 협업, 실시간 소통, 업무 연계 경험을 제공하는 것을 지향합니다.
 
 ## ✨ 주요 기능 (Key Features)
@@ -24,7 +24,7 @@
 - **스레드(Thread) 대화:** 대화 맥락을 유지하는 답글·댓글; 햄버거 메뉴 **스레드 모아보기**로 활동 중인 원글을 한곳에서 열기
 - **실시간 상태(Presence):** 온라인/자리비움/오프라인 상태 확인 및 업데이트(채팅·멤버 목록 옆 표시)
 - **@멘션:** 입력창 `@` 자동완성은 **현재 채널·DM 멤버만**(채널 상세 `members` 기준), 저장 토큰 `@{사번|이름}`; 피멘션자에게 `mention:notify`·우하단 토스트, 클릭 시 해당 채널로 이동. 현재 보고 있지 않은 채널 멘션은 사이드바 **멘션 목록(미확인만)** 으로 관리되며 클릭 시 해당 채널/메시지로 이동
-- **읽음 포인터·미읽음 배지:** 채널별 마지막으로 읽은 메시지 저장·조회; 목록 API `unreadCount`(루트 메시지 기준)로 채널/DM 사이드바에 빨간 원형 숫자 배지; **`lastMessageAt`** 로 최근 대화 순; **퀵 레일**은 ECH 제목 아래·검색~목록과 같은 높이 구간에만(64px 열); **미읽음 우선·최근 대화** 최대 15개·배지는 미읽음만; 패널 펼침 **324px**, 접힘 시 **퀵 64px만**; **접기**는 우측 **돌출 탭**·`localStorage` `ech_sidebar_collapsed`
+- **읽음 포인터·미읽음 배지:** 채널별 마지막으로 읽은 메시지 저장·조회; 목록 API `unreadCount`(루트 메시지 기준)로 채널/DM 사이드바에 빨간 원형 숫자 배지; **`lastMessageAt`** 로 최근 대화 순; **퀵 레일**은 CSTalk 제목 아래·검색~목록과 같은 높이 구간에만(64px 열); **미읽음 우선·최근 대화** 최대 15개·배지는 미읽음만; 패널 펼침 **324px**, 접힘 시 **퀵 64px만**; **접기**는 우측 **돌출 탭**·`localStorage` `ech_sidebar_collapsed`
 - **내 프레즌스:** 좌측 하단 상태 줄 클릭으로 **온라인 / 자리비움**(실시간 서버 `presence:set`)
 
 ### 🤝 협업 및 데이터 관리
@@ -182,7 +182,7 @@ graph LR
 - 서버 기동 시 기본 정책 자동 시드 (기본값: 비활성)
 
 ### 데스크톱 자동 업데이트(내부망)
-- GitHub에 나갈 수 없는 PC는 `ech-server.json`의 `serverUrl`로 백엔드 `http://.../desktop-updates/latest.yml`을 사용하도록 설정됨. 서버에는 `releases/desktop`(또는 `DESKTOP_UPDATE_DIR`)에 `latest.yml`·`ECH-Setup-*.exe` 배포.
+- GitHub에 나갈 수 없는 PC는 `cstalk-server.json`(구 `ech-server.json`)의 `serverUrl`로 백엔드 `http://.../desktop-updates/latest.yml`을 사용하도록 설정됨. 서버에는 `releases/desktop`(또는 `DESKTOP_UPDATE_DIR`)에 `latest.yml`·`CSTalk-Setup-*.exe` 배포.
 - **개념·흐름·역할 표**는 `./DEPLOYMENT_WINDOWS.md`의 **「데스크톱 앱 자동 업데이트(내부망)」** 절(동작 개념 / 운영 절차)을 참고. 운영 요약: `./HANDOVER.md`.
 
 ### 앱 기초설정 (app_settings)
@@ -267,8 +267,8 @@ npm start
 - **첨부「저장 후 열기」**: 데스크톱에서는 **저장 대화상자**로 경로를 고른 뒤 디스크에 쓰고 `shell.openPath`로 **OS 기본 연결 앱**으로 연다(임시 폴더에 먼저 열지 않음). **브라우저만** 쓸 때는 **다운로드** 후 짧은 지연 뒤 blob **새 탭**으로 연다.
 - **단일 인스턴스**: 이미 실행 중이면 두 번째 실행은 프로세스가 뜨지 않고 기존 창이 포커스됩니다. **아이콘(Windows)**: 원본은 `assets/icon-source-cs.png`(제공 로고). 흰 배경 제거·512×512 정사각 PNG로 맞춘 뒤 `icon.png`·`icon.ico`를 한 번에 만들려면 `npm run icon:build`. `npm run build:win`만 실행할 때는 `prebuild:win`이 **`assets/icon.png`** 로부터 **`assets/icon.ico`** 만 재생성한다. 설치본·작업 표시줄·창·트레이는 **`.ico` 우선**(PNG만 쓰면 EXE 아이콘이 Electron 기본으로 남을 수 있음).
 - **Windows 시작 시 실행**: 설치본(NSIS)에서 트레이 아이콘 **우클릭** → **Windows 시작 시 실행** 체크. Electron `app.setLoginItemSettings`(Windows에서는 사용자 시작 프로그램에 등록). 개발 모드(`electron .`)에서는 항목이 비활성이다. `window.electronAPI.getOpenAtLogin` / `setOpenAtLogin`으로 동일 설정을 렌더러에서 읽고 바꿀 수 있음(선택 UI 연동용).
-- **설치 위치(Windows)**: NSIS **`perMachine`** 으로 **`%PROGRAMFILES%\ECH\`** 에 전역 설치(UAC). 선택 설정 `ech-server.json`은 `ECH.exe` 옆 또는 **`%ProgramData%\ECH\ech-server.json`** 에 둘 수 있음(자세한 절차: `./DEPLOYMENT_WINDOWS.md`).
+- **설치 위치(Windows)**: NSIS **`perMachine`** 으로 **`%PROGRAMFILES%\CSTalk\`** 에 전역 설치(UAC). 선택 설정 `cstalk-server.json`은 `CSTalk.exe` 옆 또는 **`%ProgramData%\CSTalk\cstalk-server.json`** 에 둘 수 있음(구 `ech-server.json` 경로도 호환). 자세한 절차: `./DEPLOYMENT_WINDOWS.md`.
 
-- Windows 설치 파일(NSIS): `desktop`에서 `npm run build:win` → `desktop/dist/ECH-Setup-{version}.exe`(버전은 `desktop/package.json`의 `version`)·`latest.yml`·`.blockmap`. Electron은 `file://`로 UI를 열므로 API/소켓은 기본 **`http://localhost:8080`**, **`http://localhost:3001`** 로 붙습니다(백엔드·Realtime을 로컬에서 띄워야 로그인 가능). 다른 호스트를 쓰려면 `index.html`의 `<meta name="ech-api-base">` / `<meta name="ech-realtime-url">` 또는 `localStorage` `ech_realtime_url` 로 지정합니다.
-- **빌드 실패(`app.asar` 사용 중)**: ECH·다른 Electron 인스턴스를 종료한 뒤 `desktop/dist`를 비우고 다시 시도. 계속되면 출력만 다른 폴더로 빌드한 뒤 설치 파일을 `dist`로 복사: `npx electron-builder --win nsis --publish never --config.directories.output=dist-build-temp` → 생성된 `ECH-Setup-*.exe` 등을 `dist/`로 옮김.
+- Windows 설치 파일(NSIS): `desktop`에서 `npm run build:win` → `desktop/dist/CSTalk-Setup-{version}.exe`(버전은 `desktop/package.json`의 `version`)·`latest.yml`·`.blockmap`. Electron은 `file://`로 UI를 열므로 API/소켓은 기본 **`http://localhost:8080`**, **`http://localhost:3001`** 로 붙습니다(백엔드·Realtime을 로컬에서 띄워야 로그인 가능). 다른 호스트를 쓰려면 `index.html`의 `<meta name="ech-api-base">` / `<meta name="ech-realtime-url">` 또는 `localStorage` `ech_realtime_url` 로 지정합니다.
+- **빌드 실패(`app.asar` 사용 중)**: CSTalk·다른 Electron 인스턴스를 종료한 뒤 `desktop/dist`를 비우고 다시 시도. 계속되면 출력만 다른 폴더로 빌드한 뒤 설치 파일을 `dist`로 복사: `npx electron-builder --win nsis --publish never --config.directories.output=dist-build-temp` → 생성된 `CSTalk-Setup-*.exe` 등을 `dist/`로 옮김.
 - **자동 업데이트**: 패키지 실행 시 `electron-updater`가 GitHub Releases(`build.publish`의 owner/repo)를 조회합니다. 릴리즈 에셋에 **`latest.yml`**과 설치 파일(및 가능하면 **`*.exe.blockmap`**)을 함께 올려야 합니다. `tools/publish-electron-github-release.ps1`로 일괄 업로드할 수 있습니다(`GITHUB_TOKEN` 필요). 새 버전 다운로드가 끝나면 **메인 창 모달**에서 안내 후 **확인** 시 설치·재시작합니다. **내부망**에서는 GitHub 대신 사내 백엔드 `/desktop-updates/` 를 쓰는 방식이며, 설명·절차는 `./DEPLOYMENT_WINDOWS.md` **「데스크톱 앱 자동 업데이트(내부망)」** 를 본다. GitHub 릴리즈에 **Source code (zip/tar)** 가 함께 보이는 것은 **GitHub가 태그마다 자동으로 붙이는 항목**이며, 위 스크립트가 소스 zip을 따로 올리는 것이 아닙니다. 이미지 크게 보기: 서버에 미리보기가 있으면 먼저 압축 JPEG를 보여 주고 **원본 보기**로 전환할 수 있습니다(채팅 인라인·파일 허브·검색 공통).

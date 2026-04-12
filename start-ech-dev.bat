@@ -2,7 +2,7 @@
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-echo ECH local dev — checks health, starts only what is missing.
+echo CSTalk local dev — checks health, starts only what is missing.
 echo PostgreSQL must be running. See docs\ENVIRONMENT_SETUP.md
 echo.
 

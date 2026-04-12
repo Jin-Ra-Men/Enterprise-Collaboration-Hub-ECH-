@@ -1,7 +1,7 @@
 ﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
-  ECH 배포 패키지 생성 스크립트 (개발 PC에서 실행)
+  CSTalk 배포 패키지 생성 스크립트 (개발 PC에서 실행)
 .DESCRIPTION
   1. Spring Boot JAR 빌드
   2. 배포에 필요한 파일을 하나의 ZIP으로 패키징
@@ -20,7 +20,7 @@ function Warn  { param($msg) Write-Host "  [!!] $msg" -ForegroundColor Yellow }
 function Fatal { param($msg) Write-Host "`n  [FAIL] $msg" -ForegroundColor Red; exit 1 }
 function Title { param($msg) Write-Host "`n═══ $msg ═══" -ForegroundColor White }
 
-Title "ECH 배포 패키지 생성"
+Title "CSTalk 배포 패키지 생성"
 
 # ── 경로 설정 ────────────────────────────────────────────────
 $root    = Split-Path -Parent $PSScriptRoot
@@ -28,7 +28,7 @@ $backend = Join-Path $root "backend"
 $realtime= Join-Path $root "realtime"
 $deploy  = Join-Path $root "deploy"
 $outDir  = Join-Path $root "deploy\package"
-$zipPath = Join-Path $root "deploy\ECH-deploy.zip"
+$zipPath = Join-Path $root "deploy\CSTalk-deploy.zip"
 
 # ── 1. Gradle JAR 빌드 ───────────────────────────────────────
 Title "1단계 — Spring Boot JAR 빌드"
@@ -55,8 +55,8 @@ New-Item -ItemType Directory "$outDir\backend" | Out-Null
 New-Item -ItemType Directory "$outDir\realtime" | Out-Null
 
 # JAR 복사 (이름 고정)
-Copy-Item $jarFile.FullName "$outDir\backend\ech-backend.jar"
-Ok "JAR 복사: ech-backend.jar"
+Copy-Item $jarFile.FullName "$outDir\backend\cstalk-backend.jar"
+Ok "JAR 복사: cstalk-backend.jar"
 
 # realtime node_modules 사전 설치 (개발 PC 인터넷 활용)
 Title "1-1단계 — realtime npm install (패키지 포함용)"
@@ -134,23 +134,23 @@ Title "3단계 — ZIP 패키지 생성"
 if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
 Compress-Archive -Path "$outDir\*" -DestinationPath $zipPath
 $zipSize = [math]::Round((Get-Item $zipPath).Length / 1MB, 1)
-Ok "생성 완료: deploy\ECH-deploy.zip ($zipSize MB)"
+Ok "생성 완료: deploy\CSTalk-deploy.zip ($zipSize MB)"
 
 # ── 4. 안내 ──────────────────────────────────────────────────
 Title "완료"
 Write-Host @"
 
-  생성된 파일: deploy\ECH-deploy.zip
+  생성된 파일: deploy\CSTalk-deploy.zip
 
   ┌── 이후 절차 ─────────────────────────────────────────────────┐
   │                                                              │
   │  [DB 서버 (192.168.11.179)] 에서:                           │
-  │    1. ECH-deploy.zip 복사 후 압축 해제                       │
+  │    1. CSTalk-deploy.zip 복사 후 압축 해제                       │
   │    2. PowerShell (관리자) 로 실행:                           │
   │       .\setup-db-server.ps1                                 │
   │                                                              │
   │  [WEB 서버 (192.168.11.168)] 에서:                          │
-  │    1. ECH-deploy.zip 복사 후 C:\ECH-deploy\ 에 압축 해제    │
+  │    1. CSTalk-deploy.zip 복사 후 C:\CSTalk-deploy\ 에 압축 해제    │
   │    2. PowerShell (관리자) 로 실행:                           │
   │       .\setup-web-server.ps1                                │
   │                                                              │

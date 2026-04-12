@@ -1,4 +1,4 @@
-# ECH 기능 명세서
+# CSTalk 기능 명세서
 
 이 문서는 구현된 기능의 동작 기준을 상세히 기록합니다.  
 신규 개발/수정 시 해당 기능 항목을 반드시 갱신합니다.
@@ -198,7 +198,7 @@
 - 테스트 기준:
   - 타 채널 메시지 수신 후 퀵 레일 순서·배지가 목록과 일치
   - 미읽음 0이어도 최근 대화가 퀵에 나오고, 미읽음 발생 시 해당 항목이 상단·배지로 올라옴
-  - ECH 헤더가 퀵 레일보다 위에만 보이고, 퀵이 검색 행과 같은 높이에서 시작함
+  - CSTalk 헤더가 퀵 레일보다 위에만 보이고, 퀵이 검색 행과 같은 높이에서 시작함
   - 돌출 탭으로 접기/펼치기 및 새로고침 후 상태 유지
 - 비고: 퀵 레일 DM도 `dmSidebarLeadingHtml`·`data-presence-user`·`sidebar-dm-presence`로 사이드바와 동일하게 프레즌스 점 갱신(`refreshPresenceDots`); 상대 사번 없을 때만 `●` 폴백
 
@@ -859,7 +859,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - **조직도 모달 전용**: 헤더에 **새로고침** 버튼을 두지 않는다. 모달을 열면 로그인 사용자 기준 **최하위 소속** 노드를 자동 선택한다 — (1) 팀 `users`에 본인 사번이 있으면 해당 팀, (2) 없으면 `currentUser.department` 문자열과 **팀명**이 일치하는 팀, (3) 없으면 본부 `directMembers`, (4) 없으면 회사 `directMembers`. 우측 구성원 패널은 해당 노드 기준으로 채우고, 좌측 트리는 선택 노드가 보이도록 스크롤한다. 우선순위는 구성원 추가 피커의 기본 팀(`loadOrgPicker`)과 맞춘다. `frontend/app.js` (`findDefaultOrgChartNodeButton`, `applyOrgChartNodeSelection`).
   - 멤버 패널: `department`·`jobLevel`을 한 줄 요약, `jobPosition`·`jobTitle`은 값이 있을 때만 추가 표시
   - 멤버 패널: **PUBLIC/PRIVATE**에서 개설자 사번(`createdByEmployeeNo`)과 일치하는 멤버에 `관리자` 배지 표시 — **DM**에서는 미표시
-  - 파일 업로드 성공 시: **비이미지**는 메시지 행 안에 **카드 리스트**(아이콘·파일명·크기 + **저장** / **저장 후 열기**만; **뷰어로 열기 없음**). **저장 후 열기**: **브라우저**에서는 먼저 **다운로드**(`<a download>`) 후 짧은 지연 뒤 blob **새 탭** 열기. **ECH 데스크톱(Electron)** 에서는 **저장 대화상자**로 경로를 고른 뒤 디스크에 쓰고 `shell.openPath`로 **OS 기본 앱** 실행(임시 폴더에 먼저 열지 않음). IPC `ech-save-file-and-open-default-app` / `electronAPI.saveFileAndOpenWithDefaultApp`. **이미지**는 같은 묶음 안에서 **2열 그리드** 썸네일 — **이미지 1장만**일 때는 그리드 한 칸이 아니라 **전체 폭**을 쓰도록 CSS(`:only-child` → `grid-column: 1 / -1`). 썸네일 클릭 시 `openChannelImageLightbox`. **연속 FILE 메시지**(같은 분·같은 발신자·스레드 댓글 없음)는 `tryConsumeFileAttachmentGroup` → `createFileAttachmentGroupRowFromMsgs`로 **한 말풍선**에 묶고, **일괄저장**은 **JSZip**으로 **ZIP 한 파일** 다운로드(`batchDownloadChannelImageFiles`; CDN `jszip`). **FILE 메시지 직후** 다음 타임라인 메시지는 **항상 아바타 행**을 새로 띄움(`shouldShowAvatarForMessage`에서 이전이 FILE이면 true, 실시간 `appendMessageRealtime`에서 직전 행이 `msg-has-attachment`면 아바타 표시)
+  - 파일 업로드 성공 시: **비이미지**는 메시지 행 안에 **카드 리스트**(아이콘·파일명·크기 + **저장** / **저장 후 열기**만; **뷰어로 열기 없음**). **저장 후 열기**: **브라우저**에서는 먼저 **다운로드**(`<a download>`) 후 짧은 지연 뒤 blob **새 탭** 열기. **CSTalk 데스크톱(Electron)** 에서는 **저장 대화상자**로 경로를 고른 뒤 디스크에 쓰고 `shell.openPath`로 **OS 기본 앱** 실행(임시 폴더에 먼저 열지 않음). IPC `ech-save-file-and-open-default-app` / `electronAPI.saveFileAndOpenWithDefaultApp`. **이미지**는 같은 묶음 안에서 **2열 그리드** 썸네일 — **이미지 1장만**일 때는 그리드 한 칸이 아니라 **전체 폭**을 쓰도록 CSS(`:only-child` → `grid-column: 1 / -1`). 썸네일 클릭 시 `openChannelImageLightbox`. **연속 FILE 메시지**(같은 분·같은 발신자·스레드 댓글 없음)는 `tryConsumeFileAttachmentGroup` → `createFileAttachmentGroupRowFromMsgs`로 **한 말풍선**에 묶고, **일괄저장**은 **JSZip**으로 **ZIP 한 파일** 다운로드(`batchDownloadChannelImageFiles`; CDN `jszip`). **FILE 메시지 직후** 다음 타임라인 메시지는 **항상 아바타 행**을 새로 띄움(`shouldShowAvatarForMessage`에서 이전이 FILE이면 true, 실시간 `appendMessageRealtime`에서 직전 행이 `msg-has-attachment`면 아바타 표시)
   - **연속 이미지(같은 분·같은 발신자)**: 서버는 파일별 `FILE` 메시지로 저장하되, 타임라인에서는 **2장 이상**이면 **2열 그리드**로 묶어 표시(스레드 댓글이 달린 메시지는 묶지 않음). 하단 **일괄저장**은 **ZIP**(`attachments-{channelId}-{timestamp}.zip`)
   - **DM 채팅 헤더**: `#chatChannelPrefix`에 사이드바 DM 목록과 동일하게 `dmSidebarLeadingHtml` 기반 **프레즌스 점**(그룹 DM은 최대 3명 + `+N`). 멤버 API 로드 후 `updateChatHeaderDmPresence`로 갱신
 - **상단 채널 컨텍스트**: 채팅방 이름·구성원 수(`chatChannelName`, `chatMemberCount`)는 채팅창 헤더 대신 상단 글로벌 바 중앙 `#appTopbarChannelContext`에 표시되며, 채널 설정 햄버거(`btnHeaderMenu`)는 상단 우측 아이콘 영역에서 채팅 뷰일 때만 표시
@@ -899,7 +899,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 - `showView` 호출 시 `syncAdminSidebarActive(viewId)`로 `viewOrgManagement`·`viewUserManagement`·`viewReleases`·`viewSettings` 중 하나와 사이드바 네 항목의 `.active`를 맞추고, 채팅/환영 등 비관리 뷰에서는 관리 메뉴 활성을 해제한다.
 
 ## 글로벌 바·시작 화면·워크플로우 진입 (2026-04-09 개정, 2026-04-09 워크플로우 명칭 통합)
-- **대시보드** 상단 탭은 제거. **ECH** 로고는 `#btnAppShellHome` — 클릭 시 `clearActiveChannelAndReload()`로 슬림 시작 화면(`#viewWelcome`, `.ech-home-*`)으로 복귀.
+- **대시보드** 상단 탭은 제거. **CSTalk** 로고는 `#btnAppShellHome` — 클릭 시 `clearActiveChannelAndReload()`로 슬림 시작 화면(`#viewWelcome`, `.ech-home-*`)으로 복귀.
 - 시작 화면은 기능형 웰컴 대시보드로 제공한다. 상단 히어로는 `👋` 인사 + `안녕하세요, {이름}님`을 표시하고, 기존 `채널 목록 보기/검색/조직도` 버튼은 제거한다.
 - 시작 화면의 즉시 실행 액션: 워크플로우 열기(사이드바 진입과 동일한 채널 선택 플로우), 채널 만들기, DM 만들기, 조직도 열기, 테마 설정, 내 프로필 보기.
 - 글로벌 바 우측 본인 아바타(`#appHeaderAvatar`)·사이드바 하단 본인 아바타(`#sidebarAvatar`) 클릭 시에도 웰컴「내 프로필 확인」과 동일하게 `openCurrentUserProfile` → 사용자 프로필 모달(`modalUserProfile`)을 연다(`button.user-avatar`).
@@ -971,31 +971,31 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 ## 데스크톱 (Electron) Windows 자동 업데이트
 - 목적: 설치형(NSIS) 클라이언트가 GitHub Releases(또는 내부망 generic 피드)에서 새 버전을 감지·내려받고, **다운로드 완료 시 메인 창에 모달**(`modalAppUpdate`)로 안내 — **확인** 시 `quitAndInstall`로 즉시 설치·재시작. **나중에**는 모달만 닫고, 이후 트레이에서 종료 시 `autoInstallOnAppQuit`로 적용 가능
-- 사용자: Windows에 ECH 데스크톱을 설치한 사용자
-- 관련 화면/경로: `desktop/main.js` — 메인 창 제목에 `app.getVersion()` 표시(`did-finish-load` 후 `setTitle`), 트레이 툴팁에도 `ECH v{version}`. 패키지 실행(`app.isPackaged`) 시에만 `electron-updater` 초기화
+- 사용자: Windows에 CSTalk 데스크톱을 설치한 사용자
+- 관련 화면/경로: `desktop/main.js` — 메인 창 제목에 `app.getVersion()` 표시(`did-finish-load` 후 `setTitle`), 트레이 툴팁에도 `CSTalk v{version}`. 패키지 실행(`app.isPackaged`) 시에만 `electron-updater` 초기화
 - 관련 API: GitHub Releases API(런타임) — `GET https://github.com/{owner}/{repo}/releases/latest` 계열로 메타 조회; 실제 파일은 릴리즈 에셋
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:
   - `desktop/package.json`의 `build.publish`에 `provider: github`, `owner`, `repo` 설정(메타 생성·업데이터 URL 결정에 사용)
   - 빌드 산출물: `desktop/dist/latest.yml`, 설치 파일(`latest.yml`의 `path` 필드와 동일한 파일명), 권장 `*.exe.blockmap`
-  - 배포: 동일 Git 태그 릴리즈에 위 파일들을 **모두** 에셋으로 올림(`tools/publish-electron-github-release.ps1`가 `latest.yml`의 `path`(URL용 파일명)로 에셋 이름을 맞추고, 로컬에 공백 포함 `ECH Setup {version}.exe`만 있을 때는 그 파일을 읽어 동일 에셋 이름으로 업로드)
+  - 배포: 동일 Git 태그 릴리즈에 위 파일들을 **모두** 에셋으로 올림(`tools/publish-electron-github-release.ps1`가 `latest.yml`의 `path`(URL용 파일명)로 에셋 이름을 맞추고, 로컬에 공백 포함 `CSTalk Setup {version}.exe`만 있을 때는 그 파일을 읽어 동일 에셋 이름으로 업로드)
 - 상태 전이/예외 케이스:
   - **exe만** 릴리즈에 있고 `latest.yml`이 없으면 업데이터가 새 버전을 찾지 못함(기존 동작)
   - 개발 모드(`npm start`)에서는 업데이터 비활성화
   - 코드 서명이 없으면 Windows SmartScreen 경고는 남을 수 있음(업데이터 자체와는 별개)
 - 권한/보안: Private 저장소면 사용자 환경에 GitHub 인증이 없어도 **공개 릴리즈 에셋**은 URL로 내려받기 가능; 비공개 배포면 별도 토큰/서버 검토 필요
-- 로그/감사 포인트: 업데이터 오류는 메인 프로세스 콘솔 `[ECH] autoUpdater error:` 로그
+- 로그/감사 포인트: 업데이터 오류는 메인 프로세스 콘솔 `[CSTalk] autoUpdater error:` 로그
 - 테스트 기준:
   - 이전 버전 설치 후 상위 버전 릴리즈에 `latest.yml`+설치파일(+blockmap) 업로드 → 앱 기동 또는 주기 점검(6시간) 후 다운로드 완료 시 모달 노출·확인 시 재기동 적용(또는 종료 시 적용)
 - 비고: `npm run build:win`은 `--publish never`로 업로드는 하지 않되, `publish` 설정이 있으면 `latest.yml` 등이 `dist`에 생성됨
-- **내부망(인터넷/GitHub 불가)**: 설치 디렉터리의 `ech-server.json`에 `serverUrl`(예: `http://ech.co.kr:8080`) 또는 `updateBaseUrl`(예: `http://host:8080/desktop-updates/`)이 있으면 `electron-updater`가 `generic` 피드로 전환되어 **백엔드** `GET /desktop-updates/latest.yml` 및 동일 베이스 URL의 설치 파일을 사용한다. 서버에는 `{APP_RELEASES_DIR}/desktop`(또는 `DESKTOP_UPDATE_DIR`)에 `latest.yml`·`ECH-Setup-{version}.exe`를 배치하고, yml의 `path`와 실제 파일명을 일치시킨다. 상세: `docs/DEPLOYMENT_WINDOWS.md`, `DesktopUpdateResourceConfig`.
+- **내부망(인터넷/GitHub 불가)**: 설치 디렉터리의 `cstalk-server.json`(구 `ech-server.json`)에 `serverUrl`(예: `http://cstalk.co.kr:8080`) 또는 `updateBaseUrl`(예: `http://host:8080/desktop-updates/`)이 있으면 `electron-updater`가 `generic` 피드로 전환되어 **백엔드** `GET /desktop-updates/latest.yml` 및 동일 베이스 URL의 설치 파일을 사용한다. 서버에는 `{APP_RELEASES_DIR}/desktop`(또는 `DESKTOP_UPDATE_DIR`)에 `latest.yml`·`CSTalk-Setup-{version}.exe`를 배치하고, yml의 `path`와 실제 파일명을 일치시킨다. 상세: `docs/DEPLOYMENT_WINDOWS.md`, `DesktopUpdateResourceConfig`.
 - **동료·운영자용 요약**: 동작 한눈에(비유·흐름·역할 표)는 `docs/DEPLOYMENT_WINDOWS.md`의 **「데스크톱 앱 자동 업데이트(내부망)」** 절 **「동작 개념」** 을 참고한다.
 - **이미지 다운로드 선택 모달**(`modalImageDownloadChoice`): **원본** 옆 용량은 `channel_files.size_bytes`. 서버에 `preview_storage_key`가 있으면 **압축본(미리보기)** 옆에 `preview_size_bytes`를 표시하고 `GET .../download?variant=preview`로 내려받는다. 미리보기가 없는 구 첨부는 **압축본**이 브라우저 JPEG 재인코딩이며 용량은 실행 전까지 대략 안내만 한다.
 
 ---
 
 ## 데스크톱 (Electron) 부팅·로그인 시 자동 실행
-- 목적: Windows 로그인(또는 부팅 후 첫 로그인) 시 ECH 데스크톱을 자동 실행
+- 목적: Windows 로그인(또는 부팅 후 첫 로그인) 시 CSTalk 데스크톱을 자동 실행
 - 사용자: NSIS 설치본(`app.isPackaged`) 사용자. 개발 모드(`electron .`)에서는 등록 대상이 아니며 트레이 메뉴 항목이 비활성
 - 관련 경로: `desktop/main.js` — `app.setLoginItemSettings` / `getLoginItemSettings`, `path: process.execPath`. 트레이 **우클릭** 메뉴에 체크박스 — Windows 문구 **Windows 시작 시 실행**, macOS **로그인 시 자동 실행**, 그 외 **시작 시 자동 실행**. 메뉴를 열 때마다 `buildTrayMenu()`로 현재 OS 등록 상태를 반영
 - IPC(선택 UI 연동): `ech-get-open-at-login`, `ech-set-open-at-login` → `preload.js`의 `electronAPI.getOpenAtLogin` / `setOpenAtLogin`
@@ -1065,7 +1065,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 ---
 
-## UI 구역 (ECH 화면설계 연동)
+## UI 구역 (CSTalk 화면설계 연동)
 - 목적: `design/ECH화면설계 (1)~(9)` Stitch 목업과 실제 앱 구역을 추적 가능하게 맞춤
 - 관련 화면: 채팅 `#viewChat`, 워크플로우 페이지 `#modalWorkHub`, 관리자 `#viewReleases`·`#viewUserManagement`·`#viewOrgManagement`·`#viewSettings`
 - 마크업 훅: `.ech-region--chat`, `.ech-chat-header`, `.ech-messages-wrap`, `.ech-composer-bar`, `.ech-workhub-shell`, `.ech-region--admin`, `data-ech-design-ref` (예: `admin-releases`, `screen7-users`, `screen5-org`, `screen8-settings`)
