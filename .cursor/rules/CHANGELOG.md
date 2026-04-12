@@ -5,7 +5,7 @@
 ## 2026-04-12 (추가)
 
 ### Changed
-- **데스크톱 빌드**: `npm run build:win` 전에 `scripts/clean-dist.cjs`로 `desktop/dist` 삭제 — `app.asar` 잠금 시 한글 안내 후 실패. `package.json`에 `description`·`author` 추가(electron-builder 경고 완화).
+- **데스크톱 빌드**: `npm run build:win` 전에 `scripts/clean-dist.cjs`로 `desktop/dist` 삭제 — 재시도·Cursor/Defender 안내. `CSTALK_SKIP_DIST_CLEAN=1`로 삭제 생략 가능. `package.json`에 `description`·`author` 추가(electron-builder 경고 완화).
 
 ## 릴리즈 v1.2.5
 
