@@ -375,11 +375,13 @@ ipcMain.on("os-notification-show", (event, payload) => {
     const tag = payload?.tag != null ? String(payload.tag) : "";
     const title = payload?.title != null ? String(payload.title) : "알림";
     const body = payload?.body != null ? String(payload.body) : "";
-    const isMention = payload?.kind === "mention";
+    const kind = payload?.kind;
+    const isHighlight =
+      kind === "mention" || kind === "workActivity";
 
     const notificationOptions = { title, body };
     // Windows/Linux: keep toast visible until dismissed (default is short).
-    if (isMention && (process.platform === "win32" || process.platform === "linux")) {
+    if (isHighlight && (process.platform === "win32" || process.platform === "linux")) {
       notificationOptions.timeoutType = "never";
     }
 
@@ -401,8 +403,8 @@ ipcMain.on("os-notification-show", (event, payload) => {
 
     n.show();
 
-    // Windows: flash taskbar button until the window is focused (helps notice mentions).
-    if (isMention && process.platform === "win32" && mainWindow && !mainWindow.isDestroyed()) {
+    // Windows: flash taskbar button until the window is focused (mentions & high-priority work alerts).
+    if (isHighlight && process.platform === "win32" && mainWindow && !mainWindow.isDestroyed()) {
       try {
         if (!mainWindow.isFocused()) {
           mainWindow.flashFrame(true);

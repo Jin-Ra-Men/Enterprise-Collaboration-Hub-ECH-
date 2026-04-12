@@ -5532,6 +5532,7 @@ function showOsNotificationIfAllowed({ tag, title, body, onClick, kind }) {
     }
     const payload = { tag: String(tag), title: String(title || ""), body: String(body || "") };
     if (kind === "mention") payload.kind = "mention";
+    else if (kind === "workActivity") payload.kind = "workActivity";
     window.electronAPI.showOsNotification(payload);
     return;
   }
@@ -5556,13 +5557,14 @@ function showOsNotificationIfAllowed({ tag, title, body, onClick, kind }) {
       }
     };
   }
+  const longWebMs = kind === "mention" || kind === "workActivity" ? 300_000 : 10_000;
   setTimeout(() => {
     try {
       n.close();
     } catch {
       // ignore
     }
-  }, 10_000);
+  }, longWebMs);
 }
 
 function notifyMutedStorageKey() {
@@ -5700,6 +5702,7 @@ function pushActivityToast({ title, locationLine, preview, onClick }) {
     tag: "ech_os_work_sidebar",
     title: titleStr,
     body: bodyLine,
+    kind: "workActivity",
     onClick: typeof onClick === "function" ? onClick : undefined,
   });
 
@@ -5722,7 +5725,7 @@ function pushActivityToast({ title, locationLine, preview, onClick }) {
   stack.appendChild(toast);
   setTimeout(() => {
     if (toast.parentNode) toast.remove();
-  }, 12_000);
+  }, 25_000);
 }
 
 /** 다른 채널/DM의 신규 일반 메시지 토스트. 알림 끄기 시에만 억제(미읽음 배지·멘션 토스트와 무관). */

@@ -8,6 +8,7 @@
 - **Windows 데스크톱(NSIS)**: 레거시 **ECH** 설치 제거 후 CSTalk 설치 — `desktop/nsis/installer.nsh`의 `customInit`에서 `Uninstall ECH.exe` 무인 실행(기본 경로: `%ProgramFiles%\ECH\`, `%ProgramFiles(x86)%` 대응, `%LOCALAPPDATA%\Programs\ECH\`). `desktop/package.json` → `build.nsis.include`.
 - **Electron 멘션 OS 알림**: 백그라운드일 때 멘션만 작업 표시줄 아이콘 깜빡임(`BrowserWindow.flashFrame`)·토스트 자동 닫힘 완화(`timeoutType: never`, Windows/Linux). `desktop/main.js`, `frontend/app.js` `showOsNotificationIfAllowed`·`pushMentionToast`.
 - **담당 업무 사이드바 변경 OS 알림**: `loadMyChannels`에서 담당 업무 스냅샷 변경 시 `pushActivityToast`가 기존 인앱 토스트만 띄우던 것을, 백그라운드에서는 `showOsNotificationIfAllowed`(태그 `ech_os_work_sidebar`)로 Electron·브라우저(권한 시) OS 알림까지 표시. Electron은 인앱 토스트 생략.
+- **담당 업무 알림 강조**: `kind: workActivity`로 멘션과 동일하게 Windows `flashFrame`·`timeoutType: never`(Linux 동일), 웹 OS 알림은 자동 닫힘 5분. 인앱 활동 토스트 표시 12초→25초.
 
 ### Changed
 - **제품명·브랜딩**: 표시명을 **CSTalk**로 통일(웹 로그인·글로벌 바, Electron 창 제목·트레이, 로그 프리픽스 `[CSTalk]` 등). Java 패키지 `com.ech`·CSS 접두 `ech-*`·`ech_*` localStorage 키는 호환을 위해 유지.

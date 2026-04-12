@@ -229,7 +229,7 @@
   - 멘션 삽입 후 전송 시 피멘션자 소켓에 `mention:notify` 수신
   - 토스트 클릭 시 `selectChannel`로 동일 채널 오픈
 - 비고: 구현 `MentionParser`, `MentionNotificationService`, `RealtimeBroadcastClient.notifyMentions`, `realtime/src/db.js` 멘션 헬퍼, `POST /internal/notify-mentions`. 멘션 토스트 DOM은 **`#mainApp` 밖(body 직계)** 에 두어 `.app-layout { overflow:hidden }` 에 잘리지 않게 함. 프론트 Socket.io URL은 기본 `{페이지와 동일 hostname}:3001`로 자동(REST는 `window.location.origin`), `meta ech-realtime-url` / `localStorage ech_realtime_url`로 덮어쓰기 가능 — `localhost` 고정과 `127.0.0.1` 접속 불일치 시 멘션·프레즌스가 동시에 안 되는 전형 원인
-- **CSTalk 데스크톱(Electron) OS 알림**: 창이 백그라운드(비포커스·숨김)일 때만 `showOsNotificationIfAllowed`가 동작. **멘션**(`pushMentionToast`, `kind: mention`)은 Windows에서 작업 표시줄 버튼 깜빡임(`mainWindow.flashFrame`)·토스트 자동 소멸 완화(`Notification` `timeoutType: never`, Linux 동일). 일반 신규 메시지(`pushNewMessageToast`)는 기본 짧은 표시 유지.
+- **CSTalk 데스크톱(Electron) OS 알림**: 창이 백그라운드(비포커스·숨김)일 때만 `showOsNotificationIfAllowed`가 동작. **멘션**(`kind: mention`)·**담당 업무 사이드바 변경**(`pushActivityToast`, `kind: workActivity`)은 Windows에서 작업 표시줄 깜빡임(`flashFrame`)·토스트 자동 소멸 완화(`timeoutType: never`, Linux 동일). 일반 신규 메시지는 기본 짧은 표시 유지.
 
 ### 채팅방별 알림 끄기·신규 메시지 토스트
 - 목적: 참여 중인 다른 채널/DM에 신규 메시지가 오면 우하단 토스트(`pushNewMessageToast`)로 안내하되, 사용자가 방마다 **일반 메시지 토스트만** 끌 수 있게 함(서버 저장 없음, 브라우저 `localStorage`).
@@ -238,7 +238,7 @@
 - 현재 보고 있는 채널은 신규 일반 메시지 토스트 대상에서 제외(기존과 동일).
 - UI: `#channelList` / `#dmList` / `#quickRailScroll`의 `.channel-item` **우클릭** → `#channelSidebarContextMenu`(`알림 끄기`↔`알림 켜기`, `채팅방 나가기`). 채널·DM 상단 햄버거(멤버 패널) `#btnHeaderNotifyToggle`에서 동일 토글. 음소거 시 목록 행에 **벨+슬래시** 아이콘(`notifyMutedBellSvg`) 표시.
 - 햄버거 패널 순서(위→아래): 알림 끄기/켜기 → 첨부파일 → 업무/칸반 → 이름 변경 → **멤버 목록** 제목 → 멤버 리스트 → 구성원 추가 → 채팅방 나가기 → 채널 폐쇄.
-- 비고: 업무 사이드바 변경 등 `pushActivityToast`는 채널 음소거와 무관. 백그라운드일 때 **OS 알림**(`showOsNotificationIfAllowed`, 태그 `ech_os_work_sidebar`)·앱 내 토스트를 쓰며, Electron에서는 OS 알림 후 인앱 토스트는 생략(`isEchElectronClient`).
+- 비고: 업무 사이드바 변경 등 `pushActivityToast`는 채널 음소거와 무관. 백그라운드일 때 **OS 알림**(`showOsNotificationIfAllowed`, `kind: workActivity`, 태그 `ech_os_work_sidebar`)·앱 내 토스트(표시 **25초**, 멘션 토스트와 동일)를 쓰며, Electron에서는 OS 알림 후 인앱 토스트는 생략(`isEchElectronClient`).
 
 ---
 
