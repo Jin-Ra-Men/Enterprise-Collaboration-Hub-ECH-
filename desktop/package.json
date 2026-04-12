@@ -1,6 +1,8 @@
 {
   "name": "cstalk-desktop",
   "version": "1.2.5",
+  "description": "CSTalk Windows desktop client (Electron)",
+  "author": "Jin-Ra-Men",
   "private": true,
   "main": "main.js",
   "repository": {
@@ -11,7 +13,7 @@
     "prebuild:win": "node scripts/generate-icon-ico.mjs",
     "icon:build": "node scripts/build-desktop-icon.mjs && node scripts/generate-icon-ico.mjs",
     "start": "electron .",
-    "build:win": "electron-builder --win nsis --publish never"
+    "build:win": "node scripts/clean-dist.cjs && electron-builder --win nsis --publish never"
   },
   "dependencies": {
     "electron-updater": "^6.8.3"

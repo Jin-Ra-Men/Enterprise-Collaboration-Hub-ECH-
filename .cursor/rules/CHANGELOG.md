@@ -2,6 +2,11 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-04-12 (추가)
+
+### Changed
+- **데스크톱 빌드**: `npm run build:win` 전에 `scripts/clean-dist.cjs`로 `desktop/dist` 삭제 — `app.asar` 잠금 시 한글 안내 후 실패. `package.json`에 `description`·`author` 추가(electron-builder 경고 완화).
+
 ## 릴리즈 v1.2.5
 
 ### Release
