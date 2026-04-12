@@ -106,6 +106,7 @@ New-Item -ItemType Directory -Force C:\CSTalk\releases\desktop
   1. `CSTalk.exe`와 같은 폴더 — 예: `C:\Program Files\CSTalk\cstalk-server.json` (일반 사용자는 수정이 어려울 수 있음)
   2. **`%ProgramData%\CSTalk\cstalk-server.json`** — 예: `C:\ProgramData\CSTalk\cstalk-server.json` (배포·그룹 정책으로 넣기에 적합)
 - **Windows 시작 시 자동 실행**: 사용자가 트레이 아이콘 **우클릭** → **Windows 시작 시 실행**을 켜면 Electron이 로그인 시 실행 목록에 등록한다. 조직 정책(GPO 등)으로 사용자 시작 프로그램이 제한되면 동작하지 않을 수 있다.
+- **ECH → CSTalk 업그레이드(자동 업데이트/설치 시)**: NSIS 설치 프로그램이 시작될 때 **예전 ECH**가 기본 경로에 있으면 `Uninstall ECH.exe /S`로 먼저 무인 제거한 뒤 CSTalk를 설치한다(`desktop/nsis/installer.nsh`). 사용자가 ECH를 **임의 경로**에 설치했거나 제거 프로그램 이름이 다른 경우에는 수동으로 제거한 뒤 CSTalk를 설치해야 할 수 있다.
 
 ### 데스크톱 앱 자동 업데이트(내부망)
 

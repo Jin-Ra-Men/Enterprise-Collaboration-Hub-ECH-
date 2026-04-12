@@ -19,4 +19,4 @@ if (!fs.existsSync(input)) {
 
 const buf = await pngToIco(input);
 fs.writeFileSync(output, buf);
-console.log("[ECH] wrote", output, `(${buf.length} bytes)`);
+console.log("[CSTalk] wrote", output, `(${buf.length} bytes)`);

@@ -4,6 +4,9 @@
 
 ## 2026-04-12
 
+### Added
+- **Windows 데스크톱(NSIS)**: 레거시 **ECH** 설치 제거 후 CSTalk 설치 — `desktop/nsis/installer.nsh`의 `customInit`에서 `Uninstall ECH.exe` 무인 실행(기본 경로: `%ProgramFiles%\ECH\`, `%ProgramFiles(x86)%` 대응, `%LOCALAPPDATA%\Programs\ECH\`). `desktop/package.json` → `build.nsis.include`.
+
 ### Changed
 - **제품명·브랜딩**: 표시명을 **CSTalk**로 통일(웹 로그인·글로벌 바, Electron 창 제목·트레이, 로그 프리픽스 `[CSTalk]` 등). Java 패키지 `com.ech`·CSS 접두 `ech-*`·`ech_*` localStorage 키는 호환을 위해 유지.
 - **운영 도메인 예시**: 기본 데스크톱 `serverUrl`·문서·배포 스크립트의 사이트 호스트를 **`cstalk.co.kr`**(예: `http://cstalk.co.kr:8080`) 기준으로 갱신. hosts 파일 예시 동일.

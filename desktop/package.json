@@ -61,7 +61,8 @@
     ],
     "nsis": {
       "perMachine": true,
-      "allowElevation": true
+      "allowElevation": true,
+      "include": "nsis/installer.nsh"
     }
   }
 }
