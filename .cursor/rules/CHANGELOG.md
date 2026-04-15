@@ -6,6 +6,7 @@
 
 ### Changed
 - **데스크톱 빌드**: `npm run build:win` 전에 `scripts/clean-dist.cjs`로 `desktop/dist` 삭제 — 재시도·Cursor/Defender 안내. `CSTALK_SKIP_DIST_CLEAN=1`로 삭제 생략 가능. `package.json`에 `description`·`author` 추가(electron-builder 경고 완화).
+- **채팅 타임라인 복구**: 네트워크 단절로 `메시지 로드 실패`가 남은 채널은 브라우저 `online` 이벤트·소켓 `connect/reconnect` 시 `recoverActiveChannelTimelineIfNeeded`가 자동 재로딩하여 앱 재시작 없이 복구.
 
 ## 릴리즈 v1.2.5
 

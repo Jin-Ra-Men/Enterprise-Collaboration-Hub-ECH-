@@ -218,6 +218,10 @@ let timelineRootMessageById = new Map();
 let chatTimelineHasMoreOlder = false;
 let chatTimelineLoadingOlder = false;
 let messageListScrollHandlerBound = false;
+/** 네트워크/일시 오류로 현재 채널 타임라인 로드가 실패한 마지막 채널 ID */
+let lastMessageLoadFailedChannelId = null;
+/** 재연결 시 중복 타임라인 복구 요청을 막기 위한 잠금 */
+let recoveringTimelineChannelId = null;
 /** 마지막 읽은 위치 앵커 저장(디바운스) 바인딩 여부 */
 // loadMessages(preserveScroll=true)일 때만 렌더 함수의 자동 스크롤을 억제/복원하기 위한 비율
 let pendingScrollRestoreRatio = null;
@@ -3249,8 +3253,12 @@ async function loadMessages(channelId, { preserveScroll = false, skipNewMsgsDivi
     messagesEl.innerHTML = "";
     if (!res.ok) {
       skipAutoScrollToBottomOnce = false;
+      lastMessageLoadFailedChannelId = Number(channelId);
       appendSystemMsg("메시지 로드 실패: " + (json.error?.message || ""));
       return;
+    }
+    if (lastMessageLoadFailedChannelId === Number(channelId)) {
+      lastMessageLoadFailedChannelId = null;
     }
 
     // 백엔드 read-state가 있으면 자동 하단 스크롤 억제(새 메시지 구분선 위치로 스크롤)
@@ -3317,6 +3325,7 @@ async function loadMessages(channelId, { preserveScroll = false, skipNewMsgsDivi
     await markChannelReadCaughtUp(channelId);
     await loadMyChannels();
   } catch (err) {
+    lastMessageLoadFailedChannelId = Number(channelId);
     appendSystemMsg("메시지 로드 중 오류 발생");
     console.error(err);
   } finally {
@@ -5249,6 +5258,28 @@ function pushRealtimeNoticeToast(message) {
   }, 14_000);
 }
 
+/** 연결이 복구되면 현재 채널 타임라인을 자동 재로딩해 "로드 실패" 고착을 해소한다. */
+async function recoverActiveChannelTimelineIfNeeded(reason = "unknown") {
+  const cid = Number(activeChannelId);
+  if (!Number.isFinite(cid) || !messagesEl) return;
+  const hasRows = messagesEl.querySelector(".msg-row") != null;
+  const shouldRecover =
+    lastMessageLoadFailedChannelId === cid || !hasRows;
+  if (!shouldRecover) return;
+  if (recoveringTimelineChannelId === cid) return;
+  recoveringTimelineChannelId = cid;
+  try {
+    await loadMessages(cid, { skipNewMsgsDivider: true });
+    if (lastMessageLoadFailedChannelId === cid) {
+      lastMessageLoadFailedChannelId = null;
+    }
+  } catch (e) {
+    console.warn(`[CSTalk] timeline recovery failed (${reason})`, e?.message || e);
+  } finally {
+    if (recoveringTimelineChannelId === cid) recoveringTimelineChannelId = null;
+  }
+}
+
 function initSocket() {
   if (socket) socket.disconnect();
   let realtimeConnectErrorToasted = false;
@@ -5285,6 +5316,7 @@ function initSocket() {
     await fetchPresenceSnapshot();
     refreshPresenceDots();
     if (activeChannelId) loadChannelMembers(activeChannelId);
+    await recoverActiveChannelTimelineIfNeeded("socket-connect");
   });
 
   socket.on("reconnect", async () => {
@@ -5300,6 +5332,7 @@ function initSocket() {
     await fetchPresenceSnapshot();
     refreshPresenceDots();
     if (activeChannelId) loadChannelMembers(activeChannelId);
+    await recoverActiveChannelTimelineIfNeeded("socket-reconnect");
   });
 
   /** Realtime 서버가 presence:set 직후 내려주는 전체 목록(타 클라이언트와 상태 일치) */
@@ -10245,6 +10278,10 @@ function scheduleSidebarAndPresenceSync() {
 }
 
 window.addEventListener("focus", scheduleSidebarAndPresenceSync);
+window.addEventListener("online", () => {
+  scheduleSidebarAndPresenceSync();
+  void recoverActiveChannelTimelineIfNeeded("browser-online");
+});
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
     onPresenceUserActivity();
