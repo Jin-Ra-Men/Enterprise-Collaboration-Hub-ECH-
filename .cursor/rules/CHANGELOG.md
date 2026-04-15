@@ -1280,3 +1280,17 @@
   - `frontend/app.js`: `loadAdminUsers()`, `renderAdminUserTable()`, `openAdminUserEditModal()`, `saveAdminUsers()` 등 사용자 관리 함수 블록 추가
   - `frontend/styles.css`: 사용자 관리 테이블·모달·배지 스타일 추가
   - 로드맵 Phase 5-2 완료 처리(`[v]`)
+
+## 2026-04-15
+
+### Changed
+- 워크플로우 업무-칸반 상태 연동 보정: 연결된 카드 중 하나만 완료되어도 업무가 `DONE`으로 바뀌던 로직을 수정
+- `frontend/app.js`의 `syncPendingWorkItemStatusFromKanbanColumn`에서 업무별 **전체 연결 카드 상태를 집계**해, 모든 카드가 완료 컬럼일 때만 업무를 `DONE`으로 반영하도록 변경
+- `docs/FEATURE_SPEC.md`, `docs/HANDOVER.md`에 업무 완료 판정 기준(전체 카드 완료 기준) 반영
+- 워크플로우 저장 후 삭제 마킹(`inUse=false`)된 업무 항목이 목록 하단으로 정렬되도록 변경
+- 비활성 업무에 연결된 칸반 카드가 컬럼 내 하단으로 정렬되도록 변경(활성 카드 우선 노출)
+- 첨부파일 업로드 중 Enter/전송 버튼 재입력 시 동일 첨부가 중복 업로드되던 문제를 수정 (`composerSendInFlight` 재진입 가드 추가)
+- 첨부 선택/붙여넣기/드롭 시점에 업로드 최대 용량 정책을 먼저 조회·검사해, 초과 파일은 미리보기 생성 전에 즉시 차단하도록 변경
+- `GET /api/channels/{channelId}/files/upload-policy` API를 추가해 프론트에서 현재 `file.max-size-mb` 설정값을 사용하도록 연동
+- 배포 버전을 `1.2.6`으로 상향 (`backend/build.gradle`, `desktop/package.json`, `desktop/package-lock.json`)
+- 문서/화면의 현재 배포 기준 버전 표기를 `1.2.6` (`v1.2.6`)으로 갱신 (`README.md`, `docs/DEVELOPER_README.md`, `docs/ROADMAP.md`, `docs/HANDOVER.md`, `frontend/index.html`)

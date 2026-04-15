@@ -3,6 +3,7 @@ package com.ech.backend.api.file;
 import com.ech.backend.api.file.dto.ChannelFileResponse;
 import com.ech.backend.api.file.dto.CreateChannelFileMetadataRequest;
 import com.ech.backend.api.file.dto.FileDownloadInfoResponse;
+import com.ech.backend.api.file.dto.FileUploadPolicyResponse;
 import com.ech.backend.common.api.ApiResponse;
 import jakarta.validation.Valid;
 import java.io.IOException;
@@ -36,6 +37,11 @@ public class ChannelFileController {
             @RequestParam String employeeNo
     ) {
         return ApiResponse.success(channelFileService.listFiles(channelId, employeeNo));
+    }
+
+    @GetMapping("/upload-policy")
+    public ApiResponse<FileUploadPolicyResponse> uploadPolicy() {
+        return ApiResponse.success(channelFileService.getUploadPolicy());
     }
 
     /**

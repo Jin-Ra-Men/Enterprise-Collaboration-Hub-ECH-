@@ -567,10 +567,11 @@
   - 칸반 보드는 채널당 1개를 기본으로 사용하며, 최초 조회 시 `할 일/진행 중/완료` 컬럼을 자동 생성
   - 칸반 카드는 **반드시 동일 채널의 업무 항목(`work_item_id`)에 연결**된다(미연결 카드 없음). `POST .../columns/.../cards` body에 `workItemId` 필수. 카드 담당: 채널 멤버 자동완성·`POST/DELETE .../assignees`(후보는 **본인 포함**, 이미 해당 카드에 배정된 사번만 제외; UI에서 이름·조직·직급을 구분 표시)
   - UI: 레이아웃은 **항상** **업무 항목 패널 위 → 칸반 보드 패널 아래** 한 열 세로 배치(`work-hub-body` flex column; 넓은 화면에서도 좌우 2열로 나누지 않음). 모달 본문 전체 스크롤. 신규 카드는 **저장된 업무**를 선택한 뒤 큐에 넣고, 저장 시 생성. 업무 **✕**는 소프트 삭제를 **저장 전까지** `workHubPendingWorkDeleteIds`에만 넣고, 목록에서는 **삭제 예정**(주황 배지)·**삭제 취소**로 표시(행을 바로 숨기지 않음). 비활성 업무의 **복원**·**완전 삭제**는 **업무 목록 행** 또는 **업무 상세**에서 선택 가능하며, 모두 `workHubPendingWorkRestoreIds` / `workHubPendingWorkPurgeIds`에만 쌓였다가 **업무·칸반 모달 저장(`flushWorkHubSave`)** 시에만 API 호출(즉시 DB 반영 아님). 목록에서 **복원 예정**(녹색 배지)·**완전 삭제 예정**(적색 배지)으로 표시, **취소** 버튼으로 대기 큐에서 제거. **완전 삭제**는 서버에서 연결 칸반 카드를 먼저 지우므로, 저장 시 해당 업무의 카드 ID를 `workHubPendingCard*` pending 맵에서 제거한 뒤 나머지 카드만 `PUT`(없으면 「카드를 찾을 수 없습니다」 방지). 공통 확인창 `#modalAppDialog`는 z-index를 상세 모달보다 높게 두어 **완전 삭제 확인**이 상세 모달에 가리지 않음
+  - 저장으로 삭제 마킹이 반영된 업무(`inUse=false`)는 업무 목록에서 **맨 아래**로 정렬한다. 또한 해당 비활성 업무에 연결된 칸반 카드는 각 컬럼 내 정렬에서 **맨 아래**로 배치해, 현재 진행 중인(활성) 업무·카드가 항상 위쪽에 보이게 한다
   - 모달 **저장** 성공 시 사이드바 **내 업무 항목** 목록을 다시 조회해 담당 칸반 변경이 즉시 반영된다
   - 사이드바 **내 업무 항목** 행 클릭은 채팅 채널 전환 없이 해당 채널의 업무·칸반 모달만 연다(스코프된 `channelId`로 API 호출). 행 **보조 텍스트**는 `channelName`인데, DM은 내부 채널명(`_dm__...`)이 아니라 **표시용 제목**(`channels.description`)을 쓴다 — API `GET /api/work-items/sidebar/by-assigned-cards` 응답의 `channelName`은 백엔드에서 DM일 때 `description` 우선(`WorkItemService.channelDisplayNameForSidebar`). 프론트는 로드된 채널 목록으로 한 번 더 보정(`displayChannelLabelForWorkSidebar`). 업무·칸반 모달 **업무 목록**에서 행을 클릭해 상세를 열면 해당 행에 `channel-work-item--selected`로 **선택 강조**(테두리·그림자·배경 틴트), 사이드바에서 항목을 눌러 들어올 때도 동일 키로 강조
   - 칸반 카드는 컬럼 내 세로 순서뿐 아니라 **컬럼 간 드래그앤드롭**으로 이동 가능. **`article.kanban-card-item`에 `draggable="true"`** 를 두되, `dragstart` 시 이벤트 타깃이 **`input`/`textarea`/`select`/`button`/담당 검색 영역 등**이면 `preventDefault`로 드래그를 막아 본문·제목은 잡고 끌고, 컨트롤은 그대로 쓸 수 있게 한다. Chrome에서 카드가 `draggable` 조상 아래에 있을 때 이동 후 `<select>` 표시가 어긋나는 문제는 **드롭 처리 말미에 `rebuildKanbanCardColumnSelectDom`으로 컬럼 `<select>` 노드를 통째로 교체**하고, 컬럼 변경은 **`#channelKanbanBoard`에 위임한 `change` 리스너 한 개**로 처리한다. 드롭 시 출발·도착 컬럼의 순서·컬럼 임시 상태를 반영하고, **저장** 시 컬럼이 바뀐 카드에 대해 `PUT .../kanban/cards/{id}`에 `columnId`와 함께 컬럼에 대응하는 `status`(`OPEN`/`IN_PROGRESS`/`DONE`, 기본 3컬럼은 정렬 순 0·1·2)를 함께 보낸다
-  - 카드가 **연결된 업무(`work_item_id`)** 가 있을 때, 드래그앤드롭·카드 행 컬럼 셀렉트·카드 상세에서 컬럼을 바꾸면 프론트의 **`workHubPendingWorkStatus`**(업무 목록 저장용)도 동일 컬럼 기준 `statusForKanbanColumnId`로 맞춘다. 그렇지 않으면 업무 행은 예전 상태(예: 진행 중)를 **저장**에 실어 보내 카드는 완료 컬럼인데 업무 상태만 어긋날 수 있다
+  - 카드가 **연결된 업무(`work_item_id`)** 가 있을 때, 드래그앤드롭·카드 행 컬럼 셀렉트·카드 상세에서 컬럼을 바꾸면 프론트의 **`workHubPendingWorkStatus`**(업무 목록 저장용)를 연결된 **전체 카드 상태 집계**로 계산한다. 즉, 해당 업무의 카드가 **모두 완료 컬럼**일 때만 업무를 `DONE`으로 두고, 하나라도 미완료면 `IN_PROGRESS`/`OPEN`으로 유지해 “카드 하나 완료 = 업무 전체 완료” 오판정을 막는다
   - 드롭 직후에는 보드 **모든 컬럼**의 카드 순서·`columnId` pending을 DOM에서 다시 읽고(`syncKanbanBoardFromDomFull`), 카드 하단 컬럼 `<select>` 값을 카드가 실제로 들어 있는 컬럼(`data-column-id`)과 맞춘다 — `dragend`/`drop` 이벤트 순서 차이로 셀렉트만 어긋나는 현상 방지
   - `loadChannelKanbanBoard()`는 DnD·저장·셀렉트 변경 등으로 **동시에 여러 번** 호출될 수 있다. 채널별 **요청 세대(`kanbanBoardFetchGenByChannelId`)**를 두어, 늦게 완료된 **오래된 응답**은 `renderKanbanBoard`를 호출하지 않게 해 카드 컬럼과 행 `<select>`가 다시 어긋나는 간헐 현상을 막는다(동기 XHR로 바꿀 필요 없음)
   - **연속 DnD**에서는 두 번째 `drop`이 `requestAnimationFrame`으로 동기화를 미루는 동안 직전 `GET`이 끝나 세대가 아직 안 올라간 것처럼 보일 수 있어, 컬럼 `drop`과 컬럼 `<select>` 변경 시 **`loadChannelKanbanBoard` 호출 전(동기 구간)** 에 세대를 한 번 더 올려 진행 중인 조회를 즉시 무효화한다
@@ -1074,3 +1075,33 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 - 스타일: `frontend/styles.css` — 시맨틱 스타일 우선(Tailwind 미로드 시에도 동작). `ech-tailwind.css` 갱신: `cd frontend && npm run build:css`
 - 테스트 기준: 라이트 테마에서 채팅·칸반 모달·관리자 탭 전환 시 레이아웃 깨짐 없음
 - 비고: 상세 매핑 표는 `docs/DESIGN_SYSTEM.md` 섹션 6
+
+---
+
+## 메시지 전송-첨부 업로드 재진입 방지 (2026-04-15)
+- 목적: 첨부 업로드 진행 중 사용자가 메시지를 연속 전송할 때 동일 첨부가 중복 업로드되는 문제 방지
+- 관련 경로: `frontend/app.js`
+- 동작:
+  - `sendMessage()` 시작 시 `composerSendInFlight` 플래그를 검사해 이미 전송/업로드 중이면 즉시 반환
+  - 전송 시작 시 전송 버튼을 비활성화하고, 완료/실패/중단 여부와 무관하게 `finally`에서 원복
+  - 기존 `socketSendInFlight`(소켓 전송 오류 중복 억제)와 별도로 동작해 업로드 단계부터 재진입을 차단
+- 기대 효과:
+  - Enter 연타/버튼 연속 클릭 상황에서도 같은 첨부 큐가 중복 처리되지 않음
+  - 업로드 완료 전 추가 전송 요청은 무시되어 첨부-메시지 결합 상태가 1회성으로 유지됨
+
+---
+
+## 첨부 선택 즉시 용량 제한 검사 (2026-04-15)
+- 목적: 대용량 파일 선택 시 미리보기 렌더링 이후에 실패 메시지가 뜨는 UX를 제거하고, 파일 선택 직후 제한 초과를 안내
+- 관련 경로:
+  - `frontend/app.js`
+  - `backend/src/main/java/com/ech/backend/api/file/ChannelFileController.java`
+  - `backend/src/main/java/com/ech/backend/api/file/ChannelFileService.java`
+- 정책 조회 API:
+  - `GET /api/channels/{channelId}/files/upload-policy`
+  - 응답: `maxFileSizeBytes`, `maxFileSizeMb`
+  - 기준값: 기초설정 `file.max-size-mb` (예: 20MB)
+- 동작:
+  - 파일 선택(`fileInput`), 붙여넣기, 드래그 앤 드롭, 스레드 첨부 선택 이벤트에서 업로드 정책을 먼저 조회
+  - 허용 용량 초과 파일은 첨부 큐/미리보기에 넣지 않고 즉시 시스템 메시지로 안내
+  - 허용 파일만 기존 첨부 큐에 반영

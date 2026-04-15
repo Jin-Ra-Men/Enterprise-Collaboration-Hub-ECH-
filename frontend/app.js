@@ -4869,8 +4869,8 @@ if (replyComposerBannerCloseEl) {
   replyComposerBannerCloseEl.addEventListener("click", () => clearReplyComposerTarget());
 }
 if (threadFileInputEl) {
-  threadFileInputEl.addEventListener("change", () => {
-    const files = normalizePendingFileList(threadFileInputEl.files);
+  threadFileInputEl.addEventListener("change", async () => {
+    const files = await filterFilesByUploadLimit(threadFileInputEl.files);
     if (files.length === 0) return;
     const append = threadPendingFilesQueue.length > 0;
     setThreadComposerPendingFiles(files, { append });
@@ -5826,6 +5826,8 @@ function pushNewMessageToast(msg) {
 // socket으로 전송 시도 중이면, server가 내려주는 `message:error` 시스템 문구가
 // (API 폴백 성공 케이스에서도) 중복으로 남을 수 있다. 이 플래그로 억제한다.
 let socketSendInFlight = false;
+// 업로드/전송 중 재진입을 막아 동일 첨부가 중복 업로드되는 현상을 방지한다.
+let composerSendInFlight = false;
 
 // composer 화면에는 `@표시명`만 보이게 삽입하고,
 // 전송 시에만 `@{사번|표시명}` 토큰으로 변환하기 위한 매핑.
@@ -6118,110 +6120,117 @@ function maybeShowMentionToastFromMessage(msg) {
  * ========================================================================== */
 async function sendMessage() {
   if (!activeChannelId || !currentUser) return;
+  if (composerSendInFlight) return;
+  composerSendInFlight = true;
+  if (btnSendEl) btnSendEl.disabled = true;
   const text = messageInputEl.value.trim();
   const preparedText = applyMentionTokensForSend(text);
   closeMentionSuggest();
+    try {
+      // 답글 모드: 선택된 메시지를 parent로 해서 REPLY 저장
+      if (replyComposerTargetMessageId != null) {
+        const parentMessageId = replyComposerTargetMessageId;
 
-  // 답글 모드: 선택된 메시지를 parent로 해서 REPLY 저장
-  if (replyComposerTargetMessageId != null) {
-    const parentMessageId = replyComposerTargetMessageId;
+        if (pendingFilesQueue.length > 0) {
+          const filesToUpload = pendingFilesQueue.slice();
+          const n = filesToUpload.length;
+          for (let i = 0; i < n; i++) {
+            const isLast = i === n - 1;
+            const up = await uploadFile(filesToUpload[i], {
+              parentMessageId,
+              threadKind: "REPLY",
+              reloadMode: isLast ? "timeline" : "none",
+              batchIndex: i + 1,
+              batchTotal: n,
+              skipNewMsgsDividerAfterReload: true,
+            });
+            if (up && up.canceled) return;
+          }
+          clearFilePreview();
+          if (!preparedText) {
+            messageInputEl.value = "";
+            scheduleComposerInputHeight();
+            clearReplyComposerTarget();
+            mentionDisplayToEmployeeNo.clear();
+            clearChatReadAnchorUi();
+            return;
+          }
+        }
 
-    if (pendingFilesQueue.length > 0) {
-      const filesToUpload = pendingFilesQueue.slice();
-      const n = filesToUpload.length;
-      for (let i = 0; i < n; i++) {
-        const isLast = i === n - 1;
-        const up = await uploadFile(filesToUpload[i], {
-          parentMessageId,
-          threadKind: "REPLY",
-          reloadMode: isLast ? "timeline" : "none",
-          batchIndex: i + 1,
-          batchTotal: n,
-          skipNewMsgsDividerAfterReload: true,
-        });
-        if (up && up.canceled) return;
-      }
-      clearFilePreview();
-      if (!preparedText) {
-        messageInputEl.value = "";
-        scheduleComposerInputHeight();
-        clearReplyComposerTarget();
-        mentionDisplayToEmployeeNo.clear();
-        clearChatReadAnchorUi();
+        if (!preparedText) return;
+
+        try {
+          const res = await apiFetch(
+            `/api/channels/${activeChannelId}/messages/${parentMessageId}/replies`,
+            {
+              method: "POST",
+              body: JSON.stringify({ senderId: currentUser.employeeNo, text: preparedText }),
+            }
+          );
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(json.error?.message || "답글 전송 실패");
+
+          clearChatReadAnchorUi();
+          messageInputEl.value = "";
+          scheduleComposerInputHeight();
+          clearReplyComposerTarget();
+          mentionDisplayToEmployeeNo.clear();
+          await loadMessages(activeChannelId, { skipNewMsgsDivider: true });
+        } catch (e) {
+          appendSystemMsg("답글 전송 실패: " + (e?.message || "오류"));
+          console.error(e);
+        }
         return;
       }
-    }
 
-    if (!preparedText) return;
-
-    try {
-      const res = await apiFetch(
-        `/api/channels/${activeChannelId}/messages/${parentMessageId}/replies`,
-        {
-          method: "POST",
-          body: JSON.stringify({ senderId: currentUser.employeeNo, text: preparedText }),
+      // 파일이 있으면 파일 먼저 업로드(다중 시 순차, 마지막만 타임라인 갱신)
+      if (pendingFilesQueue.length > 0) {
+        const filesToUpload = pendingFilesQueue.slice();
+        const n = filesToUpload.length;
+        for (let i = 0; i < n; i++) {
+          const isLast = i === n - 1;
+          const up = await uploadFile(filesToUpload[i], {
+            reloadMode: isLast ? "timeline" : "none",
+            batchIndex: i + 1,
+            batchTotal: n,
+            skipNewMsgsDividerAfterReload: true,
+          });
+          if (up && up.canceled) return;
         }
-      );
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error?.message || "답글 전송 실패");
+        clearFilePreview();
+        if (!preparedText) {
+          messageInputEl.value = "";
+          scheduleComposerInputHeight();
+          mentionDisplayToEmployeeNo.clear();
+          clearChatReadAnchorUi();
+          return;
+        }
+      }
 
+      if (!preparedText) return;
+      try {
+        socketSendInFlight = true;
+        await sendMessageViaSocket(activeChannelId, currentUser.employeeNo, preparedText);
+      } catch (socketErr) {
+        // 소켓 저장이 실패해도 API 경로로 한 번 더 시도해 전송 유실을 줄인다.
+        console.warn("[sendMessage] socket 전송 실패, API 폴백 시도:", socketErr);
+        try {
+          await sendMessageViaApi(activeChannelId, currentUser.employeeNo, preparedText);
+        } catch (apiErr) {
+          appendSystemMsg("전송 실패: " + (apiErr?.message || "오류"));
+          return;
+        }
+      } finally {
+        socketSendInFlight = false;
+      }
       clearChatReadAnchorUi();
       messageInputEl.value = "";
       scheduleComposerInputHeight();
-      clearReplyComposerTarget();
       mentionDisplayToEmployeeNo.clear();
-      await loadMessages(activeChannelId, { skipNewMsgsDivider: true });
-    } catch (e) {
-      appendSystemMsg("답글 전송 실패: " + (e?.message || "오류"));
-      console.error(e);
+    } finally {
+      composerSendInFlight = false;
+      if (btnSendEl) btnSendEl.disabled = false;
     }
-    return;
-  }
-
-  // 파일이 있으면 파일 먼저 업로드(다중 시 순차, 마지막만 타임라인 갱신)
-  if (pendingFilesQueue.length > 0) {
-    const filesToUpload = pendingFilesQueue.slice();
-    const n = filesToUpload.length;
-    for (let i = 0; i < n; i++) {
-      const isLast = i === n - 1;
-      const up = await uploadFile(filesToUpload[i], {
-        reloadMode: isLast ? "timeline" : "none",
-        batchIndex: i + 1,
-        batchTotal: n,
-        skipNewMsgsDividerAfterReload: true,
-      });
-      if (up && up.canceled) return;
-    }
-    clearFilePreview();
-    if (!preparedText) {
-      messageInputEl.value = "";
-      scheduleComposerInputHeight();
-      mentionDisplayToEmployeeNo.clear();
-      clearChatReadAnchorUi();
-      return;
-    }
-  }
-
-  if (!preparedText) return;
-  try {
-    socketSendInFlight = true;
-    await sendMessageViaSocket(activeChannelId, currentUser.employeeNo, preparedText);
-  } catch (socketErr) {
-    // 소켓 저장이 실패해도 API 경로로 한 번 더 시도해 전송 유실을 줄인다.
-    console.warn("[sendMessage] socket 전송 실패, API 폴백 시도:", socketErr);
-    try {
-      await sendMessageViaApi(activeChannelId, currentUser.employeeNo, preparedText);
-    } catch (apiErr) {
-      appendSystemMsg("전송 실패: " + (apiErr?.message || "오류"));
-      return;
-    }
-  } finally {
-    socketSendInFlight = false;
-  }
-  clearChatReadAnchorUi();
-  messageInputEl.value = "";
-  scheduleComposerInputHeight();
-  mentionDisplayToEmployeeNo.clear();
 }
 
 btnSendEl?.addEventListener("click", sendMessage);
@@ -6288,6 +6297,49 @@ const IMAGE_PREVIEW_MAX_EDGE = 1024;
 const IMAGE_PREVIEW_SMALL_BYTES = 256 * 1024;
 const UPLOAD_COMPRESS_MIN_BYTES = 2 * 1024 * 1024;
 const UPLOAD_MAX_EDGE = 4096;
+const DEFAULT_MAX_FILE_SIZE_BYTES = 100 * 1024 * 1024;
+let cachedMaxFileSizeBytes = DEFAULT_MAX_FILE_SIZE_BYTES;
+let pendingUploadPolicyPromise = null;
+
+async function ensureUploadPolicyLoaded() {
+  if (cachedMaxFileSizeBytes !== DEFAULT_MAX_FILE_SIZE_BYTES) return cachedMaxFileSizeBytes;
+  if (!pendingUploadPolicyPromise) {
+    pendingUploadPolicyPromise = (async () => {
+      try {
+        const res = await apiFetch(`/api/channels/${activeChannelId}/files/upload-policy`);
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json.error?.message || "정책 조회 실패");
+        const fromApi = Number(json.data?.maxFileSizeBytes);
+        if (Number.isFinite(fromApi) && fromApi > 0) cachedMaxFileSizeBytes = fromApi;
+      } catch {
+        // 정책 조회 실패 시 기본값(100MB)으로 동작
+      } finally {
+        pendingUploadPolicyPromise = null;
+      }
+      return cachedMaxFileSizeBytes;
+    })();
+  }
+  return pendingUploadPolicyPromise;
+}
+
+async function filterFilesByUploadLimit(files) {
+  const incoming = normalizePendingFileList(files);
+  if (incoming.length === 0) return [];
+  const maxBytes = await ensureUploadPolicyLoaded();
+  const allowed = [];
+  const rejected = [];
+  incoming.forEach((f) => {
+    if ((Number(f?.size) || 0) > maxBytes) rejected.push(f);
+    else allowed.push(f);
+  });
+  if (rejected.length > 0) {
+    const limitMb = (maxBytes / 1024 / 1024).toFixed(0);
+    const names = rejected.slice(0, 3).map((f) => f.name || "이름 없는 파일").join(", ");
+    const more = rejected.length > 3 ? ` 외 ${rejected.length - 3}건` : "";
+    appendSystemMsg(`파일 크기 초과(최대 ${limitMb}MB): ${names}${more}`);
+  }
+  return allowed;
+}
 
 async function buildImagePreviewObjectUrl(file) {
   if (!file || !String(file.type || "").toLowerCase().startsWith("image/")) {
@@ -6536,8 +6588,8 @@ function setComposerPendingFiles(files, { append = false } = {}) {
   setFilePreviewUploadStatus("composer", "");
 }
 
-document.getElementById("fileInput").addEventListener("change", (e) => {
-  const files = normalizePendingFileList(e.target?.files);
+document.getElementById("fileInput").addEventListener("change", async (e) => {
+  const files = await filterFilesByUploadLimit(e.target?.files);
   if (files.length === 0) return;
   const append = pendingFilesQueue.length > 0;
   setComposerPendingFiles(files, { append });
@@ -6595,7 +6647,10 @@ function handleChatImagePaste(e) {
       ? new File([imageFile], name, { type: mime })
       : imageFile;
   });
-  setComposerPendingFiles(named, { append: pendingFilesQueue.length > 0 });
+  void filterFilesByUploadLimit(named).then((allowed) => {
+    if (allowed.length === 0) return;
+    setComposerPendingFiles(allowed, { append: pendingFilesQueue.length > 0 });
+  });
 }
 
 const viewChatEl = document.getElementById("viewChat");
@@ -6626,14 +6681,14 @@ if (viewChatEl) {
     }
   });
 
-  viewChatEl.addEventListener("drop", (e) => {
+  viewChatEl.addEventListener("drop", async (e) => {
     e.preventDefault();
     viewChatEl.classList.remove("view-chat--drag-over");
     if (!activeChannelId || !currentUser) return;
     if (isModalOverlayBlockingChatDrop()) return;
     const dt = e.dataTransfer;
     if (!dt || !dt.files || dt.files.length === 0) return;
-    const files = normalizePendingFileList(dt.files);
+    const files = await filterFilesByUploadLimit(dt.files);
     if (files.length === 0) return;
     setComposerPendingFiles(files, { append: pendingFilesQueue.length > 0 });
   });
@@ -7232,7 +7287,20 @@ function renderChannelWorkItems(items) {
     _isDraft: true,
     _draftIdx: i,
   }));
-  const visibleItems = [...draftItems, ...savedItems];
+  const visibleItems = [...draftItems, ...savedItems].sort((a, b) => {
+    const aDraft = a?._isDraft === true;
+    const bDraft = b?._isDraft === true;
+    // Keep draft rows above saved rows while editing.
+    if (aDraft !== bDraft) return aDraft ? -1 : 1;
+    if (aDraft && bDraft) return Number(a._draftIdx ?? 0) - Number(b._draftIdx ?? 0);
+    const aId = Number(a?.id);
+    const bId = Number(b?.id);
+    const aInactive = !effectiveWorkItemInUseForUi(aId);
+    const bInactive = !effectiveWorkItemInUseForUi(bId);
+    // Persisted deleted-marked(inactive) work items go to the bottom.
+    if (aInactive !== bInactive) return aInactive ? 1 : -1;
+    return aId - bId;
+  });
   if (!visibleItems.length) {
     listEl.innerHTML = `<li class="empty-notice">등록된 업무 항목이 없습니다.</li>`;
     return;
@@ -7453,13 +7521,34 @@ function statusForKanbanColumnId(columnId) {
 
 /**
  * Linked work-item row uses `workHubPendingWorkStatus` on save. If only the card column moves (DnD/select),
- * the work item can stay stale (e.g. IN_PROGRESS) and overwrite user intent. Align pending work status to column.
+ * the work item can stay stale (e.g. IN_PROGRESS) and overwrite user intent.
+ * A work item is DONE only when every linked kanban card is in a done-like column.
  */
 function syncPendingWorkItemStatusFromKanbanColumn(workItemId, columnId) {
   const wi = Number(workItemId);
   const col = Number(columnId);
   if (!Number.isFinite(wi) || wi <= 0 || !Number.isFinite(col) || col <= 0) return;
-  workHubPendingWorkStatus.set(wi, statusForKanbanColumnId(col));
+  const allCards = [
+    ...getEffectiveSavedCardsByColumn(activeWorkHubColumns || []),
+    ...(Array.isArray(workHubPendingNewKanbanCards) ? workHubPendingNewKanbanCards : []),
+  ];
+  const linkedCardStatuses = allCards
+    .filter((card) => Number(card.workItemId ?? card.work_item_id) === wi)
+    .map((card) => {
+      const effectiveColumnId = Number(card._effectiveColumnId ?? card.columnId);
+      return statusForKanbanColumnId(effectiveColumnId);
+    });
+
+  // Keep manual selection if no linked card is present.
+  if (!linkedCardStatuses.length) return;
+
+  const allDone = linkedCardStatuses.every((status) => status === "DONE");
+  if (allDone) {
+    workHubPendingWorkStatus.set(wi, "DONE");
+    return;
+  }
+  const hasInProgress = linkedCardStatuses.some((status) => status === "IN_PROGRESS");
+  workHubPendingWorkStatus.set(wi, hasInProgress ? "IN_PROGRESS" : "OPEN");
 }
 
 /** Persist saved-card column + order for the affected columns only (reduces pending scope). */
@@ -8782,6 +8871,12 @@ function renderKanbanBoard(board) {
       const savedCards = effectiveSavedCards
         .filter((c) => Number(c._effectiveColumnId) === Number(col.id))
         .sort((a, b) => {
+          const aWorkItemId = Number(a.workItemId ?? a.work_item_id ?? 0);
+          const bWorkItemId = Number(b.workItemId ?? b.work_item_id ?? 0);
+          const aInactive = aWorkItemId > 0 && !effectiveWorkItemInUseForUi(aWorkItemId);
+          const bInactive = bWorkItemId > 0 && !effectiveWorkItemInUseForUi(bWorkItemId);
+          // Cards linked to deleted-marked(inactive) work items stay at the bottom.
+          if (aInactive !== bInactive) return aInactive ? 1 : -1;
           const so = Number(a._effectiveSortOrder) - Number(b._effectiveSortOrder);
           if (so !== 0) return so;
           return Number(a.id) - Number(b.id);

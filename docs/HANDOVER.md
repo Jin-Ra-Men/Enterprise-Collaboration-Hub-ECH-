@@ -62,7 +62,7 @@
 - **DM 채팅 헤더**: `#chatChannelPrefix`는 DM일 때 멤버 로드 후 상대(그룹 DM은 최대 3명 + `+N`) **프레즌스 점**을 사이드바 DM과 동일 규칙으로 표시(`frontend/app.js` `updateChatHeaderDmPresence`, `dmSidebarLeadingHtml`).
 - **DM 멤버 패널**: DM에서는 채널 생성자에 대한 `관리자` 배지와 멤버 `내보내기` 버튼을 표시하지 않는다(`loadChannelMembers`). PUBLIC/PRIVATE 채널 멤버 패널은 기존과 동일.
 - **이미지 다운로드**: 약 **512KB 이상**·GIF/SVG 제외 시 원본 vs JPEG 압축 선택 모달; 압축은 브라우저에서 `GET .../download` blob → 캔버스(최대 변 4096px) 저장(서버 전용 압축 API 없음). **약 512KB 이상** 바이너리 수신 시 `ReadableStream`으로 읽으며 하단 **`#fileDownloadStatusBar`**에 진행 표시(`responseToBlobWithProgress`).
-- **데스크톱 GitHub 릴리즈 에셋 업로드**: 로컬에서 `cd desktop && npm run build:win` 후 `desktop/dist`에 `latest.yml`·`CSTalk-Setup-{version}.exe`·`.blockmap` 생성. `GITHUB_TOKEN`(repo releases 권한) 설정 뒤 `powershell -File ./tools/publish-electron-github-release.ps1 v1.2.5` — 태그·릴리즈 생성 및 에셋 업로드(`README.md`·`docs/DEVELOPER_README.md` 자동 업데이트 절차 참고).
+- **데스크톱 GitHub 릴리즈 에셋 업로드**: 로컬에서 `cd desktop && npm run build:win` 후 `desktop/dist`에 `latest.yml`·`CSTalk-Setup-{version}.exe`·`.blockmap` 생성. `GITHUB_TOKEN`(repo releases 권한) 설정 뒤 `powershell -File ./tools/publish-electron-github-release.ps1 v1.2.6` — 태그·릴리즈 생성 및 에셋 업로드(`README.md`·`docs/DEVELOPER_README.md` 자동 업데이트 절차 참고).
 - **이미지 크게 보기·모아보기 성능**: 서버 `preview_*`가 있으면 라이트박스는 먼저 `/preview`로 표시 후 **원본 보기** 선택 가능(`openChannelImageLightbox`). 파일 허브 이미지 탭 썸네일은 보이는 셀만 로드(IntersectionObserver).
 - **채팅 첨부(다중·DnD)**: 메인 채팅 `#viewChat`에 파일 **드래그 앤 드롭**, 첨부 `<input type="file" multiple>`(메인·스레드), 클립보드 이미지 **여러 장** 붙여넣기 → `pendingFilesQueue` / `threadPendingFilesQueue`로 미리보기 후 순차 업로드. **전송 중 대기 비우기**(항목별 ✕로 모두 제거해 `clearFilePreview` 등이 호출될 때)는 `activeFileUploadXhr.abort()` + `fileUploadSessionId`(압축 단계 포함)로 네트워크 전송을 끊고 이후 단계를 건너뜀. 다른 모달이 열려 있으면 채팅 드롭은 처리하지 않음(`isModalOverlayBlockingChatDrop`). **연속 FILE 첨부 메시지**(같은 분·같은 발신자, 스레드 댓글 없음)는 타임라인에서 `tryConsumeFileAttachmentGroup` → `createFileAttachmentGroupRowFromMsgs`로 **한 묶음** + **일괄저장**은 **JSZip**으로 **ZIP 한 번**(`batchDownloadChannelImageFiles`; `index.html`에 jszip CDN). **이미지**는 `buildImageGridHtml`·`wireImageGridThumbs`로 **2열 그리드** 썸네일(1장만이면 그리드 전체 폭 사용), 클릭 시 `openChannelImageLightbox`; **비이미지**는 `buildAttachmentCardHtml`·`wireAttachmentCardActions`로 **카드**(저장·저장 후 열기만). **저장 후 열기**(`saveChannelFileAndOpenInNewTab`): 브라우저는 다운로드 후 새 탭; **Electron**은 `ech-save-file-and-open-default-app` → **저장 대화상자** 후 디스크 저장 + `shell.openPath`. **FILE 직후** 다음 메시지는 아바타 새 행(`shouldShowAvatarForMessage`·실시간 `appendMessageRealtime`). 이미지+문서 혼합 묶음은 그리드 위·카드 아래로 같은 말풍선에 배치.
 - **채팅 입력·말풍선**: `#messageInput`·`#threadMessageInput`은 **`textarea`** — Enter 전송·Shift+Enter 개행, 타임라인은 `\n`→`<br>`; 본인 텍스트는 시각이 말풍선 **옆**(`row-reverse`), **첨부 메시지**는 시각·일괄저장이 썸네일/카드 **아래 한 줄**(시각 왼쪽·일괄저장 오른쪽). **파일 카드** 열은 이미지 번들과 같이 **최대 360px**·본인은 우측 정렬로 시각 푸터를 이미지와 맞춘다. **전송 전 첨부 미리보기** `#filePreview` / `#threadFilePreview`는 각각 입력창 **위**에 두고, 목록은 항목별 제거(✕)·추가 선택 시 **기존 대기에 누적**. **텍스트 줄**은 CSS 말풍선(`--msg-bubble-*`)으로 가독성 확보; 채널 전환 시 `composerDraftByChannelId`로 미전송 입력·답글 대상·대기 첨부 복원, 로그아웃 시 `clearSession`에서 맵 비움.
@@ -371,8 +371,9 @@
 - 채널 허브 칸반 카드 담당: `POST/DELETE /api/kanban/cards/{id}/assignees`는 `MEMBER`+`assertCanMutateCard`(채널 보드는 채널 멤버, 워크스페이스 보드는 `MANAGER` 이상). 서비스는 채널 연동 보드에서 `assertAssigneeIsChannelMemberIfApplicable`로 담당 사번이 채널 멤버인지 검증. **채널 허브 UI**에서는 `GET /api/channels/{id}` 멤버 목록으로 담당 자동완성(↑↓·Enter, 열린 상태에서 미선택 Enter는 폼 제출 방지).
 - 담당 제거(`removeAssignee`): `KanbanCard`의 `@OneToMany assignees`와 DB를 맞추기 위해, 자식 행만 `delete` 하면 영속 컨텍스트의 카드 컬렉션이 오래된 채로 남을 수 있음. `KanbanService`에서는 컬렉션에서 해당 `KanbanCardAssignee`를 제거(orphanRemoval)하거나, 컬렉션에 없을 때만 저장소 `delete`로 폴백한 뒤 `toCardResponse(card)`로 응답을 만든다.
 - 업무 삭제: `DELETE /api/work-items/{workItemId}?actorEmployeeNo=...`(채널 멤버). 칸반 카드 삭제: `DELETE /api/kanban/cards/{cardId}?actorEmployeeNo=...` — 컨트롤러는 `MEMBER`, 서비스 `deleteCard`에서 `assertCanMutateCard`로 채널/워크스페이스 보드 구분.
-- 업무 허브 모달: 하단 **저장**으로 신규 업무·신규 카드·업무 상태·카드 컬럼·담당 추가/해제(임시 맵)를 일괄 반영. 칸반 **컬럼만** 바꿀 때(DnD·카드 행 셀렉트·카드 상세) 연결 업무의 pending 상태(`workHubPendingWorkStatus`)를 `statusForKanbanColumnId`로 맞춰, 저장 시 업무 `PUT`과 카드 `PUT`이 같은 단계(OPEN/IN_PROGRESS/DONE)로 나가게 한다. DnD는 **`section.kanban-column` 전체**에 `dragover`/`drop`을 걸고 `.kanban-card-list`를 flex로 세로 채워 카드 아래 빈 영역에서도 드롭되게 한다. 칸반 카드는 **`article` 전체 `draggable`** 이지만 `dragstart`에서 폼 컨트롤·버튼·담당 검색 영역이면 취소; 드롭 후 **`rebuildKanbanCardColumnSelectDom`** 으로 컬럼 `<select>`를 새 노드로 갈아 끼워 Chrome 표시 불일치를 줄인다. 컬럼 `<select>` `change`는 **`ensureKanbanBoardColumnSelectChangeDelegated`** 한 번만 바인딩. **칸반 카드는 `work_item_id`로 업무에 종속**되며 신규 카드 생성 body에 `workItemId`가 필수다. 업무 삭제 API는 기본 **소프트 삭제**(`work_items.in_use`), `hard=true` 시 연결 카드 삭제 후 업무 행 삭제. 보드에서 ✕/검색 추가는 UI만 즉시 갱신하고 담당 API는 저장 시 `POST/DELETE .../assignees` 순서. **레이아웃**: 본문 `.modal-body.work-hub-body`는 **업무 항목 패널 위·칸반 패널 아래** 한 열(좌우 2열 없음). `modal-work-hub`는 `max-height: min(90vh,100dvh-24px)`·헤더/푸터 고정, `work-hub-panel-body` 안에서만 세로 스크롤(설치형 창 축소 대응).
+- 업무 허브 모달: 하단 **저장**으로 신규 업무·신규 카드·업무 상태·카드 컬럼·담당 추가/해제(임시 맵)를 일괄 반영. 칸반 **컬럼만** 바꿀 때(DnD·카드 행 셀렉트·카드 상세) 연결 업무의 pending 상태(`workHubPendingWorkStatus`)를 연결된 **전체 카드 상태 집계**로 계산한다. 즉, 해당 업무의 카드가 **모두 완료 컬럼**이면 `DONE`, 하나라도 미완료면 `IN_PROGRESS`/`OPEN`으로 유지한다(카드 1건 완료만으로 업무 완료가 되지 않음). DnD는 **`section.kanban-column` 전체**에 `dragover`/`drop`을 걸고 `.kanban-card-list`를 flex로 세로 채워 카드 아래 빈 영역에서도 드롭되게 한다. 칸반 카드는 **`article` 전체 `draggable`** 이지만 `dragstart`에서 폼 컨트롤·버튼·담당 검색 영역이면 취소; 드롭 후 **`rebuildKanbanCardColumnSelectDom`** 으로 컬럼 `<select>`를 새 노드로 갈아 끼워 Chrome 표시 불일치를 줄인다. 컬럼 `<select>` `change`는 **`ensureKanbanBoardColumnSelectChangeDelegated`** 한 번만 바인딩. **칸반 카드는 `work_item_id`로 업무에 종속**되며 신규 카드 생성 body에 `workItemId`가 필수다. 업무 삭제 API는 기본 **소프트 삭제**(`work_items.in_use`), `hard=true` 시 연결 카드 삭제 후 업무 행 삭제. 보드에서 ✕/검색 추가는 UI만 즉시 갱신하고 담당 API는 저장 시 `POST/DELETE .../assignees` 순서. **레이아웃**: 본문 `.modal-body.work-hub-body`는 **업무 항목 패널 위·칸반 패널 아래** 한 열(좌우 2열 없음). `modal-work-hub`는 `max-height: min(90vh,100dvh-24px)`·헤더/푸터 고정, `work-hub-panel-body` 안에서만 세로 스크롤(설치형 창 축소 대응).
 - 프론트 `loadChannelKanbanBoard()`는 DnD/저장/셀렉트 등으로 중첩 호출될 수 있다. **`kanbanBoardFetchGenByChannelId`**로 채널별 요청 세대를 올리고, 완료 시점에 세대·현재 허브 채널이 맞을 때만 `renderKanbanBoard`를 호출해, 늦게 도착한 **이전 GET 응답**이 UI를 덮어쓰지 않게 한다. **연속 DnD**는 `drop` 직후 rAF 전에 세대를 한 번 더 올려(컬럼 `<select>` 변경도 동일), 직전 조회 응답이 다음 드롭 DOM을 덮는 레이스를 막는다. **컬럼 DnD `drop` 핸들러**에서는 카드가 이미 DOM에서 옮겨졌으므로 보드 GET/풀 렌더를 하지 않고 `sync*` + `loadChannelWorkItems`만 호출한다(셀렉트 변경·모달 오픈 등은 기존처럼 보드 조회). DnD 후 행 컬럼 `<select>`는 **`applyKanbanColumnSelectToColumnId`(`selectedIndex`)** 와 **`setTimeout(0)` 뒤 재 `sync*`** 로 호스트 컬럼과 맞춘다.
+- 저장 후 삭제 마킹(`work_items.in_use=false`)된 업무는 업무 목록 렌더에서 하단으로 내리고, 그 업무에 연결된 칸반 카드(`kanban-card-item-inactive`)도 컬럼 내부 정렬에서 하단으로 보낸다. 목적은 활성 업무/카드가 상단에 먼저 노출되도록 유지하는 것이다.
 
 ### 채널 파일 메타데이터 인수인계 메모
 - 바이너리는 외부 스토리지에 두고 `channel_files`에 메타만 저장합니다. **`preview_storage_key` / `preview_size_bytes`** 는 업로드 시 multipart `preview`가 있을 때 채워집니다(스키마: `docs/sql/migrate_channel_files_preview.sql`).
@@ -571,3 +572,26 @@ Stop-Process -Id <PID> -Force
 - 배너에 미반영 변경 건수 표시
 - "저장" 클릭 시: delete → update → create 순서로 순차 API 호출
 - "취소" 클릭 시: Map 초기화 후 서버 데이터로 재렌더링
+
+---
+
+## 첨부 업로드 중 중복 전송 방지 메모 (2026-04-15)
+- 현상: 첨부 업로드가 진행 중일 때 Enter 연타/전송 버튼 재클릭으로 `sendMessage()`가 중복 진입하여 동일 파일 재업로드 발생
+- 원인: `pendingFilesQueue`를 업로드 완료 시점에 비우는 구조에서, 업로드 중 추가 진입이 같은 큐 스냅샷을 다시 업로드
+- 조치: `frontend/app.js`에 `composerSendInFlight` 플래그 추가
+  - `sendMessage()` 진입 시 가드 (`if (composerSendInFlight) return`)
+  - 전송 시작 시 `btnSendEl.disabled = true`, 함수 종료 `finally`에서 원복
+- 운영 영향:
+  - 업로드 진행 중에는 추가 전송 요청이 무시되며, 업로드 완료 후에만 다음 전송 가능
+  - 기존 `socketSendInFlight`(에러 메시지 중복 억제)와 책임 분리
+
+---
+
+## 첨부 선택 즉시 용량 검사 메모 (2026-04-15)
+- 배경: 기초설정(`file.max-size-mb`)을 20MB 등으로 낮춘 환경에서, 제한 초과 파일이 먼저 미리보기 큐에 올라간 뒤 업로드 단계에서만 실패 안내가 발생
+- 조치:
+  - 백엔드 `GET /api/channels/{channelId}/files/upload-policy` 추가 (`maxFileSizeBytes`, `maxFileSizeMb`)
+  - 프론트 `filterFilesByUploadLimit()` 추가: 선택/붙여넣기/드롭/스레드 첨부 이벤트에서 큐 반영 전에 즉시 필터링
+- 결과:
+  - 초과 파일은 미리보기 생성 전에 차단되고 시스템 메시지로 즉시 안내
+  - 허용 파일만 `pendingFilesQueue` / `threadPendingFilesQueue`로 진입

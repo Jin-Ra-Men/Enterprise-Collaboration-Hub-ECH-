@@ -5,6 +5,7 @@ import com.ech.backend.api.message.MessageService;
 import com.ech.backend.api.file.dto.ChannelFileResponse;
 import com.ech.backend.api.file.dto.CreateChannelFileMetadataRequest;
 import com.ech.backend.api.file.dto.FileDownloadInfoResponse;
+import com.ech.backend.api.file.dto.FileUploadPolicyResponse;
 import com.ech.backend.api.settings.AppSettingsService;
 import com.ech.backend.domain.audit.AuditEventType;
 import com.ech.backend.domain.channel.Channel;
@@ -318,6 +319,11 @@ public class ChannelFileService {
         );
     }
 
+    public FileUploadPolicyResponse getUploadPolicy() {
+        long maxBytes = resolveMaxFileSizeBytes();
+        return new FileUploadPolicyResponse(maxBytes, maxBytes / (1024L * 1024L));
+    }
+
     @Transactional
     public ChannelFileResponse registerMetadata(Long channelId,
                                                  CreateChannelFileMetadataRequest request) {
@@ -382,16 +388,22 @@ public class ChannelFileService {
 
     private void validateFileSize(MultipartFile file) {
         String maxMbStr = appSettingsService.get(AppSettingKey.FILE_MAX_SIZE_MB, "100");
-        long maxBytes;
-        try {
-            maxBytes = Long.parseLong(maxMbStr.trim()) * 1024L * 1024L;
-        } catch (NumberFormatException e) {
-            maxBytes = 100L * 1024 * 1024;
-        }
+        long maxBytes = resolveMaxFileSizeBytes();
         if (file.getSize() > maxBytes) {
             throw new IllegalArgumentException(
                     "파일 크기 초과. 최대 허용: " + maxMbStr + "MB, 현재: "
                             + (file.getSize() / 1024 / 1024) + "MB");
+        }
+    }
+
+    private long resolveMaxFileSizeBytes() {
+        String maxMbStr = appSettingsService.get(AppSettingKey.FILE_MAX_SIZE_MB, "100");
+        try {
+            long maxMb = Long.parseLong(maxMbStr.trim());
+            if (maxMb <= 0) return 100L * 1024L * 1024L;
+            return maxMb * 1024L * 1024L;
+        } catch (NumberFormatException e) {
+            return 100L * 1024L * 1024L;
         }
     }
 
