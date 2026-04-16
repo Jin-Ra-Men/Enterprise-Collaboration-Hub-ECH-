@@ -64,7 +64,8 @@ public class MessageService {
                     parentId,
                     rs.getString("body"),
                     readCreatedAtUtc(rs),
-                    msgType != null && !msgType.isBlank() ? msgType : "TEXT"
+                    msgType != null && !msgType.isBlank() ? msgType : "TEXT",
+                    rs.getBoolean("sender_has_profile_image")
             );
         }
     };
@@ -106,7 +107,8 @@ public class MessageService {
                 replyToSenderName,
                 threadCommentCount,
                 null,
-                null
+                null,
+                rs.getBoolean("sender_has_profile_image")
         );
     };
 
@@ -343,7 +345,9 @@ public class MessageService {
                                    m.parent_message_id,
                                    m.body,
                                    m.created_at,
-                                   m.message_type
+                                   m.message_type,
+                                   (u.profile_image_relpath IS NOT NULL AND TRIM(u.profile_image_relpath) <> '')
+                                       AS sender_has_profile_image
                             FROM messages m
                             INNER JOIN users u ON u.id = m.sender_id
                             WHERE m.parent_message_id = ?
@@ -359,7 +363,9 @@ public class MessageService {
                                    m.parent_message_id,
                                    m.body,
                                    m.created_at,
-                                   m.message_type
+                                   m.message_type,
+                                   (u.profile_image_relpath IS NOT NULL AND TRIM(u.profile_image_relpath) <> '')
+                                       AS sender_has_profile_image
                             FROM messages m
                             INNER JOIN users u ON u.id = m.sender_id
                             WHERE m.parent_message_id = ?
@@ -413,7 +419,9 @@ public class MessageService {
                                    m.parent_message_id,
                                    m.body,
                                    m.created_at,
-                                   m.message_type
+                                   m.message_type,
+                                   (u.profile_image_relpath IS NOT NULL AND TRIM(u.profile_image_relpath) <> '')
+                                       AS sender_has_profile_image
                             FROM messages m
                             INNER JOIN users u ON u.id = m.sender_id
                             WHERE m.channel_id = ?
@@ -513,7 +521,8 @@ public class MessageService {
                     null,
                     0,
                     null,
-                    null);
+                    null,
+                    userHasProfileImage(m.getSender()));
         }
 
         Message replyTo = m.getParentMessage();
@@ -539,7 +548,8 @@ public class MessageService {
                 replyTargetAuthor,
                 null,
                 null,
-                null);
+                null,
+                userHasProfileImage(m.getSender()));
     }
 
     private MessageTimelinePageResponse getChannelTimelinePageLegacy(
@@ -559,7 +569,9 @@ public class MessageService {
                                    pm.id AS reply_to_message_id,
                                    pm.parent_message_id AS reply_to_parent_message_id,
                                    pm.body AS reply_to_body,
-                                   pu.name AS reply_to_sender_name
+                                   pu.name AS reply_to_sender_name,
+                                   (u.profile_image_relpath IS NOT NULL AND TRIM(u.profile_image_relpath) <> '')
+                                       AS sender_has_profile_image
                             FROM messages m
                             INNER JOIN users u ON u.id = m.sender_id
                             LEFT JOIN messages pm ON pm.id = m.parent_message_id
@@ -596,7 +608,9 @@ public class MessageService {
                                    pm.id AS reply_to_message_id,
                                    pm.parent_message_id AS reply_to_parent_message_id,
                                    pm.body AS reply_to_body,
-                                   pu.name AS reply_to_sender_name
+                                   pu.name AS reply_to_sender_name,
+                                   (u.profile_image_relpath IS NOT NULL AND TRIM(u.profile_image_relpath) <> '')
+                                       AS sender_has_profile_image
                             FROM messages m
                             INNER JOIN users u ON u.id = m.sender_id
                             LEFT JOIN messages pm ON pm.id = m.parent_message_id
@@ -674,7 +688,8 @@ public class MessageService {
                             null,
                             0,
                             null,
-                            null));
+                            null,
+                            userHasProfileImage(m.getSender())));
         }
         return attachThreadCommentSummaries(placeholders);
     }
@@ -713,7 +728,8 @@ public class MessageService {
                             i.replyToSenderName(),
                             c,
                             lastAt,
-                            lastSender
+                            lastSender,
+                            i.senderHasProfileImage()
                     );
                 })
                 .toList();
@@ -807,7 +823,16 @@ public class MessageService {
                 parentMessageId,
                 message.getBody(),
                 message.getCreatedAt(),
-                message.getMessageType()
+                message.getMessageType(),
+                userHasProfileImage(message.getSender())
         );
+    }
+
+    private static boolean userHasProfileImage(User u) {
+        if (u == null) {
+            return false;
+        }
+        String p = u.getProfileImageRelPath();
+        return p != null && !p.isBlank();
     }
 }

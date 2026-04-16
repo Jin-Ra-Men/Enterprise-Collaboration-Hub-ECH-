@@ -55,6 +55,8 @@ app:
   desktop-update-dir: ${DESKTOP_UPDATE_DIR:}
   # 첨부파일 저장 기본 경로 (DB app_settings 에서 덮어쓸 수 있음)
   file-storage-dir: ${FILE_STORAGE_DIR:D:/testStorage}
+  # false 이면 본인 프로필 사진 변경 API/UI 비활성(관리자 업로드는 유지)
+  allow-user-profile-self-upload: ${ALLOW_USER_PROFILE_SELF_UPLOAD:true}
   # Node 실시간 서버에 채널 시스템 메시지 등 브로드캐스트(내부 HTTP). REALTIME_INTERNAL_TOKEN 은 realtime/.env 과 동일하게 맞출 것.
   realtime:
     internal-base-url: ${REALTIME_INTERNAL_BASE_URL:http://localhost:3001}

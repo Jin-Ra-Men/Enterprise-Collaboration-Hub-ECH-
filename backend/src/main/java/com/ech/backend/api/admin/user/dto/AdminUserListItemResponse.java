@@ -16,5 +16,6 @@ public record AdminUserListItemResponse(
         String jobPositionDisplayName,
         String jobTitleGroupCode,
         String jobTitleDisplayName,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        boolean profileImagePresent
 ) {}

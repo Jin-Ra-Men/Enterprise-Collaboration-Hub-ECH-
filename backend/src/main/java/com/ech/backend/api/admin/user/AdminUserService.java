@@ -3,6 +3,7 @@ package com.ech.backend.api.admin.user;
 import com.ech.backend.api.admin.user.dto.AdminUserListItemResponse;
 import com.ech.backend.api.admin.user.dto.AdminUserSaveRequest;
 import com.ech.backend.api.admin.user.dto.OrgGroupOptionResponse;
+import com.ech.backend.api.user.UserProfileImageService;
 import com.ech.backend.common.exception.NotFoundException;
 import com.ech.backend.domain.channel.ChannelMemberRepository;
 import com.ech.backend.domain.channel.ChannelReadStateRepository;
@@ -27,9 +28,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.io.IOException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class AdminUserService {
@@ -51,6 +54,7 @@ public class AdminUserService {
     private final ChannelMemberRepository channelMemberRepository;
     private final ChannelFileRepository channelFileRepository;
     private final ChannelRepository channelRepository;
+    private final UserProfileImageService userProfileImageService;
 
     public AdminUserService(
             UserRepository userRepository,
@@ -67,7 +71,8 @@ public class AdminUserService {
             ChannelReadStateRepository channelReadStateRepository,
             ChannelMemberRepository channelMemberRepository,
             ChannelFileRepository channelFileRepository,
-            ChannelRepository channelRepository
+            ChannelRepository channelRepository,
+            UserProfileImageService userProfileImageService
     ) {
         this.userRepository = userRepository;
         this.orgGroupRepository = orgGroupRepository;
@@ -84,6 +89,7 @@ public class AdminUserService {
         this.channelMemberRepository = channelMemberRepository;
         this.channelFileRepository = channelFileRepository;
         this.channelRepository = channelRepository;
+        this.userProfileImageService = userProfileImageService;
     }
 
     @Transactional(readOnly = true)
@@ -117,7 +123,8 @@ public class AdminUserService {
                     jp   != null ? jp.getGroup().getDisplayName() : null,
                     jt   != null ? jt.getGroup().getGroupCode()   : null,
                     jt   != null ? jt.getGroup().getDisplayName() : null,
-                    user.getCreatedAt()
+                    user.getCreatedAt(),
+                    user.getProfileImageRelPath() != null && !user.getProfileImageRelPath().isBlank()
             );
         }).toList();
     }
@@ -147,6 +154,7 @@ public class AdminUserService {
             if (userRepository.findByEmployeeNo(newEmpNo).isPresent()) {
                 throw new IllegalArgumentException("이미 존재하는 사원번호입니다: " + newEmpNo);
             }
+            userProfileImageService.renameStorageIfNeeded(employeeNo.trim(), newEmpNo, user);
             user.setEmployeeNo(newEmpNo);
         }
 
@@ -191,8 +199,9 @@ public class AdminUserService {
     @Transactional
     public void deleteUser(String employeeNo) {
         String empNo = employeeNo.trim();
-        userRepository.findByEmployeeNo(empNo)
+        User toDelete = userRepository.findByEmployeeNo(empNo)
                 .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다: " + empNo));
+        userProfileImageService.deleteStoredFileOnly(toDelete);
 
         // ── Kanban ──────────────────────────────────────────────────────────
         kanbanCardEventRepository.deleteAllRelatedToEmployeeNo(empNo);
@@ -218,6 +227,13 @@ public class AdminUserService {
 
         // ── User ─────────────────────────────────────────────────────────────
         userRepository.deleteByEmployeeNo(empNo);
+    }
+
+    @Transactional
+    public void uploadProfileImage(String employeeNo, MultipartFile file) throws IOException {
+        User user = userRepository.findByEmployeeNo(employeeNo.trim())
+                .orElseThrow(() -> new NotFoundException("사용자를 찾을 수 없습니다: " + employeeNo));
+        userProfileImageService.saveProfileImage(user, file);
     }
 
     @Transactional(readOnly = true)
@@ -305,7 +321,8 @@ public class AdminUserService {
                 jp   != null ? jp.getGroup().getDisplayName() : null,
                 jt   != null ? jt.getGroup().getGroupCode()   : null,
                 jt   != null ? jt.getGroup().getDisplayName() : null,
-                user.getCreatedAt()
+                user.getCreatedAt(),
+                user.getProfileImageRelPath() != null && !user.getProfileImageRelPath().isBlank()
         );
     }
 }

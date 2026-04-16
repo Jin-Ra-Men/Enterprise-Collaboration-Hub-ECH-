@@ -23,7 +23,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
                 jtGroup.displayName,
                 u.role,
                 u.status,
-                u.createdAt
+                u.createdAt,
+                CASE WHEN u.profileImageRelPath IS NOT NULL AND TRIM(u.profileImageRelPath) <> '' THEN true ELSE false END,
+                u.updatedAt
             )
             FROM User u
             JOIN OrgGroupMember mTeam ON mTeam.user = u AND mTeam.memberGroupType = 'TEAM'

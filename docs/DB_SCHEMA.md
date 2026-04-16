@@ -141,6 +141,7 @@ CREATE TABLE users (
     role            VARCHAR(30)  NOT NULL DEFAULT 'MEMBER',
     status          VARCHAR(20)  NOT NULL DEFAULT 'ACTIVE',
     password_hash   VARCHAR(255),
+    profile_image_relpath VARCHAR(512),
     created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
@@ -155,6 +156,7 @@ CREATE TABLE users (
 | `role` | VARCHAR(30) | ✅ | `'MEMBER'` | 앱 역할. → [역할 Enum 참고](#roles) |
 | `status` | VARCHAR(20) | ✅ | `'ACTIVE'` | 계정 상태. → [상태 Enum 참고](#user-status) |
 | `password_hash` | VARCHAR(255) | ❌ | NULL | BCrypt 해시. 그룹웨어 연동 시 NULL 허용 |
+| `profile_image_relpath` | VARCHAR(512) | ❌ | NULL | 프로필 사진 파일 상대 경로(스토리지 루트 기준, 예: `user-profiles/E12345.jpg`) |
 | `created_at` | TIMESTAMPTZ | ✅ | NOW() | 계정 생성 시각 |
 | `updated_at` | TIMESTAMPTZ | ✅ | NOW() | 최종 수정 시각 |
 

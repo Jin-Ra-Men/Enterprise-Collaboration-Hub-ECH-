@@ -38,6 +38,13 @@ public class User {
     @Column(name = "theme_preference", length = 20)
     private String themePreference;
 
+    /**
+     * 프로필 사진 파일 상대 경로(스토리지 루트 기준). 예: {@code user-profiles/E12345.jpg}.
+     * 한 디렉터리({@code user-profiles})에 사번 기반 파일명으로 저장한다.
+     */
+    @Column(name = "profile_image_relpath", length = 512)
+    private String profileImageRelPath;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
@@ -128,5 +135,14 @@ public class User {
 
     public void setThemePreference(String themePreference) {
         this.themePreference = themePreference;
+    }
+
+    public String getProfileImageRelPath() {
+        return profileImageRelPath;
+    }
+
+    public void setProfileImageRelPath(String profileImageRelPath) {
+        this.profileImageRelPath = profileImageRelPath;
+        this.updatedAt = OffsetDateTime.now();
     }
 }

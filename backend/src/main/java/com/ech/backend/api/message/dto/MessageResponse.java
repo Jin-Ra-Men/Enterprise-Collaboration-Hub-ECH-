@@ -10,6 +10,7 @@ public record MessageResponse(
         Long parentMessageId,
         String text,
         OffsetDateTime createdAt,
-        String messageType
+        String messageType,
+        boolean senderHasProfileImage
 ) {
 }

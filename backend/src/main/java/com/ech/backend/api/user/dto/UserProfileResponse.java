@@ -10,6 +10,10 @@ public record UserProfileResponse(
         String jobPosition,
         String jobTitle,
         String role,
-        String status
+        String status,
+        /** 프로필 사진 존재 여부(캐시·표시용). */
+        boolean profileImagePresent,
+        /** 프로필 사진 캐시 무효화용(보통 사용자 {@code updated_at} 기반 epoch ms). */
+        long profileImageVersion
 ) {
 }

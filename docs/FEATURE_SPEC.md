@@ -695,6 +695,7 @@
   - `GET /api/users/profile?employeeNo=` — 동료 프로필(프론트 기본, 사번 기준)
   - `GET /api/users/profile?userId=` — 동일(숫자 사용자 ID, 호환)
   - 프로필 내용: 이름·사원번호·이메일·부서·직급; 직위(`jobPosition`)·직책(`jobTitle`)은 값이 있을 때만 모달에 표시. **DM 보내기**로 DM 채널 생성·입장. 응답에 `role`/`status`가 있어도 프로필 모달에는 표시하지 않음
+  - **프로필 사진**: 응답에 `profileImagePresent`, `profileImageVersion`(캐시 무효화용 epoch ms). 이미지 바이너리는 `GET /api/users/profile-image?employeeNo=`(인증 필요, 프론트는 blob URL). 저장 경로는 파일 스토리지 루트 하위 **`user-profiles/`** 에 `사번기반파일명.확장자`. 본인 변경은 `POST /api/users/me/profile-image`(multipart `file`, `app.allow-user-profile-self-upload`가 false이면 403), 관리자는 `POST /api/admin/users/{employeeNo}/profile-image`. **본인 사진 편집 UI**는 좌측 하단 프로필(사이드바 아바타·헤더 아바타·웰컴「내 프로필」)으로 연 모달에서만 표시; 채팅 등 다른 경로로 본인 프로필을 열면 편집 버튼 숨김.
   - `GET /api/users/{userId}/profile` — 동일(경로형, 하위 호환)
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:

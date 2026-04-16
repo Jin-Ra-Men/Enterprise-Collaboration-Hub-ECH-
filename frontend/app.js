@@ -343,6 +343,11 @@ let orgPickerContext = null;  // member | dm | channelMember
 let orgPickerEmbedElId = null; // member/dm/channelMember 조직도 체크박스가 그려진 엘리먼트 id
 /** 프로필 모달에 표시 중인 사용자 사번 (DM 보내기용) */
 let profileViewEmployeeNo = null;
+/** "sidebar" | "default" — 좌측 하단에서 연 본인 프로필만 사진 변경 UI 표시 */
+let profileModalEntry = "default";
+const profileImageBlobUrlCache = new Map();
+/** employeeNo → { hasImage, version } — 채널 멤버 목록 API 기준 */
+const activeChannelMemberAvatarByEmployeeNo = new Map();
 /** 워크플로우 모달 상태 */
 let workHubBoardId = null;
 let workHubColumns = [];
@@ -659,8 +664,12 @@ let imageLightboxEscapeBound = false;
 
 async function apiFetch(path, opts = {}) {
   const token = getToken();
-  const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const headers = { ...(opts.headers || {}) };
+  const isFormData = typeof FormData !== "undefined" && opts.body instanceof FormData;
+  if (!isFormData && !headers["Content-Type"] && !headers["content-type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (token) headers.Authorization = `Bearer ${token}`;
   return fetch(`${API_BASE}${path}`, { ...opts, headers });
 }
 
@@ -1066,9 +1075,10 @@ function dmSidebarLeadingHtml(peerEmployeeNos, options) {
   return `<span class="sidebar-dm-presence-wrap">${dots}${more}</span>`;
 }
 
-async function openUserProfile(employeeNo) {
+async function openUserProfile(employeeNo, opts = {}) {
   const emp = String(employeeNo || "").trim();
   if (!emp || !currentUser) return;
+  profileModalEntry = opts.entry === "sidebar" ? "sidebar" : "default";
   try {
     const res  = await apiFetch(`/api/users/profile?employeeNo=${encodeURIComponent(emp)}`);
     const json = await res.json();
@@ -1079,7 +1089,15 @@ async function openUserProfile(employeeNo) {
     const u = json.data;
     profileViewEmployeeNo = u.employeeNo != null ? String(u.employeeNo).trim() : emp;
     document.getElementById("profileModalName").textContent = u.name || "-";
-    document.getElementById("profileAvatarLg").textContent = avatarInitials(u.name || "?");
+    const av = document.getElementById("profileAvatarLg");
+    const present = !!u.profileImagePresent;
+    const pver = Number(u.profileImageVersion) || 0;
+    applyAvatarPhotoToSurface(av, {
+      employeeNo: profileViewEmployeeNo,
+      name: u.name,
+      hasImage: present,
+      version: pver,
+    });
     document.getElementById("profileModalEmpNo").textContent = u.employeeNo || "-";
     document.getElementById("profileModalEmail").textContent = u.email || "-";
     document.getElementById("profileModalDept").textContent = u.department || "-";
@@ -1130,6 +1148,12 @@ async function openUserProfile(employeeNo) {
       }
       dmBtn.title = self ? "본인 전용 메모 방으로 이동합니다." : "";
     }
+    const btnEdit = document.getElementById("btnProfileImageEdit");
+    if (btnEdit) {
+      const self = String(profileViewEmployeeNo) === String(currentUser.employeeNo || "").trim();
+      const allow = currentUser.profileSelfUploadAllowed !== false;
+      btnEdit.classList.toggle("hidden", !(self && profileModalEntry === "sidebar" && allow));
+    }
     openModal("modalUserProfile");
   } catch (e) {
     console.error(e);
@@ -1141,7 +1165,7 @@ async function openUserProfile(employeeNo) {
 function openCurrentUserProfile() {
   const emp = String(currentUser?.employeeNo || "").trim();
   if (!emp) return;
-  void openUserProfile(emp);
+  void openUserProfile(emp, { entry: "sidebar" });
 }
 
 /** 본인 전용 DM(메모·북마크) — 서버는 dmPeer에 본인 사번을 넣으면 단일 멤버 채널로 생성 */
@@ -2342,6 +2366,119 @@ function avatarInitials(name) {
     : name.slice(0,2).toUpperCase();
 }
 
+function msgSenderHasProfileImage(msg) {
+  if (msg == null) return false;
+  if (msg.senderHasProfileImage != null) return !!msg.senderHasProfileImage;
+  if (msg.sender_has_profile_image != null) return !!msg.sender_has_profile_image;
+  return false;
+}
+
+function avatarVersionForEmployee(emp, fallback) {
+  const e = String(emp || "").trim();
+  if (!e) return Number(fallback) || 0;
+  const row = activeChannelMemberAvatarByEmployeeNo.get(e);
+  if (row && row.version != null) return row.version;
+  const n = Number(fallback);
+  return Number.isFinite(n) ? n : 0;
+}
+
+async function getProfileImageObjectUrl(employeeNo, version, hasImage) {
+  const emp = String(employeeNo || "").trim();
+  if (!emp || !hasImage) return null;
+  const v = Number(version) || 0;
+  const key = `${emp}:${v}`;
+  if (profileImageBlobUrlCache.has(key)) return profileImageBlobUrlCache.get(key);
+  const res = await apiFetch(`/api/users/profile-image?employeeNo=${encodeURIComponent(emp)}`);
+  if (!res.ok) return null;
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  profileImageBlobUrlCache.set(key, url);
+  return url;
+}
+
+function invalidateProfileImageBlobCacheFor(employeeNo) {
+  const prefix = `${String(employeeNo || "").trim()}:`;
+  if (!prefix || prefix === ":") return;
+  for (const k of [...profileImageBlobUrlCache.keys()]) {
+    if (k.startsWith(prefix)) {
+      const u = profileImageBlobUrlCache.get(k);
+      if (u) try { URL.revokeObjectURL(u); } catch { /* ignore */ }
+      profileImageBlobUrlCache.delete(k);
+    }
+  }
+}
+
+function applyAvatarPhotoToButton(btn, { employeeNo, name, hasImage, version }) {
+  if (!btn) return;
+  const n = String(name || "").trim() || "?";
+  btn.dataset.avatarName = n;
+  const emp = String(employeeNo || "").trim();
+  const ver = Number(version) || 0;
+  if (!hasImage) {
+    btn.classList.remove("ech-avatar--photo");
+    btn.style.backgroundImage = "";
+    btn.textContent = avatarInitials(n);
+    return;
+  }
+  btn.textContent = "";
+  void (async () => {
+    const url = await getProfileImageObjectUrl(emp, ver, true);
+    if (!url) {
+      btn.classList.remove("ech-avatar--photo");
+      btn.style.backgroundImage = "";
+      btn.textContent = avatarInitials(btn.dataset.avatarName || "?");
+      return;
+    }
+    btn.classList.add("ech-avatar--photo");
+    btn.style.backgroundImage = `url("${url}")`;
+  })();
+}
+
+function applyAvatarPhotoToSurface(el, { employeeNo, name, hasImage, version }) {
+  if (!el) return;
+  const n = String(name || "").trim() || "?";
+  el.dataset.avatarName = n;
+  const emp = String(employeeNo || "").trim();
+  const ver = Number(version) || 0;
+  if (!hasImage) {
+    el.classList.remove("ech-avatar--photo");
+    el.style.backgroundImage = "";
+    el.textContent = avatarInitials(n);
+    return;
+  }
+  el.textContent = "";
+  void (async () => {
+    const url = await getProfileImageObjectUrl(emp, ver, true);
+    if (!url) {
+      el.classList.remove("ech-avatar--photo");
+      el.style.backgroundImage = "";
+      el.textContent = avatarInitials(el.dataset.avatarName || "?");
+      return;
+    }
+    el.classList.add("ech-avatar--photo");
+    el.style.backgroundImage = `url("${url}")`;
+  })();
+}
+
+function wireMsgRowAvatar(div, emp, senderName, msg) {
+  const btn = div.querySelector(".msg-avatar.msg-user-trigger");
+  if (!btn) return;
+  const has = msgSenderHasProfileImage(msg);
+  const ver = avatarVersionForEmployee(emp, 0);
+  applyAvatarPhotoToButton(btn, { employeeNo: emp, name: senderName, hasImage: has, version: ver });
+}
+
+function applySelfAvatarPhotos(user) {
+  if (!user) return;
+  const emp = String(user.employeeNo || "").trim();
+  const has = !!user.profileImagePresent;
+  const ver = Number(user.profileImageVersion) || 0;
+  const sb = document.getElementById("sidebarAvatar");
+  if (sb) applyAvatarPhotoToButton(sb, { employeeNo: emp, name: user.name, hasImage: has, version: ver });
+  const h = document.getElementById("appHeaderAvatar");
+  if (h) applyAvatarPhotoToButton(h, { employeeNo: emp, name: user.name, hasImage: has, version: ver });
+}
+
 /* ==========================================================================
  * 화면 전환
  * ========================================================================== */
@@ -2384,9 +2521,7 @@ function showMain(user) {
   applySidebarCollapsedState();
 
   sidebarUserName.textContent = `${user.name}`;
-  sidebarAvatar.textContent = avatarInitials(user.name);
-  const appHeaderAvatarEl = document.getElementById("appHeaderAvatar");
-  if (appHeaderAvatarEl) appHeaderAvatarEl.textContent = avatarInitials(user.name);
+  applySelfAvatarPhotos(user);
   const welcomeHeroTitleEl = document.getElementById("welcomeHeroTitle");
   if (welcomeHeroTitleEl) {
     const nm = String(user.name || "").trim();
@@ -3440,6 +3575,7 @@ async function loadChannelMembers(channelId) {
     activeChannelMemberCount = members.length;
     syncChannelActionButtons();
     activeChannelMemberOrgLineByEmployeeNo.clear();
+    activeChannelMemberAvatarByEmployeeNo.clear();
 
     const myEmpMention = currentUser ? String(currentUser.employeeNo || "").trim() : "";
     activeChannelMemberMentionList = members
@@ -3489,6 +3625,10 @@ async function loadChannelMembers(channelId) {
       let orgLine = deptParts.length ? deptParts.map(x => String(x).trim()).join(" · ") : "조직 미지정";
       if (emp) {
         activeChannelMemberOrgLineByEmployeeNo.set(emp, orgLine);
+        activeChannelMemberAvatarByEmployeeNo.set(emp, {
+          hasImage: !!m.profileImagePresent,
+          version: Number(m.profileImageVersion) || 0,
+        });
       }
       const jobPosition = normalizeOrgValueForDisplay(m.jobPosition);
       const jobTitle = normalizeOrgValueForDisplay(m.jobTitle);
@@ -3528,6 +3668,15 @@ async function loadChannelMembers(channelId) {
         </div>
         ${kickBtnHtml}`;
       li.querySelector(".member-profile-btn").addEventListener("click", () => openUserProfile(emp));
+      const avSm = li.querySelector(".member-avatar-sm");
+      if (avSm) {
+        applyAvatarPhotoToSurface(avSm, {
+          employeeNo: emp,
+          name: m.name,
+          hasImage: !!m.profileImagePresent,
+          version: Number(m.profileImageVersion) || 0,
+        });
+      }
       const kickBtn = li.querySelector(".btn-member-kick");
       if (kickBtn) {
         kickBtn.addEventListener("click", (ev) => {
@@ -4209,6 +4358,7 @@ function createFileAttachmentRowFromMsg(msg, payload, { showAvatar, showTime }) 
     const card = div.querySelector(".msg-attach-card");
     wireAttachmentCardActions(card, fileMeta, channelId);
   }
+  wireMsgRowAvatar(div, emp, senderName, msg);
   attachThreadCommentFooter(div, msg);
   return div;
 }
@@ -4341,6 +4491,7 @@ function createFileAttachmentGroupRowFromMsgs(msgs, { showAvatar, showTime }) {
     if (meta) wireAttachmentCardActions(card, meta, channelId);
   });
 
+  wireMsgRowAvatar(div, emp, senderName, first);
   attachThreadCommentFooter(div, first);
   return div;
 }
@@ -4420,6 +4571,7 @@ function createMessageRowElement(msg, { showAvatar, showTime }) {
         </div>
       </div>`;
   }
+  wireMsgRowAvatar(div, emp, senderName, msg);
   attachThreadCommentFooter(div, msg);
   return div;
 }
@@ -6952,6 +7104,17 @@ function renderUserSearchResults(users, listEl, context) {
       addSelectedMember(u, context);
       li.remove();
     });
+    const av = li.querySelector(".user-search-avatar");
+    if (av) {
+      const emp = String(u.employeeNo || "").trim();
+      const ver = u.updatedAt ? Date.parse(u.updatedAt) : 0;
+      applyAvatarPhotoToSurface(av, {
+        employeeNo: emp,
+        name: u.name,
+        hasImage: !!u.profileImagePresent,
+        version: Number.isFinite(ver) ? ver : 0,
+      });
+    }
     listEl.appendChild(li);
   });
 }
@@ -10350,6 +10513,39 @@ function initEvents() {
       }
     });
   }
+
+  document.getElementById("btnProfileImageEdit")?.addEventListener("click", () => {
+    document.getElementById("inputProfileImageUpload")?.click();
+  });
+  document.getElementById("inputProfileImageUpload")?.addEventListener("change", async (e) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f || !currentUser) return;
+    const fd = new FormData();
+    fd.append("file", f);
+    const res = await apiFetch("/api/users/me/profile-image", { method: "POST", body: fd });
+    const upJson = await res.json().catch(() => ({}));
+    if (!res.ok || upJson.success === false) {
+      const msg = upJson.error?.message || "프로필 사진을 올리지 못했습니다.";
+      await uiAlert(msg);
+      return;
+    }
+    invalidateProfileImageBlobCacheFor(currentUser.employeeNo);
+    const meRes = await apiFetch("/api/auth/me");
+    if (meRes.ok) {
+      const mj = await meRes.json();
+      const me = mj?.data;
+      if (me) {
+        const token = getToken();
+        const prev = getUser() || {};
+        saveSession(token, { ...prev, ...me });
+        currentUser = { ...currentUser, ...me };
+        applySelfAvatarPhotos(currentUser);
+      }
+    }
+    const emp = String(currentUser.employeeNo || "").trim();
+    if (emp) await openUserProfile(emp, { entry: profileModalEntry });
+  });
 }
 
 /* ==========================================================================
@@ -10460,6 +10656,8 @@ document.addEventListener("visibilitychange", () => {
  * 관리자 - 사용자 관리
  * ========================================================================== */
 let adminUserList = [];          // 서버에서 로드한 원본 목록
+/** 편집 확인 시 저장할 프로필 이미지 파일(키 = pending 변경 키 사원번호) */
+const adminProfileImageFilesPending = new Map();
 let adminUserOrgOptions = null;  // 조직 드롭다운 옵션 (teams/jobLevels/...)
 let adminUserOrgTree = [];       // 전체 조직 그룹
 let adminUserSelectedOrgCode = null;         // 좌측 패널에서 선택한 조직 코드 (null = 전체)
@@ -10776,6 +10974,8 @@ function openAdminUserEditModal(employeeNo) {
   }
 
   document.getElementById("btnAdminUserEditConfirm").dataset.editEmp = employeeNo || "";
+  const imgIn = document.getElementById("auProfileImage");
+  if (imgIn) imgIn.value = "";
   openModal("modalAdminUserEdit");
 }
 
@@ -10963,6 +11163,12 @@ document.getElementById("btnAdminUserEditConfirm").addEventListener("click", () 
   // 사원번호가 변경된 경우: 원래 키로 pending 저장 (저장 시 URL = 원래 사원번호, body.employeeNo = 새 사원번호)
   const pendingKey = isNew ? newEmpNo : originalEmpNo;
   adminUserPendingChanges.set(pendingKey, { op: isNew ? "create" : "update", data });
+  const imgIn = document.getElementById("auProfileImage");
+  const imgFile = imgIn?.files?.[0];
+  if (imgFile) {
+    adminProfileImageFilesPending.set(pendingKey, imgFile);
+  }
+  if (imgIn) imgIn.value = "";
   closeModal("modalAdminUserEdit");
   renderAdminUserView();
 });
@@ -10989,6 +11195,22 @@ document.getElementById("btnAdminUserSave").addEventListener("click", async () =
         if (!res.ok) {
           const j = await res.json().catch(() => ({}));
           errors.push(`[등록 ${empNo}] ${j.error?.message || res.status}`);
+        } else {
+          const targetEmp = String(change.data?.employeeNo || empNo).trim();
+          const imgFile = adminProfileImageFilesPending.get(empNo);
+          if (imgFile && targetEmp) {
+            const fd = new FormData();
+            fd.append("file", imgFile);
+            const up = await apiFetch(`/api/admin/users/${encodeURIComponent(targetEmp)}/profile-image`, {
+              method: "POST",
+              body: fd,
+            });
+            if (!up.ok) {
+              const j = await up.json().catch(() => ({}));
+              errors.push(`[프로필사진 ${targetEmp}] ${j.error?.message || up.status}`);
+            }
+            adminProfileImageFilesPending.delete(empNo);
+          }
         }
       } else if (change.op === "update") {
         const res = await apiFetch(`/api/admin/users/${encodeURIComponent(empNo)}`, {
@@ -10999,6 +11221,22 @@ document.getElementById("btnAdminUserSave").addEventListener("click", async () =
         if (!res.ok) {
           const j = await res.json().catch(() => ({}));
           errors.push(`[수정 ${empNo}] ${j.error?.message || res.status}`);
+        } else {
+          const targetEmp = String(change.data?.employeeNo || empNo).trim();
+          const imgFile = adminProfileImageFilesPending.get(empNo);
+          if (imgFile && targetEmp) {
+            const fd = new FormData();
+            fd.append("file", imgFile);
+            const up = await apiFetch(`/api/admin/users/${encodeURIComponent(targetEmp)}/profile-image`, {
+              method: "POST",
+              body: fd,
+            });
+            if (!up.ok) {
+              const j = await up.json().catch(() => ({}));
+              errors.push(`[프로필사진 ${targetEmp}] ${j.error?.message || up.status}`);
+            }
+            adminProfileImageFilesPending.delete(empNo);
+          }
         }
       }
     } catch (e) {
@@ -11669,6 +11907,19 @@ function renderOrgChartMembers(team) {
     </div>`;
   }).join("");
   refreshPresenceDots();
+  grid.querySelectorAll(".orgchart-member-card[data-emp]").forEach((card) => {
+    const emp = String(card.dataset.emp || "").trim();
+    const u = users.find((x) => String(x.employeeNo ?? "").trim() === emp);
+    const av = card.querySelector(".orgchart-member-avatar");
+    if (!u || !av) return;
+    const ver = u.updatedAt ? Date.parse(u.updatedAt) : 0;
+    applyAvatarPhotoToSurface(av, {
+      employeeNo: emp,
+      name: u.name,
+      hasImage: !!u.profileImagePresent,
+      version: Number.isFinite(ver) ? ver : 0,
+    });
+  });
 }
 
 document.getElementById("orgChartMemberGrid").addEventListener("click", (e) => {

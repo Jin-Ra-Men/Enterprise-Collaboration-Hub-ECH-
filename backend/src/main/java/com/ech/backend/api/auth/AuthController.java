@@ -10,6 +10,7 @@ import com.ech.backend.common.exception.UnauthorizedException;
 import com.ech.backend.common.security.UserPrincipal;
 import com.ech.backend.domain.user.User;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,6 +24,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+
+    @Value("${app.allow-user-profile-self-upload:true}")
+    private boolean allowUserProfileSelfUpload;
 
     public AuthController(AuthService authService) {
         this.authService = authService;
@@ -62,6 +66,8 @@ public class AuthController {
             throw new UnauthorizedException("계정에 사원번호가 없습니다. 관리자에게 문의하세요.");
         }
         String themePreference = authService.getThemePreference(user.getEmployeeNo());
+        boolean present = user.getProfileImageRelPath() != null && !user.getProfileImageRelPath().isBlank();
+        long ver = user.getUpdatedAt() != null ? user.getUpdatedAt().toInstant().toEpochMilli() : 0L;
         return ApiResponse.success(new MeResponse(
                 user.getId(),
                 user.getEmployeeNo(),
@@ -69,7 +75,10 @@ public class AuthController {
                 user.getName(),
                 principal.department(),
                 principal.role().name(),
-                themePreference
+                themePreference,
+                allowUserProfileSelfUpload,
+                present,
+                ver
         ));
     }
 

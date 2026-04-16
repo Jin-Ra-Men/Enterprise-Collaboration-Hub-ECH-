@@ -10,6 +10,8 @@ public record ChannelMemberResponse(
         String jobPosition,
         String jobTitle,
         String memberRole,
-        OffsetDateTime joinedAt
+        OffsetDateTime joinedAt,
+        boolean profileImagePresent,
+        long profileImageVersion
 ) {
 }

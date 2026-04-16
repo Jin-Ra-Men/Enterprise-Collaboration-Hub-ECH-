@@ -783,15 +783,20 @@ public class ChannelService {
         List<ChannelMemberResponse> memberResponses = uniqueMembers.stream()
                 .map(member -> {
                     String emp = member.getUser().getEmployeeNo();
+                    var u = member.getUser();
+                    boolean img = u.getProfileImageRelPath() != null && !u.getProfileImageRelPath().isBlank();
+                    long v = u.getUpdatedAt() != null ? u.getUpdatedAt().toInstant().toEpochMilli() : 0L;
                     return new ChannelMemberResponse(
-                            member.getUser().getEmployeeNo(),
-                            member.getUser().getName(),
+                            u.getEmployeeNo(),
+                            u.getName(),
                             departmentByEmp.getOrDefault(emp, ""),
                             levelByEmp.getOrDefault(emp, null),
                             positionByEmp.getOrDefault(emp, null),
                             titleByEmp.getOrDefault(emp, null),
                             member.getMemberRole().name(),
-                            member.getJoinedAt()
+                            member.getJoinedAt(),
+                            img,
+                            v
                     );
                 })
                 .toList();

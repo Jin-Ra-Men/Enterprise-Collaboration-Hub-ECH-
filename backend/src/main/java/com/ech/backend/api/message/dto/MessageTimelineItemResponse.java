@@ -32,7 +32,9 @@ public record MessageTimelineItemResponse(
         /** ROOT 전용: 가장 최근 COMMENT 시각 */
         OffsetDateTime lastCommentAt,
         /** ROOT 전용: 가장 최근 COMMENT 작성자 표시명 */
-        String lastCommentSenderName
+        String lastCommentSenderName,
+
+        boolean senderHasProfileImage
 ) {
 }
 

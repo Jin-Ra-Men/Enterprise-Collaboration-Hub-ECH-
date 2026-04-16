@@ -15,6 +15,9 @@ public record UserSearchResponse(
         String role,
         String status,
         /** 조직도 등 동일 직급 정렬(먼저 생성된 사용자 우선). */
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        boolean profileImagePresent,
+        /** 프로필 이미지 캐시 무효화 등(사용자 정보 변경 시 갱신). */
+        OffsetDateTime updatedAt
 ) {
 }

@@ -230,6 +230,7 @@ public class UserSearchService {
             String jobPosition,
             String jobTitle
     ) {
+        boolean profileImg = user.getProfileImageRelPath() != null && !user.getProfileImageRelPath().isBlank();
         return new UserSearchResponse(
                 user.getId(),
                 user.getEmployeeNo(),
@@ -241,7 +242,9 @@ public class UserSearchService {
                 jobTitle,
                 user.getRole(),
                 user.getStatus(),
-                user.getCreatedAt()
+                user.getCreatedAt(),
+                profileImg,
+                user.getUpdatedAt()
         );
     }
 
@@ -267,6 +270,10 @@ public class UserSearchService {
         String jobLevel = lookupDisplayName(emp, "JOB_LEVEL");
         String jobPosition = lookupDisplayName(emp, "JOB_POSITION");
         String jobTitle = lookupDisplayName(emp, "JOB_TITLE");
+        boolean present = user.getProfileImageRelPath() != null && !user.getProfileImageRelPath().isBlank();
+        long ver = user.getUpdatedAt() != null
+                ? user.getUpdatedAt().toInstant().toEpochMilli()
+                : 0L;
         return new UserProfileResponse(
                 user.getId(),
                 user.getEmployeeNo(),
@@ -277,7 +284,9 @@ public class UserSearchService {
                 jobPosition,
                 jobTitle,
                 user.getRole(),
-                user.getStatus()
+                user.getStatus(),
+                present,
+                ver
         );
     }
 

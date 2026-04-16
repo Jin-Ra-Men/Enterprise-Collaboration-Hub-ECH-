@@ -814,6 +814,11 @@
               <label for="auJobTitle">직책</label>
               <select id="auJobTitle"><option value="">선택 안함</option></select>
             </div>
+            <div class="form-group">
+              <label for="auProfileImage">프로필 사진</label>
+              <input id="auProfileImage" type="file" accept="image/jpeg,image/png,image/webp,image/gif" />
+              <small class="hint">저장 시 반영됩니다(최대 5MB).</small>
+            </div>
           </div>
           <p id="adminUserEditError" class="login-error hidden" style="margin-top:8px"></p>
         </div>
@@ -1276,7 +1281,19 @@
           <button type="button" class="ech-profile-modal-close modal-close" data-modal="modalUserProfile" aria-label="닫기">✕</button>
           <div class="modal-body profile-body ech-profile-body">
             <div class="ech-profile-hero">
-              <div class="profile-avatar-lg" id="profileAvatarLg">?</div>
+              <div class="ech-profile-avatar-wrap">
+                <div class="profile-avatar-lg" id="profileAvatarLg">?</div>
+                <button
+                  type="button"
+                  id="btnProfileImageEdit"
+                  class="ech-profile-avatar-edit hidden"
+                  title="프로필 사진 변경"
+                  aria-label="프로필 사진 변경"
+                >
+                  <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+                </button>
+                <input type="file" id="inputProfileImageUpload" class="hidden" accept="image/jpeg,image/png,image/webp,image/gif" />
+              </div>
               <h4 id="profileModalName" class="profile-modal-name">-</h4>
               <p id="profileModalSubtitle" class="profile-modal-subtitle">-</p>
             </div>
