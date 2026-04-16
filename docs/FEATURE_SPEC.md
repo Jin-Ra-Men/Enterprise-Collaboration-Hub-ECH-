@@ -861,7 +861,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - `GET /api/channels/{channelId}/files/{fileId}/download?employeeNo=...`
 - 입력/출력:
   - **통합 피커**: 채널 생성·DM 생성·구성원 추가 모두 **동일한 `+` 버튼 기반 팝업**(`modalAddMemberPicker`)을 사용합니다. 팝업에서 좌측 조직도(회사>본부>팀) + 우측 검색/결과로 사용자 선택 후 상위 모달의 선택 태그에 반영됩니다. 구성원 추가 `+`는 텍스트 대신 **SVG 십자**(`btn-picker-plus-icon`)로 그려 버튼 박스 안에 시각 중심을 맞춤.
-  - **사이드바 조직도 모달**(`modalOrgChart`)·**구성원 추가 피커**·**관리자 사용자 관리** 표 모두 동일 정렬(`sortOrgDirectoryMembers`): **관리자 지정 사용자 위치 순번(`directorySortOrder`)** 우선(오름차순) → 직책에 `팀장` 포함 시 최상단 → **직급**은 `org_groups.sort_order`(API `jobLevelSortOrder` 또는 관리자 `adminUserOrgTree`의 `JOB_LEVEL`) 우선, 없으면 표시명 부장→차장→… 휴리스틱 → **직위**는 `jobPositionSortOrder` / `JOB_POSITION` 트리 순서 → 동률 시 직위 표시명·이름 가나다.
+  - **사이드바 조직도 모달**(`modalOrgChart`)·**구성원 추가 피커**·**관리자 사용자 관리** 표 모두 동일 정렬(`sortOrgDirectoryMembers`): **관리자 지정 사용자 위치 순번(`directorySortOrder`)** 우선(오름차순) → 직책에 `팀장` 포함 시 최상단 → 동률 시 이름 가나다.
   - **조직도 모달 전용**: 헤더에 **새로고침** 버튼을 두지 않는다. 모달을 열면 로그인 사용자 기준 **최하위 소속** 노드를 자동 선택한다 — (1) 팀 `users`에 본인 사번이 있으면 해당 팀, (2) 없으면 `currentUser.department` 문자열과 **팀명**이 일치하는 팀, (3) 없으면 본부 `directMembers`, (4) 없으면 회사 `directMembers`. 우측 구성원 패널은 해당 노드 기준으로 채우고, 좌측 트리는 선택 노드가 보이도록 스크롤한다. 우선순위는 구성원 추가 피커의 기본 팀(`loadOrgPicker`)과 맞춘다. `frontend/app.js` (`findDefaultOrgChartNodeButton`, `applyOrgChartNodeSelection`).
   - 멤버 패널: `department`·`jobLevel`을 한 줄 요약, `jobPosition`·`jobTitle`은 값이 있을 때만 추가 표시
   - 멤버 패널: **PUBLIC/PRIVATE**에서 개설자 사번(`createdByEmployeeNo`)과 일치하는 멤버에 `관리자` 배지 표시 — **DM**에서는 미표시

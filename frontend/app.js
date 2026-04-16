@@ -2049,42 +2049,13 @@ async function loadOrganizationCompanyFiltersIntoSelect() {
 }
 
 /**
- * 사용자별 위치 순번(directorySortOrder) 우선 + 직책 "팀장" 최우선 + 직급/직위 정렬 + 이름.
- * @param {object} [ctx] - `orgTree`: 관리자 `/api/admin/org-groups` 목록(직급·직위 코드로 sort_order 조회).
+ * 사용자 관리/조직도 공통 정렬:
+ * 1) 사용자별 위치 순번(directorySortOrder) 오름차순
+ * 2) 직책에 "팀장" 포함 시 우선
+ * 3) 이름 가나다
  */
-function orgMemberSortOrderFromTree(orgTree, groupType, groupCode) {
-  if (!orgTree || !groupCode) return null;
-  const g = orgTree.find((x) => x.groupType === groupType && x.groupCode === groupCode);
-  if (!g || g.sortOrder === undefined || g.sortOrder === null) return null;
-  const n = Number(g.sortOrder);
-  return Number.isFinite(n) ? n : null;
-}
-
-function sortOrgDirectoryMembers(users, ctx) {
-  const orgTree = ctx && ctx.orgTree;
-  const JOB_LEVEL_ORDER = ["부장", "차장", "과장", "대리", "사원", "인턴"];
-  const levelRank = (level) => {
-    if (!level) return 999;
-    const idx = JOB_LEVEL_ORDER.findIndex((l) => String(level).includes(l));
-    return idx >= 0 ? idx : 998;
-  };
-  const jobLevelOf = (u) => u.jobLevel ?? u.jobLevelDisplayName ?? "";
-  const jobPositionOf = (u) => u.jobPosition ?? u.jobPositionDisplayName ?? "";
+function sortOrgDirectoryMembers(users) {
   const jobTitleOf = (u) => u.jobTitle ?? u.jobTitleDisplayName ?? "";
-
-  const levelSortKey = (u) => {
-    if (u.jobLevelSortOrder != null && u.jobLevelSortOrder !== undefined) return Number(u.jobLevelSortOrder);
-    const fromTree = orgMemberSortOrderFromTree(orgTree, "JOB_LEVEL", u.jobLevelGroupCode);
-    if (fromTree != null) return fromTree;
-    return levelRank(jobLevelOf(u));
-  };
-
-  const positionSortKey = (u) => {
-    if (u.jobPositionSortOrder != null && u.jobPositionSortOrder !== undefined) return Number(u.jobPositionSortOrder);
-    const fromTree = orgMemberSortOrderFromTree(orgTree, "JOB_POSITION", u.jobPositionGroupCode);
-    if (fromTree != null) return fromTree;
-    return 99999;
-  };
 
   return [...users].sort((a, b) => {
     const aDirectoryOrder = Number(a.directorySortOrder ?? 0);
@@ -2094,17 +2065,6 @@ function sortOrgDirectoryMembers(users, ctx) {
     const aIsLeader = String(jobTitleOf(a)).includes("팀장") ? 0 : 1;
     const bIsLeader = String(jobTitleOf(b)).includes("팀장") ? 0 : 1;
     if (aIsLeader !== bIsLeader) return aIsLeader - bIsLeader;
-
-    const la = levelSortKey(a);
-    const lb = levelSortKey(b);
-    if (la !== lb) return la - lb;
-
-    const pa = positionSortKey(a);
-    const pb = positionSortKey(b);
-    if (pa !== pb) return pa - pb;
-
-    const posStrCmp = String(jobPositionOf(a) || "").localeCompare(String(jobPositionOf(b) || ""), "ko-KR");
-    if (posStrCmp !== 0) return posStrCmp;
 
     return String(a.name || "").localeCompare(String(b.name || ""), "ko-KR");
   });
