@@ -6489,6 +6489,11 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
   border: 4px solid color-mix(in srgb, var(--outline-variant, #acb3b7) 35%, transparent);
   box-shadow: 0 8px 24px rgba(44, 52, 55, 0.08);
 }
+.ech-profile-hero .profile-avatar-lg.ech-avatar--photo {
+  /* 증명사진 원본의 좌우 여백이 보이지 않도록 모달 아바타만 소폭 확대 */
+  background-size: 122%;
+  background-position: center 40%;
+}
 .ech-profile-avatar-wrap {
   position: relative;
   display: inline-block;
