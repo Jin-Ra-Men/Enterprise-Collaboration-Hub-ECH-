@@ -150,7 +150,7 @@
 - 관련 Socket 이벤트: 추후 `channel:join`과 연계 예정
 - 입력/출력:
   - 생성 입력: `workspaceKey`, `name`, `description`, `channelType`(`PUBLIC`|`PRIVATE`|`DM`), 선택 `createdByEmployeeNo`(구 클라이언트용·**실제 생성자는 Bearer JWT의 사원번호**), 선택 `dmPeerEmployeeNos`(DM일 때 상대 **사원번호** 목록 — 서버가 내부 고유 `name`(`__dm__…`)과 표시용 `description`을 구성하고, 동일 참가자 조합이면 기존 채널 반환 후 누락 멤버만 추가)
-  - **나에게 쓰기**: `dmPeerEmployeeNos`에 **본인 사번**을 포함하면 참가자 집합이 본인만 남는 DM(단일 멤버)이 되며, 표시명은 `나에게 쓰기`로 맞춘다. `GET /api/channels/{id}` 멤버 목록은 동일 사번 **중복 행을 제거**해 한 줄만 내려준다.
+  - **나에게 쓰기(본인 전용 DM)**: `dmPeerEmployeeNos`에 **본인 사번**을 포함하면 참가자 집합이 본인만 남는 DM(단일 멤버)이 된다. **표시용 `description`/요약 설명**은 1:1 DM과 같이 **본인 표시명(이름)** 으로 맞춘다(구버전 DB에 `나에게 쓰기`가 남아 있으면 프론트 `displayNameForDmChannel`에서 본인 이름으로 보정). `GET /api/channels`의 `dmPeerEmployeeNos`는 조회자 제외라 비어 있을 수 있으며, 프론트는 `dmPeerEmployeeNosForPresence`로 본인 사번을 넣어 사이드바·탑바 프레즌스 점을 그린다. `GET /api/channels/{id}` 멤버 목록은 동일 사번 **중복 행을 제거**해 한 줄만 내려준다.
   - 참여 입력: `employeeNo`, `memberRole` (`JoinChannelRequest`)
   - 출력: 채널 기본 정보 + 멤버 목록(`members`: `employeeNo`, `name`, `department`, `jobLevel`, `jobPosition`, `jobTitle`, `memberRole`, `joinedAt` — `ChannelMemberResponse`)
 - 상태 전이/예외 케이스:
@@ -865,7 +865,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - 멤버 패널: **PUBLIC/PRIVATE**에서 개설자 사번(`createdByEmployeeNo`)과 일치하는 멤버에 `관리자` 배지 표시 — **DM**에서는 미표시
   - 파일 업로드 성공 시: **비이미지**는 메시지 행 안에 **카드 리스트**(아이콘·파일명·크기 + **저장** / **저장 후 열기**만; **뷰어로 열기 없음**). **저장 후 열기**: **브라우저**에서는 먼저 **다운로드**(`<a download>`) 후 짧은 지연 뒤 blob **새 탭** 열기. **CSTalk 데스크톱(Electron)** 에서는 **저장 대화상자**로 경로를 고른 뒤 디스크에 쓰고 `shell.openPath`로 **OS 기본 앱** 실행(임시 폴더에 먼저 열지 않음). IPC `ech-save-file-and-open-default-app` / `electronAPI.saveFileAndOpenWithDefaultApp`. **이미지**는 같은 묶음 안에서 **2열 그리드** 썸네일 — **이미지 1장만**일 때는 그리드 한 칸이 아니라 **전체 폭**을 쓰도록 CSS(`:only-child` → `grid-column: 1 / -1`). 썸네일 클릭 시 `openChannelImageLightbox`. **연속 FILE 메시지**(같은 분·같은 발신자·스레드 댓글 없음)는 `tryConsumeFileAttachmentGroup` → `createFileAttachmentGroupRowFromMsgs`로 **한 말풍선**에 묶고, **일괄저장**은 **JSZip**으로 **ZIP 한 파일** 다운로드(`batchDownloadChannelImageFiles`; CDN `jszip`). **FILE 메시지 직후** 다음 타임라인 메시지는 **항상 아바타 행**을 새로 띄움(`shouldShowAvatarForMessage`에서 이전이 FILE이면 true, 실시간 `appendMessageRealtime`에서 직전 행이 `msg-has-attachment`면 아바타 표시)
   - **연속 이미지(같은 분·같은 발신자)**: 서버는 파일별 `FILE` 메시지로 저장하되, 타임라인에서는 **2장 이상**이면 **2열 그리드**로 묶어 표시(스레드 댓글이 달린 메시지는 묶지 않음). 하단 **일괄저장**은 **ZIP**(`attachments-{channelId}-{timestamp}.zip`)
-  - **DM 채팅 헤더**: 글로벌 탑바 `#chatChannelPrefix`에 사이드바 DM과 동일하게 `dmSidebarLeadingHtml(..., { showPresence: true })` 기반 **프레즌스 점**(그룹 DM은 최대 3명 + `+N`). **나에게 쓰기**(멤버 1명·본인만)는 상대 사번이 없어 **본인** 사번으로 점 1개 표시. 멤버 API 로드 후 `updateChatHeaderDmPresence`로 갱신(`refreshPresenceDots`와 연동)
+  - **DM 채팅 헤더**: 글로벌 탑바 `#chatChannelPrefix`에 사이드바 DM과 동일하게 `dmSidebarLeadingHtml(..., { showPresence: true })` 기반 **프레즌스 점**(그룹 DM은 최대 3명 + `+N`). 본인 전용 DM도 **일반 DM과 동일하게** `dmPeerEmployeeNosForPresence`로 본인 점을 표시. 멤버 API 로드 후 `updateChatHeaderDmPresence`로 갱신(`refreshPresenceDots`와 연동)
 - **상단 채널 컨텍스트**: 채팅방 이름·구성원 수(`chatChannelName`, `chatMemberCount`)는 채팅창 헤더 대신 상단 글로벌 바 중앙 `#appTopbarChannelContext`에 표시되며, 채널 설정 햄버거(`btnHeaderMenu`)는 상단 우측 아이콘 영역에서 채팅 뷰일 때만 표시
 - **중앙 정렬 기준**: `#appTopbarChannelContext`의 중앙 기준은 상단바 전체 폭이 아니라 `chat-area` 중심축을 따른다(사이드바 펼침/접힘 폭을 고려해 오프셋 보정).
 - **상단 검색 폭 기준**: `appHeaderSearchInput` 래퍼(`.app-shell-global-search`)는 사이드바 폭(324px) 기준선 밖으로 튀어나오지 않도록 축소된 고정폭(236px)으로 유지한다.

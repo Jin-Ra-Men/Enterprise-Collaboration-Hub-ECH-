@@ -163,8 +163,42 @@ let presenceActivityRafId = null;
 /** 사이드바에서 직접 선택한 자리비움 — 동작 감지로 온라인으로 바꾸지 않음(자동 무활동 자리비움만 해제 가능) */
 let presenceManualAway = false;
 
-/** 본인 전용 DM(나에게 쓰기) 표시명 — API name/description과 맞춤 */
+/** 본인 전용 DM 진입 버튼·레거시 폴백용 라벨 — 목록/헤더 표시명은 본인 이름과 동일하게 맞춘다 */
 const SELF_DM_LABEL = "나에게 쓰기";
+
+/** DM 목록 요약에서 본인만 있는 방 — `dmPeerEmployeeNos`는 조회자 제외라 비어 있을 수 있음 */
+function isSelfOnlyDmChannelSummary(ch) {
+  if (String(ch?.channelType || "").toUpperCase() !== "DM") return false;
+  const peers = ch?.dmPeerEmployeeNos;
+  if (Array.isArray(peers) && peers.length > 0) return false;
+  return Number(ch?.memberCount ?? 0) === 1;
+}
+
+function dmPeerEmployeeNosForPresence(ch) {
+  const raw = Array.isArray(ch?.dmPeerEmployeeNos) ? ch.dmPeerEmployeeNos : [];
+  const peers = raw.map((e) => String(e || "").trim()).filter(Boolean);
+  if (peers.length > 0) return peers;
+  if (isSelfOnlyDmChannelSummary(ch) && currentUser?.employeeNo) {
+    return [String(currentUser.employeeNo).trim()];
+  }
+  return [];
+}
+
+function displayNameForDmChannel(ch) {
+  if (String(ch?.channelType || "").toUpperCase() !== "DM") {
+    return String(ch?.name || "").trim();
+  }
+  let fromApi = String(ch?.description || "").trim() || String(ch?.name || "").trim();
+  if (isSelfOnlyDmChannelSummary(ch)) {
+    if (!fromApi || fromApi === SELF_DM_LABEL) {
+      const nm = currentUser?.name != null ? String(currentUser.name).trim() : "";
+      if (nm) return nm;
+      const emp = currentUser?.employeeNo != null ? String(currentUser.employeeNo).trim() : "";
+      if (emp) return emp;
+    }
+  }
+  return fromApi || SELF_DM_LABEL;
+}
 
 /* ── 전역 상태 ── */
 let socket         = null;
@@ -350,7 +384,7 @@ function syncWorkHubChannelContext() {
     const ch = lastSidebarChannelsSnapshot.find((c) => Number(c.channelId) === Number(cid));
     if (ch) {
       const ct = String(ch.channelType || "").toUpperCase();
-      label = ct === "DM" && ch.description ? String(ch.description).trim() : String(ch.name || "").trim();
+      label = ct === "DM" ? displayNameForDmChannel(ch) : String(ch.name || "").trim();
     }
   }
   el.textContent = label ? `연결: ${label}` : `연결: 채널 #${cid}`;
@@ -362,7 +396,7 @@ function openWorkflowPage() {
 }
 function formatWorkflowChannelLabel(ch) {
   const ct = String(ch?.channelType || "").toUpperCase();
-  const base = ct === "DM" && ch?.description ? String(ch.description) : String(ch?.name || "이름 없음");
+  const base = ct === "DM" ? displayNameForDmChannel(ch) : String(ch?.name || "이름 없음");
   return ct === "DM" ? `DM · ${base}` : `# ${base}`;
 }
 function renderWorkflowChannelPicker() {
@@ -993,14 +1027,12 @@ function updateChatHeaderDmPresence() {
   if (!prefixEl) return;
   if (String(activeChannelType || "").toUpperCase() !== "DM") return;
   prefixEl.className = "chat-channel-prefix chat-header-dm-prefix";
-  let peers = Array.isArray(activeDmPeerEmployeeNos) ? activeDmPeerEmployeeNos.slice() : [];
-  if (
-    peers.length === 0 &&
-    Number(activeChannelMemberCount) === 1 &&
-    currentUser?.employeeNo
-  ) {
-    peers = [String(currentUser.employeeNo).trim()];
-  }
+  const summary = {
+    channelType: activeChannelType,
+    memberCount: activeChannelMemberCount,
+    dmPeerEmployeeNos: activeDmPeerEmployeeNos,
+  };
+  const peers = dmPeerEmployeeNosForPresence(summary);
   prefixEl.innerHTML = dmSidebarLeadingHtml(peers, { showPresence: true });
   refreshPresenceDots();
 }
@@ -1117,13 +1149,14 @@ async function openOrCreateSelfDm() {
   if (!currentUser) return;
   const emp = String(currentUser.employeeNo || "").trim();
   if (!emp) return;
+  const selfDmDisplayName = String(currentUser.name || "").trim() || emp;
   try {
     const res = await apiFetch("/api/channels", {
       method: "POST",
       body: JSON.stringify({
         workspaceKey: WS_KEY,
-        name: SELF_DM_LABEL,
-        description: SELF_DM_LABEL,
+        name: selfDmDisplayName,
+        description: selfDmDisplayName,
         channelType: "DM",
         createdByEmployeeNo: currentUser.employeeNo,
         dmPeerEmployeeNos: [emp],
@@ -1138,7 +1171,7 @@ async function openOrCreateSelfDm() {
     closeModal("modalUserProfile");
     closeModal("modalCreateDm");
     await loadMyChannels();
-    selectChannel(channelId, SELF_DM_LABEL, "DM");
+    selectChannel(channelId, selfDmDisplayName, "DM");
   } catch (e) {
     console.error(e);
     await uiAlert("DM 생성 중 오류 발생");
@@ -2911,9 +2944,7 @@ function renderQuickUnreadList(channels) {
     btn.dataset.channelId = String(ch.channelId);
     btn.dataset.channelType = ch.channelType;
     const displayName =
-      ch.channelType === "DM" && ch.description
-        ? ch.description
-        : ch.name;
+      ch.channelType === "DM" ? displayNameForDmChannel(ch) : ch.name;
     btn.dataset.channelName = displayName;
     const badgeTxt = formatUnreadBadgeCount(Number(ch.unreadCount ?? 0));
     const cap = quickRailCaption(displayName);
@@ -2923,7 +2954,7 @@ function renderQuickUnreadList(channels) {
     const muteRailHtml = quickRailNotifyMutedHtml(ch.channelId);
     const leadHtml =
       ch.channelType === "DM"
-        ? `<span class="quick-rail-dm-lead">${dmSidebarLeadingHtml(ch.dmPeerEmployeeNos)}</span>`
+        ? `<span class="quick-rail-dm-lead">${dmSidebarLeadingHtml(dmPeerEmployeeNosForPresence(ch))}</span>`
         : `<span class="quick-rail-icon">${ch.channelType === "PRIVATE" ? "🔒" : "#"}</span>`;
     btn.innerHTML = `${leadHtml}<span class="quick-rail-label">${escHtml(cap)}</span>${muteRailHtml}${badgeHtml}`;
     btn.setAttribute("data-tooltip-title", displayName);
@@ -2948,9 +2979,7 @@ function renderChannelList(channels) {
     li.dataset.channelId   = ch.channelId;
     li.dataset.channelType = ch.channelType;
     const displayName =
-      ch.channelType === "DM" && ch.description
-        ? ch.description
-        : ch.name;
+      ch.channelType === "DM" ? displayNameForDmChannel(ch) : ch.name;
     li.dataset.channelName = displayName;
 
     const unread = Number(ch.unreadCount ?? 0);
@@ -2961,7 +2990,7 @@ function renderChannelList(channels) {
 
     const muteHtml = notifyMutedIconHtml(ch.channelId);
     if (ch.channelType === "DM") {
-      const dmLead = dmSidebarLeadingHtml(ch.dmPeerEmployeeNos);
+      const dmLead = dmSidebarLeadingHtml(dmPeerEmployeeNosForPresence(ch));
       li.innerHTML = `${dmLead}<span class="item-label">${escHtml(displayName)}</span>${muteHtml}${badgeHtml}`;
       dmListEl.appendChild(li);
     } else {
@@ -2990,8 +3019,7 @@ function displayChannelLabelForWorkSidebar(channels, channelId, apiChannelName) 
     if (ch) {
       const ct = String(ch.channelType || "").toUpperCase();
       if (ct === "DM") {
-        const d = String(ch.description || "").trim();
-        if (d) return d;
+        return displayNameForDmChannel(ch);
       }
       const n = String(ch.name || "").trim();
       if (n) return n;
@@ -9235,7 +9263,7 @@ document.getElementById("btnWorkflowOpenChannel")?.addEventListener("click", asy
   }
   const ch = (lastSidebarChannelsSnapshot || []).find((x) => Number(x.channelId) === cid);
   const ct = String(ch?.channelType || "PUBLIC").toUpperCase();
-  const displayName = ct === "DM" && ch?.description ? ch.description : ch?.name || "";
+  const displayName = ct === "DM" && ch ? displayNameForDmChannel(ch) : ch?.name || "";
   await selectChannel(cid, displayName, ct);
   await openWorkHubModalForActiveChannel();
 });

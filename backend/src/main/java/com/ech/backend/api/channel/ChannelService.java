@@ -137,10 +137,12 @@ public class ChannelService {
             if (displayLabel.isBlank()) {
                 displayLabel = "DM";
             }
-            /* 단일 참가자(본인만) DM = 나에게 쓰기 — 라벨이 비어 있거나 기본 DM일 때 */
-            if (distinctSorted.size() == 1 && Objects.equals(distinctSorted.get(0), creatorEmpNo)
-                    && ("DM".equals(displayLabel) || displayLabel.isBlank())) {
-                displayLabel = "나에게 쓰기";
+            /* 단일 참가자(본인만) DM: 1:1 DM과 같이 상대 표시명 자리에 본인 이름(또는 사번) */
+            if (distinctSorted.size() == 1 && Objects.equals(distinctSorted.get(0), creatorEmpNo)) {
+                String selfName = creator.getName() != null && !creator.getName().isBlank()
+                        ? creator.getName().trim()
+                        : creatorEmpNo;
+                displayLabel = selfName;
             }
             if (displayLabel.length() > 2000) {
                 displayLabel = displayLabel.substring(0, 2000);
@@ -721,7 +723,19 @@ public class ChannelService {
         }
         if (labels.isEmpty()) {
             if (members.size() == 1) {
-                return "나에게 쓰기";
+                ChannelMember cm = members.get(0);
+                User u = cm.getUser();
+                if (u != null) {
+                    String name = u.getName();
+                    if (name != null && !name.isBlank()) {
+                        return name.trim();
+                    }
+                    String emp = u.getEmployeeNo() == null ? "" : u.getEmployeeNo().trim();
+                    if (!emp.isEmpty()) {
+                        return emp;
+                    }
+                }
+                return "DM";
             }
             return "DM";
         }
