@@ -5,7 +5,7 @@
 ## 2026-04-16
 
 ### Changed
-- **프로필 모달 아바타 프레이밍**: `.ech-profile-hero .profile-avatar-lg.ech-avatar--photo`에서 과확대 크롭(`122%`)을 제거하고 `background-size: cover` + `background-position: center 38%`로 상체·어깨가 보이도록 조정.
+- **사진 아바타 프레이밍 통일**: `frontend/styles.css` 하단에 `.ech-avatar--photo` 단일 규칙(`background-size: cover`, `background-position: center 38%`)으로 프로필 히어로 포함 사이드바·글로벌 헤더·채널 멤버·메시지·사용자 검색·프로필 카드·조직도에 동일 적용. 위젯별 중복 블록 제거(기존 히어로 `122%` 과확대 제거 포함).
 - **릴리즈 버전 상향**: 백엔드 `1.2.7`(`backend/build.gradle`)·데스크톱 `1.2.7`(`desktop/package.json`)로 동기화.
 - **관리자 사용자 API 정렬 키 보강**: `GET /api/admin/users` 응답에 `jobTitleSortOrder`, `jobLevelSortOrder`를 포함해 프론트 fallback 의존 없이 직책/직급 기준 정렬을 안정화.
 - **정렬 우선순위 재정의**: 공통 정렬을 `직책 sort_order -> 직급 sort_order -> 사용자 위치(directorySortOrder) -> 이름`으로 확정. 조직도 모달/사용자 관리/멤버 피커에 동일 적용.
