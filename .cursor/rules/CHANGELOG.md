@@ -5,6 +5,7 @@
 ## 2026-04-16
 
 ### Changed
+- **관리자 사용자별 위치 수동 정렬 추가**: `users.directory_sort_order` 컬럼(기본 0)으로 사용자별 위치를 저장하고, 관리자 사용자 관리의 테이블/편집 모달에서 `위치`를 수정해 배치 저장할 수 있도록 확장. 조직도 모달·멤버 피커 정렬은 해당 사용자 위치 순번을 최우선으로 반영.
 - **조직도·멤버 피커·관리자 사용자 목록 정렬 통일**: `org_groups.sort_order`를 직급·직위 정렬에 반영. `UserSearchResponse`에 `jobLevelSortOrder`, `jobPositionSortOrder` 추가(`GET /api/user-directory/organization` 등). 프론트 `sortOrgDirectoryMembers`는 API 값 + 관리자 화면의 `adminUserOrgTree`로 코드 기준 순서를 해석, 직위 문자열·이름으로 동률 처리.
 
 ### Added

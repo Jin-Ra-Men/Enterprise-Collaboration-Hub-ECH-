@@ -45,6 +45,10 @@ public class User {
     @Column(name = "profile_image_relpath", length = 512)
     private String profileImageRelPath;
 
+    /** 관리자 사용자 관리에서 수동 조정하는 조직도 사용자 정렬 순번(작을수록 먼저 노출). */
+    @Column(name = "directory_sort_order", nullable = false)
+    private int directorySortOrder = 0;
+
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 
@@ -143,6 +147,15 @@ public class User {
 
     public void setProfileImageRelPath(String profileImageRelPath) {
         this.profileImageRelPath = profileImageRelPath;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public int getDirectorySortOrder() {
+        return directorySortOrder;
+    }
+
+    public void setDirectorySortOrder(int directorySortOrder) {
+        this.directorySortOrder = directorySortOrder;
         this.updatedAt = OffsetDateTime.now();
     }
 }

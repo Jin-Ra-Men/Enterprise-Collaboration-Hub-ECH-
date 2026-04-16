@@ -8,6 +8,7 @@ public record AdminUserListItemResponse(
         String name,
         String role,
         String status,
+        Integer directorySortOrder,
         String teamGroupCode,
         String teamDisplayName,
         String jobLevelGroupCode,

@@ -268,6 +268,7 @@ public class UserSearchService {
                 jobLevel,
                 jobPosition,
                 jobTitle,
+                user.getDirectorySortOrder(),
                 jobLevelSortOrder,
                 jobPositionSortOrder,
                 user.getRole(),

@@ -7665,6 +7665,17 @@ html:not([data-theme="light"]):not([data-theme="cream"]) .admin-insight-card:hov
 .inline-select.status-select option[value="INACTIVE"] { color: #f87171; }
 .inline-select:focus { outline: none; border-color: var(--border-focus); }
 .inline-select-org { max-width: 130px; }
+.inline-input {
+  width: 100%;
+  padding: 5px 7px;
+  font-size: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+.inline-input:focus { outline: none; border-color: var(--border-focus); }
+.inline-input-number { max-width: 88px; text-align: right; }
 
 /* ============================================================
  * 관리자 - 조직 관리

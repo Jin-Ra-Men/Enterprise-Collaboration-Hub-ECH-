@@ -566,6 +566,7 @@ Stop-Process -Id <PID> -Force
 ### 운영 주의사항
 - **INACTIVE 계정**: 일반 로그인(`/api/auth/login`)과 AD 로그인(`/api/auth/ad-login`) 모두 차단됨
 - **사용자 하드 삭제**: `org_group_members`의 조직 배정 레코드도 함께 삭제됨; 채널 멤버십 등은 별도 처리 필요
+- **사용자별 위치 정렬**: `users.directory_sort_order`(기본 0)를 관리자 사용자 관리에서 조정하며, 조직도 모달/멤버 피커 정렬에 우선 반영됨. 동일 팀 내 순서 제어가 필요하면 이 값을 먼저 조정.
 - **ADMIN 자기 자신 삭제 방지 미구현**: 현재 자신의 계정을 삭제해도 API가 처리됨 → 운영 시 주의
 - **AD 신뢰 모델**: Windows 계정명과 DB `employee_no`를 1:1 매핑; AD 조인되지 않은 환경에서는 사원번호 직접 입력으로 우회 가능 → 반드시 사내 AD 환경에서만 배포
 

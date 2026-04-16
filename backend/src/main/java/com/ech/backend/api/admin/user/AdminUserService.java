@@ -115,6 +115,7 @@ public class AdminUserService {
             OrgGroupMember jt   = byType.get("JOB_TITLE");
             return new AdminUserListItemResponse(
                     user.getEmployeeNo(), user.getEmail(), user.getName(), user.getRole(), user.getStatus(),
+                    user.getDirectorySortOrder(),
                     team != null ? team.getGroup().getGroupCode() : null,
                     team != null ? team.getGroup().getDisplayName() : null,
                     jl   != null ? jl.getGroup().getGroupCode()   : null,
@@ -137,6 +138,7 @@ public class AdminUserService {
         User user = new User(req.employeeNo().trim(), req.email().trim(), req.name().trim(),
                 req.role() != null && !req.role().isBlank() ? req.role() : "MEMBER");
         user.setStatus(req.status() != null && !req.status().isBlank() ? req.status() : "ACTIVE");
+        user.setDirectorySortOrder(req.directorySortOrder() != null ? req.directorySortOrder() : 0);
         user.setPasswordHash(passwordEncoder.encode(DEFAULT_PASSWORD));
         userRepository.save(user);
         applyOrgAssignments(user, req);
@@ -162,6 +164,7 @@ public class AdminUserService {
         user.setName(req.name().trim());
         user.setRole(req.role() != null && !req.role().isBlank() ? req.role() : "MEMBER");
         user.setStatus(req.status() != null && !req.status().isBlank() ? req.status() : "ACTIVE");
+        user.setDirectorySortOrder(req.directorySortOrder() != null ? req.directorySortOrder() : 0);
         userRepository.save(user);
         applyOrgAssignments(user, req);
         return toResponse(user);
@@ -313,6 +316,7 @@ public class AdminUserService {
                 .findByUser_EmployeeNoAndMemberGroupType(user.getEmployeeNo(), "JOB_TITLE").orElse(null);
         return new AdminUserListItemResponse(
                 user.getEmployeeNo(), user.getEmail(), user.getName(), user.getRole(), user.getStatus(),
+                user.getDirectorySortOrder(),
                 team != null ? team.getGroup().getGroupCode() : null,
                 team != null ? team.getGroup().getDisplayName() : null,
                 jl   != null ? jl.getGroup().getGroupCode()   : null,

@@ -21,6 +21,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
                 jlGroup.displayName,
                 jpGroup.displayName,
                 jtGroup.displayName,
+                u.directorySortOrder,
                 CASE WHEN mJl IS NOT NULL THEN jlGroup.sortOrder ELSE NULL END,
                 CASE WHEN mJp IS NOT NULL THEN jpGroup.sortOrder ELSE NULL END,
                 u.role,

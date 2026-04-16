@@ -2049,7 +2049,7 @@ async function loadOrganizationCompanyFiltersIntoSelect() {
 }
 
 /**
- * org_groups.sort_order 기준(관리자 조직 설정) + 직책 "팀장" 최우선 + 직급/직위 휴리스틱 보조 + 이름.
+ * 사용자별 위치 순번(directorySortOrder) 우선 + 직책 "팀장" 최우선 + 직급/직위 정렬 + 이름.
  * @param {object} [ctx] - `orgTree`: 관리자 `/api/admin/org-groups` 목록(직급·직위 코드로 sort_order 조회).
  */
 function orgMemberSortOrderFromTree(orgTree, groupType, groupCode) {
@@ -2087,6 +2087,10 @@ function sortOrgDirectoryMembers(users, ctx) {
   };
 
   return [...users].sort((a, b) => {
+    const aDirectoryOrder = Number(a.directorySortOrder ?? 0);
+    const bDirectoryOrder = Number(b.directorySortOrder ?? 0);
+    if (aDirectoryOrder !== bDirectoryOrder) return aDirectoryOrder - bDirectoryOrder;
+
     const aIsLeader = String(jobTitleOf(a)).includes("팀장") ? 0 : 1;
     const bIsLeader = String(jobTitleOf(b)).includes("팀장") ? 0 : 1;
     if (aIsLeader !== bIsLeader) return aIsLeader - bIsLeader;
@@ -10884,7 +10888,7 @@ function renderAdminUserTable() {
   const opts = adminUserOrgOptions || { teams: [], jobLevels: [], jobPositions: [], jobTitles: [] };
 
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:24px">등록된 사용자가 없습니다.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--text-muted);padding:24px">등록된 사용자가 없습니다.</td></tr>`;
     updateAdminUserPendingBanner();
     return;
   }
@@ -10930,6 +10934,7 @@ function renderUserRow(row, opts, indentPx) {
   const curLevel  = eff.jobLevelGroupCode      ?? null;
   const curPos    = eff.jobPositionGroupCode   ?? null;
   const curTitle  = eff.jobTitleGroupCode      ?? null;
+  const curDirectorySortOrder = Number(eff.directorySortOrder ?? 0);
   const emp       = row.employeeNo;
 
   const createdAt = row.createdAt
@@ -10955,6 +10960,9 @@ function renderUserRow(row, opts, indentPx) {
   const levelSel = buildOrgInlineSelect("jobLevelGroupCode",    emp, curLevel, opts.jobLevels,    isDeleted);
   const posSel   = buildOrgInlineSelect("jobPositionGroupCode", emp, curPos,   opts.jobPositions, isDeleted);
   const titleSel = buildOrgInlineSelect("jobTitleGroupCode",    emp, curTitle, opts.jobTitles,    isDeleted);
+  const directorySortInput = isDeleted
+    ? `<span class="text-muted">${curDirectorySortOrder}</span>`
+    : `<input class="inline-input inline-input-number" type="number" min="0" step="1" value="${curDirectorySortOrder}" data-field="directorySortOrder" data-emp="${escHtml(emp)}" />`;
 
   const firstCellStyle = indentPx > 0 ? ` style="padding-left:${indentPx}px"` : "";
   return `<tr class="${rowClass}" data-emp="${escHtml(emp)}" title="우클릭: 편집/삭제">
@@ -10965,6 +10973,7 @@ function renderUserRow(row, opts, indentPx) {
     <td>${levelSel}</td>
     <td>${posSel}</td>
     <td>${titleSel}</td>
+    <td>${directorySortInput}</td>
     <td>${roleSelect}</td>
     <td>${statusSelect}</td>
     <td class="cell-date">${createdAt}</td>
@@ -10987,6 +10996,7 @@ function openAdminUserEditModal(employeeNo) {
   document.getElementById("auEmail").value = "";
   document.getElementById("auRole").value  = "MEMBER";
   document.getElementById("auStatus").value = "ACTIVE";
+  document.getElementById("auDirectorySortOrder").value = "0";
   document.getElementById("adminUserEditError").textContent = "";
   document.getElementById("adminUserEditError").classList.add("hidden");
 
@@ -11002,6 +11012,7 @@ function openAdminUserEditModal(employeeNo) {
     document.getElementById("auEmail").value        = data.email             || "";
     document.getElementById("auRole").value         = data.role              || "MEMBER";
     document.getElementById("auStatus").value       = data.status            || "ACTIVE";
+    document.getElementById("auDirectorySortOrder").value = Number(data.directorySortOrder ?? 0);
     document.getElementById("auTeam").value         = data.teamGroupCode     || "";
     document.getElementById("auJobLevel").value     = data.jobLevelGroupCode || "";
     document.getElementById("auJobPosition").value  = data.jobPositionGroupCode || "";
@@ -11061,11 +11072,13 @@ const ORG_CODE_TO_OPTS_KEY = {
 };
 
 document.getElementById("adminUserTableBody").addEventListener("change", (e) => {
-  const sel = e.target.closest("select[data-field]");
-  if (!sel) return;
-  const empNo = sel.dataset.emp;
-  const field = sel.dataset.field;
-  const value = sel.value;
+  const fieldEl = e.target.closest("[data-field][data-emp]");
+  if (!fieldEl) return;
+  const empNo = fieldEl.dataset.emp;
+  const field = fieldEl.dataset.field;
+  const value = field === "directorySortOrder"
+    ? Math.max(0, Number.parseInt(fieldEl.value || "0", 10) || 0)
+    : fieldEl.value;
 
   const base     = adminUserList.find(u => u.employeeNo === empNo);
   const existing = adminUserPendingChanges.get(empNo);
@@ -11089,7 +11102,7 @@ document.getElementById("adminUserTableBody").addEventListener("change", (e) => 
     adminUserPendingChanges.set(empNo, { op: "update", data: { ...base, [field]: value, ...extraFields } });
   }
 
-  const row = sel.closest("tr[data-emp]");
+  const row = fieldEl.closest("tr[data-emp]");
   if (row) {
     row.classList.remove("admin-row-modified", "admin-row-new");
     const p = adminUserPendingChanges.get(empNo);
@@ -11164,6 +11177,7 @@ document.getElementById("btnAdminUserEditConfirm").addEventListener("click", () 
   const email    = document.getElementById("auEmail").value.trim();
   const role     = document.getElementById("auRole").value;
   const status   = document.getElementById("auStatus").value;
+  const directorySortOrder = Math.max(0, Number.parseInt(document.getElementById("auDirectorySortOrder").value || "0", 10) || 0);
   const teamGroupCode         = document.getElementById("auTeam").value;
   const jobLevelGroupCode     = document.getElementById("auJobLevel").value;
   const jobPositionGroupCode  = document.getElementById("auJobPosition").value;
@@ -11188,6 +11202,7 @@ document.getElementById("btnAdminUserEditConfirm").addEventListener("click", () 
 
   const data = {
     employeeNo: newEmpNo, name, email, role, status,
+    directorySortOrder,
     teamGroupCode, jobLevelGroupCode, jobPositionGroupCode, jobTitleGroupCode,
     teamDisplayName:        resolveOrgDisplayName(teamGroupCode,        "TEAM"),
     jobLevelDisplayName:    resolveOrgDisplayName(jobLevelGroupCode,    "JOB_LEVEL"),
