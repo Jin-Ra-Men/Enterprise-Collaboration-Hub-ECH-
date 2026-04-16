@@ -987,19 +987,27 @@ function emitMyPresenceStatus(status, opts = {}) {
   }
 }
 
-/** DM 줄 왼쪽·글로벌 탑바: 접두만(프레즌스 점 없음). 사이드바·퀵레일은 `dmSidebarLeadingHtml` 기본 동작. */
+/** DM 글로벌 탑바 접두: 상대(또는 본인 전용 DM 시 본인) 프레즌스 점. 사이드바·퀵레일은 `dmSidebarLeadingHtml` 기본 동작. */
 function updateChatHeaderDmPresence() {
   const prefixEl = document.getElementById("chatChannelPrefix");
   if (!prefixEl) return;
   if (String(activeChannelType || "").toUpperCase() !== "DM") return;
   prefixEl.className = "chat-channel-prefix chat-header-dm-prefix";
-  prefixEl.innerHTML = dmSidebarLeadingHtml(activeDmPeerEmployeeNos, { showPresence: false });
+  let peers = Array.isArray(activeDmPeerEmployeeNos) ? activeDmPeerEmployeeNos.slice() : [];
+  if (
+    peers.length === 0 &&
+    Number(activeChannelMemberCount) === 1 &&
+    currentUser?.employeeNo
+  ) {
+    peers = [String(currentUser.employeeNo).trim()];
+  }
+  prefixEl.innerHTML = dmSidebarLeadingHtml(peers, { showPresence: true });
   refreshPresenceDots();
 }
 
 /**
  * @param {string[]} peerEmployeeNos
- * @param {{ showPresence?: boolean }} [options] — `showPresence: false` 이면 DM 표식만(탑바 등).
+ * @param {{ showPresence?: boolean }} [options] — `showPresence: false` 이면 DM 기호(●)만(프레즌스 점 없음).
  */
 function dmSidebarLeadingHtml(peerEmployeeNos, options) {
   const showPresence = options?.showPresence !== false;

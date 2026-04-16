@@ -7,6 +7,7 @@
 ### Changed
 - **채팅 타임라인 복구**: 탭이 다시 보일 때(`visibilitychange` → visible, 디바운스) `recoverActiveChannelTimelineIfNeeded` 호출 — 절전·재개 후 `online`/소켓 이벤트 없이도 실패 화면 복구.
 - **`loadMessages`**: 타임라인·레거시 API가 5xx/408/429 또는 `fetch` 예외일 때 **최대 5회 재시도**(지수 백오프, 상한 10초).
+- **DM 글로벌 탑바**: 채널명 왼쪽 접두를 정적 ●가 아니라 **상대(또는 나에게 쓰기 시 본인) 프레즌스 점**으로 표시(`updateChatHeaderDmPresence` + `dmSidebarLeadingHtml` `showPresence: true`).
 
 ## 2026-04-12 (추가)
 
