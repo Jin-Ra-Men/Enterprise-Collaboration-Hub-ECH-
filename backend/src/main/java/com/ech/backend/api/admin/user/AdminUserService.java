@@ -120,10 +120,12 @@ public class AdminUserService {
                     team != null ? team.getGroup().getDisplayName() : null,
                     jl   != null ? jl.getGroup().getGroupCode()   : null,
                     jl   != null ? jl.getGroup().getDisplayName() : null,
+                    jl   != null ? jl.getGroup().getSortOrder()   : null,
                     jp   != null ? jp.getGroup().getGroupCode()   : null,
                     jp   != null ? jp.getGroup().getDisplayName() : null,
                     jt   != null ? jt.getGroup().getGroupCode()   : null,
                     jt   != null ? jt.getGroup().getDisplayName() : null,
+                    jt   != null ? jt.getGroup().getSortOrder()   : null,
                     user.getCreatedAt(),
                     user.getProfileImageRelPath() != null && !user.getProfileImageRelPath().isBlank()
             );
@@ -321,10 +323,12 @@ public class AdminUserService {
                 team != null ? team.getGroup().getDisplayName() : null,
                 jl   != null ? jl.getGroup().getGroupCode()   : null,
                 jl   != null ? jl.getGroup().getDisplayName() : null,
+                jl   != null ? jl.getGroup().getSortOrder()   : null,
                 jp   != null ? jp.getGroup().getGroupCode()   : null,
                 jp   != null ? jp.getGroup().getDisplayName() : null,
                 jt   != null ? jt.getGroup().getGroupCode()   : null,
                 jt   != null ? jt.getGroup().getDisplayName() : null,
+                jt   != null ? jt.getGroup().getSortOrder()   : null,
                 user.getCreatedAt(),
                 user.getProfileImageRelPath() != null && !user.getProfileImageRelPath().isBlank()
         );

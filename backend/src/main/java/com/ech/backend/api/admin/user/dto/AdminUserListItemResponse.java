@@ -13,10 +13,12 @@ public record AdminUserListItemResponse(
         String teamDisplayName,
         String jobLevelGroupCode,
         String jobLevelDisplayName,
+        Integer jobLevelSortOrder,
         String jobPositionGroupCode,
         String jobPositionDisplayName,
         String jobTitleGroupCode,
         String jobTitleDisplayName,
+        Integer jobTitleSortOrder,
         OffsetDateTime createdAt,
         boolean profileImagePresent
 ) {}

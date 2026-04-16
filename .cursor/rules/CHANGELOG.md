@@ -5,6 +5,7 @@
 ## 2026-04-16
 
 ### Changed
+- **관리자 사용자 API 정렬 키 보강**: `GET /api/admin/users` 응답에 `jobTitleSortOrder`, `jobLevelSortOrder`를 포함해 프론트 fallback 의존 없이 직책/직급 기준 정렬을 안정화.
 - **정렬 우선순위 재정의**: 공통 정렬을 `직책 sort_order -> 직급 sort_order -> 사용자 위치(directorySortOrder) -> 이름`으로 확정. 조직도 모달/사용자 관리/멤버 피커에 동일 적용.
 - **조직도/사용자 관리 정렬 규칙 단순화**: 공통 정렬 함수를 `directorySortOrder` → 팀장 우선 → 이름순으로 통일해 두 화면의 체감 순서 불일치를 해소.
 - **관리자 사용자별 위치 수동 정렬 추가**: `users.directory_sort_order` 컬럼(기본 0)으로 사용자별 위치를 저장하고, 관리자 사용자 관리의 테이블/편집 모달에서 `위치`를 수정해 배치 저장할 수 있도록 확장. 조직도 모달·멤버 피커 정렬은 해당 사용자 위치 순번을 최우선으로 반영.
