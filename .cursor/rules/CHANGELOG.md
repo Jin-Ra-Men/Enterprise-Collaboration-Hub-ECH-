@@ -5,6 +5,7 @@
 ## 2026-04-16
 
 ### Changed
+- **릴리즈 버전 상향**: 백엔드 `1.2.7`(`backend/build.gradle`)·데스크톱 `1.2.7`(`desktop/package.json`)로 동기화.
 - **관리자 사용자 API 정렬 키 보강**: `GET /api/admin/users` 응답에 `jobTitleSortOrder`, `jobLevelSortOrder`를 포함해 프론트 fallback 의존 없이 직책/직급 기준 정렬을 안정화.
 - **정렬 우선순위 재정의**: 공통 정렬을 `직책 sort_order -> 직급 sort_order -> 사용자 위치(directorySortOrder) -> 이름`으로 확정. 조직도 모달/사용자 관리/멤버 피커에 동일 적용.
 - **조직도/사용자 관리 정렬 규칙 단순화**: 공통 정렬 함수를 `directorySortOrder` → 팀장 우선 → 이름순으로 통일해 두 화면의 체감 순서 불일치를 해소.
