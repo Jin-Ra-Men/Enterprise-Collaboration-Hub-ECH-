@@ -7676,6 +7676,15 @@ html:not([data-theme="light"]):not([data-theme="cream"]) .admin-insight-card:hov
 }
 .inline-input:focus { outline: none; border-color: var(--border-focus); }
 .inline-input-number { max-width: 88px; text-align: right; }
+.admin-sort-order-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.admin-sort-move-btns {
+  display: flex;
+  gap: 4px;
+}
 
 /* ============================================================
  * 관리자 - 조직 관리

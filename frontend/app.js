@@ -10962,7 +10962,13 @@ function renderUserRow(row, opts, indentPx) {
   const titleSel = buildOrgInlineSelect("jobTitleGroupCode",    emp, curTitle, opts.jobTitles,    isDeleted);
   const directorySortInput = isDeleted
     ? `<span class="text-muted">${curDirectorySortOrder}</span>`
-    : `<input class="inline-input inline-input-number" type="number" min="0" step="1" value="${curDirectorySortOrder}" data-field="directorySortOrder" data-emp="${escHtml(emp)}" />`;
+    : `<div class="admin-sort-order-cell">
+        <input class="inline-input inline-input-number" type="number" min="0" step="1" value="${curDirectorySortOrder}" data-field="directorySortOrder" data-emp="${escHtml(emp)}" />
+        <div class="admin-sort-move-btns">
+          <button type="button" class="btn-xs btn-secondary" data-action="user-move-up" data-emp="${escHtml(emp)}" title="위로 이동">▲</button>
+          <button type="button" class="btn-xs btn-secondary" data-action="user-move-down" data-emp="${escHtml(emp)}" title="아래로 이동">▼</button>
+        </div>
+      </div>`;
 
   const firstCellStyle = indentPx > 0 ? ` style="padding-left:${indentPx}px"` : "";
   return `<tr class="${rowClass}" data-emp="${escHtml(emp)}" title="우클릭: 편집/삭제">
@@ -11112,6 +11118,42 @@ document.getElementById("adminUserTableBody").addEventListener("change", (e) => 
   updateAdminUserPendingBanner();
 });
 
+function upsertAdminUserPendingField(empNo, field, value) {
+  const base = adminUserList.find((u) => u.employeeNo === empNo);
+  const existing = adminUserPendingChanges.get(empNo);
+  if (existing?.op === "delete") return;
+  if (existing) {
+    existing.data = { ...existing.data, [field]: value };
+    if (existing.op !== "create") existing.op = "update";
+    adminUserPendingChanges.set(empNo, existing);
+    return;
+  }
+  if (base) {
+    adminUserPendingChanges.set(empNo, { op: "update", data: { ...base, [field]: value } });
+  }
+}
+
+function moveAdminUserDirectoryOrder(empNo, direction) {
+  const tbody = document.getElementById("adminUserTableBody");
+  if (!tbody) return;
+  const rows = [...tbody.querySelectorAll("tr[data-emp]")];
+  if (!rows.length) return;
+
+  const currentIndex = rows.findIndex((r) => r.dataset.emp === empNo);
+  if (currentIndex < 0) return;
+  const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+  if (targetIndex < 0 || targetIndex >= rows.length) return;
+
+  const orderedEmpNos = rows.map((r) => String(r.dataset.emp || "").trim()).filter(Boolean);
+  [orderedEmpNos[currentIndex], orderedEmpNos[targetIndex]] = [orderedEmpNos[targetIndex], orderedEmpNos[currentIndex]];
+
+  orderedEmpNos.forEach((orderedEmpNo, idx) => {
+    upsertAdminUserPendingField(orderedEmpNo, "directorySortOrder", idx);
+  });
+
+  renderAdminUserTable();
+}
+
 // ── 우클릭 컨텍스트 메뉴 ──────────────────────────────────────────────────
 let adminUserCtxEmp = null;
 
@@ -11134,6 +11176,18 @@ document.getElementById("adminUserTableBody").addEventListener("contextmenu", (e
   menu.style.left = x + "px";
   menu.style.top  = y + "px";
   menu.classList.remove("hidden");
+});
+
+document.getElementById("adminUserTableBody").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-action][data-emp]");
+  if (!btn) return;
+  const empNo = String(btn.dataset.emp || "").trim();
+  if (!empNo) return;
+  if (btn.dataset.action === "user-move-up") {
+    moveAdminUserDirectoryOrder(empNo, "up");
+  } else if (btn.dataset.action === "user-move-down") {
+    moveAdminUserDirectoryOrder(empNo, "down");
+  }
 });
 
 document.getElementById("adminUserContextMenu").addEventListener("click", (e) => {
