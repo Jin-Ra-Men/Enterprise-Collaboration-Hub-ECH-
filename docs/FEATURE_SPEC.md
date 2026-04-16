@@ -303,7 +303,8 @@
   - 저장 성공한 경우에만 `message:new` 브로드캐스트
   - 프론트는 소켓 ACK 실패/지연(2.5초) 또는 소켓 미연결 시 `POST /api/channels/{channelId}/messages`로 자동 폴백해 전송 유실을 줄임
   - 메시지 API 폴백 요청의 발신자 식별자(`senderId`)는 employee_no 문자열 기준으로 처리
-  - 프론트 타임라인이 일시 네트워크 오류로 `메시지 로드 실패` 상태가 되면, 브라우저 `online` 이벤트 및 소켓 `connect/reconnect`에서 `recoverActiveChannelTimelineIfNeeded`가 현재 채널 `loadMessages(..., { skipNewMsgsDivider: true })`를 자동 재시도해 재시작 없이 화면을 복구
+  - 프론트 타임라인이 일시 네트워크 오류로 `메시지 로드 실패` 상태가 되면, 브라우저 `online` 이벤트·탭 **`visibilitychange` 가시 복귀**(디바운스 약 320ms)·소켓 `connect/reconnect`에서 `recoverActiveChannelTimelineIfNeeded`가 현재 채널 `loadMessages(..., { skipNewMsgsDivider: true })`를 자동 재시도해 재시작 없이 화면을 복구
+  - `loadMessages`는 타임라인(및 404 시 레거시) API가 **5xx·408·429** 등으로 실패할 때 **최대 5회 재시도**(지수 백오프 상한 10초), `fetch` 예외(네트워크 단절 등)도 동일 횟수까지 재시도
 - 성능·메모리:
   - Socket.io `maxHttpBufferSize`로 비정상적으로 큰 패킷 완충 완화
   - `pg` Pool: `max`/`idleTimeoutMillis`/`connectionTimeoutMillis` 환경변수로 조정 가능

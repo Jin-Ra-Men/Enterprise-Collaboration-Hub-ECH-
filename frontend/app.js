@@ -69,6 +69,8 @@ const USER_KEY   = "ech_user";
 const WS_KEY     = "CSTalk"; // 기본 워크스페이스 키
 /** 타임라인 API 한 번에 요청하는 최대 행 수(서버 상한 200) */
 const TIMELINE_PAGE_LIMIT = 100;
+/** `loadMessages` 실패 시 추가 재시도 횟수(첫 시도 + 이 값 = 최대 시도 수) */
+const MESSAGE_LOAD_MAX_RETRIES = 5;
 /** 하단 근처에 있을 때만 오래된 DOM 노드를 정리(위로 히스토리 탐색 중에는 유지) */
 const MAX_CHAT_DOM_NODES = 4000;
 const HARD_MAX_CHAT_DOM_NODES = 10000;
@@ -301,6 +303,8 @@ let workHubDetailKanbanAssigneesInitial = [];
 /** 다른 채널에 새 메시지 시 목록 갱신 디바운스 */
 let refreshChannelListTimer = null;
 let windowFocusChannelsTimer = null;
+/** 탭 가시 복귀 시 타임라인 자동 복구 `recoverActiveChannelTimelineIfNeeded` 디바운스 */
+let visibilityTimelineRecoverTimer = null;
 let orgPickerContext = null;  // member | dm | channelMember
 let orgPickerEmbedElId = null; // member/dm/channelMember 조직도 체크박스가 그려진 엘리먼트 id
 /** 프로필 모달에 표시 중인 사용자 사번 (DM 보내기용) */
@@ -624,6 +628,19 @@ async function apiFetch(path, opts = {}) {
   const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   return fetch(`${API_BASE}${path}`, { ...opts, headers });
+}
+
+function sleepMs(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** 일시적 장애·절전 복구 직후 등에 타임라인 API 재시도할 HTTP 상태 */
+function shouldRetryMessageLoadHttp(status) {
+  const s = Number(status);
+  if (!Number.isFinite(s)) return true;
+  if (s === 408 || s === 429) return true;
+  if (s >= 500 && s <= 599) return true;
+  return false;
 }
 
 function escHtml(s) {
@@ -3239,15 +3256,28 @@ async function loadMessages(channelId, { preserveScroll = false, skipNewMsgsDivi
     // read-state 조회는 메시지 로드와 병렬로 실행 — markChannelReadCaughtUp 전에 해야 유효하다.
     const readStateProm = !preserveScroll ? fetchLastReadMessageId(channelId) : Promise.resolve(null);
 
-    let res = await apiFetch(timelineUrl);
-    let json = await res.json().catch(() => ({}));
+    let res;
+    let json;
     let usedTimeline = true;
 
-    // 구버전 백엔드(timeline 미구현)는 404(NoHandlerFound)로 떨어질 수 있음 → 루트 메시지 API로 폴백
-    if (!res.ok && res.status === 404) {
-      usedTimeline = false;
-      res = await apiFetch(legacyUrl);
-      json = await res.json().catch(() => ({}));
+    for (let attempt = 0; attempt <= MESSAGE_LOAD_MAX_RETRIES; attempt++) {
+      try {
+        res = await apiFetch(timelineUrl);
+        json = await res.json().catch(() => ({}));
+        usedTimeline = true;
+        // 구버전 백엔드(timeline 미구현)는 404(NoHandlerFound)로 떨어질 수 있음 → 루트 메시지 API로 폴백
+        if (!res.ok && res.status === 404) {
+          usedTimeline = false;
+          res = await apiFetch(legacyUrl);
+          json = await res.json().catch(() => ({}));
+        }
+        if (res.ok) break;
+        if (!shouldRetryMessageLoadHttp(res.status) || attempt === MESSAGE_LOAD_MAX_RETRIES) break;
+        await sleepMs(Math.min(400 * 2 ** attempt, 10000));
+      } catch (e) {
+        if (attempt >= MESSAGE_LOAD_MAX_RETRIES) throw e;
+        await sleepMs(Math.min(400 * 2 ** attempt, 10000));
+      }
     }
 
     messagesEl.innerHTML = "";
@@ -10381,6 +10411,11 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
     onPresenceUserActivity();
     scheduleSidebarAndPresenceSync();
+    if (visibilityTimelineRecoverTimer) clearTimeout(visibilityTimelineRecoverTimer);
+    visibilityTimelineRecoverTimer = setTimeout(() => {
+      visibilityTimelineRecoverTimer = null;
+      void recoverActiveChannelTimelineIfNeeded("browser-visible");
+    }, 320);
   }
 });
 
