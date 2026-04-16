@@ -233,6 +233,7 @@
 
 ### 채팅방별 알림 끄기·신규 메시지 토스트
 - 목적: 참여 중인 다른 채널/DM에 신규 메시지가 오면 우하단 토스트(`pushNewMessageToast`)로 안내하되, 사용자가 방마다 **일반 메시지 토스트만** 끌 수 있게 함(서버 저장 없음, 브라우저 `localStorage`).
+- 미리보기: 본문의 멘션 저장 형식 `@{사번|표시명}`은 인앱/OS **일반 신규 메시지** 토스트에서도 `mentionPreviewForToastClient`로 `@표시명`으로 줄여 노출(멘션 전용 `mention:notify`와 동일한 가독성).
 - 저장 키: `ech_notify_muted_channels_{employeeNo}` — JSON 숫자 배열(채널 ID). `isChannelNotifyMuted` / `setChannelNotifyMuted`.
 - 효과: 음소거된 채널에서는 **`pushNewMessageToast`만** 억제. **멘션 토스트**(`pushMentionToast`, `mention:notify` 및 현재 채널 `message:new` 폴백)는 음소거와 **무관하게 항상** 표시. **미읽음 배지**(`unreadCount` 기반 사이드바·퀵 레일)는 서버/읽음 상태 그대로이며 음소거와 **무관**.
 - 현재 보고 있는 채널은 신규 일반 메시지 토스트 대상에서 제외(기존과 동일).

@@ -5849,7 +5849,8 @@ function pushNewMessageToast(msg) {
   const isDm = channelType === "DM";
   const locationText = isDm ? `DM · ${displayName}` : `채널 · #${displayName}`;
   const senderName = String(msg.senderName || msg.sender_name || "").trim() || "알 수 없음";
-  const preview = String(msg.text || "").replace(/\s+/g, " ").trim().slice(0, 160);
+  const collapsed = String(msg.text || "").replace(/\s+/g, " ").trim();
+  const preview = mentionPreviewForToastClient(collapsed, 160);
 
   // OS notification for background mode (general message mute already applied via early returns).
   const midNumForOs = msg.messageId != null ? Number(msg.messageId) : null;
