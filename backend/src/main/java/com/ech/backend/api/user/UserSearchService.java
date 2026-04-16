@@ -128,17 +128,25 @@ public class UserSearchService {
         Map<Long, String> jobLevelByUserId;
         Map<Long, String> jobPositionByUserId;
         Map<Long, String> jobTitleByUserId;
+        Map<Long, Integer> jobLevelSortByUserId;
+        Map<Long, Integer> jobPositionSortByUserId;
         if (employeeNos.isEmpty()) {
             jobLevelByUserId    = Map.of();
             jobPositionByUserId = Map.of();
             jobTitleByUserId    = Map.of();
+            jobLevelSortByUserId    = Map.of();
+            jobPositionSortByUserId = Map.of();
         } else {
-            jobLevelByUserId = toDisplayByUserId(
-                    orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos("JOB_LEVEL", employeeNos));
-            jobPositionByUserId = toDisplayByUserId(
-                    orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos("JOB_POSITION", employeeNos));
+            List<OrgGroupMember> jobLevelMembers =
+                    orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos("JOB_LEVEL", employeeNos);
+            List<OrgGroupMember> jobPositionMembers =
+                    orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos("JOB_POSITION", employeeNos);
+            jobLevelByUserId = toDisplayByUserId(jobLevelMembers);
+            jobPositionByUserId = toDisplayByUserId(jobPositionMembers);
             jobTitleByUserId = toDisplayByUserId(
                     orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos("JOB_TITLE", employeeNos));
+            jobLevelSortByUserId = toSortOrderByUserId(jobLevelMembers);
+            jobPositionSortByUserId = toSortOrderByUserId(jobPositionMembers);
         }
 
         List<OrgCompanyResponse> companiesResponse = new ArrayList<>();
@@ -148,7 +156,9 @@ public class UserSearchService {
             // 회사 직속 멤버 (TEAM 멤버십 → COMPANY 그룹)
             List<UserSearchResponse> companyDirect = buildMemberList(
                     usersByGroupCode.getOrDefault(company.getGroupCode(), List.of()),
-                    company.getDisplayName(), jobLevelByUserId, jobPositionByUserId, jobTitleByUserId);
+                    company.getDisplayName(),
+                    jobLevelByUserId, jobPositionByUserId, jobTitleByUserId,
+                    jobLevelSortByUserId, jobPositionSortByUserId);
 
             List<OrgDivisionResponse> divisionsResponse = new ArrayList<>();
             for (OrgGroup division : divisions) {
@@ -160,12 +170,16 @@ public class UserSearchService {
                 // 본부 직속 멤버 (TEAM 멤버십 → DIVISION 그룹)
                 List<UserSearchResponse> divisionDirect = buildMemberList(
                         usersByGroupCode.getOrDefault(division.getGroupCode(), List.of()),
-                        division.getDisplayName(), jobLevelByUserId, jobPositionByUserId, jobTitleByUserId);
+                        division.getDisplayName(),
+                        jobLevelByUserId, jobPositionByUserId, jobTitleByUserId,
+                        jobLevelSortByUserId, jobPositionSortByUserId);
 
                 List<OrgTeamResponse> teamsResponse = teams.stream().map(team -> {
                     List<UserSearchResponse> members = buildMemberList(
                             usersByGroupCode.getOrDefault(team.getGroupCode(), List.of()),
-                            team.getDisplayName(), jobLevelByUserId, jobPositionByUserId, jobTitleByUserId);
+                            team.getDisplayName(),
+                            jobLevelByUserId, jobPositionByUserId, jobTitleByUserId,
+                            jobLevelSortByUserId, jobPositionSortByUserId);
                     return new OrgTeamResponse(team.getDisplayName(), members);
                 }).toList();
 
@@ -183,13 +197,15 @@ public class UserSearchService {
         return user != null && "ACTIVE".equalsIgnoreCase(user.getStatus());
     }
 
-    /** 사용자 목록 → UserSearchResponse 변환 + 이름 가나다 정렬 */
+    /** 사용자 목록 → UserSearchResponse 변환 + 이름 가나다 정렬(프론트에서 최종 정렬). */
     private List<UserSearchResponse> buildMemberList(
             List<User> users,
             String groupDisplayName,
             Map<Long, String> jobLevelMap,
             Map<Long, String> jobPositionMap,
-            Map<Long, String> jobTitleMap
+            Map<Long, String> jobTitleMap,
+            Map<Long, Integer> jobLevelSortMap,
+            Map<Long, Integer> jobPositionSortMap
     ) {
         return users.stream()
                 .sorted(Comparator.comparing(User::getName, String.CASE_INSENSITIVE_ORDER))
@@ -197,7 +213,9 @@ public class UserSearchService {
                         u, groupDisplayName,
                         jobLevelMap.get(u.getId()),
                         jobPositionMap.get(u.getId()),
-                        jobTitleMap.get(u.getId())))
+                        jobTitleMap.get(u.getId()),
+                        jobLevelSortMap.get(u.getId()),
+                        jobPositionSortMap.get(u.getId())))
                 .toList();
     }
 
@@ -205,6 +223,14 @@ public class UserSearchService {
         return members.stream().collect(Collectors.toMap(
                 m -> m.getUser().getId(),
                 m -> m.getGroup().getDisplayName(),
+                (a, b) -> a
+        ));
+    }
+
+    private static Map<Long, Integer> toSortOrderByUserId(List<OrgGroupMember> members) {
+        return members.stream().collect(Collectors.toMap(
+                m -> m.getUser().getId(),
+                m -> m.getGroup().getSortOrder(),
                 (a, b) -> a
         ));
     }
@@ -228,7 +254,9 @@ public class UserSearchService {
             String department,
             String jobLevel,
             String jobPosition,
-            String jobTitle
+            String jobTitle,
+            Integer jobLevelSortOrder,
+            Integer jobPositionSortOrder
     ) {
         boolean profileImg = user.getProfileImageRelPath() != null && !user.getProfileImageRelPath().isBlank();
         return new UserSearchResponse(
@@ -240,6 +268,8 @@ public class UserSearchService {
                 jobLevel,
                 jobPosition,
                 jobTitle,
+                jobLevelSortOrder,
+                jobPositionSortOrder,
                 user.getRole(),
                 user.getStatus(),
                 user.getCreatedAt(),

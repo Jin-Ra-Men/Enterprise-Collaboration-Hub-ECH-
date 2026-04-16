@@ -2049,10 +2049,19 @@ async function loadOrganizationCompanyFiltersIntoSelect() {
 }
 
 /**
- * 조직 인원 목록 공통 정렬: 직책 "팀장" 최우선 → 직급(부장→차장→과장→대리→사원→인턴→기타) → 이름 가나다.
- * user-directory 응답(jobLevel/jobTitle)과 관리자 사용자 목록(jobLevelDisplayName/jobTitleDisplayName) 모두 지원.
+ * org_groups.sort_order 기준(관리자 조직 설정) + 직책 "팀장" 최우선 + 직급/직위 휴리스틱 보조 + 이름.
+ * @param {object} [ctx] - `orgTree`: 관리자 `/api/admin/org-groups` 목록(직급·직위 코드로 sort_order 조회).
  */
-function sortOrgDirectoryMembers(users) {
+function orgMemberSortOrderFromTree(orgTree, groupType, groupCode) {
+  if (!orgTree || !groupCode) return null;
+  const g = orgTree.find((x) => x.groupType === groupType && x.groupCode === groupCode);
+  if (!g || g.sortOrder === undefined || g.sortOrder === null) return null;
+  const n = Number(g.sortOrder);
+  return Number.isFinite(n) ? n : null;
+}
+
+function sortOrgDirectoryMembers(users, ctx) {
+  const orgTree = ctx && ctx.orgTree;
   const JOB_LEVEL_ORDER = ["부장", "차장", "과장", "대리", "사원", "인턴"];
   const levelRank = (level) => {
     if (!level) return 999;
@@ -2060,13 +2069,39 @@ function sortOrgDirectoryMembers(users) {
     return idx >= 0 ? idx : 998;
   };
   const jobLevelOf = (u) => u.jobLevel ?? u.jobLevelDisplayName ?? "";
+  const jobPositionOf = (u) => u.jobPosition ?? u.jobPositionDisplayName ?? "";
   const jobTitleOf = (u) => u.jobTitle ?? u.jobTitleDisplayName ?? "";
+
+  const levelSortKey = (u) => {
+    if (u.jobLevelSortOrder != null && u.jobLevelSortOrder !== undefined) return Number(u.jobLevelSortOrder);
+    const fromTree = orgMemberSortOrderFromTree(orgTree, "JOB_LEVEL", u.jobLevelGroupCode);
+    if (fromTree != null) return fromTree;
+    return levelRank(jobLevelOf(u));
+  };
+
+  const positionSortKey = (u) => {
+    if (u.jobPositionSortOrder != null && u.jobPositionSortOrder !== undefined) return Number(u.jobPositionSortOrder);
+    const fromTree = orgMemberSortOrderFromTree(orgTree, "JOB_POSITION", u.jobPositionGroupCode);
+    if (fromTree != null) return fromTree;
+    return 99999;
+  };
+
   return [...users].sort((a, b) => {
     const aIsLeader = String(jobTitleOf(a)).includes("팀장") ? 0 : 1;
     const bIsLeader = String(jobTitleOf(b)).includes("팀장") ? 0 : 1;
     if (aIsLeader !== bIsLeader) return aIsLeader - bIsLeader;
-    const rankDiff = levelRank(jobLevelOf(a)) - levelRank(jobLevelOf(b));
-    if (rankDiff !== 0) return rankDiff;
+
+    const la = levelSortKey(a);
+    const lb = levelSortKey(b);
+    if (la !== lb) return la - lb;
+
+    const pa = positionSortKey(a);
+    const pb = positionSortKey(b);
+    if (pa !== pb) return pa - pb;
+
+    const posStrCmp = String(jobPositionOf(a) || "").localeCompare(String(jobPositionOf(b) || ""), "ko-KR");
+    if (posStrCmp !== 0) return posStrCmp;
+
     return String(a.name || "").localeCompare(String(b.name || ""), "ko-KR");
   });
 }
@@ -10854,7 +10889,7 @@ function renderAdminUserTable() {
     return;
   }
 
-  const sortedRows = sortOrgDirectoryMembers(rows);
+  const sortedRows = sortOrgDirectoryMembers(rows, { orgTree: adminUserOrgTree });
   tbody.innerHTML = sortedRows.map(row => renderUserRow(row, opts, 0)).join("");
   updateAdminUserPendingBanner();
 }

@@ -12,6 +12,10 @@ public record UserSearchResponse(
         String jobLevel,
         String jobPosition,
         String jobTitle,
+        /** {@link com.ech.backend.domain.org.OrgGroup#getSortOrder()} — 직급 그룹 정렬(관리자 조직 설정과 동일). */
+        Integer jobLevelSortOrder,
+        /** 직위 그룹 정렬. */
+        Integer jobPositionSortOrder,
         String role,
         String status,
         /** 조직도 등 동일 직급 정렬(먼저 생성된 사용자 우선). */

@@ -4,6 +4,9 @@
 
 ## 2026-04-16
 
+### Changed
+- **조직도·멤버 피커·관리자 사용자 목록 정렬 통일**: `org_groups.sort_order`를 직급·직위 정렬에 반영. `UserSearchResponse`에 `jobLevelSortOrder`, `jobPositionSortOrder` 추가(`GET /api/user-directory/organization` 등). 프론트 `sortOrgDirectoryMembers`는 API 값 + 관리자 화면의 `adminUserOrgTree`로 코드 기준 순서를 해석, 직위 문자열·이름으로 동률 처리.
+
 ### Added
 - **프로필 사진**: 스토리지 `{FILE_STORAGE_DIR}/user-profiles/{사번안전문자}.{확장자}` 단일 폴더 저장, DB `users.profile_image_relpath`. API: `GET /api/users/profile-image?employeeNo=`(JWT), `POST /api/users/me/profile-image`(본인·`app.allow-user-profile-self-upload`로 비활성화 가능), `POST /api/admin/users/{employeeNo}/profile-image`(관리자). 프로필·`/api/auth/me`·채널 멤버·메시지에 이미지 메타 포함. 프론트: 채팅/멤버/검색/조직도 아바타·프로필 모달(좌측 하단 진입 시에만 본인 사진 편집 버튼), 관리자 사용자 편집에서 파일 선택 후 저장 시 업로드.
 - **운영 DB 마이그레이션**: `docs/sql/migrate_users_add_profile_image_relpath.sql` — `users.profile_image_relpath` 컬럼 추가.
