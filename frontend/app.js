@@ -2050,21 +2050,45 @@ async function loadOrganizationCompanyFiltersIntoSelect() {
 
 /**
  * 사용자 관리/조직도 공통 정렬:
- * 1) 사용자별 위치 순번(directorySortOrder) 오름차순
- * 2) 직책에 "팀장" 포함 시 우선
- * 3) 이름 가나다
+ * 1) 직책 sortOrder
+ * 2) 직급 sortOrder
+ * 3) 사용자별 위치 순번(directorySortOrder)
+ * 4) 이름 가나다
  */
-function sortOrgDirectoryMembers(users) {
-  const jobTitleOf = (u) => u.jobTitle ?? u.jobTitleDisplayName ?? "";
+function orgMemberSortOrderFromTree(orgTree, groupType, groupCode) {
+  if (!orgTree || !groupCode) return null;
+  const g = orgTree.find((x) => x.groupType === groupType && x.groupCode === groupCode);
+  if (!g || g.sortOrder === undefined || g.sortOrder === null) return null;
+  const n = Number(g.sortOrder);
+  return Number.isFinite(n) ? n : null;
+}
+
+function sortOrgDirectoryMembers(users, ctx) {
+  const orgTree = ctx && ctx.orgTree;
+
+  const titleSortKey = (u) => {
+    if (u.jobTitleSortOrder != null) return Number(u.jobTitleSortOrder);
+    const fromTree = orgMemberSortOrderFromTree(orgTree, "JOB_TITLE", u.jobTitleGroupCode);
+    return fromTree != null ? fromTree : 99999;
+  };
+  const levelSortKey = (u) => {
+    if (u.jobLevelSortOrder != null) return Number(u.jobLevelSortOrder);
+    const fromTree = orgMemberSortOrderFromTree(orgTree, "JOB_LEVEL", u.jobLevelGroupCode);
+    return fromTree != null ? fromTree : 99999;
+  };
 
   return [...users].sort((a, b) => {
+    const aTitle = titleSortKey(a);
+    const bTitle = titleSortKey(b);
+    if (aTitle !== bTitle) return aTitle - bTitle;
+
+    const aLevel = levelSortKey(a);
+    const bLevel = levelSortKey(b);
+    if (aLevel !== bLevel) return aLevel - bLevel;
+
     const aDirectoryOrder = Number(a.directorySortOrder ?? 0);
     const bDirectoryOrder = Number(b.directorySortOrder ?? 0);
     if (aDirectoryOrder !== bDirectoryOrder) return aDirectoryOrder - bDirectoryOrder;
-
-    const aIsLeader = String(jobTitleOf(a)).includes("팀장") ? 0 : 1;
-    const bIsLeader = String(jobTitleOf(b)).includes("팀장") ? 0 : 1;
-    if (aIsLeader !== bIsLeader) return aIsLeader - bIsLeader;
 
     return String(a.name || "").localeCompare(String(b.name || ""), "ko-KR");
   });

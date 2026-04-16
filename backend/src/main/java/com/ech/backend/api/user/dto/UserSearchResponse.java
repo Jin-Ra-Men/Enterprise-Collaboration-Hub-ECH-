@@ -14,6 +14,8 @@ public record UserSearchResponse(
         String jobTitle,
         /** 관리자에서 사용자별로 지정하는 조직도 노출 순번(작을수록 먼저). */
         Integer directorySortOrder,
+        /** 직책 그룹 정렬. */
+        Integer jobTitleSortOrder,
         /** {@link com.ech.backend.domain.org.OrgGroup#getSortOrder()} — 직급 그룹 정렬(관리자 조직 설정과 동일). */
         Integer jobLevelSortOrder,
         /** 직위 그룹 정렬. */

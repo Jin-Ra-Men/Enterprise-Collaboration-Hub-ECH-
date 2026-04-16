@@ -128,12 +128,14 @@ public class UserSearchService {
         Map<Long, String> jobLevelByUserId;
         Map<Long, String> jobPositionByUserId;
         Map<Long, String> jobTitleByUserId;
+        Map<Long, Integer> jobTitleSortByUserId;
         Map<Long, Integer> jobLevelSortByUserId;
         Map<Long, Integer> jobPositionSortByUserId;
         if (employeeNos.isEmpty()) {
             jobLevelByUserId    = Map.of();
             jobPositionByUserId = Map.of();
             jobTitleByUserId    = Map.of();
+            jobTitleSortByUserId    = Map.of();
             jobLevelSortByUserId    = Map.of();
             jobPositionSortByUserId = Map.of();
         } else {
@@ -141,10 +143,12 @@ public class UserSearchService {
                     orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos("JOB_LEVEL", employeeNos);
             List<OrgGroupMember> jobPositionMembers =
                     orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos("JOB_POSITION", employeeNos);
+            List<OrgGroupMember> jobTitleMembers =
+                    orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos("JOB_TITLE", employeeNos);
             jobLevelByUserId = toDisplayByUserId(jobLevelMembers);
             jobPositionByUserId = toDisplayByUserId(jobPositionMembers);
-            jobTitleByUserId = toDisplayByUserId(
-                    orgGroupMemberRepository.findMembersByMemberGroupTypeAndEmployeeNos("JOB_TITLE", employeeNos));
+            jobTitleByUserId = toDisplayByUserId(jobTitleMembers);
+            jobTitleSortByUserId = toSortOrderByUserId(jobTitleMembers);
             jobLevelSortByUserId = toSortOrderByUserId(jobLevelMembers);
             jobPositionSortByUserId = toSortOrderByUserId(jobPositionMembers);
         }
@@ -158,7 +162,7 @@ public class UserSearchService {
                     usersByGroupCode.getOrDefault(company.getGroupCode(), List.of()),
                     company.getDisplayName(),
                     jobLevelByUserId, jobPositionByUserId, jobTitleByUserId,
-                    jobLevelSortByUserId, jobPositionSortByUserId);
+                    jobTitleSortByUserId, jobLevelSortByUserId, jobPositionSortByUserId);
 
             List<OrgDivisionResponse> divisionsResponse = new ArrayList<>();
             for (OrgGroup division : divisions) {
@@ -172,14 +176,14 @@ public class UserSearchService {
                         usersByGroupCode.getOrDefault(division.getGroupCode(), List.of()),
                         division.getDisplayName(),
                         jobLevelByUserId, jobPositionByUserId, jobTitleByUserId,
-                        jobLevelSortByUserId, jobPositionSortByUserId);
+                        jobTitleSortByUserId, jobLevelSortByUserId, jobPositionSortByUserId);
 
                 List<OrgTeamResponse> teamsResponse = teams.stream().map(team -> {
                     List<UserSearchResponse> members = buildMemberList(
                             usersByGroupCode.getOrDefault(team.getGroupCode(), List.of()),
                             team.getDisplayName(),
                             jobLevelByUserId, jobPositionByUserId, jobTitleByUserId,
-                            jobLevelSortByUserId, jobPositionSortByUserId);
+                            jobTitleSortByUserId, jobLevelSortByUserId, jobPositionSortByUserId);
                     return new OrgTeamResponse(team.getDisplayName(), members);
                 }).toList();
 
@@ -204,6 +208,7 @@ public class UserSearchService {
             Map<Long, String> jobLevelMap,
             Map<Long, String> jobPositionMap,
             Map<Long, String> jobTitleMap,
+            Map<Long, Integer> jobTitleSortMap,
             Map<Long, Integer> jobLevelSortMap,
             Map<Long, Integer> jobPositionSortMap
     ) {
@@ -214,6 +219,7 @@ public class UserSearchService {
                         jobLevelMap.get(u.getId()),
                         jobPositionMap.get(u.getId()),
                         jobTitleMap.get(u.getId()),
+                        jobTitleSortMap.get(u.getId()),
                         jobLevelSortMap.get(u.getId()),
                         jobPositionSortMap.get(u.getId())))
                 .toList();
@@ -255,6 +261,7 @@ public class UserSearchService {
             String jobLevel,
             String jobPosition,
             String jobTitle,
+            Integer jobTitleSortOrder,
             Integer jobLevelSortOrder,
             Integer jobPositionSortOrder
     ) {
@@ -269,6 +276,7 @@ public class UserSearchService {
                 jobPosition,
                 jobTitle,
                 user.getDirectorySortOrder(),
+                jobTitleSortOrder,
                 jobLevelSortOrder,
                 jobPositionSortOrder,
                 user.getRole(),
