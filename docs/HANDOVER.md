@@ -54,7 +54,7 @@
 - **운영·관리자**
   - 구성 요소: Java API 서버, Node 실시간 서버, PostgreSQL, (첨부는 외부 스토리지 연동 전제).
   - **첨부 저장 경로**: DB `app_settings` 의 `file.storage.base-dir` 이 `FILE_STORAGE_DIR` 보다 우선한다. 업로드 전부 실패 시 해당 값·폴더 권한·기동 로그 `[CSTalk] file storage` 를 확인. 절차: `docs/DEPLOYMENT_WINDOWS.md`(트러블슈팅·SQL 예시). UNC 사용 시 **백엔드 프로세스** 기준 쓰기 여부는 관리자 `GET /api/admin/storage/probe` 로 확인(대화형 PowerShell 성공과 불일치할 수 있음).
-  - **프로필 사진**: 동일 스토리지 루트 하위 **`user-profiles/`** 에 `사번기반파일명`(확장자 jpg/png/webp/gif 등)으로 저장되며, DB `users.profile_image_relpath`에 상대 경로가 들어간다. 본인 업로드 비활성화는 `app.allow-user-profile-self-upload`(환경변수 `ALLOW_USER_PROFILE_SELF_UPLOAD`)로 제어한다.
+  - **프로필 사진**: 동일 스토리지 루트 하위 **`user-profiles/`** 에 `사번기반파일명`(확장자 jpg/png/webp/gif 등)으로 저장되며, DB `users.profile_image_relpath`에 상대 경로가 들어간다. **운영 DB 반영**: `docs/sql/migrate_users_add_profile_image_relpath.sql` 실행. 업로드 한도 **3MB**. 본인 업로드 비활성화는 `app.allow-user-profile-self-upload`(환경변수 `ALLOW_USER_PROFILE_SELF_UPLOAD`)로 제어한다.
   - 가용성 확인: Backend `GET /api/health`, Realtime `GET /health`(DB 연계 여부 포함).
   - 인증·RBAC·감사·배포(WAR 업로드·롤백 등)는 로드맵 **Phase 3** 및 아래 **7)**에 예정 범위가 정리되어 있습니다.
   - 다중 서버로 Realtime을 늘릴 경우 Presence는 현재 메모리 기반이므로 공유 저장소(예: Redis) 검토가 필요합니다(아래 **6) Realtime 메모**).

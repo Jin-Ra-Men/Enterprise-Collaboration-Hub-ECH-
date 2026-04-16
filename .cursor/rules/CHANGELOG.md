@@ -6,8 +6,10 @@
 
 ### Added
 - **프로필 사진**: 스토리지 `{FILE_STORAGE_DIR}/user-profiles/{사번안전문자}.{확장자}` 단일 폴더 저장, DB `users.profile_image_relpath`. API: `GET /api/users/profile-image?employeeNo=`(JWT), `POST /api/users/me/profile-image`(본인·`app.allow-user-profile-self-upload`로 비활성화 가능), `POST /api/admin/users/{employeeNo}/profile-image`(관리자). 프로필·`/api/auth/me`·채널 멤버·메시지에 이미지 메타 포함. 프론트: 채팅/멤버/검색/조직도 아바타·프로필 모달(좌측 하단 진입 시에만 본인 사진 편집 버튼), 관리자 사용자 편집에서 파일 선택 후 저장 시 업로드.
+- **운영 DB 마이그레이션**: `docs/sql/migrate_users_add_profile_image_relpath.sql` — `users.profile_image_relpath` 컬럼 추가.
 
 ### Changed
+- **프로필 이미지 업로드 한도**: 5MB → **3MB**(`UserProfileImageService`).
 - **일반 신규 메시지 토스트**: `pushNewMessageToast` 미리보기에 `mentionPreviewForToastClient` 적용 — `@{사번|표시명}` 토큰이 OS/인앱 알림에 그대로 보이던 현상 방지.
 - **채팅 타임라인 복구**: 탭이 다시 보일 때(`visibilitychange` → visible, 디바운스) `recoverActiveChannelTimelineIfNeeded` 호출 — 절전·재개 후 `online`/소켓 이벤트 없이도 실패 화면 복구.
 - **`loadMessages`**: 타임라인·레거시 API가 5xx/408/429 또는 `fetch` 예외일 때 **최대 5회 재시도**(지수 백오프, 상한 10초).

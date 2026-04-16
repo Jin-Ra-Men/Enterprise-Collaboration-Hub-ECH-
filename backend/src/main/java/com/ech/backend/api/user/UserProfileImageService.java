@@ -26,7 +26,7 @@ public class UserProfileImageService {
 
     public static final String USER_PROFILE_SUBDIR = "user-profiles";
 
-    private static final long MAX_BYTES = 5L * 1024 * 1024;
+    private static final long MAX_BYTES = 3L * 1024 * 1024;
 
     private static final Set<String> ALLOWED_EXT = Set.of("jpg", "jpeg", "png", "webp", "gif");
 
@@ -233,7 +233,7 @@ public class UserProfileImageService {
             throw new IllegalArgumentException("파일이 비어 있습니다.");
         }
         if (file.getSize() > MAX_BYTES) {
-            throw new IllegalArgumentException("프로필 이미지는 5MB 이하여야 합니다.");
+            throw new IllegalArgumentException("프로필 이미지는 3MB 이하여야 합니다.");
         }
     }
 
