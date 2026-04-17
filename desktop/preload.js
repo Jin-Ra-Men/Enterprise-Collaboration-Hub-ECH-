@@ -56,5 +56,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
    * @returns {Promise<{ ok: boolean, canceled?: boolean, error?: string }>}
    */
   saveFileAndOpenWithDefaultApp: (payload) => ipcRenderer.invoke("ech-save-file-and-open-default-app", payload),
+  /**
+   * OS 절전·재개(Windows 포함) 시 메인에서 한 번씩 전달.
+   * 렌더러에서 REST/소켓 재동기화에 사용.
+   */
+  onSystemResume: (handler) => {
+    if (typeof handler !== "function") return;
+    ipcRenderer.on("ech-system-resume", () => {
+      try {
+        handler();
+      } catch {
+        /* ignore */
+      }
+    });
+  },
 });
 

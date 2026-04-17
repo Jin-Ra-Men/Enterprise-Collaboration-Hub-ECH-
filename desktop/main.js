@@ -1,7 +1,18 @@
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, Notification, shell, dialog } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  Menu,
+  Tray,
+  nativeImage,
+  Notification,
+  shell,
+  dialog,
+  powerMonitor,
+} = require("electron");
 const { autoUpdater } = require("electron-updater");
 
 const gotTheLock = app.requestSingleInstanceLock();
@@ -426,6 +437,19 @@ app.whenReady().then(() => {
   createMainWindow();
   createTray();
   setupAutoUpdater();
+  try {
+    powerMonitor.on("resume", () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        try {
+          mainWindow.webContents.send("ech-system-resume");
+        } catch {
+          /* ignore */
+        }
+      }
+    });
+  } catch (e) {
+    console.warn("[CSTalk] powerMonitor resume:", e?.message || e);
+  }
 });
 
 // 트레이 모드: 모든 창이 닫혀도 앱은 트레이에서 계속 실행

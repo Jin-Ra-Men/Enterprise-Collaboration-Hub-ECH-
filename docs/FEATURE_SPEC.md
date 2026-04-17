@@ -975,6 +975,12 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 ---
 
+## 데스크톱 (Electron) 절전 재개 복구
+- **배경**: 장시간 절전 후 재개 시 Electron(Chromium)에서 **REST `fetch`·Socket.io** 가 “죽은 연결”처럼 남아, 같은 서버라도 **브라우저 탭**에서는 정상인데 **데스크톱만** 메시지·워크플로·조직도 등 API가 실패하는 현상이 날 수 있음(`navigator.onLine`·프레즌스 UI와 불일치 가능).
+- **처리**: `desktop/main.js` `powerMonitor.on("resume")` → 렌더러로 `ech-system-resume` IPC → `preload` `electronAPI.onSystemResume` → `frontend/app.js` `setupElectronSystemResumeRecovery`: `loadMyChannels`, `scheduleSidebarAndPresenceSync`, `recoverActiveChannelTimelineIfNeeded("electron-resume")`, Socket.io **수동** `disconnect` 후 `connect` 재시도. 재연결 직전 끊김은 `suppressSocketDisconnectSystemMsg`로 채팅 시스템 줄 스팸을 막음.
+
+---
+
 ## 데스크톱 (Electron) Windows 자동 업데이트
 - 목적: 설치형(NSIS) 클라이언트가 GitHub Releases(또는 내부망 generic 피드)에서 새 버전을 감지·내려받고, **다운로드 완료 시 메인 창에 모달**(`modalAppUpdate`)로 안내 — **확인** 시 `quitAndInstall`로 즉시 설치·재시작. **나중에**는 모달만 닫고, 이후 트레이에서 종료 시 `autoInstallOnAppQuit`로 적용 가능
 - 사용자: Windows에 CSTalk 데스크톱을 설치한 사용자

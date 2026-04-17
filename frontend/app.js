@@ -202,6 +202,8 @@ function displayNameForDmChannel(ch) {
 
 /* ── 전역 상태 ── */
 let socket         = null;
+/** Electron 절전 재개 직후 `socket.disconnect()` 시 시스템 줄(연결 끊김) 스팸 방지 */
+let suppressSocketDisconnectSystemMsg = false;
 let currentUser    = null;
 let activeChannelId = null;
 let activeChannelType = null; // PUBLIC / PRIVATE / DM
@@ -5600,6 +5602,10 @@ function initSocket() {
   });
 
   socket.on("disconnect", (reason) => {
+    if (suppressSocketDisconnectSystemMsg) {
+      suppressSocketDisconnectSystemMsg = false;
+      return;
+    }
     appendSystemMsg(`연결이 끊어졌습니다. (${reason})`);
   });
 
@@ -10414,6 +10420,32 @@ async function runSearch(q, type) {
 /* ==========================================================================
  * 기타 이벤트
  * ========================================================================== */
+function setupElectronSystemResumeRecovery() {
+  if (typeof window.electronAPI?.onSystemResume !== "function") return;
+  window.electronAPI.onSystemResume(() => {
+    console.warn("[CSTalk] System resume (Electron) — refreshing REST + realtime");
+    if (!currentUser) return;
+    try {
+      if (socket) {
+        suppressSocketDisconnectSystemMsg = true;
+        socket.disconnect();
+        setTimeout(() => {
+          try {
+            socket.connect();
+          } catch (e) {
+            console.warn("[CSTalk] socket.connect after resume failed", e);
+          }
+        }, 120);
+      }
+    } catch (e) {
+      console.warn("[CSTalk] socket recovery after resume", e);
+    }
+    void loadMyChannels();
+    scheduleSidebarAndPresenceSync();
+    void recoverActiveChannelTimelineIfNeeded("electron-resume");
+  });
+}
+
 function initEvents() {
   if (!imageLightboxEscapeBound) {
     imageLightboxEscapeBound = true;
@@ -10569,6 +10601,8 @@ function initEvents() {
     const emp = String(currentUser.employeeNo || "").trim();
     if (emp) await openUserProfile(emp, { entry: profileModalEntry });
   });
+
+  setupElectronSystemResumeRecovery();
 }
 
 /* ==========================================================================
