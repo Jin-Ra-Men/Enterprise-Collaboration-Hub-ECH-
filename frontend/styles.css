@@ -2528,6 +2528,11 @@ html[data-theme="light"] .msg-row.msg-chat {
   border-radius: 12px 12px 12px 4px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14);
 }
+html:not([data-theme="light"]):not([data-theme="cream"]) .msg-row.msg-other .msg-content-row:has(.msg-text) .msg-text {
+  background: color-mix(in srgb, var(--bg-elevated) 82%, #ffffff 18%);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+}
 html[data-theme="light"] .msg-row.msg-other .msg-content-row:has(.msg-text) .msg-text {
   /* ECH채팅: surface_container_high, 테두리 없이 톤만 */
   border: none;
@@ -2540,6 +2545,10 @@ html[data-theme="light"] .msg-row.msg-other .msg-content-row:has(.msg-text) .msg
   border-radius: 12px 12px 4px 12px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
   color: var(--msg-bubble-mine-fg);
+}
+html:not([data-theme="light"]):not([data-theme="cream"]) .msg-row.msg-mine .msg-content-row:has(.msg-text) .msg-text {
+  border-color: rgba(122, 112, 255, 0.58);
+  box-shadow: 0 8px 22px rgba(46, 38, 130, 0.34);
 }
 html[data-theme="light"] .msg-row.msg-mine .msg-content-row:has(.msg-text) .msg-text {
   box-shadow: 0 8px 20px rgba(78, 69, 228, 0.18);
@@ -2563,9 +2572,9 @@ html[data-theme="light"] .msg-row.msg-mine .msg-content-row:has(.msg-text) .msg-
   text-align: left;
 }
 .msg-row.msg-mine .msg-reply-to {
-  width: 100%;
-  max-width: min(85%, 720px);
-  align-self: stretch;
+  width: min(100%, 560px);
+  max-width: 100%;
+  align-self: flex-end;
   text-align: left;
 }
 .msg-row.msg-mine .msg-thread-summary {
@@ -2573,7 +2582,7 @@ html[data-theme="light"] .msg-row.msg-mine .msg-content-row:has(.msg-text) .msg-
   max-width: min(85%, 720px);
   text-align: left;
 }
-.msg-row:hover { background: var(--bg-message-hover); }
+.msg-row:hover { background: transparent; }
 /* 연속 메시지: 아바타(36px) + flex gap(10px) 만큼만 비우면 본문 열이 첫 줄과 정렬됨. padding-left 추가 시 이중 들여쓰기 됨 */
 
 /* 메시지 아바타 + 프레즌스(네모 아이콘 우측 하단) */
@@ -2676,12 +2685,17 @@ html[data-theme="light"] .msg-time {
 /* ── 답글(REPLY) UI: 타임라인 카드(작성자 + 원문 스니펫) ── */
 .msg-has-reply .msg-body { gap: 6px; }
 .msg-reply-to {
-  width: 100%;
+  width: min(100%, 560px);
   margin: 0 0 8px 0;
 }
 .msg-reply-to-card {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   width: 100%;
+  min-width: min(240px, 100%);
+  max-width: 100%;
+  box-sizing: border-box;
   text-align: left;
   padding: 10px 12px;
   border-radius: 10px;
@@ -2708,9 +2722,11 @@ html[data-theme="light"] .msg-reply-to-card:hover {
   font-weight: 800;
   color: var(--text-primary);
   line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .msg-reply-to-card-snippet {
-  margin-top: 4px;
   font-size: 12px;
   font-weight: 500;
   color: var(--text-muted);
@@ -2812,6 +2828,11 @@ html:not([data-theme="light"]) .msg-date-pill {
   max-height: 200px;
   line-height: 0;
 }
+html:not([data-theme="light"]):not([data-theme="cream"]) .msg-attach-image-thumb-btn {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: color-mix(in srgb, var(--bg-elevated) 88%, #000 12%);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
+}
 .msg-attach-image-thumb-btn:focus-visible {
   outline: 2px solid var(--border-focus);
   outline-offset: 2px;
@@ -2819,7 +2840,8 @@ html:not([data-theme="light"]) .msg-date-pill {
 .msg-attach-image-thumb-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: color-mix(in srgb, var(--bg-elevated) 88%, #000 12%);
   display: block;
   vertical-align: bottom;
 }
@@ -2886,6 +2908,11 @@ html:not([data-theme="light"]) .msg-date-pill {
   border-radius: 10px;
   padding: 10px 12px;
   text-align: left;
+}
+html:not([data-theme="light"]):not([data-theme="cream"]) .msg-attach-card {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: color-mix(in srgb, var(--bg-elevated) 86%, #ffffff 14%);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.26);
 }
 .msg-attach-card-head {
   display: flex;
@@ -7411,12 +7438,34 @@ html[data-theme="light"] .user-org-panel {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 14px 6px 10px;
+  --uorg-depth: 0;
+  position: relative;
+  padding: 6px 14px 6px calc(10px + (var(--uorg-depth) * 16px));
   cursor: pointer;
   font-size: 13px;
   color: var(--text-primary);
   transition: background .12s;
   border-radius: 0;
+}
+.uorg-item[data-uorg-depth]:not([data-uorg-depth="0"])::before {
+  content: "";
+  position: absolute;
+  left: calc(16px + ((var(--uorg-depth) - 1) * 16px));
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: color-mix(in srgb, var(--text-muted) 30%, transparent);
+  pointer-events: none;
+}
+.uorg-item[data-uorg-depth]:not([data-uorg-depth="0"])::after {
+  content: "";
+  position: absolute;
+  left: calc(16px + ((var(--uorg-depth) - 1) * 16px));
+  top: 50%;
+  width: 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--text-muted) 34%, transparent);
+  transform: translateY(-50%);
+  pointer-events: none;
 }
 .uorg-item:hover { background: var(--hover-bg, rgba(0,0,0,.05)); }
 .uorg-item.selected {
@@ -7448,12 +7497,16 @@ html[data-theme="light"] .uorg-item.selected {
   padding: 0 2px;
   opacity: .7;
   flex-shrink: 0;
+  width: 14px;
+  text-align: center;
 }
 .uorg-bullet {
   font-size: 14px;
   opacity: .4;
   padding: 0 2px;
   flex-shrink: 0;
+  width: 14px;
+  text-align: center;
 }
 .uorg-badge { transform: scale(.85); transform-origin: left center; }
 

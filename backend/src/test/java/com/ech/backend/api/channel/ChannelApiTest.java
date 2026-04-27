@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.equalTo;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -16,6 +17,35 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @DisplayName("채널 API 통합 테스트")
 class ChannelApiTest extends BaseIntegrationTest {
+
+    @Test
+    @DisplayName("기존 1:1 DM 상대와 재생성 요청 시 기존 채널 재사용")
+    void create_one_to_one_dm_reuses_existing_channel() throws Exception {
+        String createDmBody = """
+                {
+                  "name": "1:1 DM",
+                  "workspaceKey": "WS_DM_REUSE",
+                  "channelType": "DM",
+                  "createdByEmployeeNo": "%s",
+                  "dmPeerEmployeeNos": ["%s"]
+                }
+                """.formatted(adminEmployeeNo, normalEmployeeNo);
+
+        String firstResp = mockMvc.perform(post("/api/channels")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createDmBody))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        long firstChannelId = objectMapper.readTree(firstResp).path("data").path("channelId").asLong();
+
+        mockMvc.perform(post("/api/channels")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createDmBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.channelId", equalTo((int) firstChannelId)));
+    }
 
     @Test
     @DisplayName("MANAGER 이상 권한으로 채널 생성 성공")

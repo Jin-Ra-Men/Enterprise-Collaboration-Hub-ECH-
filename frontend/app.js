@@ -200,6 +200,25 @@ function displayNameForDmChannel(ch) {
   return fromApi || SELF_DM_LABEL;
 }
 
+function sidebarDisplayNameForDmChannel(ch) {
+  const fromSidebar = String(ch?.dmSidebarLabel || "").trim();
+  if (fromSidebar) return fromSidebar;
+  return displayNameForDmChannel(ch);
+}
+
+function displayNameForDmChannelById(channelId, fallbackName) {
+  const cid = Number(channelId);
+  if (!Number.isFinite(cid)) return String(fallbackName || "").trim();
+  const row = document.querySelector(`.channel-item[data-channel-id="${cid}"]`);
+  const fromSidebar = String(row?.dataset?.channelName || "").trim();
+  if (fromSidebar) return fromSidebar;
+  const fromSnapshot = Array.isArray(lastSidebarChannelsSnapshot)
+    ? lastSidebarChannelsSnapshot.find((c) => Number(c.channelId) === cid)
+    : null;
+  if (fromSnapshot) return sidebarDisplayNameForDmChannel(fromSnapshot);
+  return String(fallbackName || "").trim();
+}
+
 /* ── 전역 상태 ── */
 let socket         = null;
 /** Electron 절전 재개 직후 `socket.disconnect()` 시 시스템 줄(연결 끊김) 스팸 방지 */
@@ -626,6 +645,16 @@ async function openUnreadMentionById(id) {
   await selectChannel(item.channelId, item.channelName, item.channelType, {
     targetMessageId: item.messageId,
   });
+}
+
+function removeUnreadMentionsByChannelId(channelId) {
+  const cid = Number(channelId);
+  if (!Number.isFinite(cid)) return;
+  const next = mentionInboxItems.filter((x) => Number(x.channelId) !== cid);
+  if (next.length === mentionInboxItems.length) return;
+  mentionInboxItems = next;
+  saveMentionInboxToStorage();
+  renderMentionInboxList();
 }
 
 /** 인증된 다운로드로 만든 이미지 blob URL (채널 재입장 시 재사용 — 네트워크 재요청 방지) */
@@ -2398,6 +2427,14 @@ function msgSenderHasProfileImage(msg) {
   return false;
 }
 
+function avatarHasImageForEmployee(emp, fallback) {
+  const e = String(emp || "").trim();
+  if (!e) return !!fallback;
+  const row = activeChannelMemberAvatarByEmployeeNo.get(e);
+  if (row && row.hasImage != null) return !!row.hasImage;
+  return !!fallback;
+}
+
 function avatarVersionForEmployee(emp, fallback) {
   const e = String(emp || "").trim();
   if (!e) return Number(fallback) || 0;
@@ -2488,7 +2525,7 @@ function applyAvatarPhotoToSurface(el, { employeeNo, name, hasImage, version }) 
 function wireMsgRowAvatar(div, emp, senderName, msg) {
   const btn = div.querySelector(".msg-avatar.msg-user-trigger");
   if (!btn) return;
-  const has = msgSenderHasProfileImage(msg);
+  const has = avatarHasImageForEmployee(emp, msgSenderHasProfileImage(msg));
   const ver = avatarVersionForEmployee(emp, 0);
   applyAvatarPhotoToButton(btn, { employeeNo: emp, name: senderName, hasImage: has, version: ver });
 }
@@ -3104,7 +3141,7 @@ function renderQuickUnreadList(channels) {
     btn.dataset.channelId = String(ch.channelId);
     btn.dataset.channelType = ch.channelType;
     const displayName =
-      ch.channelType === "DM" ? displayNameForDmChannel(ch) : ch.name;
+      ch.channelType === "DM" ? sidebarDisplayNameForDmChannel(ch) : ch.name;
     btn.dataset.channelName = displayName;
     const badgeTxt = formatUnreadBadgeCount(Number(ch.unreadCount ?? 0));
     const cap = quickRailCaption(displayName);
@@ -3139,6 +3176,8 @@ function renderChannelList(channels) {
     li.dataset.channelId   = ch.channelId;
     li.dataset.channelType = ch.channelType;
     const displayName =
+      ch.channelType === "DM" ? sidebarDisplayNameForDmChannel(ch) : ch.name;
+    const selectName =
       ch.channelType === "DM" ? displayNameForDmChannel(ch) : ch.name;
     li.dataset.channelName = displayName;
 
@@ -3161,7 +3200,7 @@ function renderChannelList(channels) {
 
     if (ch.channelId === activeChannelId) li.classList.add("active");
 
-    li.addEventListener("click", () => selectChannel(ch.channelId, displayName, ch.channelType));
+    li.addEventListener("click", () => selectChannel(ch.channelId, selectName, ch.channelType));
   });
 
   renderQuickUnreadList(channels);
@@ -3313,6 +3352,7 @@ async function selectChannel(channelId, channelName, channelType, options = {}) 
   activeChannelCreatorEmployeeNo = null;
   activeChannelMemberCount = 0;
   activeChannelMemberMentionList = [];
+  removeUnreadMentionsByChannelId(channelId);
 
   if (switchingChannel) {
     messageInputEl.value = "";
@@ -6028,7 +6068,8 @@ function pushNewMessageToast(msg) {
   const displayName = String(row?.dataset.channelName || "").trim() || "채팅";
   const channelType = String(row?.dataset.channelType || "PUBLIC");
   const isDm = channelType === "DM";
-  const locationText = isDm ? `DM · ${displayName}` : `채널 · #${displayName}`;
+  const dmDisplayName = isDm ? displayNameForDmChannelById(cid, displayName) : "";
+  const locationText = isDm ? `DM · ${dmDisplayName || displayName}` : `채널 · #${displayName}`;
   const senderName = String(msg.senderName || msg.sender_name || "").trim() || "알 수 없음";
   const collapsed = String(msg.text || "").replace(/\s+/g, " ").trim();
   const preview = mentionPreviewForToastClient(collapsed, 160);
@@ -6244,18 +6285,21 @@ function pushMentionToast(p) {
   }
   const channelName = String(p.channelName || "채널");
   const channelType = String(p.channelType || "PUBLIC");
+  const channelDisplayName = channelType === "DM"
+    ? (displayNameForDmChannelById(cid, channelName) || channelName)
+    : channelName;
   const senderName = String(p.senderName || "");
   const preview = String(p.messagePreview || "").slice(0, 160);
   const isDm = channelType === "DM";
   const locationText = isDm
-    ? `DM · ${channelName}`
+    ? `DM · ${channelDisplayName}`
     : `채널 · #${channelName}`;
   const senderText = senderName || "알 수 없음";
   const isDifferentChannel = activeChannelId == null || Number(activeChannelId) !== cid;
   if (isDifferentChannel) {
     enqueueUnreadMention({
       channelId: cid,
-      channelName,
+      channelName: channelDisplayName,
       channelType,
       senderName,
       senderEmployeeNo: String(p.senderEmployeeNo || ""),
@@ -10790,7 +10834,7 @@ function renderUserOrgPanel() {
   const parts = [];
   const totalCount = activeUsers(allUsers).length;
   const allSel = adminUserSelectedOrgCode === null;
-  parts.push(`<div class="uorg-item${allSel ? " selected" : ""}" data-uorg-select="__all__">
+  parts.push(`<div class="uorg-item${allSel ? " selected" : ""}" data-uorg-select="__all__" data-uorg-depth="0" style="--uorg-depth:0">
     <span class="uorg-label">📋 전체</span>
     <span class="uorg-count">${totalCount}</span>
   </div>`);
@@ -10803,8 +10847,7 @@ function renderUserOrgPanel() {
     const kids   = getKids(g.groupCode);
     const count  = countForOrg(g.groupCode);
     const isSel  = adminUserSelectedOrgCode === g.groupCode;
-    const indent = 10 + depth * 16;
-    parts.push(`<div class="uorg-item${isSel ? " selected" : ""}" data-uorg-select="${escHtml(g.groupCode)}" style="padding-left:${indent}px">
+    parts.push(`<div class="uorg-item${isSel ? " selected" : ""}" data-uorg-select="${escHtml(g.groupCode)}" data-uorg-depth="${depth}" style="--uorg-depth:${depth}">
       ${kids.length ? `<button class="uorg-toggle" data-uorg-toggle="${escHtml(g.groupCode)}">${isExp ? "▾" : "▸"}</button>` : `<span class="uorg-bullet">·</span>`}
       <span class="org-type-badge ${TYPE_CLS[g.groupType] || ""} uorg-badge">${TYPE_LABEL[g.groupType] || g.groupType}</span>
       <span class="uorg-label">${escHtml(g.displayName)}</span>
@@ -10821,7 +10864,7 @@ function renderUserOrgPanel() {
   }).length;
   if (unassignedCount > 0) {
     const isSel = adminUserSelectedOrgCode === "__unassigned__";
-    parts.push(`<div class="uorg-item${isSel ? " selected" : ""}" data-uorg-select="__unassigned__" style="padding-left:10px">
+    parts.push(`<div class="uorg-item${isSel ? " selected" : ""}" data-uorg-select="__unassigned__" data-uorg-depth="0" style="--uorg-depth:0">
       <span class="uorg-bullet">·</span>
       <span class="uorg-label">미배정</span>
       <span class="uorg-count">${unassignedCount}</span>

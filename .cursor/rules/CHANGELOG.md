@@ -2,6 +2,23 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-04-27
+
+### Changed
+- 실시간 `message:new` 수신 직후 메시지 아바타 렌더링 시, 메시지 payload에 프로필 플래그가 누락되어도 채널 멤버 아바타 캐시(`activeChannelMemberAvatarByEmployeeNo`)를 fallback으로 사용하도록 `frontend/app.js`를 보강해 프로필 이미지가 채팅방 재진입 없이 즉시 보이도록 수정.
+- 기존 1:1 DM 재사용 판별 로직을 요청자 기준 채널 조회로 보강해, 이미 대화방이 있는 상대에게 새 1:1 DM이 중복 생성되던 케이스를 방지 (`ChannelService.findExistingOneToOneDm` 개선).
+- 1:1 DM 중복 생성 방지 회귀 테스트를 `ChannelApiTest`에 추가해 동일 상대 재요청 시 기존 `channelId` 재사용을 검증.
+- 좌측 사이드바 DM 목록 라벨을 `이름 + 직급`으로 표시할 수 있도록 채널 요약 응답에 `dmSidebarLabel`을 추가하고, `frontend/app.js` DM 렌더링에서 해당 라벨을 우선 사용하도록 변경.
+- DM quick list 및 멘션/일반 메시지 알림 토스트의 DM 위치 표기를 사이드바와 동일한 `이름 + 직급` 라벨 기준으로 통일.
+- 읽지 않은 멘션은 멘션 목록 클릭뿐 아니라, 해당 멘션이 속한 채팅방에 직접 진입해도 자동으로 목록에서 제거되도록 `selectChannel` 진입 시 채널 단위 멘션 정리 로직 추가.
+- 답글 카드(`oo에게 답장`)의 폭을 `min/max` 범위로 고정하고 제목 말줄임 처리해, 사용자명 길이·말풍선 길이에 따라 답글 영역이 과도하게 짧거나 길어지는 UI 편차를 제거.
+- 채팅 첨부 이미지 썸네일(`.msg-attach-image-thumb-img`) 렌더링을 `object-fit: cover`에서 `contain`으로 변경해, 미리보기 영역에서 이미지가 과확대/잘림 없이 작은 영역에 전체가 보이도록 수정.
+- 관리자 사용자 조직 트리(`uorg-item`)에 레벨별 들여쓰기 기준 변수(`--uorg-depth`)와 세로 가이드선/가지선(ㄴ)을 추가해, 본부-팀 하위 관계가 한눈에 구분되도록 트리 가독성 개선.
+- 채팅 타임라인 메시지 행(`.msg-row`) hover 배경 강조를 제거해, 마우스를 올려도 색상이 바뀌지 않도록 동작을 단순화.
+- 다크 테마에서 채팅 배경 대비를 높이기 위해 상대/내 메시지 말풍선의 배경·테두리·그림자를 강화하고, 이미지 썸네일/파일 첨부 카드에 테두리·음영을 추가해 배경과 메시지·이미지 영역 구분이 명확해지도록 조정.
+- 사용자 제공 새 로고 이미지로 데스크톱 앱 아이콘 에셋(`desktop/assets/icon-source-cs.png`, `desktop/assets/icon.png`)을 교체하고, Windows용 `desktop/assets/icon.ico`를 재생성.
+- 릴리즈 버전을 `1.2.8`로 상향(`backend/build.gradle`, `desktop/package.json`)하고 배포 산출물 생성을 위한 백엔드 JAR/데스크톱 EXE 빌드 기준 버전을 동기화.
+
 ## 2026-04-16
 
 ### Added

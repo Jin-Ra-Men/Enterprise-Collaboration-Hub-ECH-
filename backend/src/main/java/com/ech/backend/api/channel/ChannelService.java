@@ -120,7 +120,11 @@ public class ChannelService {
 
             String internalName = buildDmCanonicalName(distinctSorted);
             if (distinctSorted.size() == 2) {
-                Optional<Channel> existingOneToOne = findExistingOneToOneDm(request.workspaceKey(), distinctSorted);
+                Optional<Channel> existingOneToOne = findExistingOneToOneDm(
+                        request.workspaceKey(),
+                        creatorEmpNo,
+                        distinctSorted
+                );
                 if (existingOneToOne.isPresent()) {
                     Channel ch = existingOneToOne.get();
                     ensureDmParticipantsMembers(ch, distinctSorted);
@@ -250,15 +254,21 @@ public class ChannelService {
         }
     }
 
-    private Optional<Channel> findExistingOneToOneDm(String workspaceKey, List<String> participantIds) {
+    private Optional<Channel> findExistingOneToOneDm(
+            String workspaceKey,
+            String requesterEmployeeNo,
+            List<String> participantIds
+    ) {
         if (participantIds == null || participantIds.size() != 2) {
             return Optional.empty();
         }
         String expectedCanonicalName = buildDmCanonicalName(participantIds);
-        String a = participantIds.get(0);
-        String b = participantIds.get(1);
-        Set<String> expected = Set.of(a, b);
-        List<Channel> mine = channelRepository.findByMemberEmployeeNo(a);
+        String requester = requesterEmployeeNo == null ? "" : requesterEmployeeNo.trim();
+        if (requester.isBlank()) {
+            return Optional.empty();
+        }
+        Set<String> expected = Set.of(participantIds.get(0), participantIds.get(1));
+        List<Channel> mine = channelRepository.findByMemberEmployeeNo(requester);
         for (Channel ch : mine) {
             if (ch.getChannelType() != ChannelType.DM) {
                 continue;
@@ -600,6 +610,9 @@ public class ChannelService {
                     List<String> dmPeers = channel.getChannelType() == ChannelType.DM
                             ? resolveDmPeerEmployeeNos(channel.getId(), emp)
                             : List.of();
+                    String dmSidebarLabel = channel.getChannelType() == ChannelType.DM
+                            ? resolveDmSidebarLabel(channel.getId(), emp)
+                            : null;
                     OffsetDateTime lastAt = lastMsgAtByChannel.get(channel.getId());
                     return new ChannelSummaryResponse(
                             channel.getId(),
@@ -611,6 +624,7 @@ public class ChannelService {
                             channel.getCreatedAt(),
                             unread,
                             dmPeers,
+                            dmSidebarLabel,
                             lastAt
                     );
                 })
@@ -737,6 +751,61 @@ public class ChannelService {
                 }
                 return "DM";
             }
+            return "DM";
+        }
+        return String.join(", ", labels);
+    }
+
+    private String resolveDmSidebarLabel(Long channelId, String viewerEmployeeNo) {
+        List<ChannelMember> members = channelMemberRepository.findByChannelIdFetchUsers(channelId);
+        if (members.isEmpty()) {
+            return "DM";
+        }
+        List<String> employeeNos = members.stream()
+                .map(cm -> cm.getUser())
+                .filter(Objects::nonNull)
+                .map(User::getEmployeeNo)
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isBlank())
+                .toList();
+        Map<String, String> jobLevelByEmp = membershipDisplayByEmp("JOB_LEVEL", employeeNos);
+        String viewer = viewerEmployeeNo == null ? "" : viewerEmployeeNo.trim();
+        List<String> labels = new ArrayList<>();
+        for (ChannelMember cm : members) {
+            User u = cm.getUser();
+            if (u == null) {
+                continue;
+            }
+            String emp = u.getEmployeeNo() == null ? "" : u.getEmployeeNo().trim();
+            if (!viewer.isEmpty() && viewer.equals(emp)) {
+                continue;
+            }
+            String name = u.getName() == null ? "" : u.getName().trim();
+            if (name.isBlank()) {
+                name = emp;
+            }
+            if (name.isBlank()) {
+                continue;
+            }
+            String jobLevel = jobLevelByEmp.getOrDefault(emp, "").trim();
+            labels.add(jobLevel.isBlank() ? name : (name + " " + jobLevel));
+        }
+        if (labels.isEmpty() && members.size() == 1) {
+            User self = members.get(0).getUser();
+            if (self != null) {
+                String selfEmp = self.getEmployeeNo() == null ? "" : self.getEmployeeNo().trim();
+                String selfName = self.getName() == null ? "" : self.getName().trim();
+                if (selfName.isBlank()) {
+                    selfName = selfEmp;
+                }
+                String selfJobLevel = jobLevelByEmp.getOrDefault(selfEmp, "").trim();
+                if (!selfName.isBlank()) {
+                    return selfJobLevel.isBlank() ? selfName : (selfName + " " + selfJobLevel);
+                }
+            }
+        }
+        if (labels.isEmpty()) {
             return "DM";
         }
         return String.join(", ", labels);

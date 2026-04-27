@@ -13,6 +13,7 @@ public record ChannelSummaryResponse(
         OffsetDateTime createdAt,
         int unreadCount,
         List<String> dmPeerEmployeeNos,
+        String dmSidebarLabel,
         OffsetDateTime lastMessageAt
 ) {
 }
