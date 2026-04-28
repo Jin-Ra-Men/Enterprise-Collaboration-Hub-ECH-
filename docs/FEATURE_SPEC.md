@@ -156,6 +156,7 @@
 - 상태 전이/예외 케이스:
   - 중복 채널명(`workspaceKey + name`) 생성 시 예외
   - DM 1:1은 동일 2인 조합이면 기존 채널 재사용(내부명 편차/레거시 데이터 보정 포함)
+  - 프론트는 1:1 DM 생성 전에 사이드바 스냅샷(`lastSidebarChannelsSnapshot`)에서 동일 상대 `dmPeerEmployeeNos`를 먼저 찾아, 존재하면 생성 API를 생략하고 기존 채널로 즉시 이동(중복 생성 UX 방지)
   - 없는 사용자/채널 조회 시 예외
   - 이미 참여한 사용자 재참여 시 예외
   - 생성 시 생성자는 자동으로 `MANAGER` 멤버십 부여
@@ -435,7 +436,7 @@
   - 인덱스(`idx_messages_parent_message_id`) 기반 스레드 조회 성능 점검
 - 비고:
   - 타임라인 **ROOT** 항목은 `threadCommentCount`, `lastCommentAt`, `lastCommentSenderName`(댓글 1개 이상일 때)로 메인 목록에 **댓글 요약**을 그릴 수 있다.
-  - 프론트: 원글·첨부 행 하단 **「N개의 댓글」+ 마지막 댓글 시각** 클릭 시 스레드 모달(건수는 루트 직계 댓글·답글 + 댓글에 달린 답글까지 합산에 가깝게 집계); **답글** 선택 시 입력창 위 **답장 미리보기 바**(이름·본문 스니펫·취소). **스레드 모아보기**는 `refreshThreadHubData`·행 클릭 시 `openThreadModal`·`timelineRootMessageById` 캐시 주입.
+  - 프론트: 원글·첨부 행 하단 **「N개의 댓글」+ 마지막 댓글 시각** 클릭 시 스레드 모달(건수는 루트 직계 댓글·답글 + 댓글에 달린 답글까지 합산에 가깝게 집계); **답글** 선택 시 입력창 위 **답장 미리보기 바**(이름·본문 스니펫·취소). 답장 카드(`oo에게 답장`)는 사용자명/본문 길이와 무관하게 일관된 폭으로 보이도록 `msg-has-reply` 컨텍스트에서 폭 기준을 고정. **스레드 모아보기**는 `refreshThreadHubData`·행 클릭 시 `openThreadModal`·`timelineRootMessageById` 캐시 주입.
   - 프론트 `loadMessages`: **timeline 요청이 HTTP 404**이면(구버전 백엔드 등) 위 루트 목록 API로 **자동 폴백**해 채팅 읽기는 가능(이 경우 타임라인 전용 답글 UI는 제한될 수 있음).
   - 프론트 채팅: 최초 `loadMessages`는 타임라인 **`TIMELINE_PAGE_LIMIT`(100)**·응답 `hasMoreOlder` 저장. 상단 스크롤 시 `beforeMessageId`로 **이전 페이지** `prepend`(`prependTimelineMessages`·스크롤 위치 보정). DOM은 `trimMessages()`: 하단 근처일 때만 앞에서 제거해 **`MAX_CHAT_DOM_NODES`(4000)** 근처까지, **강제 상한 `HARD_MAX`(10000)**. DB 전체 이력은 페이지 단위로만 메모리에 올림(10만 건 채널도 요청당 최대 200행). 대량 테스트용 `tools/sql/seed_mass_channel_messages.sql` 참고.
   - 경로 매칭: 단건 조회·`.../replies`·`.../comments`는 `{id:\\d+}`로 **숫자만** 매칭해 `GET .../messages/threads`·`/timeline`과 `/{messageId}` 오매칭을 방지한다.

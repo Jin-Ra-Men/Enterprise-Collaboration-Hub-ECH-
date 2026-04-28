@@ -1,8 +1,16 @@
 package com.ech.backend.api.channel;
 
 import com.ech.backend.BaseIntegrationTest;
+import com.ech.backend.domain.channel.Channel;
+import com.ech.backend.domain.channel.ChannelMember;
+import com.ech.backend.domain.channel.ChannelMemberRepository;
+import com.ech.backend.domain.channel.ChannelMemberRole;
+import com.ech.backend.domain.channel.ChannelRepository;
+import com.ech.backend.domain.channel.ChannelType;
+import com.ech.backend.domain.user.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
 import static org.hamcrest.Matchers.hasSize;
@@ -17,6 +25,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @DisplayName("채널 API 통합 테스트")
 class ChannelApiTest extends BaseIntegrationTest {
+
+    @Autowired
+    private ChannelRepository channelRepository;
+
+    @Autowired
+    private ChannelMemberRepository channelMemberRepository;
 
     @Test
     @DisplayName("기존 1:1 DM 상대와 재생성 요청 시 기존 채널 재사용")
@@ -45,6 +59,36 @@ class ChannelApiTest extends BaseIntegrationTest {
                         .content(createDmBody))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.channelId", equalTo((int) firstChannelId)));
+    }
+
+    @Test
+    @DisplayName("레거시 내부명을 가진 기존 1:1 DM도 재생성 시 기존 채널 재사용")
+    void create_one_to_one_dm_reuses_legacy_channel_with_noncanonical_name() throws Exception {
+        User adminUser = userRepository.findByEmployeeNo(adminEmployeeNo).orElseThrow();
+        User normalUser = userRepository.findByEmployeeNo(normalEmployeeNo).orElseThrow();
+        String workspaceKey = "WS_DM_LEGACY_REUSE";
+        Channel legacyChannel = channelRepository.saveAndFlush(
+                new Channel(workspaceKey, "legacy_dm_name", "legacy", ChannelType.DM, adminUser)
+        );
+        channelMemberRepository.saveAndFlush(new ChannelMember(legacyChannel, adminUser, ChannelMemberRole.MANAGER));
+        channelMemberRepository.saveAndFlush(new ChannelMember(legacyChannel, normalUser, ChannelMemberRole.MEMBER));
+
+        String createDmBody = """
+                {
+                  "name": "legacy 재생성",
+                  "workspaceKey": "%s",
+                  "channelType": "DM",
+                  "createdByEmployeeNo": "%s",
+                  "dmPeerEmployeeNos": ["%s"]
+                }
+                """.formatted(workspaceKey, normalEmployeeNo, adminEmployeeNo);
+
+        mockMvc.perform(post("/api/channels")
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createDmBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.channelId", equalTo(legacyChannel.getId().intValue())));
     }
 
     @Test

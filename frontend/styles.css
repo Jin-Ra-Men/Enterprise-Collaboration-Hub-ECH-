@@ -2476,6 +2476,9 @@ html[data-theme="light"] .msg-row.msg-chat {
   align-items: flex-end;
   text-align: right;
 }
+.msg-row.msg-mine.msg-has-reply .msg-body--mine {
+  width: min(85%, 720px);
+}
 .msg-row.msg-mine .msg-body--mine .msg-meta {
   display: none;
 }

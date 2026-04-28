@@ -1370,3 +1370,12 @@
 - 사용자 피드백에 따라 `titleBarOverlay` 방식은 제거하고 Windows **네이티브 타이틀바**를 유지하도록 되돌렸으며, 테마 동기화는 `nativeTheme.themeSource`(dark/light)로 처리해 상단바가 본문과 분리되어 보이던 문제를 해소
 - 좌측 하단/상단 본인 아바타는 `profileImagePresent` 플래그가 false여도 `/api/users/profile-image`를 1회 강제 조회해 실제 이미지가 있으면 즉시 사진 아바타로 복구하도록 보강
 - 상대방 아바타 지연을 줄이기 위해 프로필 이미지 blob URL 요청에 in-flight 캐시를 추가해 동일 키(`employeeNo:version`) 중복 요청을 제거하고, 채널 멤버 로드 직후 이미지 보유 멤버를 선로딩하도록 개선
+
+## 2026-04-28
+
+### Changed
+- 1:1 DM 생성 시 프론트에서 사이드바 스냅샷을 먼저 확인해 기존 1:1 DM이 있으면 `POST /api/channels`를 호출하지 않고 기존 채널로 즉시 이동하도록 보강 (`startDmWithUser`, `btnConfirmCreateDm`)
+- 백엔드 1:1 DM 재사용 탐색에 워크스페이스+참가자 기준 후보 조회 쿼리를 추가해 레거시 내부명(`__dm__` 미사용) 채널도 안정적으로 재사용하도록 보강
+- 채널 통합 테스트에 레거시 내부명 1:1 DM 재생성 재사용 케이스를 추가해 회귀를 방지
+- 답글 카드가 사용자명/메시지 길이에 따라 폭이 달라 보이던 문제를 줄이기 위해, 내 메시지의 답글 행(`.msg-has-reply`)에서 본문 컨테이너 폭 기준을 고정해 `oo에게 답장` 영역이 일관된 폭으로 렌더링되도록 조정
+- 릴리즈 버전을 `1.2.10`으로 상향 (`backend/build.gradle`, `desktop/package.json`, `desktop/package-lock.json`)

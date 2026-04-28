@@ -201,6 +201,23 @@ function dmPeerEmployeeNosForPresence(ch) {
   return [];
 }
 
+function findExistingOneToOneDmChannelId(peerEmployeeNo) {
+  const peer = String(peerEmployeeNo || "").trim();
+  const me = String(currentUser?.employeeNo || "").trim();
+  if (!peer || !me || peer === me) return null;
+  const rows = Array.isArray(lastSidebarChannelsSnapshot) ? lastSidebarChannelsSnapshot : [];
+  for (const ch of rows) {
+    if (String(ch?.channelType || "").toUpperCase() !== "DM") continue;
+    if (Number(ch?.memberCount ?? 0) !== 2) continue;
+    const peers = dmPeerEmployeeNosForPresence(ch).map((e) => String(e || "").trim()).filter(Boolean);
+    if (peers.length !== 1) continue;
+    if (peers[0] !== peer) continue;
+    const cid = Number(ch.channelId);
+    if (Number.isFinite(cid) && cid > 0) return cid;
+  }
+  return null;
+}
+
 function displayNameForDmChannel(ch) {
   if (String(ch?.channelType || "").toUpperCase() !== "DM") {
     return String(ch?.name || "").trim();
@@ -1402,6 +1419,13 @@ async function startDmWithUser(peerEmployeeNo, displayName) {
   }
   const dmName =
     displayName && displayName !== "-" ? displayName : peer;
+  const existingChannelId = findExistingOneToOneDmChannelId(peer);
+  if (existingChannelId) {
+    closeModal("modalUserProfile");
+    closeModal("modalCreateDm");
+    selectChannel(existingChannelId, dmName, "DM");
+    return;
+  }
   try {
     const res = await apiFetch("/api/channels", {
       method: "POST",
@@ -7519,6 +7543,15 @@ document.getElementById("btnConfirmCreateDm").addEventListener("click", async ()
   if (!currentUser) return;
 
   const dmName = selectedDmMembers.map(m => m.name).join(", ");
+  if (selectedDmMembers.length === 1) {
+    const peerEmp = String(selectedDmMembers[0]?.employeeNo || "").trim();
+    const existingChannelId = findExistingOneToOneDmChannelId(peerEmp);
+    if (existingChannelId) {
+      closeModal("modalCreateDm");
+      selectChannel(existingChannelId, dmName, "DM");
+      return;
+    }
+  }
 
   try {
     const res = await apiFetch("/api/channels", {

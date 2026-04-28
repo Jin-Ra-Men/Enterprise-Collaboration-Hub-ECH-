@@ -288,6 +288,20 @@ public class ChannelService {
                 return Optional.of(ch);
             }
         }
+        List<Channel> globalCandidates = channelRepository.findOneToOneDmByWorkspaceAndParticipants(
+                workspaceKey,
+                List.copyOf(expected)
+        );
+        for (Channel candidate : globalCandidates) {
+            List<ChannelMember> members = channelMemberRepository.findByChannelId(candidate.getId());
+            Set<String> actual = members.stream()
+                    .map(cm -> cm.getUser().getEmployeeNo() == null ? "" : cm.getUser().getEmployeeNo().trim())
+                    .filter(s -> !s.isBlank())
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+            if (actual.size() == 2 && actual.equals(expected)) {
+                return Optional.of(candidate);
+            }
+        }
         return Optional.empty();
     }
 

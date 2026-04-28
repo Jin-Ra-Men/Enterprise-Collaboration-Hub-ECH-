@@ -24,6 +24,28 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
             """)
     List<Channel> findByMemberEmployeeNo(@Param("employeeNo") String employeeNo);
 
+    @Query("""
+            SELECT c FROM Channel c
+            WHERE c.workspaceKey = :workspaceKey
+              AND c.channelType = com.ech.backend.domain.channel.ChannelType.DM
+              AND (
+                  SELECT COUNT(DISTINCT cm.user.employeeNo)
+                  FROM ChannelMember cm
+                  WHERE cm.channel.id = c.id
+              ) = 2
+              AND (
+                  SELECT COUNT(DISTINCT cm2.user.employeeNo)
+                  FROM ChannelMember cm2
+                  WHERE cm2.channel.id = c.id
+                    AND cm2.user.employeeNo IN :participantEmployeeNos
+              ) = 2
+            ORDER BY c.createdAt DESC
+            """)
+    List<Channel> findOneToOneDmByWorkspaceAndParticipants(
+            @Param("workspaceKey") String workspaceKey,
+            @Param("participantEmployeeNos") List<String> participantEmployeeNos
+    );
+
     /**
      * 통합 검색: 사용자가 속한 채널 중 채널명/설명 키워드 검색.
      */

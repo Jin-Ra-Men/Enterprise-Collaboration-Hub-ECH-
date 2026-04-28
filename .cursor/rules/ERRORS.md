@@ -271,3 +271,12 @@
 - **발생 위치(파일/명령/기능)**: `tools/create-github-release-v001.ps1` — `Invoke-RestMethod -Method Post -Uri "$baseUri/releases"`
 - **원인**: 토큰이 릴리즈 생성 권한(예: `contents: write` / Releases write / Repository 권한 또는 조직 SSO 승인)을 갖지 못한 것으로 추정
 - **해결/현재 상태**: `GET /user`, `GET /repos/{owner}/{repo}`는 성공(레포 접근은 가능)했으나 릴리즈 생성은 실패. 토큰의 릴리즈 생성 권한 재설정 또는 권한 포함 토큰 제공 필요
+
+---
+
+## 2026-04-28 — ChannelApiTest 신규 케이스 실패 (기대값 불일치)
+
+- **에러 요약**: `./gradlew test --tests com.ech.backend.api.channel.ChannelApiTest` 실행 시 `요청자가 미참여 상태의 레거시 1:1 DM도 재생성 시 기존 채널 재사용` 테스트 실패
+- **발생 위치(파일/명령/기능)**: `backend/src/test/java/com/ech/backend/api/channel/ChannelApiTest.java`, 명령 `./gradlew test --tests com.ech.backend.api.channel.ChannelApiTest`
+- **원인**: 테스트가 "요청자 미참여(멤버십 제거) 상태의 DM도 동일 채널 재사용"을 기대했지만, 실제 도메인 규칙은 현재 멤버 2인(1:1) 채널 기준 재사용으로 동작해 기대값이 맞지 않음
+- **해결/현재 상태**: 테스트 시나리오를 "레거시 내부명(non-canonical name)을 가진 기존 1:1 DM 재사용"으로 조정해 실제 정책과 일치시켰고, 재실행으로 통과 확인
