@@ -6484,6 +6484,11 @@ button.msg-sender:hover { text-decoration: underline; color: var(--accent); }
   border: 4px solid color-mix(in srgb, var(--outline-variant, #acb3b7) 35%, transparent);
   box-shadow: 0 8px 24px rgba(44, 52, 55, 0.08);
 }
+/* 프로필 히어로 원형 아바타는 인물 영역이 원 내부를 충분히 채우도록 확대 */
+.ech-profile-hero .profile-avatar-lg.ech-avatar--photo {
+  background-size: 122%;
+  background-position: center 34%;
+}
 .ech-profile-avatar-wrap {
   position: relative;
   display: inline-block;
@@ -7168,10 +7173,15 @@ html[data-theme="light"] #appDialogInput:focus {
   margin-bottom: 4px;
 }
 
+.ech-tree-co-children {
+  margin-left: 12px;
+  padding-left: 0;
+}
+
 .ech-tree-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   min-height: 32px;
   padding: 4px 8px 4px 8px;
   border-radius: 6px;
@@ -7190,10 +7200,12 @@ html[data-theme="light"] #appDialogInput:focus {
 }
 
 .ech-tree-row--lv2 {
+  padding-left: 24px;
   font-weight: 600;
 }
 
 .ech-tree-row--lv3 {
+  padding-left: 40px;
   cursor: pointer;
 }
 
@@ -7204,17 +7216,16 @@ html[data-theme="light"] #appDialogInput:focus {
   align-self: center;
 }
 
+.org-tree-embedded .ech-tree-line {
+  display: none;
+}
+
 .ech-tree-line--root {
   opacity: 0.35;
 }
 
 .ech-tree-line--branch {
-  border-left: 1px solid rgba(167, 139, 250, 0.35);
-  margin-left: 2px;
-  padding-left: 6px;
-  height: 100%;
-  min-height: 18px;
-  align-self: stretch;
+  opacity: 0;
 }
 
 .ech-tree-ico {
@@ -7259,10 +7270,28 @@ html[data-theme="light"] #appDialogInput:focus {
   display: none;
 }
 
+.ech-tree-summary::before {
+  content: "▾";
+  position: absolute;
+  left: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  transform: translateY(-1px);
+  transition: transform 120ms ease;
+}
+
+.ech-tree-details--div > summary {
+  position: relative;
+}
+
+.ech-tree-details--div:not([open]) > summary::before {
+  transform: rotate(-90deg) translateY(1px);
+}
+
 .ech-tree-div-body {
-  padding-left: 8px;
-  margin-left: 4px;
-  border-left: 1px solid rgba(167, 139, 250, 0.22);
+  padding-left: 2px;
+  margin-left: 8px;
+  border-left: 0;
 }
 
 .ech-tree-team:hover {
@@ -7290,7 +7319,7 @@ html[data-theme="light"] #appDialogInput:focus {
   list-style: none;
 }
 .org-lvl > summary::-webkit-details-marker { display: none; }
-.org-lvl-body { padding: 4px 6px 8px 10px; border-left: 2px solid rgba(167, 139, 250, 0.35); margin-left: 6px; }
+.org-lvl-body { padding: 4px 6px 8px 10px; border-left: 0; margin-left: 6px; }
 .org-lvl-company { border-color: rgba(167, 139, 250, 0.45); }
 .org-lvl-division { margin-left: 4px; }
 .org-lvl-team { margin-left: 8px; }
@@ -8061,8 +8090,8 @@ html:not([data-theme="light"]) .org-tab--rail.active {
 }
 
 /* 본부 블록: details 대신 div + data-expanded 방식 사용 */
-.orgchart-div-block { margin-left: 8px; }
-.orgchart-div-header { display: flex; align-items: center; gap: 2px; }
+.orgchart-div-block { margin-left: 12px; }
+.orgchart-div-header { display: flex; align-items: center; gap: 4px; }
 .orgchart-div-toggle-btn {
   flex-shrink: 0;
   width: 22px; height: 22px;
@@ -8076,7 +8105,7 @@ html:not([data-theme="light"]) .org-tab--rail.active {
 .orgchart-div-block[data-expanded="true"] .orgchart-div-toggle-btn { transform: rotate(90deg); }
 .orgchart-div-name-btn {
   display: flex; align-items: center; gap: 6px;
-  flex: 1; padding: 5px 8px;
+  flex: 1; padding: 6px 10px;
   font-size: 12px; font-weight: 600;
   color: var(--text-secondary);
   background: transparent; border: none;
@@ -8090,11 +8119,13 @@ html:not([data-theme="light"]) .org-tab--rail.active {
   font-weight: 700;
 }
 .orgchart-div-block[data-expanded="false"] > .orgchart-div-teams { display: none; }
-.orgchart-div-teams { padding-left: 8px; }
+.orgchart-div-teams {
+  padding-left: 28px;
+}
 
 .orgchart-team-btn {
   display: flex; align-items: center; gap: 6px;
-  width: 100%; padding: 5px 10px;
+  width: 100%; padding: 5px 10px 5px 14px;
   background: transparent; border: none; border-radius: 6px;
   font-size: 12px; color: var(--text-secondary);
   cursor: pointer; text-align: left;

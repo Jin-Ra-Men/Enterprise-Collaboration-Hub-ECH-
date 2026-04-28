@@ -621,6 +621,7 @@ Stop-Process -Id <PID> -Force
 - 후속 요청 반영:
   - 연결선이 과하다는 피드백에 따라 세로/분기/점선 라인을 제거하고, 들여쓰기와 토글 화살표만 유지
   - 추가 피드백으로 DM/채널 멤버 추가 모달에서도 선이 보이지 않도록 `.org-tree-embedded .ech-tree-line { display: none; }` 적용, 레거시 `.org-lvl-body`의 `border-left` 제거
+  - 추가 보정으로 우측 상단 조직도 전용 모달(`.orgchart-*`)의 본부/팀 레벨 간 간격을 확대해 계층 구분을 강화 (`.orgchart-div-block`, `.orgchart-div-header`, `.orgchart-div-teams`, `.orgchart-team-btn`)
 - 운영 참고:
   - 트리 구조 자체(`renderOrgTreeLeft`)는 변경하지 않았고 클래스 기반 스타일만 수정함
   - 이후 레벨이 추가될 경우(`lv4` 등) 동일 규칙(패딩 증가 + 브랜치 라인)을 확장 적용 가능

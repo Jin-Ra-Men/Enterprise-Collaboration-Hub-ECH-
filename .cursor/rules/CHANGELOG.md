@@ -1361,6 +1361,7 @@
 - 관련 상세 문서(`docs/FEATURE_SPEC.md`, `docs/HANDOVER.md`)에 조직도 트리 UI 개선 내용을 반영
 - 사용자 피드백에 따라 조직도 트리 연결선(세로 가이드/분기 엘보우/팀 점선 보더)을 제거하고, 들여쓰기와 토글 화살표 중심의 계층 표현으로 단순화
 - DM/채널 멤버 추가 조직도 모달에서도 연결선이 남지 않도록 `.org-tree-embedded .ech-tree-line`을 숨기고 레거시 `.org-lvl-body`의 좌측 보더를 제거
+- 우측 상단 조직도 전용 모달(`.orgchart-*`)이 별도 스타일을 사용하는 점을 반영해 본부/팀 들여쓰기 간격을 재조정(`.orgchart-div-block`, `.orgchart-div-teams`, `.orgchart-team-btn`)하여 레벨 구분을 강화
 - Electron Windows 타이틀바를 `titleBarOverlay` 기반으로 전환해 앱 테마(`dark/light/ocean/cream`) 변경 시 상단 창 프레임 색상도 함께 동기화
 - 다크/오션 계열에서는 타이틀바 텍스트(앱명·버전) 및 창 컨트롤 아이콘 색상을 흰색으로 고정해 가독성을 개선
 - `frontend/app.js` `applyTheme()`에서 `electronAPI.syncWindowTheme` IPC를 호출하도록 연결해 테마 변경 즉시 타이틀바에 반영

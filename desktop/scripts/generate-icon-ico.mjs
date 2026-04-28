@@ -6,6 +6,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import pngToIco from "png-to-ico";
+import sharp from "sharp";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
@@ -17,6 +18,19 @@ if (!fs.existsSync(input)) {
   process.exit(1);
 }
 
-const buf = await pngToIco(input);
+const sizes = [16, 24, 32, 40, 48, 64, 128, 256];
+const pngBuffers = await Promise.all(
+  sizes.map((size) =>
+    sharp(input)
+      .resize(size, size, {
+        fit: "contain",
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
+      .png()
+      .toBuffer()
+  )
+);
+
+const buf = await pngToIco(pngBuffers);
 fs.writeFileSync(output, buf);
-console.log("[CSTalk] wrote", output, `(${buf.length} bytes)`);
+console.log("[CSTalk] wrote", output, `(${buf.length} bytes, sizes=${sizes.join(",")})`);

@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-04-27 — Windows 데스크톱 빌드 실패 (`app.asar`/`desktop/dist` 잠금)
+
+- **에러 요약**: `npm run build:win` 실행 시 `EPERM, Permission denied ... desktop/dist` 및 `remove ... dist\\win-unpacked\\resources\\app.asar: The process cannot access the file because it is being used by another process.`로 빌드 중단
+- **발생 위치(파일/명령/기능)**: `desktop` — `npm run build:win` (`scripts/clean-dist.cjs`, `electron-builder --win nsis`)
+- **원인**: `desktop/dist` 하위 파일(`app.asar` 포함)이 다른 프로세스(탐색기 미리보기/인덱싱/백신/실행 중 앱 등)에 의해 잠겨 electron-builder가 출력 디렉터리를 비우지 못함
+- **해결/현재 상태**: 아이콘 재생성(`npm run prebuild:win`)은 성공. 배포 EXE 재빌드는 잠금 해제 후 재시도 필요(탐색기에서 `desktop/dist` 닫기, 실행 중 앱 종료, 필요 시 재부팅 후 빌드)
+
+---
+
 ## 2026-04-03 — electron-builder NSIS `makensis` 실패 (`Can't open output file`)
 
 - **에러 요약**: `makensis.exe process failed` / NSIS stderr `Can't open output file` — `dist\ECH Setup {version}.exe` 생성 단계 중단

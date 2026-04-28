@@ -1138,6 +1138,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 - 후속 조정(요청 반영):
   - 연결선(세로 가이드/분기 엘보우/팀 영역 점선 보더)은 제거하고, 들여쓰기 차이와 접기/펼치기 화살표 중심으로 계층을 표현
   - DM/채널 멤버 추가 모달까지 동일하게 적용되도록 `.org-tree-embedded .ech-tree-line` 숨김 처리 및 레거시 `.org-lvl-body` 보더 제거
+  - 우측 상단 조직도 전용 모달(`.orgchart-*`)은 별도 스타일 경로를 사용하므로 본부/팀 들여쓰기를 추가 보정(`.orgchart-div-block`, `.orgchart-div-teams`, `.orgchart-team-btn` 패딩/여백 확대)
 - 기대 효과:
   - 본부와 팀의 레벨이 동일한 깊이로 보이던 문제를 완화
   - 조직 트리에서 부모-자식 관계를 빠르게 식별 가능
