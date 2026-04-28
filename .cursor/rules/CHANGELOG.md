@@ -2,9 +2,18 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-04-28
+
+### Changed
+- **Electron 절전 재개 복구 강화**: `powerMonitor` 이벤트를 `resume`뿐 아니라 `unlock-screen`까지 수신해 렌더러 복구 훅 누락을 줄임.
+- **재개 후 네트워크 고착 대응**: 렌더러 `setupElectronSystemResumeRecovery`에서 `/api/auth/me` 도달성 재시도 후(0/0.4/1.2/2.4s) 실패 시 `location.reload()`로 강제 복구.
+- **재개 후 실시간 재초기화**: 소켓 `connect()` 재사용 대신 `initSocket()` 재생성으로 Manager 상태 꼬임을 줄이고, 중복 실행 방지 플래그(`electronResumeRecoveryBound`/`electronResumeRecoveryInFlight`)를 추가.
+
 ## 2026-04-27
 
 ### Changed
+- 로그인/AD 자동 로그인 직후 `/api/auth/me`로 사용자 정보를 보강(hydrate)한 뒤 메인 화면을 렌더링하도록 `frontend/app.js`를 수정해, 좌측 하단 본인 아바타가 첫 진입 시에도 프로필 이미지로 즉시 표시되도록 개선.
+- 프로필 모달 히어로 아바타(`.ech-profile-hero .profile-avatar-lg`)의 사진 표시 규칙을 별도 조정(`background-size: 122%`, `background-position: center 34%`)해, 정사각형 업로드 이미지가 원형 프레임 안을 더 꽉 채워 보이도록 개선.
 - 실시간 `message:new` 수신 직후 메시지 아바타 렌더링 시, 메시지 payload에 프로필 플래그가 누락되어도 채널 멤버 아바타 캐시(`activeChannelMemberAvatarByEmployeeNo`)를 fallback으로 사용하도록 `frontend/app.js`를 보강해 프로필 이미지가 채팅방 재진입 없이 즉시 보이도록 수정.
 - 기존 1:1 DM 재사용 판별 로직을 요청자 기준 채널 조회로 보강해, 이미 대화방이 있는 상대에게 새 1:1 DM이 중복 생성되던 케이스를 방지 (`ChannelService.findExistingOneToOneDm` 개선).
 - 1:1 DM 중복 생성 방지 회귀 테스트를 `ChannelApiTest`에 추가해 동일 상대 재요청 시 기존 `channelId` 재사용을 검증.
@@ -18,6 +27,9 @@
 - 다크 테마에서 채팅 배경 대비를 높이기 위해 상대/내 메시지 말풍선의 배경·테두리·그림자를 강화하고, 이미지 썸네일/파일 첨부 카드에 테두리·음영을 추가해 배경과 메시지·이미지 영역 구분이 명확해지도록 조정.
 - 사용자 제공 새 로고 이미지로 데스크톱 앱 아이콘 에셋(`desktop/assets/icon-source-cs.png`, `desktop/assets/icon.png`)을 교체하고, Windows용 `desktop/assets/icon.ico`를 재생성.
 - 릴리즈 버전을 `1.2.8`로 상향(`backend/build.gradle`, `desktop/package.json`)하고 배포 산출물 생성을 위한 백엔드 JAR/데스크톱 EXE 빌드 기준 버전을 동기화.
+- 프로그램 아이콘의 외곽 흰 배경이 남지 않도록 아이콘 빌드 파이프라인(`npm run icon:build`)으로 투명 배경 트리밍을 다시 적용해, 검은 CS 사각형 영역만 아이콘으로 사용하도록 `icon.png`/`icon.ico`를 재생성.
+- 아이콘 배경 제거 로직을 가장자리 연결 영역만 투명화하는 flood-fill 방식으로 개선(`desktop/scripts/build-desktop-icon.mjs`)해, 외곽 흰 여백만 제거하고 내부 `CS` 흰 글자는 유지되도록 보정.
+- Windows 작업표시줄 품질 개선을 위해 `icon.ico`를 단일 256 크기에서 다중 크기(16/24/32/40/48/64/128/256) 프레임으로 생성하도록 `desktop/scripts/generate-icon-ico.mjs`를 개선.
 
 ## 2026-04-16
 
@@ -1338,3 +1350,20 @@
 - `GET /api/channels/{channelId}/files/upload-policy` API를 추가해 프론트에서 현재 `file.max-size-mb` 설정값을 사용하도록 연동
 - 배포 버전을 `1.2.6`으로 상향 (`backend/build.gradle`, `desktop/package.json`, `desktop/package-lock.json`)
 - 문서/화면의 현재 배포 기준 버전 표기를 `1.2.6` (`v1.2.6`)으로 갱신 (`README.md`, `docs/DEVELOPER_README.md`, `docs/ROADMAP.md`, `docs/HANDOVER.md`, `frontend/index.html`)
+
+## 2026-04-27
+
+### Changed
+- 우측 상단 조직도 버튼 팝업의 조직 트리(`.ech-tree-*`) 계층 표현을 개선해 본부/팀 들여쓰기 차이를 확대
+- 회사 하위 그룹 라인(`.ech-tree-co-children::before`)과 분기 엘보우 라인(`.ech-tree-line--branch::after`)을 추가해 부모-자식 관계를 명확화
+- 본부 접기/펼치기 화살표(`.ech-tree-summary::before`)를 추가하고 팀 묶음 보더를 점선으로 조정해 하위 조직 인지성을 강화
+- 관련 상세 문서(`docs/FEATURE_SPEC.md`, `docs/HANDOVER.md`)에 조직도 트리 UI 개선 내용을 반영
+- 사용자 피드백에 따라 조직도 트리 연결선(세로 가이드/분기 엘보우/팀 점선 보더)을 제거하고, 들여쓰기와 토글 화살표 중심의 계층 표현으로 단순화
+- DM/채널 멤버 추가 조직도 모달에서도 연결선이 남지 않도록 `.org-tree-embedded .ech-tree-line`을 숨기고 레거시 `.org-lvl-body`의 좌측 보더를 제거
+- Electron Windows 타이틀바를 `titleBarOverlay` 기반으로 전환해 앱 테마(`dark/light/ocean/cream`) 변경 시 상단 창 프레임 색상도 함께 동기화
+- 다크/오션 계열에서는 타이틀바 텍스트(앱명·버전) 및 창 컨트롤 아이콘 색상을 흰색으로 고정해 가독성을 개선
+- `frontend/app.js` `applyTheme()`에서 `electronAPI.syncWindowTheme` IPC를 호출하도록 연결해 테마 변경 즉시 타이틀바에 반영
+- Windows 데스크톱 초기 로드 시에도 `localStorage`의 현재 테마를 메인 프로세스가 읽어 타이틀바 오버레이를 즉시 동기화하도록 보정해, 우측 컨트롤 영역 색이 늦게 맞거나 어색하게 보이던 문제를 완화
+- 사용자 피드백에 따라 `titleBarOverlay` 방식은 제거하고 Windows **네이티브 타이틀바**를 유지하도록 되돌렸으며, 테마 동기화는 `nativeTheme.themeSource`(dark/light)로 처리해 상단바가 본문과 분리되어 보이던 문제를 해소
+- 좌측 하단/상단 본인 아바타는 `profileImagePresent` 플래그가 false여도 `/api/users/profile-image`를 1회 강제 조회해 실제 이미지가 있으면 즉시 사진 아바타로 복구하도록 보강
+- 상대방 아바타 지연을 줄이기 위해 프로필 이미지 blob URL 요청에 in-flight 캐시를 추가해 동일 키(`employeeNo:version`) 중복 요청을 제거하고, 채널 멤버 로드 직후 이미지 보유 멤버를 선로딩하도록 개선

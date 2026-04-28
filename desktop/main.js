@@ -8,6 +8,7 @@ const {
   Menu,
   Tray,
   nativeImage,
+  nativeTheme,
   Notification,
   shell,
   dialog,
@@ -62,6 +63,14 @@ function readCstalkServerJson() {
 let mainWindow = null;
 /** @type {Tray | null} */
 let tray = null;
+
+function syncNativeWindowTheme(theme) {
+  if (process.platform !== "win32") return false;
+  const t = String(theme || "").trim().toLowerCase();
+  const isDarkTone = t === "dark" || t === "ocean";
+  nativeTheme.themeSource = isDarkTone ? "dark" : "light";
+  return true;
+}
 
 function showMainWindow() {
   if (!mainWindow) return;
@@ -171,6 +180,7 @@ function createMainWindow() {
     width: 1400,
     height: 900,
     show: true,
+    backgroundColor: "#0f172a",
     ...(iconPath ? { icon: iconPath } : {}),
     webPreferences: {
       contextIsolation: true,
@@ -198,6 +208,24 @@ function createMainWindow() {
       mainWindow.setTitle(getWindowTitle());
     } catch {
       /* ignore */
+    }
+    if (process.platform === "win32") {
+      // 초기 렌더에서도 저장 테마를 읽어 타이틀바를 즉시 맞춘다.
+      void mainWindow.webContents
+        .executeJavaScript(
+          "(function(){try{return localStorage.getItem('ech_theme')||'dark';}catch{return 'dark';}})();",
+          true,
+        )
+        .then((theme) => {
+          try {
+            syncNativeWindowTheme(theme);
+          } catch {
+            /* ignore */
+          }
+        })
+        .catch(() => {
+          /* ignore */
+        });
     }
   });
 
@@ -301,6 +329,16 @@ ipcMain.handle("ech-set-open-at-login", (_, enabled) => {
     return true;
   } catch (e) {
     console.warn("[CSTalk] ech-set-open-at-login failed:", e?.message || e);
+    return false;
+  }
+});
+
+/** Windows 네이티브 타이틀바 색 모드를 앱 테마와 동기화한다. */
+ipcMain.handle("ech-sync-window-theme", (_, theme) => {
+  try {
+    return syncNativeWindowTheme(theme);
+  } catch (e) {
+    console.warn("[CSTalk] ech-sync-window-theme failed:", e?.message || e);
     return false;
   }
 });
@@ -438,7 +476,7 @@ app.whenReady().then(() => {
   createTray();
   setupAutoUpdater();
   try {
-    powerMonitor.on("resume", () => {
+    const notifyRendererResume = () => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         try {
           mainWindow.webContents.send("ech-system-resume");
@@ -446,7 +484,10 @@ app.whenReady().then(() => {
           /* ignore */
         }
       }
-    });
+    };
+    powerMonitor.on("resume", notifyRendererResume);
+    // 일부 Windows 환경에서는 unlock-screen만 오거나 순서가 다를 수 있어 함께 처리한다.
+    powerMonitor.on("unlock-screen", notifyRendererResume);
   } catch (e) {
     console.warn("[CSTalk] powerMonitor resume:", e?.message || e);
   }

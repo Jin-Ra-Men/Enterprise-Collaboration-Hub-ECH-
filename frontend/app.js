@@ -94,6 +94,16 @@ function syncThemeOptions() {
   });
 }
 
+function syncDesktopWindowTheme(theme) {
+  try {
+    const api = window.electronAPI;
+    if (!api || typeof api.syncWindowTheme !== "function") return;
+    void api.syncWindowTheme(theme);
+  } catch (e) {
+    /* ignore */
+  }
+}
+
 function applyTheme(theme, { persistLocal = true } = {}) {
   const t = VALID_THEMES.includes(theme) ? theme : "dark";
   if (t === "dark") {
@@ -109,6 +119,7 @@ function applyTheme(theme, { persistLocal = true } = {}) {
     }
   }
   syncThemeOptions();
+  syncDesktopWindowTheme(t);
 }
 
 function initTheme() {
@@ -223,6 +234,10 @@ function displayNameForDmChannelById(channelId, fallbackName) {
 let socket         = null;
 /** Electron 절전 재개 직후 `socket.disconnect()` 시 시스템 줄(연결 끊김) 스팸 방지 */
 let suppressSocketDisconnectSystemMsg = false;
+/** Electron 절전 재개 훅 중복 바인딩 방지 */
+let electronResumeRecoveryBound = false;
+/** 절전 재개 복구 동시 실행 방지 */
+let electronResumeRecoveryInFlight = false;
 let currentUser    = null;
 let activeChannelId = null;
 let activeChannelType = null; // PUBLIC / PRIVATE / DM
@@ -367,6 +382,7 @@ let profileViewEmployeeNo = null;
 /** "sidebar" | "default" — 좌측 하단에서 연 본인 프로필만 사진 변경 UI 표시 */
 let profileModalEntry = "default";
 const profileImageBlobUrlCache = new Map();
+const profileImageBlobUrlInFlight = new Map();
 /** employeeNo → { hasImage, version } — 채널 멤버 목록 API 기준 */
 const activeChannelMemberAvatarByEmployeeNo = new Map();
 /** 워크플로우 모달 상태 */
@@ -530,6 +546,20 @@ function clearSession() {
   sessionStorage.removeItem(USER_KEY);
   revokeImageAttachmentBlobUrls();
   composerDraftByChannelId.clear();
+}
+
+async function hydrateUserFromMe(token, baseUser) {
+  if (!token) return baseUser;
+  try {
+    const res = await apiFetch("/api/auth/me");
+    if (!res.ok) return baseUser;
+    const json = await res.json().catch(() => ({}));
+    const me = json?.data;
+    if (!me || typeof me !== "object") return baseUser;
+    return { ...baseUser, ...me };
+  } catch {
+    return baseUser;
+  }
 }
 
 function mentionInboxStorageKey() {
@@ -2450,12 +2480,21 @@ async function getProfileImageObjectUrl(employeeNo, version, hasImage) {
   const v = Number(version) || 0;
   const key = `${emp}:${v}`;
   if (profileImageBlobUrlCache.has(key)) return profileImageBlobUrlCache.get(key);
-  const res = await apiFetch(`/api/users/profile-image?employeeNo=${encodeURIComponent(emp)}`);
-  if (!res.ok) return null;
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  profileImageBlobUrlCache.set(key, url);
-  return url;
+  if (profileImageBlobUrlInFlight.has(key)) return profileImageBlobUrlInFlight.get(key);
+  const task = (async () => {
+    const res = await apiFetch(`/api/users/profile-image?employeeNo=${encodeURIComponent(emp)}`);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    profileImageBlobUrlCache.set(key, url);
+    return url;
+  })();
+  profileImageBlobUrlInFlight.set(key, task);
+  try {
+    return await task;
+  } finally {
+    profileImageBlobUrlInFlight.delete(key);
+  }
 }
 
 function invalidateProfileImageBlobCacheFor(employeeNo) {
@@ -2468,6 +2507,30 @@ function invalidateProfileImageBlobCacheFor(employeeNo) {
       profileImageBlobUrlCache.delete(k);
     }
   }
+  for (const k of [...profileImageBlobUrlInFlight.keys()]) {
+    if (k.startsWith(prefix)) {
+      profileImageBlobUrlInFlight.delete(k);
+    }
+  }
+}
+
+function warmProfileImageCacheForMembers(members) {
+  const targets = [];
+  const seen = new Set();
+  (Array.isArray(members) ? members : []).forEach((m) => {
+    const emp = String(m?.employeeNo || "").trim();
+    if (!emp || seen.has(emp)) return;
+    const hasImage = !!m?.profileImagePresent;
+    if (!hasImage) return;
+    seen.add(emp);
+    const version = Number(m?.profileImageVersion) || 0;
+    targets.push({ emp, version });
+  });
+  if (!targets.length) return;
+  // 채널 진입 직후 보이는 아바타(멤버 목록/메시지 발신자)를 빠르게 표시하기 위해 선로딩.
+  void Promise.allSettled(
+    targets.map((t) => getProfileImageObjectUrl(t.emp, t.version, true)),
+  );
 }
 
 function applyAvatarPhotoToButton(btn, { employeeNo, name, hasImage, version }) {
@@ -2522,6 +2585,35 @@ function applyAvatarPhotoToSurface(el, { employeeNo, name, hasImage, version }) 
   })();
 }
 
+function forceApplyAvatarPhotoByUrl(target, url, name) {
+  if (!target || !url) return;
+  target.dataset.avatarName = String(name || "").trim() || "?";
+  target.textContent = "";
+  target.classList.add("ech-avatar--photo");
+  target.style.backgroundImage = `url("${url}")`;
+}
+
+async function ensureSelfAvatarPhotoFallback(user) {
+  if (!user) return;
+  const emp = String(user.employeeNo || "").trim();
+  if (!emp) return;
+  const name = String(user.name || "").trim() || "?";
+  const ver = Number(user.profileImageVersion) || 0;
+  const url = await getProfileImageObjectUrl(emp, ver, true);
+  if (!url) return;
+  const sb = document.getElementById("sidebarAvatar");
+  const h = document.getElementById("appHeaderAvatar");
+  forceApplyAvatarPhotoByUrl(sb, url, name);
+  forceApplyAvatarPhotoByUrl(h, url, name);
+  // 로그인 응답에 profileImagePresent 누락/오류인 경우에도 세션 상태를 바로 보정한다.
+  if (!user.profileImagePresent) {
+    user.profileImagePresent = true;
+    const token = getToken();
+    const prev = getUser() || {};
+    if (token) saveSession(token, { ...prev, profileImagePresent: true });
+  }
+}
+
 function wireMsgRowAvatar(div, emp, senderName, msg) {
   const btn = div.querySelector(".msg-avatar.msg-user-trigger");
   if (!btn) return;
@@ -2539,6 +2631,10 @@ function applySelfAvatarPhotos(user) {
   if (sb) applyAvatarPhotoToButton(sb, { employeeNo: emp, name: user.name, hasImage: has, version: ver });
   const h = document.getElementById("appHeaderAvatar");
   if (h) applyAvatarPhotoToButton(h, { employeeNo: emp, name: user.name, hasImage: has, version: ver });
+  if (!has) {
+    // 플래그가 틀린 데이터라도 실제 이미지가 있으면 하단/상단 아바타를 즉시 복구.
+    void ensureSelfAvatarPhotoFallback(user);
+  }
 }
 
 /* ==========================================================================
@@ -2688,7 +2784,8 @@ loginForm.addEventListener("submit", async (e) => {
       return;
     }
     const { token, ...user } = json.data;
-    saveSession(token, user);
+    const hydratedUser = await hydrateUserFromMe(token, user);
+    saveSession(token, hydratedUser);
     try {
       const rememberEl = document.getElementById("loginRememberId");
       if (rememberEl?.checked) {
@@ -2701,7 +2798,7 @@ loginForm.addEventListener("submit", async (e) => {
     } catch (e) {
       /* ignore */
     }
-    showMain(user);
+    showMain(hydratedUser);
   } catch {
     showLoginError("서버에 연결할 수 없습니다.");
   } finally {
@@ -3658,6 +3755,7 @@ async function loadChannelMembers(channelId) {
       activeDmPeerEmployeeNos = [];
     }
     updateChatHeaderDmPresence();
+    warmProfileImageCacheForMembers(members);
 
     const listEl = document.getElementById("memberList");
     listEl.innerHTML = "";
@@ -10465,28 +10563,65 @@ async function runSearch(q, type) {
  * 기타 이벤트
  * ========================================================================== */
 function setupElectronSystemResumeRecovery() {
+  if (electronResumeRecoveryBound) return;
   if (typeof window.electronAPI?.onSystemResume !== "function") return;
-  window.electronAPI.onSystemResume(() => {
+  electronResumeRecoveryBound = true;
+  window.electronAPI.onSystemResume(async () => {
+    if (electronResumeRecoveryInFlight) return;
+    electronResumeRecoveryInFlight = true;
     console.warn("[CSTalk] System resume (Electron) — refreshing REST + realtime");
-    if (!currentUser) return;
-    try {
-      if (socket) {
-        suppressSocketDisconnectSystemMsg = true;
-        socket.disconnect();
-        setTimeout(() => {
-          try {
-            socket.connect();
-          } catch (e) {
-            console.warn("[CSTalk] socket.connect after resume failed", e);
-          }
-        }, 120);
-      }
-    } catch (e) {
-      console.warn("[CSTalk] socket recovery after resume", e);
+    if (!currentUser) {
+      electronResumeRecoveryInFlight = false;
+      return;
     }
-    void loadMyChannels();
-    scheduleSidebarAndPresenceSync();
-    void recoverActiveChannelTimelineIfNeeded("electron-resume");
+    const token = getToken();
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const retryDelays = [0, 400, 1200, 2400];
+    let apiReachable = false;
+    for (const delayMs of retryDelays) {
+      if (delayMs > 0) await sleepMs(delayMs);
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/me`, {
+          method: "GET",
+          headers,
+          cache: "no-store",
+        });
+        // 401/403도 "서버 도달 가능"으로 본다(세션 문제이지 네트워크 고착은 아님).
+        if (res.ok || res.status === 401 || res.status === 403) {
+          apiReachable = true;
+          break;
+        }
+      } catch {
+        // keep retrying
+      }
+    }
+    if (!apiReachable) {
+      console.warn("[CSTalk] resume recovery: API unreachable, forcing renderer reload");
+      try {
+        location.reload();
+      } catch {
+        /* ignore */
+      } finally {
+        electronResumeRecoveryInFlight = false;
+      }
+      return;
+    }
+    try {
+      try {
+        if (socket?.connected) {
+          suppressSocketDisconnectSystemMsg = true;
+          socket.disconnect();
+        }
+        initSocket();
+      } catch (e) {
+        console.warn("[CSTalk] socket recovery after resume", e);
+      }
+      await loadMyChannels();
+      scheduleSidebarAndPresenceSync();
+      await recoverActiveChannelTimelineIfNeeded("electron-resume");
+    } finally {
+      electronResumeRecoveryInFlight = false;
+    }
   });
 }
 
@@ -10668,8 +10803,9 @@ async function tryAdAutoLogin() {
       return false;
     }
     const { token, ...user } = json.data;
-    saveSession(token, user);
-    showMain(user);
+    const hydratedUser = await hydrateUserFromMe(token, user);
+    saveSession(token, hydratedUser);
+    showMain(hydratedUser);
     return true;
   } catch (e) {
     console.warn("[CSTalk] AD 자동 로그인 오류:", e?.message || e);

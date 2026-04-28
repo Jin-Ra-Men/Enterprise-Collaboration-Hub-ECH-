@@ -696,6 +696,7 @@
   - `GET /api/users/profile?userId=` — 동일(숫자 사용자 ID, 호환)
   - 프로필 내용: 이름·사원번호·이메일·부서·직급; 직위(`jobPosition`)·직책(`jobTitle`)은 값이 있을 때만 모달에 표시. **DM 보내기**로 DM 채널 생성·입장. 응답에 `role`/`status`가 있어도 프로필 모달에는 표시하지 않음
   - **프로필 사진**: 응답에 `profileImagePresent`, `profileImageVersion`(캐시 무효화용 epoch ms). 이미지 바이너리는 `GET /api/users/profile-image?employeeNo=`(인증 필요, 프론트는 blob URL). 저장 경로는 파일 스토리지 루트 하위 **`user-profiles/`** 에 `사번기반파일명.확장자`. 업로드 한도 **3MB**. 본인 변경은 `POST /api/users/me/profile-image`(multipart `file`, `app.allow-user-profile-self-upload`가 false이면 403), 관리자는 `POST /api/admin/users/{employeeNo}/profile-image`. **본인 사진 편집 UI**는 좌측 하단 프로필(사이드바 아바타·헤더 아바타·웰컴「내 프로필」)으로 연 모달에서만 표시; 채팅 등 다른 경로로 본인 프로필을 열면 편집 버튼 숨김.
+  - 아바타 로딩 최적화: 동일 사용자·버전 키(`employeeNo:profileImageVersion`)의 이미지 요청은 in-flight Promise를 공유해 중복 요청을 제거한다. 채널 멤버 목록 로드 직후 `profileImagePresent=true` 멤버는 blob URL 캐시를 선로딩해 접속 직후 상대방 아바타 지연을 줄인다.
   - `GET /api/users/{userId}/profile` — 동일(경로형, 하위 호환)
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:
@@ -977,7 +978,11 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 ## 데스크톱 (Electron) 절전 재개 복구
 - **배경**: 장시간 절전 후 재개 시 Electron(Chromium)에서 **REST `fetch`·Socket.io** 가 “죽은 연결”처럼 남아, 같은 서버라도 **브라우저 탭**에서는 정상인데 **데스크톱만** 메시지·워크플로·조직도 등 API가 실패하는 현상이 날 수 있음(`navigator.onLine`·프레즌스 UI와 불일치 가능).
-- **처리**: `desktop/main.js` `powerMonitor.on("resume")` → 렌더러로 `ech-system-resume` IPC → `preload` `electronAPI.onSystemResume` → `frontend/app.js` `setupElectronSystemResumeRecovery`: `loadMyChannels`, `scheduleSidebarAndPresenceSync`, `recoverActiveChannelTimelineIfNeeded("electron-resume")`, Socket.io **수동** `disconnect` 후 `connect` 재시도. 재연결 직전 끊김은 `suppressSocketDisconnectSystemMsg`로 채팅 시스템 줄 스팸을 막음.
+- **처리**: `desktop/main.js` `powerMonitor.on("resume" | "unlock-screen")` → 렌더러 `ech-system-resume` IPC → `preload` `electronAPI.onSystemResume` → `frontend/app.js` `setupElectronSystemResumeRecovery`.
+  - 재개 직후 `/api/auth/me` 도달성 체크를 짧은 백오프로 재시도(0/0.4/1.2/2.4s)한다.
+  - 도달 실패가 지속되면 `location.reload()`로 렌더러를 강제 새로고침해 고착된 HTTP 연결 상태를 초기화한다.
+  - 도달 성공 시 `loadMyChannels`, `scheduleSidebarAndPresenceSync`, `recoverActiveChannelTimelineIfNeeded("electron-resume")`를 실행하고, Socket.io는 `connect` 재사용이 아니라 `initSocket()`으로 완전 재초기화한다.
+  - 재초기화 직전 끊김은 `suppressSocketDisconnectSystemMsg`로 채팅 시스템 줄 스팸을 막고, `electronResumeRecoveryBound`/`electronResumeRecoveryInFlight`로 중복 복구를 방지한다.
 
 ---
 
@@ -985,6 +990,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 - 목적: 설치형(NSIS) 클라이언트가 GitHub Releases(또는 내부망 generic 피드)에서 새 버전을 감지·내려받고, **다운로드 완료 시 메인 창에 모달**(`modalAppUpdate`)로 안내 — **확인** 시 `quitAndInstall`로 즉시 설치·재시작. **나중에**는 모달만 닫고, 이후 트레이에서 종료 시 `autoInstallOnAppQuit`로 적용 가능
 - 사용자: Windows에 CSTalk 데스크톱을 설치한 사용자
 - 관련 화면/경로: `desktop/main.js` — 메인 창 제목에 `app.getVersion()` 표시(`did-finish-load` 후 `setTitle`), 트레이 툴팁에도 `CSTalk v{version}`. 패키지 실행(`app.isPackaged`) 시에만 `electron-updater` 초기화
+- 타이틀바 테마 동기화: Windows 창은 `titleBarStyle: "hidden"` + `titleBarOverlay`를 사용하고, 렌더러 `applyTheme()`에서 IPC `ech-sync-window-theme`를 호출해 오버레이 색상/아이콘 색을 즉시 반영한다. `dark`·`ocean`은 어두운 배경 + 흰색(`symbolColor: #fff`), `light`·`cream`은 밝은 배경 + 어두운 아이콘으로 유지한다.
 - 관련 API: GitHub Releases API(런타임) — `GET https://github.com/{owner}/{repo}/releases/latest` 계열로 메타 조회; 실제 파일은 릴리즈 에셋
 - 관련 Socket 이벤트: 해당 없음
 - 입력/출력:
@@ -1114,3 +1120,23 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - 파일 선택(`fileInput`), 붙여넣기, 드래그 앤 드롭, 스레드 첨부 선택 이벤트에서 업로드 정책을 먼저 조회
   - 허용 용량 초과 파일은 첨부 큐/미리보기에 넣지 않고 즉시 시스템 메시지로 안내
   - 허용 파일만 기존 첨부 큐에 반영
+
+---
+
+## 조직도 멤버 선택 트리 계층 가시성 개선 (2026-04-27)
+- 목적: 우측 상단 조직도 버튼으로 여는 멤버 선택 팝업에서 팀이 하위 조직임을 시각적으로 더 명확하게 표시
+- 관련 경로:
+  - `frontend/app.js` (`renderOrgTreeLeft`의 레벨 클래스 구조 활용)
+  - `frontend/styles.css` (`.ech-tree-*` 스타일)
+- 변경 사항:
+  - 회사/본부/팀 레벨별 좌측 여백을 분리해 들여쓰기 차이를 확대
+  - 회사 하위 영역(`.ech-tree-co-children`)에 세로 가이드 라인 추가
+  - 본부/팀 행의 분기 라인(`.ech-tree-line--branch`)에 엘보우(가로 연결선) 추가
+  - 본부 `summary`에 접기/펼치기 화살표를 표시해 트리 구조 인지성 강화
+  - 팀 목록 영역(`.ech-tree-div-body`) 보더를 점선으로 조정해 하위 묶음 경계를 명확화
+- 후속 조정(요청 반영):
+  - 연결선(세로 가이드/분기 엘보우/팀 영역 점선 보더)은 제거하고, 들여쓰기 차이와 접기/펼치기 화살표 중심으로 계층을 표현
+  - DM/채널 멤버 추가 모달까지 동일하게 적용되도록 `.org-tree-embedded .ech-tree-line` 숨김 처리 및 레거시 `.org-lvl-body` 보더 제거
+- 기대 효과:
+  - 본부와 팀의 레벨이 동일한 깊이로 보이던 문제를 완화
+  - 조직 트리에서 부모-자식 관계를 빠르게 식별 가능

@@ -44,6 +44,7 @@
 - **단일 인스턴스·아이콘**: `main.js`에서 `app.requestSingleInstanceLock()`으로 중복 실행을 막고, 재실행 시 기존 창 포커스. Windows는 EXE/작업 표시줄에 **`assets/icon.ico`** 임베드가 안정적이며, `prebuild:win`(`scripts/generate-icon-ico.mjs`)이 `icon.png`에서 ICO를 생성한다. 런타임은 Windows에서 `.ico`를 우선 로드하고 `app.setAppUserModelId('com.ech.desktop')`를 설정한다.
 - **Windows 시작 시 실행**: 설치본에서 트레이 **우클릭** → **Windows 시작 시 실행**(`app.setLoginItemSettings`). 개발 모드에서는 비활성. `preload`에 `getOpenAtLogin` / `setOpenAtLogin`(웹 UI 연동 선택).
 - **설치 경로(NSIS)**: `package.json` `build.nsis.perMachine: true` — 기본 **`%PROGRAMFILES%\CSTalk\`**. `cstalk-server.json`은 exe 옆 또는 **`%ProgramData%\CSTalk\cstalk-server.json`** (`readCstalkServerJson` 순서, 구 `ech-server.json` 경로 호환).
+- **타이틀바 테마 동기화(Windows)**: 창 옵션은 `titleBarStyle: "hidden"` + `titleBarOverlay` 사용. 프론트 `applyTheme()`가 `electronAPI.syncWindowTheme` IPC를 호출해 테마 변경 즉시 상단 창 프레임 색상을 바꾼다. `dark/ocean`에서는 앱명·버전 텍스트 및 창 컨트롤 아이콘을 흰색으로 유지해 가독성을 보장한다.
 
 ## 2-1) 개발자 / 운영·관리자 — 무엇부터 보면 되나
 - **개발자**
@@ -62,7 +63,12 @@
 ## 3-0-3) 프론트 UX 메모 (2026-04-06)
 - **DM 채팅 헤더**: `#chatChannelPrefix`는 DM일 때 멤버 로드 후 상대(그룹 DM은 최대 3명 + `+N`) **프레즌스 점**을 사이드바 DM과 동일 규칙으로 표시(`frontend/app.js` `updateChatHeaderDmPresence`, `dmSidebarLeadingHtml`).
 - **본인 전용 DM(나에게 쓰기)**: 목록·퀵레일·글로벌 탑바·워크플로 맥락의 표시명은 **본인 이름**으로 1:1 DM과 같은 패턴(`displayNameForDmChannel`). API `dmPeerEmployeeNos`는 조회자 제외로 비어 있을 수 있어, 프론트 `dmPeerEmployeeNosForPresence`로 본인 사번을 넣어 사이드바·탑바 프레즌스 점을 그린다. 백엔드 `ChannelService`는 단일 멤버 DM 생성·목록 요약에서 표시 라벨을 본인 이름으로 맞춘다.
-- **Electron 절전 재개**: `desktop/main.js` `powerMonitor.on("resume")` → `webContents.send("ech-system-resume")` → `preload` `electronAPI.onSystemResume` → `frontend/app.js` `setupElectronSystemResumeRecovery`에서 `loadMyChannels`·`scheduleSidebarAndPresenceSync`·`recoverActiveChannelTimelineIfNeeded("electron-resume")` 및 Socket.io 수동 재연결(시스템 줄 스팸 방지용 `suppressSocketDisconnectSystemMsg`). 브라우저 탭 복귀와 달리 데스크톱은 장시간 절전 후 HTTP/WS 고착이 있어 별도 처리.
+- **아바타 체감 속도 개선(2026-04-27)**: 프론트 `getProfileImageObjectUrl`는 `employeeNo:profileImageVersion` 단위 in-flight Promise를 캐시해 동일 이미지 요청을 합친다. `loadChannelMembers` 직후 `profileImagePresent=true` 멤버를 선로딩(`warmProfileImageCacheForMembers`)해 채널 접속 시 상대방 프로필 이미지가 늦게 뜨는 현상을 줄인다.
+- **Electron 절전 재개**: `desktop/main.js` `powerMonitor.on("resume" | "unlock-screen")` → `webContents.send("ech-system-resume")` → `preload` `electronAPI.onSystemResume` → `frontend/app.js` `setupElectronSystemResumeRecovery`.
+  - `/api/auth/me` 도달성 재시도(0/0.4/1.2/2.4s) 후 실패 지속 시 `location.reload()` 강제 새로고침.
+  - 도달 성공 시 `loadMyChannels`·`scheduleSidebarAndPresenceSync`·`recoverActiveChannelTimelineIfNeeded("electron-resume")` 수행.
+  - Socket.io는 `initSocket()` 재생성으로 복구(단순 `connect` 재사용 대신), 시스템 줄 스팸 방지용 `suppressSocketDisconnectSystemMsg`, 중복 방지용 `electronResumeRecoveryBound`/`electronResumeRecoveryInFlight` 사용.
+  - 브라우저 탭 복귀와 달리 데스크톱은 장시간 절전 후 HTTP/WS 고착이 있어 별도 처리.
 - **DM 멤버 패널**: DM에서는 채널 생성자에 대한 `관리자` 배지와 멤버 `내보내기` 버튼을 표시하지 않는다(`loadChannelMembers`). PUBLIC/PRIVATE 채널 멤버 패널은 기존과 동일.
 - **이미지 다운로드**: 약 **512KB 이상**·GIF/SVG 제외 시 원본 vs JPEG 압축 선택 모달; 압축은 브라우저에서 `GET .../download` blob → 캔버스(최대 변 4096px) 저장(서버 전용 압축 API 없음). **약 512KB 이상** 바이너리 수신 시 `ReadableStream`으로 읽으며 하단 **`#fileDownloadStatusBar`**에 진행 표시(`responseToBlobWithProgress`).
 - **데스크톱 GitHub 릴리즈 에셋 업로드**: 로컬에서 `cd desktop && npm run build:win` 후 `desktop/dist`에 `latest.yml`·`CSTalk-Setup-{version}.exe`·`.blockmap` 생성. `GITHUB_TOKEN`(repo releases 권한) 설정 뒤 `powershell -File ./tools/publish-electron-github-release.ps1 v1.2.6` — 태그·릴리즈 생성 및 에셋 업로드(`README.md`·`docs/DEVELOPER_README.md` 자동 업데이트 절차 참고).
@@ -599,3 +605,21 @@ Stop-Process -Id <PID> -Force
 - 결과:
   - 초과 파일은 미리보기 생성 전에 차단되고 시스템 메시지로 즉시 안내
   - 허용 파일만 `pendingFilesQueue` / `threadPendingFilesQueue`로 진입
+
+---
+
+## 조직도 트리 들여쓰기/계층선 개선 메모 (2026-04-27)
+- 대상 화면: 우측 상단 조직도 버튼으로 여는 멤버 선택 팝업(좌측 조직 트리)
+- 수정 파일: `frontend/styles.css`
+- 핵심 변경:
+  - `.ech-tree-row--lv2`, `.ech-tree-row--lv3`의 좌측 패딩을 키워 본부/팀 레벨 차이를 명확화
+  - `.ech-tree-co-children` 및 `::before`를 추가해 회사 하위 영역의 공통 세로 라인 표시
+  - `.ech-tree-line--branch::after`로 분기 엘보우 라인을 추가해 부모-자식 연결 시각화
+  - `.ech-tree-summary::before`로 접기/펼치기 화살표를 제공(닫힘 상태 회전)
+  - `.ech-tree-div-body`를 점선 보더로 조정해 팀 묶음 경계를 구분
+- 후속 요청 반영:
+  - 연결선이 과하다는 피드백에 따라 세로/분기/점선 라인을 제거하고, 들여쓰기와 토글 화살표만 유지
+  - 추가 피드백으로 DM/채널 멤버 추가 모달에서도 선이 보이지 않도록 `.org-tree-embedded .ech-tree-line { display: none; }` 적용, 레거시 `.org-lvl-body`의 `border-left` 제거
+- 운영 참고:
+  - 트리 구조 자체(`renderOrgTreeLeft`)는 변경하지 않았고 클래스 기반 스타일만 수정함
+  - 이후 레벨이 추가될 경우(`lv4` 등) 동일 규칙(패딩 증가 + 브랜치 라인)을 확장 적용 가능
