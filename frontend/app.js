@@ -74,6 +74,7 @@ const MESSAGE_LOAD_MAX_RETRIES = 5;
 /** 전체 REST 공통 재시도 횟수(GET/HEAD 한정) */
 const API_FETCH_MAX_RETRIES = 3;
 const API_FETCH_RETRY_BASE_DELAY_MS = 350;
+const API_FETCH_TIMEOUT_MS = 12000;
 /** 연속 네트워크/서버 실패가 누적되면 전역 복구 루틴을 트리거한다. */
 const NETWORK_RECOVERY_TRIGGER_FAILURES = 3;
 const NETWORK_RECOVERY_COOLDOWN_MS = 15000;
@@ -265,6 +266,7 @@ let electronResumeRecoveryInFlight = false;
 let apiConsecutiveFailureCount = 0;
 let networkRecoveryInFlight = false;
 let lastNetworkRecoveryAt = 0;
+let authRecoveryInFlight = false;
 let currentUser    = null;
 let activeChannelId = null;
 let activeChannelType = null; // PUBLIC / PRIVATE / DM
@@ -762,19 +764,31 @@ async function apiFetch(path, opts = {}) {
   const retryableMethod = method === "GET" || method === "HEAD";
   const maxRetries = retryableMethod ? API_FETCH_MAX_RETRIES : 0;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    let timeoutId = null;
     try {
-      const res = await fetch(`${API_BASE}${path}`, { ...opts, headers });
+      const requestOpts = { ...opts, headers };
+      if (!opts.signal && API_FETCH_TIMEOUT_MS > 0) {
+        const controller = new AbortController();
+        requestOpts.signal = controller.signal;
+        timeoutId = setTimeout(() => controller.abort("api-timeout"), API_FETCH_TIMEOUT_MS);
+      }
+      const res = await fetch(`${API_BASE}${path}`, requestOpts);
+      if (timeoutId) clearTimeout(timeoutId);
       if (!res.ok && shouldRetryApiFetchHttp(res.status) && attempt < maxRetries) {
         await sleepMs(Math.min(API_FETCH_RETRY_BASE_DELAY_MS * 2 ** attempt, 10000));
         continue;
       }
       if (res.ok) {
         noteApiRequestSuccess();
+      } else if (res.status === 401) {
+        noteApiRequestSuccess();
+        void triggerAuthRecovery("api-401");
       } else if (shouldRetryApiFetchHttp(res.status)) {
         noteApiRequestFailure(`http-${res.status}`);
       }
       return res;
     } catch (e) {
+      if (timeoutId) clearTimeout(timeoutId);
       if (attempt >= maxRetries) {
         noteApiRequestFailure("network-exception");
         throw e;
@@ -807,6 +821,22 @@ function noteApiRequestFailure(reason = "unknown") {
   }
 }
 
+async function triggerAuthRecovery(reason = "unknown") {
+  if (authRecoveryInFlight) return;
+  authRecoveryInFlight = true;
+  console.warn(`[CSTalk] auth recovery start: ${reason}`);
+  try {
+    clearSession();
+    const adOk = await tryAdAutoLogin();
+    if (!adOk) showLogin();
+  } catch (e) {
+    console.warn("[CSTalk] auth recovery failed", e?.message || e);
+    showLogin();
+  } finally {
+    authRecoveryInFlight = false;
+  }
+}
+
 async function triggerGlobalNetworkRecovery(reason = "unknown") {
   if (!currentUser) return;
   const now = Date.now();
@@ -827,9 +857,13 @@ async function triggerGlobalNetworkRecovery(reason = "unknown") {
           headers,
           cache: "no-store",
         });
-        if (res.ok || res.status === 401 || res.status === 403) {
+        if (res.ok || res.status === 403) {
           apiReachable = true;
           break;
+        }
+        if (res.status === 401) {
+          await triggerAuthRecovery("global-recovery-401");
+          return;
         }
       } catch {
         // retry

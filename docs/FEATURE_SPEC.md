@@ -985,6 +985,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - 도달 성공 시 `loadMyChannels`, `scheduleSidebarAndPresenceSync`, `recoverActiveChannelTimelineIfNeeded("electron-resume")`를 실행하고, Socket.io는 `connect` 재사용이 아니라 `initSocket()`으로 완전 재초기화한다.
   - 재초기화 직전 끊김은 `suppressSocketDisconnectSystemMsg`로 채팅 시스템 줄 스팸을 막고, `electronResumeRecoveryBound`/`electronResumeRecoveryInFlight`로 중복 복구를 방지한다.
   - 공통 네트워크 복구 계층: `apiFetch` GET/HEAD는 408/429/5xx·예외에 지수 백오프 재시도(기본 3회), 연속 실패 임계치 초과 시 `triggerGlobalNetworkRecovery`가 소켓·채널 목록·타임라인·열린 조직도/워크플로를 재동기화한다(`window.online`에서도 동일 루틴 호출).
+  - 런타임 인증 복구: `apiFetch`가 401을 받으면 `triggerAuthRecovery`가 세션을 정리하고 Electron AD 자동 로그인을 재시도(실패 시 로그인 화면 전환). 또한 공통 요청 타임아웃 12초를 적용해 장시간 반쯤 끊긴 연결 대기를 줄인다.
 
 ---
 

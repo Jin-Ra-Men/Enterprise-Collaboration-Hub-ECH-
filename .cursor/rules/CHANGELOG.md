@@ -9,6 +9,7 @@
 - **재개 후 네트워크 고착 대응**: 렌더러 `setupElectronSystemResumeRecovery`에서 `/api/auth/me` 도달성 재시도 후(0/0.4/1.2/2.4s) 실패 시 `location.reload()`로 강제 복구.
 - **재개 후 실시간 재초기화**: 소켓 `connect()` 재사용 대신 `initSocket()` 재생성으로 Manager 상태 꼬임을 줄이고, 중복 실행 방지 플래그(`electronResumeRecoveryBound`/`electronResumeRecoveryInFlight`)를 추가.
 - **전역 네트워크 복구 루틴 추가**: `apiFetch`(GET/HEAD) 공통 재시도(기본 3회) 및 408/429/5xx·예외 연속 실패(3회) 감지 시 `triggerGlobalNetworkRecovery`로 소켓 재초기화·채널/타임라인/열린 조직도·워크플로 데이터 재동기화. Electron에서 API 미도달 지속 시 렌더러 reload.
+- **런타임 인증/타임아웃 복구**: `apiFetch`에 요청 타임아웃(12s)과 401 감지 시 `triggerAuthRecovery`(세션 정리 후 AD 자동 로그인 재시도·실패 시 로그인 화면)를 추가해, 재기동 없이 야간 만료/고착 세션을 회복.
 - 커밋 과정에서 임시로 생성한 메시지 파일(`tools/commit_msg_auto.txt`)이 저장소에 포함된 문제를 후속 커밋에서 제거하도록 정리.
 
 ## 2026-04-27
@@ -1379,3 +1380,13 @@
 - 채널 통합 테스트에 레거시 내부명 1:1 DM 재생성 재사용 케이스를 추가해 회귀를 방지
 - 답글 카드가 사용자명/메시지 길이에 따라 폭이 달라 보이던 문제를 줄이기 위해, 내 메시지의 답글 행(`.msg-has-reply`)에서 본문 컨테이너 폭 기준을 고정해 `oo에게 답장` 영역이 일관된 폭으로 렌더링되도록 조정
 - 릴리즈 버전을 `1.2.10`으로 상향 (`backend/build.gradle`, `desktop/package.json`, `desktop/package-lock.json`)
+- AI 활용 중심 3분 발표용 슬라이드 초안을 `docs/AI_PPT_3MIN.md`로 추가
+- 3분 발표 흐름에 맞춘 시간대별 발표 대본을 `docs/AI_PPT_3MIN_SCRIPT.md`로 추가
+- 실제 발표용 PowerPoint 파일 `docs/AI_PPT_3MIN.pptx`를 생성
+- PPT 자동 생성을 위한 스크립트 `tools/generate_ai_ppt_3min.py`를 추가
+- 프로젝트 기능/AI 활용 발표용 요약 문서 `docs/AI_PRESENTATION_SUMMARY.md`를 추가
+- `tools/generate_ai_ppt_3min.py`를 카드형 레이아웃/프로세스 다이어그램/비교 섹션이 포함된 디자인 버전으로 고도화
+- 고도화된 스크립트로 발표용 PPT `docs/AI_PPT_3MIN.pptx`를 디자인 템플릿 형태로 재생성
+- 발표 관점을 "AI 일관성 관리"에서 "AI 전면 위임 + 프롬프트 설계" 중심으로 재구성
+- `docs/AI_PRESENTATION_SUMMARY.md`를 프롬프트 입력 구조/좋은-나쁜 요청 패턴 중심으로 개정
+- `tools/generate_ai_ppt_3min.py`를 프롬프트 예시 비교 슬라이드 포함 구성으로 수정하고 `docs/AI_PPT_3MIN.pptx`를 재생성

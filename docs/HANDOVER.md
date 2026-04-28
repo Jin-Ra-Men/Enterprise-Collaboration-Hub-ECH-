@@ -70,6 +70,7 @@
   - Socket.io는 `initSocket()` 재생성으로 복구(단순 `connect` 재사용 대신), 시스템 줄 스팸 방지용 `suppressSocketDisconnectSystemMsg`, 중복 방지용 `electronResumeRecoveryBound`/`electronResumeRecoveryInFlight` 사용.
   - 브라우저 탭 복귀와 달리 데스크톱은 장시간 절전 후 HTTP/WS 고착이 있어 별도 처리.
 - **전역 네트워크 복구(절전 외 포함)**: `apiFetch` GET/HEAD 공통 재시도(기본 3회) + 연속 실패 임계치 감지(`apiConsecutiveFailureCount`) 시 `triggerGlobalNetworkRecovery` 실행. 복구 루틴은 소켓 재초기화(`initSocket`)·채널 목록·활성 타임라인·열린 조직도(`loadOrgChart`)·열린 워크플로(`loadWorkHubChannelMembersForAssignee`/`loadChannelWorkItems`/`loadChannelKanbanBoard`)를 재동기화하며, `window.online` 이벤트에서도 동일 경로를 사용.
+- **런타임 인증/요청 타임아웃 복구**: `apiFetch`는 기본 12초 타임아웃을 사용하며, 401 응답을 받으면 `triggerAuthRecovery`가 세션 정리 후 AD 자동 로그인(`tryAdAutoLogin`)을 재시도한다. 실패 시 즉시 로그인 화면(`showLogin`)으로 전환되어 재기동 없이 복구 가능.
 - **DM 멤버 패널**: DM에서는 채널 생성자에 대한 `관리자` 배지와 멤버 `내보내기` 버튼을 표시하지 않는다(`loadChannelMembers`). PUBLIC/PRIVATE 채널 멤버 패널은 기존과 동일.
 - **1:1 DM 중복 생성 방지(2026-04-28)**: `startDmWithUser`/`btnConfirmCreateDm`는 생성 요청 전에 `lastSidebarChannelsSnapshot`에서 동일 상대와의 2인 DM을 탐색한다. 이미 있으면 API 생성을 건너뛰고 기존 채널로 이동해 "기존 1:1 DM이 있는데 새 DM이 생기는" UX를 차단한다.
 - **이미지 다운로드**: 약 **512KB 이상**·GIF/SVG 제외 시 원본 vs JPEG 압축 선택 모달; 압축은 브라우저에서 `GET .../download` blob → 캔버스(최대 변 4096px) 저장(서버 전용 압축 API 없음). **약 512KB 이상** 바이너리 수신 시 `ReadableStream`으로 읽으며 하단 **`#fileDownloadStatusBar`**에 진행 표시(`responseToBlobWithProgress`).
