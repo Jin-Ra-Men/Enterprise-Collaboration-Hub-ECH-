@@ -8,6 +8,7 @@
 - **Electron 절전 재개 복구 강화**: `powerMonitor` 이벤트를 `resume`뿐 아니라 `unlock-screen`까지 수신해 렌더러 복구 훅 누락을 줄임.
 - **재개 후 네트워크 고착 대응**: 렌더러 `setupElectronSystemResumeRecovery`에서 `/api/auth/me` 도달성 재시도 후(0/0.4/1.2/2.4s) 실패 시 `location.reload()`로 강제 복구.
 - **재개 후 실시간 재초기화**: 소켓 `connect()` 재사용 대신 `initSocket()` 재생성으로 Manager 상태 꼬임을 줄이고, 중복 실행 방지 플래그(`electronResumeRecoveryBound`/`electronResumeRecoveryInFlight`)를 추가.
+- **전역 네트워크 복구 루틴 추가**: `apiFetch`(GET/HEAD) 공통 재시도(기본 3회) 및 408/429/5xx·예외 연속 실패(3회) 감지 시 `triggerGlobalNetworkRecovery`로 소켓 재초기화·채널/타임라인/열린 조직도·워크플로 데이터 재동기화. Electron에서 API 미도달 지속 시 렌더러 reload.
 
 ## 2026-04-27
 

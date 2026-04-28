@@ -71,6 +71,12 @@ const WS_KEY     = "CSTalk"; // 기본 워크스페이스 키
 const TIMELINE_PAGE_LIMIT = 100;
 /** `loadMessages` 실패 시 추가 재시도 횟수(첫 시도 + 이 값 = 최대 시도 수) */
 const MESSAGE_LOAD_MAX_RETRIES = 5;
+/** 전체 REST 공통 재시도 횟수(GET/HEAD 한정) */
+const API_FETCH_MAX_RETRIES = 3;
+const API_FETCH_RETRY_BASE_DELAY_MS = 350;
+/** 연속 네트워크/서버 실패가 누적되면 전역 복구 루틴을 트리거한다. */
+const NETWORK_RECOVERY_TRIGGER_FAILURES = 3;
+const NETWORK_RECOVERY_COOLDOWN_MS = 15000;
 /** 하단 근처에 있을 때만 오래된 DOM 노드를 정리(위로 히스토리 탐색 중에는 유지) */
 const MAX_CHAT_DOM_NODES = 4000;
 const HARD_MAX_CHAT_DOM_NODES = 10000;
@@ -238,6 +244,10 @@ let suppressSocketDisconnectSystemMsg = false;
 let electronResumeRecoveryBound = false;
 /** 절전 재개 복구 동시 실행 방지 */
 let electronResumeRecoveryInFlight = false;
+/** REST 연속 실패 횟수(성공 시 0으로 리셋) */
+let apiConsecutiveFailureCount = 0;
+let networkRecoveryInFlight = false;
+let lastNetworkRecoveryAt = 0;
 let currentUser    = null;
 let activeChannelId = null;
 let activeChannelType = null; // PUBLIC / PRIVATE / DM
@@ -731,11 +741,129 @@ async function apiFetch(path, opts = {}) {
     headers["Content-Type"] = "application/json";
   }
   if (token) headers.Authorization = `Bearer ${token}`;
-  return fetch(`${API_BASE}${path}`, { ...opts, headers });
+  const method = String(opts.method || "GET").toUpperCase();
+  const retryableMethod = method === "GET" || method === "HEAD";
+  const maxRetries = retryableMethod ? API_FETCH_MAX_RETRIES : 0;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(`${API_BASE}${path}`, { ...opts, headers });
+      if (!res.ok && shouldRetryApiFetchHttp(res.status) && attempt < maxRetries) {
+        await sleepMs(Math.min(API_FETCH_RETRY_BASE_DELAY_MS * 2 ** attempt, 10000));
+        continue;
+      }
+      if (res.ok) {
+        noteApiRequestSuccess();
+      } else if (shouldRetryApiFetchHttp(res.status)) {
+        noteApiRequestFailure(`http-${res.status}`);
+      }
+      return res;
+    } catch (e) {
+      if (attempt >= maxRetries) {
+        noteApiRequestFailure("network-exception");
+        throw e;
+      }
+      await sleepMs(Math.min(API_FETCH_RETRY_BASE_DELAY_MS * 2 ** attempt, 10000));
+    }
+  }
+  throw new Error("apiFetch retry loop exhausted");
 }
 
 function sleepMs(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function shouldRetryApiFetchHttp(status) {
+  const s = Number(status);
+  if (!Number.isFinite(s)) return true;
+  if (s === 408 || s === 429) return true;
+  return s >= 500 && s <= 599;
+}
+
+function noteApiRequestSuccess() {
+  apiConsecutiveFailureCount = 0;
+}
+
+function noteApiRequestFailure(reason = "unknown") {
+  apiConsecutiveFailureCount += 1;
+  if (apiConsecutiveFailureCount >= NETWORK_RECOVERY_TRIGGER_FAILURES) {
+    void triggerGlobalNetworkRecovery(`api-${reason}`);
+  }
+}
+
+async function triggerGlobalNetworkRecovery(reason = "unknown") {
+  if (!currentUser) return;
+  const now = Date.now();
+  if (networkRecoveryInFlight) return;
+  if (now - lastNetworkRecoveryAt < NETWORK_RECOVERY_COOLDOWN_MS) return;
+  networkRecoveryInFlight = true;
+  console.warn(`[CSTalk] global network recovery start: ${reason}`);
+  try {
+    const token = getToken();
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    const retryDelays = [0, 500, 1500, 3000];
+    let apiReachable = false;
+    for (const delayMs of retryDelays) {
+      if (delayMs > 0) await sleepMs(delayMs);
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/me`, {
+          method: "GET",
+          headers,
+          cache: "no-store",
+        });
+        if (res.ok || res.status === 401 || res.status === 403) {
+          apiReachable = true;
+          break;
+        }
+      } catch {
+        // retry
+      }
+    }
+    if (!apiReachable) {
+      if (isEchElectronClient()) {
+        console.warn("[CSTalk] global recovery: API unreachable, forcing renderer reload");
+        try {
+          location.reload();
+        } catch {
+          /* ignore */
+        }
+      }
+      return;
+    }
+    noteApiRequestSuccess();
+    try {
+      if (socket?.connected) {
+        suppressSocketDisconnectSystemMsg = true;
+        socket.disconnect();
+      }
+      initSocket();
+    } catch (e) {
+      console.warn("[CSTalk] global recovery socket reset failed", e);
+    }
+    await loadMyChannels();
+    scheduleSidebarAndPresenceSync();
+    await recoverActiveChannelTimelineIfNeeded(`global-${reason}`);
+
+    const orgModal = document.getElementById("modalOrgChart");
+    if (orgModal && !orgModal.classList.contains("hidden")) {
+      await loadOrgChart().catch(() => {});
+    }
+    const workflowView = document.getElementById("modalWorkHub");
+    if (
+      workflowView &&
+      !workflowView.classList.contains("hidden") &&
+      activeChannelId &&
+      !workflowNeedsChannelPick
+    ) {
+      await Promise.all([
+        loadWorkHubChannelMembersForAssignee(),
+        loadChannelWorkItems(),
+        loadChannelKanbanBoard(),
+      ]).catch(() => {});
+    }
+  } finally {
+    lastNetworkRecoveryAt = Date.now();
+    networkRecoveryInFlight = false;
+  }
 }
 
 /** 일시적 장애·절전 복구 직후 등에 타임라인 API 재시도할 HTTP 상태 */
@@ -10569,56 +10697,9 @@ function setupElectronSystemResumeRecovery() {
   window.electronAPI.onSystemResume(async () => {
     if (electronResumeRecoveryInFlight) return;
     electronResumeRecoveryInFlight = true;
-    console.warn("[CSTalk] System resume (Electron) — refreshing REST + realtime");
-    if (!currentUser) {
-      electronResumeRecoveryInFlight = false;
-      return;
-    }
-    const token = getToken();
-    const headers = token ? { Authorization: `Bearer ${token}` } : {};
-    const retryDelays = [0, 400, 1200, 2400];
-    let apiReachable = false;
-    for (const delayMs of retryDelays) {
-      if (delayMs > 0) await sleepMs(delayMs);
-      try {
-        const res = await fetch(`${API_BASE}/api/auth/me`, {
-          method: "GET",
-          headers,
-          cache: "no-store",
-        });
-        // 401/403도 "서버 도달 가능"으로 본다(세션 문제이지 네트워크 고착은 아님).
-        if (res.ok || res.status === 401 || res.status === 403) {
-          apiReachable = true;
-          break;
-        }
-      } catch {
-        // keep retrying
-      }
-    }
-    if (!apiReachable) {
-      console.warn("[CSTalk] resume recovery: API unreachable, forcing renderer reload");
-      try {
-        location.reload();
-      } catch {
-        /* ignore */
-      } finally {
-        electronResumeRecoveryInFlight = false;
-      }
-      return;
-    }
+    console.warn("[CSTalk] System resume (Electron) — trigger global network recovery");
     try {
-      try {
-        if (socket?.connected) {
-          suppressSocketDisconnectSystemMsg = true;
-          socket.disconnect();
-        }
-        initSocket();
-      } catch (e) {
-        console.warn("[CSTalk] socket recovery after resume", e);
-      }
-      await loadMyChannels();
-      scheduleSidebarAndPresenceSync();
-      await recoverActiveChannelTimelineIfNeeded("electron-resume");
+      await triggerGlobalNetworkRecovery("electron-resume");
     } finally {
       electronResumeRecoveryInFlight = false;
     }
@@ -10875,6 +10956,7 @@ function scheduleSidebarAndPresenceSync() {
 window.addEventListener("focus", scheduleSidebarAndPresenceSync);
 window.addEventListener("online", () => {
   scheduleSidebarAndPresenceSync();
+  void triggerGlobalNetworkRecovery("browser-online");
   void recoverActiveChannelTimelineIfNeeded("browser-online");
 });
 document.addEventListener("visibilitychange", () => {
