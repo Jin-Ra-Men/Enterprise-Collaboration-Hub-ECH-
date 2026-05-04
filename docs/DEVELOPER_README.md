@@ -90,6 +90,7 @@ graph LR
 - 기능/조건 명세: `./PROJECT_REQUIREMENTS.md`
 - 로컬 환경 설정: `./ENVIRONMENT_SETUP.md`
 - 개발 로드맵: `./ROADMAP.md`
+- 협업 인식·AI 전제(갭·자료실 축·거버넌스): `./COLLABORATION_TOOL_DIRECTION.md`
 - 기능 명세서: `./FEATURE_SPEC.md`
 - RBAC 매트릭스: `./RBAC_MATRIX.md`
 - 인수인계서: `./HANDOVER.md`

@@ -86,5 +86,6 @@
 | 🛠 [개발자용 저장소 안내](docs/DEVELOPER_README.md) | 기술 스택 상세, **API 목록**, 로컬 실행, 스키마 링크 |
 | 🪟 [배포·Windows](docs/DEPLOYMENT_WINDOWS.md) | 서버·설치·내부망 업데이트 |
 | 📋 [인수인계](docs/HANDOVER.md) | 운영·개발 인수인계 요약 |
+| 🧭 [협업 툴 방향](docs/COLLABORATION_TOOL_DIRECTION.md) | 멘션→업무→마감→칸반 갭, 자료실 1차 축, 캘린더·AI·프로액티브·비용 원칙 |
 
 SQL·로드맵·RBAC 매트릭스 등은 **[개발자용 저장소 안내](docs/DEVELOPER_README.md)** 의 **핵심 문서 바로가기**를 참고하면 됩니다.

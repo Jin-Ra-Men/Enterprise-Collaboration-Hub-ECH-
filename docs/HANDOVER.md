@@ -50,6 +50,7 @@
 - **개발자**
   - API·도메인 동작: `docs/FEATURE_SPEC.md`, 엔드포인트 목록은 아래 **6)**.
   - 앞으로의 기능 순서: `docs/ROADMAP.md`, 요구 배경: `docs/PROJECT_REQUIREMENTS.md`.
+  - **협업 툴 인식·AI 전제:** `docs/COLLABORATION_TOOL_DIRECTION.md`(멘션→업무→마감→칸반 갭, 자료실 1차 축, 캘린더·AI·프로액티브·비용 원칙).
   - DB 구조: `docs/sql/postgresql_schema_draft.sql` 및 **3-1)**. 로컬에서 사람 데이터가 필요하면 `docs/sql/seed_test_users.sql` (`docs/ENVIRONMENT_SETUP.md` 5-1절).
   - Java는 `backend/`, 실시간은 `realtime/`(Express 없이 `http`+Socket.io), 데모 UI 소스는 `frontend/`(로컬에서는 `bootRun` 시 8080에서 위 3개 파일만 서빙, **`/**` 전체를 정적으로 열지 않음** — `/api/**` 가 리소스 핸들러에 먹히는 404 방지).
 - **운영·관리자**

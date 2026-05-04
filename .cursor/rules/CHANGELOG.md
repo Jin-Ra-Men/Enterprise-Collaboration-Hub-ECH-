@@ -7,11 +7,13 @@
 ### Added
 - **로드맵 확장**: `docs/ROADMAP.md`에 Phase 6(개인 캘린더·공유·AI 연동 전제)·Phase 7(AI 비서 게이트웨이·프로액티브·비용)·Phase 8(외부 캘린더 연동) 미완료 항목을 추가해, 대화에서 정리한 제품 방향을 개발 기준 문서에 반영.
 - **캘린더 MVP**: `calendar_events`·`calendar_share_requests` 도메인, REST API, 감사 타입, 워크플로 허브 UI(내 일정·받은 공유·채널 공유 보내기), `CalendarApiTest`, `docs/sql/postgresql_schema_draft.sql` 반영.
+- **협업 툴 인식 강화(플랜 이행)**: `docs/COLLABORATION_TOOL_DIRECTION.md` 추가(우선 여정 갭·지식 축 확정·캘린더·AI 범위·거버넌스·프로액티브·비용). `docs/ROADMAP.md` **Phase 2.7** 체크리스트 추가, Phase 6·7에 교차 링크.
 
 ### Changed
 - **로드맵 Phase 7**: AI 데이터 주권으로 **기본 비유출**(협업 원문 공용 클라우드 LLM 기본 전송 금지) 원칙 및 하위 항목 `7-1-0`을 명시.
 - **로드맵 Phase 6**: 캘린더 MVP 완료 항목 `6-1`~`6-3` 체크 처리.
 - **문서**: `docs/FEATURE_SPEC.md`, `docs/HANDOVER.md`, `docs/DEVELOPER_README.md`, `README.md`에 캘린더 기능·API·복구 루틴 반영.
+- **문서**: `docs/FEATURE_SPEC.md`, `docs/HANDOVER.md`, `README.md`, `docs/DEVELOPER_README.md`에 협업 방향 문서 링크 반영.
 
 ## 2026-04-28
 
