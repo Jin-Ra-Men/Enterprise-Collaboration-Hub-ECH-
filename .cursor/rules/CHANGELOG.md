@@ -1390,3 +1390,17 @@
 - 발표 관점을 "AI 일관성 관리"에서 "AI 전면 위임 + 프롬프트 설계" 중심으로 재구성
 - `docs/AI_PRESENTATION_SUMMARY.md`를 프롬프트 입력 구조/좋은-나쁜 요청 패턴 중심으로 개정
 - `tools/generate_ai_ppt_3min.py`를 프롬프트 예시 비교 슬라이드 포함 구성으로 수정하고 `docs/AI_PPT_3MIN.pptx`를 재생성
+
+## 2026-04-29
+
+### Changed
+- 답글 제목(`oo에게 답장`)이 너무 길 때 뒷부분을 `…`으로 축약하도록 공통 포맷 함수를 적용해, 답글 카드/입력창 답글 배너에서 메시지 폭에 맞게 표시되도록 개선
+- 입력창 답글 배너 제목(`.reply-composer-banner-title`)에 `white-space: nowrap; overflow: hidden; text-overflow: ellipsis;`를 추가해 UI 오버플로우를 방지
+- 사용자 피드백 반영: 답글 제목(`oo에게 답장`) 축약/말줄임 처리를 제거하고 원문 그대로 노출하도록 되돌림
+- 답글 카드/입력창 배너의 **메시지 미리보기 줄**만 18자 초과 시 `…`으로 축약하도록 기준을 변경
+
+## 2026-05-04
+
+### Changed
+- 릴리즈 버전을 `1.2.11`으로 상향 (`backend/build.gradle`, `desktop/package.json`, `desktop/package-lock.json`)
+- 배포 기준 버전 표기를 `1.2.11`로 갱신 (`README.md`, `docs/DEVELOPER_README.md`, `docs/ROADMAP.md`, `docs/HANDOVER.md`)

@@ -3340,6 +3340,15 @@ function quickRailCaption(name) {
   return `${s.slice(0, 6)}…`;
 }
 
+function clipReplyPreviewText(text, maxLength = 18) {
+  const normalized = String(text || "").replace(/\s+/g, " ").trim();
+  if (!normalized) return "(미리보기 없음)";
+  if (!Number.isFinite(maxLength) || maxLength < 2) return normalized;
+  return normalized.length > maxLength
+    ? `${normalized.slice(0, maxLength - 1)}…`
+    : normalized;
+}
+
 function compareQuickRailChannel(a, b) {
   const ua = Number(a.unreadCount ?? 0) > 0 ? 1 : 0;
   const ub = Number(b.unreadCount ?? 0) > 0 ? 1 : 0;
@@ -4237,7 +4246,7 @@ function updateReplyComposerBanner() {
     replyComposerBannerTitleEl.textContent = `${senderLabel}에게 답장`;
   }
   if (replyComposerBannerPreviewEl) {
-    replyComposerBannerPreviewEl.textContent = snippet;
+    replyComposerBannerPreviewEl.textContent = clipReplyPreviewText(snippet, 18);
   }
   replyComposerBannerEl.classList.remove("hidden");
 }
@@ -4977,7 +4986,7 @@ function createReplyTimelineRowElement(tlMsg, { showAvatar, showTime }) {
     tlMsg.replyToSenderName ?? tlMsg.reply_to_sender_name ?? ""
   ).trim();
   const titleName = targetName || fallbackKind;
-  const snippet = preview || "(미리보기 없음)";
+  const snippet = clipReplyPreviewText(preview, 18);
 
   const replyToBlock = document.createElement("div");
   replyToBlock.className = "msg-reply-to";
