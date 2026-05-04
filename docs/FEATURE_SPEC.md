@@ -59,6 +59,33 @@
 
 ---
 
+## 개인 캘린더·공유 (Phase 6 MVP)
+- 목적: 사용자당 **하나의 논리 캘린더**에 직접 일정을 두고, **채널·DM** 맥락에서 다른 멤버에게 일정을 **공유 요청**한 뒤 수신자가 **수락**하면 본인 달력에 **복사본**이 생기며 **출처(채널/DM)** 를 표시한다. AI 비서·외부 연동 전에도 동작하도록 하며, `created_by_actor` 등 **확장 메타**를 남긴다.
+- 사용자: 로그인한 모든 멤버(채널/DM 멤버십에 따름)
+- 관련 화면/경로: `frontend/index.html` — `#modalWorkHub` 내 `#workHubPanelCalendar`(업무·칸반 아래 동일 허브 톤), `frontend/app.js` (`loadWorkHubCalendarPanel`, `ensureWorkHubCalendarBound`)
+- 관련 API:
+  - `GET /api/calendar/events?employeeNo=&from=&to=` — 본인 일정 목록(기간 겹침, `in_use=true`)
+  - `POST /api/calendar/events` — 직접 일정 생성(JSON: `ownerEmployeeNo` 생략 시 JWT, `title`, `description`, `startsAt`, `endsAt` ISO-8601)
+  - `PUT /api/calendar/events/{eventId}?employeeNo=` — 수정
+  - `DELETE /api/calendar/events/{eventId}?employeeNo=` — 소프트 삭제(`in_use=false`)
+  - `POST /api/channels/{channelId}/calendar/shares` — 공유 요청(발신·수신 모두 해당 채널 멤버; `sourceEventId` 있으면 발신자 본인 활성 일정에서 스냅샷)
+  - `GET /api/calendar/shares/incoming?employeeNo=` — 받은 **PENDING**·만료 전만
+  - `GET /api/calendar/shares/outgoing?employeeNo=` — 보낸 공유 이력(상태 전체)
+  - `POST /api/calendar/shares/{shareId}/accept?employeeNo=` — 수락 후 수신자 달력에 이벤트 생성·출처 `originChannelId` 설정
+  - `POST /api/calendar/shares/{shareId}/decline?employeeNo=`
+- 관련 Socket 이벤트: 해당 없음(REST만)
+- 입력/출력: 응답 `CalendarEventResponse`에 `originChannelId`, `originChannelName`, `originChannelType`, `sharedFromShareId`, `createdByActor` 포함. 공유 응답에 `sourceEventId` 포함.
+- 상태 전이/예외 케이스:
+  - `startsAt` < `endsAt` 검증, JWT `employeeNo`와 쿼리/본문 사원번호 불일치 시 거절
+  - 공유 **만료**: `expires_at` 경과 시 상태 `EXPIRED`(배치는 쓰기 API 진입 시 `expirePendingBefore`로 정리); 수신 목록은 만료 임박 제외 필터
+  - DM은 `channels.channel_type=DM`인 동일 API로 처리
+- 권한/보안: 모든 `/api/calendar/**` 및 채널 공유는 **인증 필요**; 채널 멤버십으로 공유 가능 여부 판단
+- 로그/감사 포인트: `AuditEventType` — `CALENDAR_EVENT_CREATED|UPDATED|DELETED`, `CALENDAR_SHARE_CREATED|ACCEPTED|DECLINED`
+- 테스트 기준: `CalendarApiTest` — 직접 일정 생성·목록, 채널 공유·수락 후 출처 채널명
+- 비고: `CalendarSuggestion`(AI 초안) 엔티티·충돌 검사 API·메시지 ID 출처·iCal 은 로드맵 6-4·6-5·Phase 8에서 확장
+
+---
+
 ## DM 채널 생성 제약 자동 보정 (환경 호환)
 - 목적: 오래된 로컬 DB 스키마에서 DM 생성 실패를 자동 복구하여 사용자 DM 생성 흐름을 안정화
 - 사용자: 채팅 사용자, 운영자, 백엔드 개발자

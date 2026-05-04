@@ -139,6 +139,7 @@ graph LR
 - `POST /api/kanban/cards/{cardId}/assignees`, `DELETE /api/kanban/cards/{cardId}/assignees/{assigneeEmployeeNo}?actorEmployeeNo=...`
 - `GET /api/kanban/cards/{cardId}/history?limit=`
 - `POST /api/messages/{messageId}/work-items`, `GET /api/messages/{messageId}/work-items`, `GET /api/work-items/{workItemId}`, `GET /api/work-items/sidebar/by-assigned-cards?employeeNo=&limit=`, `POST /api/work-items/{workItemId}/restore?actorEmployeeNo=...`, `DELETE /api/work-items/{workItemId}?actorEmployeeNo=...` (기본 소프트 삭제), `DELETE ...?hard=true` (완전 삭제·연결 칸반 카드 제거) (채널 멤버)
+- **캘린더(개인·공유)**: `GET /api/calendar/events?employeeNo=&from=&to=`, `POST /api/calendar/events`, `PUT /api/calendar/events/{eventId}?employeeNo=`, `DELETE /api/calendar/events/{eventId}?employeeNo=`, `POST /api/channels/{channelId}/calendar/shares`, `GET /api/calendar/shares/incoming?employeeNo=`, `GET /api/calendar/shares/outgoing?employeeNo=`, `POST /api/calendar/shares/{shareId}/accept|decline?employeeNo=` (JWT 본인 검증·채널 멤버십)
 - `GET /api/admin/org-sync/users?source=TEST|GROUPWARE` (현재 `TEST`만 지원)
 - `POST /api/admin/org-sync/users/sync?source=TEST|GROUPWARE`
 - `PUT /api/admin/org-sync/users/{employeeNo}/status`

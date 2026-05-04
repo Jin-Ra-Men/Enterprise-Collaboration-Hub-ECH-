@@ -1198,6 +1198,45 @@
                 <div id="channelKanbanBoard" class="channel-kanban-board"></div>
               </div>
             </div>
+            <div class="workflow-section" id="workHubPanelCalendar">
+              <div class="workflow-section-head">
+                <span class="workflow-section-kicker">Calendar</span>
+                <h5 class="workflow-section-title">내 일정</h5>
+              </div>
+              <p class="work-hub-hint workflow-section-hint">직접 추가한 일정과, 채널·DM에서 <strong>수락한</strong> 공유 일정이 표시됩니다. 출처는 공유된 채널/DM 이름으로 표시됩니다.</p>
+              <div class="work-hub-panel-body">
+                <form id="calendarEventCreateForm" class="work-item-create-form" onsubmit="return false;">
+                  <input id="calendarEventTitleInput" type="text" maxlength="500" placeholder="새 일정 제목" />
+                  <div class="work-item-create-row">
+                    <input id="calendarEventStartInput" type="datetime-local" aria-label="시작 시각" />
+                    <input id="calendarEventEndInput" type="datetime-local" aria-label="종료 시각" />
+                    <button type="button" class="btn-primary btn-sm btn-work-add" id="btnCalendarEventAdd">일정 추가</button>
+                  </div>
+                </form>
+                <ul id="calendarEventsList" class="channel-work-item-list"></ul>
+                <div class="workflow-section-head workflow-section-head--nested">
+                  <span class="workflow-section-kicker">Inbox</span>
+                  <h6 class="workflow-section-title">받은 일정(수락 대기)</h6>
+                </div>
+                <ul id="calendarIncomingSharesList" class="channel-work-item-list"></ul>
+                <div class="workflow-section-head workflow-section-head--nested">
+                  <span class="workflow-section-kicker">Share</span>
+                  <h6 class="workflow-section-title">이 채널에서 공유 보내기</h6>
+                </div>
+                <p class="work-hub-hint workflow-section-hint">현재 워크플로우 채널·DM 맥락에서만 전송됩니다. 수신자는 멤버 목록에서 선택합니다.</p>
+                <form id="calendarShareForm" class="work-item-create-form" onsubmit="return false;">
+                  <select id="calendarShareRecipientSelect" aria-label="공유 수신자">
+                    <option value="">수신자 선택</option>
+                  </select>
+                  <input id="calendarShareTitleInput" type="text" maxlength="500" placeholder="공유 일정 제목" />
+                  <div class="work-item-create-row">
+                    <input id="calendarShareStartInput" type="datetime-local" aria-label="공유 시작" />
+                    <input id="calendarShareEndInput" type="datetime-local" aria-label="공유 종료" />
+                    <button type="button" class="btn-primary btn-sm" id="btnCalendarShareSend">공유 보내기</button>
+                  </div>
+                </form>
+              </div>
+            </div>
             </div>
           </div>
         </div>

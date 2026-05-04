@@ -395,6 +395,7 @@ let workHubPendingNewKanbanCards = [];
 let workHubPendingCardAssigneeAdd = new Map();
 let workHubPendingCardAssigneeRemove = new Map();
 let workHubWorkListDeleteBound = false;
+let workHubCalendarBound = false;
 let workHubSelectedWorkItemMeta = null;
 let workHubSelectedKanbanCardMeta = null;
 let workHubDetailKanbanAssignees = [];
@@ -909,6 +910,7 @@ async function triggerGlobalNetworkRecovery(reason = "unknown") {
         loadWorkHubChannelMembersForAssignee(),
         loadChannelWorkItems(),
         loadChannelKanbanBoard(),
+        loadWorkHubCalendarPanel(),
       ]).catch(() => {});
     }
   } finally {
@@ -3242,8 +3244,9 @@ function getDefaultChannelForWorkHub() {
 }
 
 function focusWorkHubPanel(mode) {
-  if (mode !== "work" && mode !== "kanban") return;
-  const id = mode === "kanban" ? "workHubPanelKanban" : "workHubPanelWork";
+  if (mode !== "work" && mode !== "kanban" && mode !== "calendar") return;
+  const id =
+    mode === "kanban" ? "workHubPanelKanban" : mode === "calendar" ? "workHubPanelCalendar" : "workHubPanelWork";
   const el = document.getElementById(id);
   if (!el) return;
   el.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -3261,8 +3264,10 @@ async function openWorkHubModalForActiveChannel() {
       loadWorkHubChannelMembersForAssignee(),
       loadChannelWorkItems(),
       loadChannelKanbanBoard(),
+      loadWorkHubCalendarPanel(),
     ]);
     ensureWorkHubWorkListDeleteBound();
+    ensureWorkHubCalendarBound();
     const panelFocus = pendingWorkHubPanelFocus;
     pendingWorkHubPanelFocus = null;
     openWorkflowPage();
@@ -3552,8 +3557,14 @@ function renderMyWorkItemsSidebar(channels) {
       clearWorkHubPendingMaps();
       clearPendingNewKanbanAssignees();
       try {
-        await Promise.all([loadWorkHubChannelMembersForAssignee(), loadChannelWorkItems(), loadChannelKanbanBoard()]);
+        await Promise.all([
+          loadWorkHubChannelMembersForAssignee(),
+          loadChannelWorkItems(),
+          loadChannelKanbanBoard(),
+          loadWorkHubCalendarPanel(),
+        ]);
         ensureWorkHubWorkListDeleteBound();
+        ensureWorkHubCalendarBound();
         workflowNeedsChannelPick = false;
         openWorkflowPage();
         renderWorkflowChannelPicker();
@@ -8802,6 +8813,237 @@ async function loadChannelWorkItems() {
   lastChannelWorkItemsForHub = Array.isArray(json.data) ? json.data : [];
   renderChannelWorkItems(lastChannelWorkItemsForHub);
   populateKanbanNewCardWorkItemSelect();
+}
+
+/** `datetime-local` value → ISO-8601 offset string for API. */
+function localDatetimeInputToIsoOffset(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
+function formatCalendarRangeIso(daysBack, daysForward) {
+  const now = new Date();
+  const from = new Date(now.getTime() - daysBack * 86400000);
+  const to = new Date(now.getTime() + daysForward * 86400000);
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
+function populateCalendarShareRecipientSelect() {
+  const sel = document.getElementById("calendarShareRecipientSelect");
+  if (!sel || !currentUser) return;
+  const selfNo = String(currentUser.employeeNo || "").trim();
+  const list = Array.isArray(workHubChannelMembersForAssignee) ? workHubChannelMembersForAssignee : [];
+  const opts = list
+    .map((m) => {
+      const e = String(m.employeeNo || "").trim();
+      if (!e || e === selfNo) return null;
+      const name = String(m.name || e);
+      return `<option value="${String(e).replace(/&/g, "&amp;").replace(/"/g, "&quot;")}">${escHtml(name)} (${escHtml(e)})</option>`;
+    })
+    .filter(Boolean)
+    .join("");
+  sel.innerHTML = `<option value="">수신자 선택</option>${opts}`;
+}
+
+async function loadWorkHubCalendarPanel() {
+  if (!currentUser) return;
+  const emp = encodeURIComponent(currentUser.employeeNo);
+  const range = formatCalendarRangeIso(30, 180);
+  const fromQ = encodeURIComponent(range.from);
+  const toQ = encodeURIComponent(range.to);
+  const [evRes, inRes] = await Promise.all([
+    apiFetch(`/api/calendar/events?employeeNo=${emp}&from=${fromQ}&to=${toQ}`),
+    apiFetch(`/api/calendar/shares/incoming?employeeNo=${emp}`),
+  ]);
+  const evJson = await evRes.json().catch(() => ({}));
+  const inJson = await inRes.json().catch(() => ({}));
+  if (!evRes.ok) throw new Error(evJson.error?.message || "일정 목록 조회 실패");
+  if (!inRes.ok) throw new Error(inJson.error?.message || "받은 공유 조회 실패");
+  const events = Array.isArray(evJson.data) ? evJson.data : [];
+  const incoming = Array.isArray(inJson.data) ? inJson.data : [];
+  renderWorkHubCalendarLists(events, incoming);
+  populateCalendarShareRecipientSelect();
+}
+
+function renderWorkHubCalendarLists(events, incoming) {
+  const listEl = document.getElementById("calendarEventsList");
+  const inEl = document.getElementById("calendarIncomingSharesList");
+  if (listEl) {
+    if (!events.length) {
+      listEl.innerHTML = `<li class="channel-work-item channel-work-item--muted">등록된 일정이 없습니다.</li>`;
+    } else {
+      listEl.innerHTML = events
+        .map((ev) => {
+          const id = Number(ev.id);
+          const origin =
+            ev.originChannelId != null
+              ? `<span class="calendar-origin">${escHtml(String(ev.originChannelType || ""))} · ${escHtml(
+                  String(ev.originChannelName || "")
+                )}</span>`
+              : `<span class="calendar-origin">직접 등록</span>`;
+          const start = escHtml(String(ev.startsAt || ""));
+          const end = escHtml(String(ev.endsAt || ""));
+          const del =
+            ev.inUse === false
+              ? ""
+              : `<button type="button" class="btn-cancel btn-sm calendar-hub-delete" data-calendar-event-id="${id}">삭제</button>`;
+          const rowCls = del ? "channel-work-item channel-work-item--with-actions" : "channel-work-item";
+          return `<li class="${rowCls}" data-calendar-event-id="${id}">
+            <div class="channel-work-item-main">
+              <div class="channel-work-item-title">${escHtml(String(ev.title || ""))}</div>
+              <div class="channel-work-item-meta">${start} — ${end}</div>
+              <div class="channel-work-item-meta">${origin}</div>
+            </div>
+            <div class="channel-work-item-actions">${del}</div>
+          </li>`;
+        })
+        .join("");
+    }
+  }
+  if (inEl) {
+    if (!incoming.length) {
+      inEl.innerHTML = `<li class="channel-work-item channel-work-item--muted">대기 중인 공유가 없습니다.</li>`;
+    } else {
+      inEl.innerHTML = incoming
+        .map((s) => {
+          const id = Number(s.id);
+          const ch = escHtml(String(s.originChannelName || ""));
+          const ctype = escHtml(String(s.originChannelType || ""));
+          return `<li class="channel-work-item channel-work-item--with-actions" data-calendar-share-id="${id}">
+            <div class="channel-work-item-main">
+              <div class="channel-work-item-title">${escHtml(String(s.title || ""))}</div>
+              <div class="channel-work-item-meta">보낸 사람: ${escHtml(String(s.senderEmployeeNo || ""))}</div>
+              <div class="channel-work-item-meta">${ctype} · ${ch}</div>
+            </div>
+            <div class="channel-work-item-actions">
+              <button type="button" class="btn-primary btn-sm calendar-share-accept" data-calendar-share-id="${id}">수락</button>
+              <button type="button" class="btn-cancel btn-sm calendar-share-decline" data-calendar-share-id="${id}">거절</button>
+            </div>
+          </li>`;
+        })
+        .join("");
+    }
+  }
+}
+
+function ensureWorkHubCalendarBound() {
+  if (workHubCalendarBound) return;
+  workHubCalendarBound = true;
+  document.getElementById("btnCalendarEventAdd")?.addEventListener("click", async () => {
+    if (!currentUser) return;
+    const title = String(document.getElementById("calendarEventTitleInput")?.value || "").trim();
+    const startRaw = document.getElementById("calendarEventStartInput")?.value;
+    const endRaw = document.getElementById("calendarEventEndInput")?.value;
+    const startsAt = localDatetimeInputToIsoOffset(startRaw);
+    const endsAt = localDatetimeInputToIsoOffset(endRaw);
+    if (!title || !startsAt || !endsAt) {
+      await uiAlert("제목·시작·종료를 모두 입력해 주세요.");
+      return;
+    }
+    try {
+      const res = await apiFetch("/api/calendar/events", {
+        method: "POST",
+        body: JSON.stringify({
+          ownerEmployeeNo: currentUser.employeeNo,
+          title,
+          description: null,
+          startsAt,
+          endsAt,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error?.message || "일정 추가 실패");
+      document.getElementById("calendarEventTitleInput").value = "";
+      document.getElementById("calendarEventStartInput").value = "";
+      document.getElementById("calendarEventEndInput").value = "";
+      await loadWorkHubCalendarPanel();
+    } catch (e) {
+      await uiAlert(e?.message || "일정 추가 실패");
+    }
+  });
+  document.getElementById("btnCalendarShareSend")?.addEventListener("click", async () => {
+    if (!currentUser) return;
+    const cid = getWorkHubChannelId();
+    if (!cid) {
+      await uiAlert("채널·DM이 선택된 워크플로우에서만 공유할 수 있습니다.");
+      return;
+    }
+    const recipient = String(document.getElementById("calendarShareRecipientSelect")?.value || "").trim();
+    const title = String(document.getElementById("calendarShareTitleInput")?.value || "").trim();
+    const startsAt = localDatetimeInputToIsoOffset(document.getElementById("calendarShareStartInput")?.value);
+    const endsAt = localDatetimeInputToIsoOffset(document.getElementById("calendarShareEndInput")?.value);
+    if (!recipient || !title || !startsAt || !endsAt) {
+      await uiAlert("수신자·제목·시작·종료를 모두 입력해 주세요.");
+      return;
+    }
+    try {
+      const res = await apiFetch(`/api/channels/${cid}/calendar/shares`, {
+        method: "POST",
+        body: JSON.stringify({
+          senderEmployeeNo: currentUser.employeeNo,
+          recipientEmployeeNo: recipient,
+          title,
+          description: null,
+          startsAt,
+          endsAt,
+          sourceEventId: null,
+          expiresAt: null,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error?.message || "공유 전송 실패");
+      await uiAlert("공유 요청을 보냈습니다.");
+      document.getElementById("calendarShareTitleInput").value = "";
+      document.getElementById("calendarShareStartInput").value = "";
+      document.getElementById("calendarShareEndInput").value = "";
+    } catch (e) {
+      await uiAlert(e?.message || "공유 전송 실패");
+    }
+  });
+  document.getElementById("calendarEventsList")?.addEventListener("click", async (e) => {
+    const del = e.target.closest(".calendar-hub-delete");
+    if (!del || !currentUser) return;
+    e.preventDefault();
+    const id = Number(del.dataset.calendarEventId);
+    if (!id) return;
+    if (!(await uiConfirm("이 일정을 삭제할까요?"))) return;
+    try {
+      const emp = encodeURIComponent(currentUser.employeeNo);
+      const res = await apiFetch(`/api/calendar/events/${id}?employeeNo=${emp}`, { method: "DELETE" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error?.message || "삭제 실패");
+      await loadWorkHubCalendarPanel();
+    } catch (err) {
+      await uiAlert(err?.message || "삭제 실패");
+    }
+  });
+  document.getElementById("calendarIncomingSharesList")?.addEventListener("click", async (e) => {
+    if (!currentUser) return;
+    const acc = e.target.closest(".calendar-share-accept");
+    const dec = e.target.closest(".calendar-share-decline");
+    const btn = acc || dec;
+    if (!btn) return;
+    e.preventDefault();
+    const id = Number(btn.dataset.calendarShareId);
+    if (!id) return;
+    const emp = encodeURIComponent(currentUser.employeeNo);
+    try {
+      if (acc) {
+        const res = await apiFetch(`/api/calendar/shares/${id}/accept?employeeNo=${emp}`, { method: "POST" });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json.error?.message || "수락 실패");
+      } else {
+        const res = await apiFetch(`/api/calendar/shares/${id}/decline?employeeNo=${emp}`, { method: "POST" });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json.error?.message || "거절 실패");
+      }
+      await loadWorkHubCalendarPanel();
+    } catch (err) {
+      await uiAlert(err?.message || "처리 실패");
+    }
+  });
 }
 
 function populateKanbanNewCardWorkItemSelect() {

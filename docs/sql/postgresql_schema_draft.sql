@@ -163,6 +163,44 @@ CREATE TABLE IF NOT EXISTS work_items (
 CREATE INDEX IF NOT EXISTS idx_work_items_source_channel_id ON work_items(source_channel_id);
 CREATE INDEX IF NOT EXISTS idx_work_items_created_by ON work_items(created_by);
 
+-- 개인 캘린더(사용자당 논리 단일 캘린더: owner_employee_no)
+CREATE TABLE IF NOT EXISTS calendar_share_requests (
+    id BIGSERIAL PRIMARY KEY,
+    sender_employee_no VARCHAR(50) NOT NULL REFERENCES users(employee_no),
+    recipient_employee_no VARCHAR(50) NOT NULL REFERENCES users(employee_no),
+    origin_channel_id BIGINT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+    title VARCHAR(500) NOT NULL,
+    description TEXT,
+    starts_at TIMESTAMPTZ NOT NULL,
+    ends_at TIMESTAMPTZ NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    expires_at TIMESTAMPTZ NOT NULL,
+    accepted_event_id BIGINT,
+    source_event_id BIGINT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_calendar_share_recipient_status ON calendar_share_requests(recipient_employee_no, status);
+CREATE INDEX IF NOT EXISTS idx_calendar_share_sender ON calendar_share_requests(sender_employee_no);
+
+CREATE TABLE IF NOT EXISTS calendar_events (
+    id BIGSERIAL PRIMARY KEY,
+    owner_employee_no VARCHAR(50) NOT NULL REFERENCES users(employee_no),
+    title VARCHAR(500) NOT NULL,
+    description TEXT,
+    starts_at TIMESTAMPTZ NOT NULL,
+    ends_at TIMESTAMPTZ NOT NULL,
+    origin_channel_id BIGINT REFERENCES channels(id) ON DELETE SET NULL,
+    shared_from_share_id BIGINT REFERENCES calendar_share_requests(id) ON DELETE SET NULL,
+    created_by_actor VARCHAR(30) NOT NULL DEFAULT 'USER',
+    in_use BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_calendar_events_owner_range ON calendar_events(owner_employee_no, starts_at, ends_at) WHERE in_use = TRUE;
+
 -- 운영 오류 로그 (대화 본문/파일 원문 등 민감 데이터는 저장하지 않음)
 CREATE TABLE IF NOT EXISTS error_logs (
     id BIGSERIAL PRIMARY KEY,
