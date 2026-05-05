@@ -34,9 +34,12 @@ public class ChannelFileController {
     @GetMapping
     public ApiResponse<List<ChannelFileResponse>> list(
             @PathVariable Long channelId,
-            @RequestParam String employeeNo
+            @RequestParam String employeeNo,
+            @RequestParam(required = false) Long libraryFolderId,
+            @RequestParam(required = false) Boolean libraryUncategorizedOnly
     ) {
-        return ApiResponse.success(channelFileService.listFiles(channelId, employeeNo));
+        return ApiResponse.success(channelFileService.listFiles(
+                channelId, employeeNo, libraryFolderId, libraryUncategorizedOnly));
     }
 
     @GetMapping("/upload-policy")

@@ -1071,6 +1071,14 @@
             <button type="button" class="file-hub-tab active" data-file-hub-tab="all" id="fileHubTabAll" role="tab" aria-selected="true">전체 파일</button>
             <button type="button" class="file-hub-tab" data-file-hub-tab="images" id="fileHubTabImages" role="tab" aria-selected="false">이미지</button>
           </div>
+          <div class="file-hub-library-bar" id="fileHubLibraryBar">
+            <label for="fileHubLibraryFilter">자료실</label>
+            <select id="fileHubLibraryFilter" aria-label="자료실 폴더 필터">
+              <option value="all">전체</option>
+              <option value="uncat">미분류</option>
+            </select>
+            <button type="button" class="btn-file-hub-library-add" id="btnFileHubAddFolder" title="폴더 추가">+ 폴더</button>
+          </div>
           <div id="fileHubPaneAll" class="file-hub-pane" role="tabpanel" aria-labelledby="fileHubTabAll">
             <ul id="channelFilesList" class="channel-files-list channel-files-list-modal"></ul>
             <p id="channelFilesEmpty" class="channel-files-empty hidden">첨부 파일이 없습니다.</p>

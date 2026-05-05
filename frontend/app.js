@@ -722,6 +722,8 @@ const imageAttachmentBlobUrls = new Map();
 const MAX_CACHED_IMAGE_BLOBS = 120;
 /** 이미지 모아보기 그리드: 스크롤 영역에 들어올 때만 썸네일 요청 */
 let fileHubImageGridObserver = null;
+/** 채널 자료실 폴더 캐시(파일 행의 폴더 선택용) */
+let fileHubLibraryFoldersCache = [];
 
 function revokeImageAttachmentBlobUrls() {
   imageAttachmentBlobUrls.forEach((url) => {
@@ -1591,28 +1593,157 @@ function renderFileHubImageGrid(channelId, files) {
   });
 }
 
-/** 채널/DM 공통: 첨부 목록 API로 전체 파일 + 이미지 그리드 갱신 */
+function buildChannelFilesListUrl(channelId) {
+  let u = `/api/channels/${channelId}/files?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`;
+  const fil = document.getElementById("fileHubLibraryFilter");
+  if (!fil || fil.value === "all") return u;
+  if (fil.value === "uncat") return `${u}&libraryUncategorizedOnly=true`;
+  if (fil.value.startsWith("folder_")) {
+    return `${u}&libraryFolderId=${encodeURIComponent(fil.value.replace("folder_", ""))}`;
+  }
+  return u;
+}
+
+async function refreshChannelLibraryFolderFilterUi(channelId) {
+  const sel = document.getElementById("fileHubLibraryFilter");
+  if (!currentUser || !channelId || !sel) return;
+  const preserve = sel.value;
+  try {
+    const res = await apiFetch(
+      `/api/channels/${channelId}/library/folders?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`
+    );
+    const j = await res.json();
+    if (!res.ok) return;
+    fileHubLibraryFoldersCache = Array.isArray(j.data) ? j.data : [];
+    sel.innerHTML =
+      `<option value="all">전체</option><option value="uncat">미분류</option>` +
+      fileHubLibraryFoldersCache
+        .map((folder) => `<option value="folder_${folder.id}">${escHtml(folder.name)}</option>`)
+        .join("");
+    const ok = [...sel.options].some((o) => o.value === preserve);
+    sel.value = ok ? preserve : "all";
+  } catch (e) {
+    console.error("자료실 폴더 목록 실패", e);
+  }
+}
+
+function buildFolderOptionsForFileRow(currentFolderId) {
+  const fid = currentFolderId != null && currentFolderId !== undefined ? String(currentFolderId) : "";
+  let opts = `<option value="">미분류</option>`;
+  for (const folder of fileHubLibraryFoldersCache) {
+    const sel = String(folder.id) === fid ? " selected" : "";
+    opts += `<option value="${folder.id}"${sel}>${escHtml(folder.name)}</option>`;
+  }
+  return opts;
+}
+
+async function patchChannelFileLibrary(channelId, fileId, body) {
+  const res = await apiFetch(
+    `/api/channels/${channelId}/library/files/${fileId}?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }
+  );
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    await uiAlert(json?.error?.message || "자료실 설정을 저장하지 못했습니다.");
+    return false;
+  }
+  return true;
+}
+
+function ensureChannelFileHubLibraryBindings() {
+  const listEl = document.getElementById("channelFilesList");
+  if (!listEl || listEl.dataset.libraryHubBound) return;
+  listEl.dataset.libraryHubBound = "1";
+  listEl.addEventListener("click", async (ev) => {
+    const gid = listEl.dataset.channelId;
+    if (!gid || !currentUser) return;
+    const pinBtn = ev.target.closest(".btn-file-hub-pin");
+    if (pinBtn) {
+      ev.preventDefault();
+      const fid = Number(pinBtn.dataset.fileId);
+      const cur = pinBtn.dataset.pinned === "true";
+      const ok = await patchChannelFileLibrary(gid, fid, { pinned: !cur });
+      if (ok) await refreshChannelFileHubData(Number(gid));
+      return;
+    }
+    const memoBtn = ev.target.closest(".btn-file-hub-memo");
+    if (memoBtn) {
+      const fid = Number(memoBtn.dataset.fileId);
+      let prevCap = "";
+      let prevTags = "";
+      try {
+        prevCap = decodeURIComponent(String(memoBtn.dataset.cap || ""));
+      } catch {
+        prevCap = "";
+      }
+      try {
+        prevTags = decodeURIComponent(String(memoBtn.dataset.tags || ""));
+      } catch {
+        prevTags = "";
+      }
+      const cap = await uiPrompt("파일 설명", prevCap, "자료실 메모");
+      if (cap === null) return;
+      const tags = await uiPrompt("태그 (쉼표 구분)", prevTags, "자료실 메모");
+      if (tags === null) return;
+      const ok = await patchChannelFileLibrary(gid, fid, {
+        caption: cap,
+        tags: tags,
+      });
+      if (ok) await refreshChannelFileHubData(Number(gid));
+      return;
+    }
+    const goBtn = ev.target.closest(".btn-file-hub-goto-msg");
+    if (goBtn) {
+      const mid = Number(goBtn.dataset.messageId);
+      if (!mid) return;
+      closeModal("modalFileHub");
+      setTimeout(() => focusMessageByIdInCurrentTimeline(mid), 50);
+    }
+  });
+  listEl.addEventListener("change", async (ev) => {
+    const sel = ev.target.closest(".file-hub-folder-select");
+    if (!sel) return;
+    const gid = listEl.dataset.channelId;
+    const fid = Number(sel.dataset.fileId);
+    if (!gid || !fid) return;
+    const v = sel.value;
+    const body = v === "" ? { detachFolder: true } : { folderId: Number(v), detachFolder: false };
+    const ok = await patchChannelFileLibrary(gid, fid, body);
+    if (ok) await refreshChannelFileHubData(Number(gid));
+  });
+}
+
+/** 채널/DM 공통: 첨부 목록 API로 전체 파일 + 이미지 그리드 갱신 (자료실 필터·폴더 반영) */
 async function refreshChannelFileHubData(channelId) {
   const listEl = document.getElementById("channelFilesList");
   const emptyEl = document.getElementById("channelFilesEmpty");
   const emptyImg = document.getElementById("channelImagesEmpty");
   const grid = document.getElementById("channelImageGrid");
   if (!currentUser || !listEl) return;
+  ensureChannelFileHubLibraryBindings();
   listEl.innerHTML = "";
   if (grid) grid.innerHTML = "";
   if (emptyEl) emptyEl.classList.add("hidden");
   if (emptyImg) emptyImg.classList.add("hidden");
   try {
-    const res = await apiFetch(
-      `/api/channels/${channelId}/files?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`
-    );
+    await refreshChannelLibraryFolderFilterUi(channelId);
+    const res = await apiFetch(buildChannelFilesListUrl(channelId));
     const json = await res.json();
     if (!res.ok) return;
     if (Number(channelId) !== Number(activeChannelId)) return;
     const files = json.data || [];
+    listEl.dataset.channelId = String(channelId);
     if (files.length === 0) {
       if (emptyEl) {
-        emptyEl.textContent = "첨부 파일이 없습니다.";
+        const fil = document.getElementById("fileHubLibraryFilter");
+        emptyEl.textContent =
+          fil && fil.value !== "all"
+            ? "이 조건에 맞는 첨부가 없습니다."
+            : "첨부 파일이 없습니다.";
         emptyEl.classList.remove("hidden");
       }
       emptyImg?.classList.remove("hidden");
@@ -1631,12 +1762,29 @@ async function refreshChannelFileHubData(channelId) {
       const li = document.createElement("li");
       li.className = "channel-file-item";
       const who = f.uploaderName ? escHtml(f.uploaderName) : `emp#${f.uploadedByEmployeeNo}`;
+      const pinOn = f.libraryPinned === true;
+      const cap = f.libraryCaption
+        ? `<span class="channel-file-library-caption">${escHtml(f.libraryCaption)}</span>`
+        : "";
+      const tags = f.libraryTags
+        ? `<span class="channel-file-library-tags">${escHtml(f.libraryTags)}</span>`
+        : "";
+      const goBtn = f.attachmentMessageId
+        ? `<button type="button" class="btn-file-hub-goto-msg" data-message-id="${f.attachmentMessageId}">대화</button>`
+        : "";
+      const capEnc = encodeURIComponent(f.libraryCaption ?? "");
+      const tagsEnc = encodeURIComponent(f.libraryTags ?? "");
       li.innerHTML = `
+        <button type="button" class="btn-file-hub-pin${pinOn ? " is-pinned" : ""}" data-file-id="${f.id}" data-pinned="${pinOn}" title="자료실에 고정" aria-label="고정">📌</button>
         <span class="channel-file-icon">📎</span>
         <span class="channel-file-meta">
           <span class="channel-file-name">${escHtml(f.originalFilename || "")}</span>
           <span class="channel-file-sub">${who} · ${fmtSize(f.sizeBytes)} · ${fmtDate(f.createdAt)}</span>
+          ${cap}${tags}
         </span>
+        <select class="file-hub-folder-select" data-file-id="${f.id}" title="자료실 폴더">${buildFolderOptionsForFileRow(f.libraryFolderId)}</select>
+        ${goBtn}
+        <button type="button" class="btn-file-hub-memo" data-file-id="${f.id}" data-cap="${capEnc}" data-tags="${tagsEnc}">메모</button>
         <button type="button" class="btn-channel-file-dl" data-file-id="${f.id}">다운로드</button>`;
       li.querySelector(".btn-channel-file-dl").addEventListener("click", () => {
         void maybeDownloadChannelImageWithChoice(f.id, f.originalFilename, channelId, {
@@ -7765,6 +7913,34 @@ document.getElementById("btnOpenThreadHub")?.addEventListener("click", async () 
 
 document.querySelectorAll(".file-hub-tab[data-file-hub-tab]").forEach((btn) => {
   btn.addEventListener("click", () => setFileHubTab(btn.dataset.fileHubTab));
+});
+
+document.getElementById("fileHubLibraryFilter")?.addEventListener("change", () => {
+  if (!activeChannelId) return;
+  void refreshChannelFileHubData(activeChannelId);
+});
+
+document.getElementById("btnFileHubAddFolder")?.addEventListener("click", async () => {
+  if (!activeChannelId || !currentUser) return;
+  const name = await uiPrompt("새 폴더 이름", "", "자료실");
+  if (name == null) return;
+  const trimmed = String(name).trim();
+  if (!trimmed) return;
+  const res = await apiFetch(
+    `/api/channels/${activeChannelId}/library/folders?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmed }),
+    }
+  );
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    await uiAlert(json?.error?.message || "폴더를 만들 수 없습니다.");
+    return;
+  }
+  await refreshChannelLibraryFolderFilterUi(activeChannelId);
+  await refreshChannelFileHubData(activeChannelId);
 });
 
 const WORK_ITEM_STATUS_LABEL = { OPEN: "대기", IN_PROGRESS: "진행 중", DONE: "완료" };

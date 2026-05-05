@@ -11,6 +11,7 @@ import com.ech.backend.domain.audit.AuditEventType;
 import com.ech.backend.domain.channel.Channel;
 import com.ech.backend.domain.channel.ChannelMemberRepository;
 import com.ech.backend.domain.channel.ChannelRepository;
+import com.ech.backend.api.message.dto.MessageResponse;
 import com.ech.backend.domain.file.ChannelFile;
 import com.ech.backend.domain.file.ChannelFileRepository;
 import com.ech.backend.domain.settings.AppSettingKey;
@@ -73,13 +74,36 @@ public class ChannelFileService {
         this.messageService = messageService;
     }
 
-    public List<ChannelFileResponse> listFiles(Long channelId, String requesterEmployeeNo) {
+    /**
+     * 채널 파일 목록. 자료실 필터: {@code libraryUncategorizedOnly}=true 이면 폴더 미지정만,
+     * {@code libraryFolderId}가 있으면 해당 폴더만(미분류와 동시 지정 불가).
+     */
+    public List<ChannelFileResponse> listFiles(
+            Long channelId,
+            String requesterEmployeeNo,
+            Long libraryFolderId,
+            Boolean libraryUncategorizedOnly
+    ) {
         requireChannelMember(channelId, requesterEmployeeNo);
-        return channelFileRepository
-                .findByChannel_IdOrderByCreatedAtDesc(channelId, PageRequest.of(0, LIST_PAGE_SIZE))
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        boolean uncategorized = Boolean.TRUE.equals(libraryUncategorizedOnly);
+        if (libraryFolderId != null && uncategorized) {
+            throw new IllegalArgumentException("libraryFolderId와 libraryUncategorizedOnly를 함께 사용할 수 없습니다.");
+        }
+        List<ChannelFile> rows;
+        var page = PageRequest.of(0, LIST_PAGE_SIZE);
+        if (uncategorized) {
+            rows = channelFileRepository.findHubByChannelUncategorized(channelId, page);
+        } else if (libraryFolderId != null) {
+            rows = channelFileRepository.findHubByChannelAndFolder(channelId, libraryFolderId, page);
+        } else {
+            rows = channelFileRepository.findHubByChannelOrderPinned(channelId, page);
+        }
+        return rows.stream().map(this::toResponse).toList();
+    }
+
+    /** 라이브러리 서비스 등 외부에서 메타 매핑 시 사용 */
+    public ChannelFileResponse toChannelFileResponse(ChannelFile file) {
+        return toResponse(file);
     }
 
     /**
@@ -368,7 +392,7 @@ public class ChannelFileService {
                 mt = "FILE";
             }
 
-            messageService.createFileAttachmentMessage(
+            MessageResponse mr = messageService.createFileAttachmentMessage(
                     saved.getChannel().getId(),
                     saved.getUploadedBy().getEmployeeNo(),
                     parentMessageId,
@@ -379,6 +403,10 @@ public class ChannelFileService {
                     mt,
                     saved.getPreviewSizeBytes()
             );
+            if (mr != null && mr.messageId() != null) {
+                saved.setAttachmentMessageId(mr.messageId());
+                channelFileRepository.save(saved);
+            }
         } catch (Exception e) {
             log.warn("파일 첨부 메시지 기록 실패 (fileId={}): {}", saved.getId(), e.getMessage());
         }
@@ -433,6 +461,12 @@ public class ChannelFileService {
 
     private ChannelFileResponse toResponse(ChannelFile file) {
         boolean hasPreview = file.getPreviewStorageKey() != null && !file.getPreviewStorageKey().isBlank();
+        Long lfId = null;
+        String lfName = null;
+        if (file.getLibraryFolder() != null) {
+            lfId = file.getLibraryFolder().getId();
+            lfName = file.getLibraryFolder().getName();
+        }
         return new ChannelFileResponse(
                 file.getId(), file.getChannel().getId(),
                 file.getUploadedBy().getEmployeeNo(),
@@ -441,7 +475,13 @@ public class ChannelFileService {
                 file.getContentType(), file.getSizeBytes(),
                 file.getStorageKey(), file.getCreatedAt(),
                 hasPreview,
-                file.getPreviewSizeBytes()
+                file.getPreviewSizeBytes(),
+                lfId,
+                lfName,
+                file.isLibraryPinned(),
+                file.getLibraryCaption(),
+                file.getLibraryTags(),
+                file.getAttachmentMessageId()
         );
     }
 

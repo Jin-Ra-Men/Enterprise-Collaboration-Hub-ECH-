@@ -13,6 +13,12 @@ public record ChannelFileResponse(
         String storageKey,
         OffsetDateTime createdAt,
         boolean hasPreview,
-        Long previewSizeBytes
+        Long previewSizeBytes,
+        Long libraryFolderId,
+        String libraryFolderName,
+        boolean libraryPinned,
+        String libraryCaption,
+        String libraryTags,
+        Long attachmentMessageId
 ) {
 }

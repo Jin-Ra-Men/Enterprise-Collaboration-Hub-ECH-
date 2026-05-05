@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.ColumnDefault;
 import java.time.OffsetDateTime;
 
 @Entity
@@ -50,6 +51,26 @@ public class ChannelFile {
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
+
+    /** Channel 자료실 폴더 (nullable = 미분류) */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "library_folder_id")
+    private ChannelLibraryFolder libraryFolder;
+
+    @ColumnDefault("false")
+    @Column(name = "library_pinned", nullable = false)
+    private boolean libraryPinned;
+
+    @Column(name = "library_caption", columnDefinition = "TEXT")
+    private String libraryCaption;
+
+    /** 쉼표 구분 태그 (MVP) */
+    @Column(name = "library_tags", length = 500)
+    private String libraryTags;
+
+    /** 파일 첨부 메시지 ID (타임라인으로 이동용); 업로드 후 기록 */
+    @Column(name = "attachment_message_id")
+    private Long attachmentMessageId;
 
     protected ChannelFile() {
     }
@@ -112,5 +133,45 @@ public class ChannelFile {
 
     public OffsetDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public ChannelLibraryFolder getLibraryFolder() {
+        return libraryFolder;
+    }
+
+    public boolean isLibraryPinned() {
+        return libraryPinned;
+    }
+
+    public String getLibraryCaption() {
+        return libraryCaption;
+    }
+
+    public String getLibraryTags() {
+        return libraryTags;
+    }
+
+    public Long getAttachmentMessageId() {
+        return attachmentMessageId;
+    }
+
+    public void setLibraryFolder(ChannelLibraryFolder libraryFolder) {
+        this.libraryFolder = libraryFolder;
+    }
+
+    public void setLibraryPinned(boolean libraryPinned) {
+        this.libraryPinned = libraryPinned;
+    }
+
+    public void setLibraryCaption(String libraryCaption) {
+        this.libraryCaption = libraryCaption;
+    }
+
+    public void setLibraryTags(String libraryTags) {
+        this.libraryTags = libraryTags;
+    }
+
+    public void setAttachmentMessageId(Long attachmentMessageId) {
+        this.attachmentMessageId = attachmentMessageId;
     }
 }

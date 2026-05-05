@@ -4977,6 +4977,90 @@ html[data-theme="cream"] .search-item-clickable:hover {
 .file-hub-modal-body {
   padding-top: 12px;
 }
+.file-hub-library-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+}
+.file-hub-library-bar label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+#fileHubLibraryFilter {
+  min-width: 160px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+.btn-file-hub-library-add {
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--accent);
+  cursor: pointer;
+}
+.btn-file-hub-library-add:hover { border-color: var(--border-focus); }
+.btn-file-hub-pin {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 4px;
+  opacity: 0.5;
+}
+.btn-file-hub-pin.is-pinned { opacity: 1; }
+.file-hub-folder-select {
+  max-width: 140px;
+  font-size: 12px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+.btn-file-hub-goto-msg,
+.btn-file-hub-memo {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.btn-file-hub-goto-msg:hover,
+.btn-file-hub-memo:hover { border-color: var(--border-focus); color: var(--accent); }
+.channel-file-library-caption {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  font-style: italic;
+}
+.channel-file-library-tags {
+  display: block;
+  font-size: 11px;
+  color: var(--accent);
+  margin-top: 2px;
+}
+
 .file-hub-tabs {
   display: flex;
   gap: 6px;
@@ -5036,6 +5120,11 @@ html[data-theme="light"] .file-hub-tab.active {
 .channel-files-list-modal {
   max-height: none;
   padding: 0 4px 8px 0;
+}
+.channel-files-list-modal .channel-file-item {
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 4px;
 }
 
 .modal-thread-hub {

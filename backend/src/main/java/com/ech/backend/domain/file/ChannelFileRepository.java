@@ -12,6 +12,33 @@ public interface ChannelFileRepository extends JpaRepository<ChannelFile, Long> 
 
     List<ChannelFile> findByChannel_IdOrderByCreatedAtDesc(Long channelId, Pageable pageable);
 
+    @Query("""
+            SELECT DISTINCT f FROM ChannelFile f
+            LEFT JOIN FETCH f.libraryFolder lf
+            WHERE f.channel.id = :channelId
+            ORDER BY f.libraryPinned DESC, f.createdAt DESC
+            """)
+    List<ChannelFile> findHubByChannelOrderPinned(@Param("channelId") Long channelId, Pageable pageable);
+
+    @Query("""
+            SELECT DISTINCT f FROM ChannelFile f
+            LEFT JOIN FETCH f.libraryFolder lf
+            WHERE f.channel.id = :channelId AND f.libraryFolder.id = :folderId
+            ORDER BY f.libraryPinned DESC, f.createdAt DESC
+            """)
+    List<ChannelFile> findHubByChannelAndFolder(
+            @Param("channelId") Long channelId,
+            @Param("folderId") Long folderId,
+            Pageable pageable);
+
+    @Query("""
+            SELECT DISTINCT f FROM ChannelFile f
+            LEFT JOIN FETCH f.libraryFolder lf
+            WHERE f.channel.id = :channelId AND f.libraryFolder IS NULL
+            ORDER BY f.libraryPinned DESC, f.createdAt DESC
+            """)
+    List<ChannelFile> findHubByChannelUncategorized(@Param("channelId") Long channelId, Pageable pageable);
+
     Optional<ChannelFile> findByIdAndChannel_Id(Long id, Long channelId);
 
     /**
@@ -47,4 +74,8 @@ public interface ChannelFileRepository extends JpaRepository<ChannelFile, Long> 
     @Modifying
     @Query(value = "DELETE FROM channel_files WHERE uploaded_by = :empNo", nativeQuery = true)
     void deleteByUploaderEmployeeNo(@Param("empNo") String employeeNo);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE ChannelFile f SET f.libraryFolder = null WHERE f.libraryFolder.id = :folderId")
+    void detachFilesFromLibraryFolder(@Param("folderId") Long folderId);
 }

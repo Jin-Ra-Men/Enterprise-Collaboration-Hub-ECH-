@@ -2,6 +2,12 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-05-06
+
+### Added
+- **채널 자료실**: `channel_library_folders`, `channel_files` 확장(폴더·핀·캡션·태그·`attachment_message_id`), REST(`ChannelLibraryController`, 파일 목록 필터·PATCH), 감사 타입, `ChannelLibraryApiTest`. 프론트 파일 허브(`modalFileHub`)에 자료실 필터·폴더 추가·행 단위 편집.
+- **문서/SQL**: `docs/sql/migrate_channel_library_v1.sql`, `postgresql_schema_draft.sql` 갱신, `FEATURE_SPEC`·`ROADMAP` 2-7-2 완료 처리·`COLLABORATION_TOOL_DIRECTION` 반영.
+
 ## 2026-05-04
 
 ### Added

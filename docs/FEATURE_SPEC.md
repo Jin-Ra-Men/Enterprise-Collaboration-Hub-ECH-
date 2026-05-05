@@ -93,6 +93,26 @@
 
 ---
 
+## 채널 자료실 (기존 첨부·파일 허브 확장)
+- 목적: 채널 첨부를 **폴더·핀·설명·태그**로 정리하고, **첨부가 달린 대화**로 이동해 맥락을 잃지 않게 한다(위키 전 단계·자료 **거주지**).
+- 사용자: 채널/DM 멤버(기존 파일 API와 동일)
+- 관련 화면/경로: `modalFileHub` — **자료실** 필터 `select#fileHubLibraryFilter`, **+ 폴더**, 각 행 **고정(📌)·폴더 선택·메모·대화**
+- 관련 API:
+  - `GET /api/channels/{channelId}/library/folders?employeeNo=`
+  - `POST /api/channels/{channelId}/library/folders` — `{ "name": "..." }`
+  - `PATCH /api/channels/{channelId}/library/folders/{folderId}` — `{ "name": "..." }`
+  - `DELETE /api/channels/{channelId}/library/folders/{folderId}`
+  - `GET /api/channels/{channelId}/files?employeeNo=` — 선택 **`libraryFolderId`** 또는 **`libraryUncategorizedOnly=true`** (자료실 필터)
+  - `PATCH /api/channels/{channelId}/library/files/{fileId}?employeeNo=` — `{ "pinned","caption","tags","folderId","detachFolder" }` 부분 갱신
+- 입력/출력: 파일 목록 응답에 `libraryFolderId`, `libraryFolderName`, `libraryPinned`, `libraryCaption`, `libraryTags`, `attachmentMessageId` 포함.
+- 상태 전이/예외 케이스: 폴더 삭제 시 해당 파일의 `library_folder_id`만 해제(파일 행 유지). `libraryFolderId`와 `libraryUncategorizedOnly` 동시 지정 시 400.
+- 권한/보안: 채널 멤버만 (기존 파일 목록과 동일 패턴 `employeeNo`).
+- 로그/감사: `CHANNEL_LIBRARY_FOLDER_*`, `CHANNEL_FILE_LIBRARY_UPDATED`
+- 테스트 기준: `ChannelLibraryApiTest`
+- 비고: 스키마 반영은 `docs/sql/postgresql_schema_draft.sql`, 운영 수동 이관은 `docs/sql/migrate_channel_library_v1.sql`.
+
+---
+
 ## DM 채널 생성 제약 자동 보정 (환경 호환)
 - 목적: 오래된 로컬 DB 스키마에서 DM 생성 실패를 자동 복구하여 사용자 DM 생성 흐름을 안정화
 - 사용자: 채팅 사용자, 운영자, 백엔드 개발자

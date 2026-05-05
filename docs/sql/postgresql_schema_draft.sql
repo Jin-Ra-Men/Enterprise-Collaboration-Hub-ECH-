@@ -71,6 +71,17 @@ CREATE TABLE IF NOT EXISTS channel_read_states (
 
 CREATE INDEX IF NOT EXISTS idx_channel_read_states_channel_user ON channel_read_states(channel_id, user_id);
 
+-- 채널 자료실 폴더 (채널별 논리 폴더)
+CREATE TABLE IF NOT EXISTS channel_library_folders (
+    id BIGSERIAL PRIMARY KEY,
+    channel_id BIGINT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
+    name VARCHAR(200) NOT NULL,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_channel_library_folders_channel ON channel_library_folders(channel_id);
+
 -- 채널 첨부 파일 메타데이터 (실제 바이너리는 스토리지/NAS 등 외부, DB는 메타만)
 CREATE TABLE IF NOT EXISTS channel_files (
     id BIGSERIAL PRIMARY KEY,
@@ -82,10 +93,16 @@ CREATE TABLE IF NOT EXISTS channel_files (
     storage_key VARCHAR(1024) NOT NULL,
     preview_storage_key VARCHAR(1024),
     preview_size_bytes BIGINT,
+    library_folder_id BIGINT REFERENCES channel_library_folders(id) ON DELETE SET NULL,
+    library_pinned BOOLEAN NOT NULL DEFAULT FALSE,
+    library_caption TEXT,
+    library_tags VARCHAR(500),
+    attachment_message_id BIGINT REFERENCES messages(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_channel_files_channel_id_created_at ON channel_files(channel_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_channel_files_library_folder ON channel_files(library_folder_id) WHERE library_folder_id IS NOT NULL;
 
 -- 칸반 보드 / 컬럼 / 카드 / 담당자 / 이벤트 이력
 CREATE TABLE IF NOT EXISTS kanban_boards (
