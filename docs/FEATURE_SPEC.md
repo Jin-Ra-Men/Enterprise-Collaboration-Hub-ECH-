@@ -273,6 +273,7 @@
   - 본문당 토큰 최대 20개(Realtime·Java 공통)
   - 발신자 본인·비멤버 사번은 알림 제외
   - 미확인 멘션 목록: 현재 보고 있지 않은 채널의 멘션 토스트를 사용자별 localStorage(`ech_mention_inbox_{employeeNo}`)에 최대 100건 보관, 확인(클릭) 시 목록에서 제거
+  - **멘션 → 업무 → 칸반 빠른 연계**: 인앱 멘션 토스트 본문 영역은 기존처럼 채널·메시지로 이동하고, 별도 버튼 **「업무·칸반」** 으로 한 번에 `ensureWorkItemFromMessageApi`(미존재 시 `POST /api/messages/{messageId}/work-items`) → 해당 업무에 연결된 칸반 카드가 보드에 없으면 `POST /api/kanban/boards/{boardId}/columns/{columnId}/cards`(첫 컬럼·본인 담당)로 즉시 생성 후 워크플로 모달을 칸반 패널로 연다. 미확인 멘션 목록에도 동일 단축 버튼. 채팅 타임라인 메시지 우클릭 **「업무·칸반으로…」** 는 채널 전환 없이 `runMessageToWorkKanbanFlow(messageId)`만 수행. 진행 중인 허브 미저장 편집은 통합검색에서 업무 결과 열 때와 같이 `clearWorkHubPendingMaps()` 후 진행한다. Electron 클라이언트는 인앱 멘션 토스트 자체가 숨겨져 동일 버튼은 브라우저 세션에서만 노출된다.
 - 상태 전이/예외 케이스:
   - Realtime 미기동/내부 URL 비어 있으면 Java 쪽 `notifyMentions`는 HTTP 실패를 로그만 남기고 메시지 저장은 유지
   - `mention:notify`가 누락/지연되는 경우(소켓 emit 경로 불일치 등) 현재 채널에서 `message:new` 수신 시 본문 토큰을 클라이언트가 파싱해 내 멘션이면 폴백 토스트를 표시
@@ -621,6 +622,7 @@
   - `GET /api/work-items/me/todos?employeeNo=&limitPerBucket=` — 사이드바 **내 할 일**: `overdue`(서버 기준 오늘 시작은 **Asia/Seoul**)·`dueToday`·`mentionLinked`(원본 메시지 본문에 `@{내사번|…}` 또는 `@{내사번}` 토큰)·`kanbanAssigned`(담당 칸반과 동일 소스). 행에 `sourceMessageId`가 있으면 멘션 연계 행에서 채팅 타임라인 포커스에 사용
   - 동일 응답의 **`badgeCounts`**: `overdueTotal`(목록과 동일 조건의 **전체** 지연 건수)·`dueSoonTotal`(활성·미완료·`dueAt ∈ (now, now+dueSoonHours]` 집계)·`dueSoonHours`(기본 48). 채널 **미읽음 배지**와 별도로 사이드바 «내 할 일» 헤더에 합산 배지 표시; 지연 포함 시 진한 적색, 임박만 있으면 주황 톤. 폴링 시 지연·임박 건수가 **직전보다 증가**하면 활동 토스트(`업무 마감 알림`, OS 태그 `ech_os_work_due_badge`) — 목록 행 변경만 있을 때의 일반 «업무 항목 변경» 토스트와 중복되면 **마감 토스트 우선**(한 주기 1건)
   - `GET /api/kanban/channels/{channelId}/board?employeeNo=` — 채널 기본 칸반 보드 조회/없으면 자동 생성
+  - 메시지 출처 업무: `POST /api/messages/{messageId}/work-items`(메시지당 업무 1건)·`GET /api/messages/{messageId}/work-items` — 채널 멤버만; 동일 메시지에서 빠른 연계 시 칸반 카드 REST로 즉시 저장(허브 **저장** 버튼 없이 배치 가능)
 - 입력/출력:
   - 업무 상태는 API 값은 `OPEN`/`IN_PROGRESS`/`DONE`이며, UI 셀렉트·목록은 한글 라벨(예: 미착수·진행 중·완료)로 표시
   - 칸반 보드는 채널당 1개를 기본으로 사용하며, 최초 조회 시 `할 일/진행 중/완료` 컬럼을 자동 생성

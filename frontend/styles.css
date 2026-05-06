@@ -1270,6 +1270,33 @@ html:not([data-theme="light"]) .sidebar-item.active::before {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.mention-list .sidebar-item.mention-item {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+}
+.mention-item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mention-item-kanban-btn {
+  flex-shrink: 0;
+  margin-top: 2px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent, #7c4dff) 35%, var(--border-subtle));
+  background: color-mix(in srgb, var(--accent, #7c4dff) 10%, transparent);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.mention-item-kanban-btn:hover {
+  background: color-mix(in srgb, var(--accent, #7c4dff) 18%, transparent);
+}
 
 /* 채널/DM 목록 미읽음 (Slack 스타일 원형 배지) */
 .channel-unread-badge {
@@ -3486,6 +3513,46 @@ html[data-theme="cream"] .mention-suggest-item:hover {
   text-align: left;
   font: inherit;
   animation: mention-toast-in 0.2s ease;
+}
+.mention-toast--split {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  cursor: default;
+}
+.mention-toast-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 16px 18px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mention-toast-quick {
+  flex: 0 0 auto;
+  align-self: stretch;
+  padding: 10px 14px;
+  border: none;
+  border-left: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--accent, #7c4dff) 12%, transparent);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mention-toast-quick:hover {
+  background: color-mix(in srgb, var(--accent, #7c4dff) 22%, transparent);
 }
 @keyframes mention-toast-in {
   from { opacity: 0; transform: translateY(8px); }

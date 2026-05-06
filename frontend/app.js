@@ -662,9 +662,18 @@ function renderMentionInboxList() {
     const li = document.createElement("li");
     li.className = "sidebar-item mention-item";
     li.dataset.mentionId = it.id;
+    const quickKanban =
+      it.messageId != null && Number.isFinite(Number(it.messageId))
+        ? `<button type="button" class="mention-item-kanban-btn" data-mention-kanban-id="${escHtml(
+            String(it.id)
+          )}" title="업무를 만들고 칸반 첫 컬럼에 배치">업무·칸반</button>`
+        : "";
     li.innerHTML = `
-      <span class="mention-item-title">${escHtml(`${it.senderName || "알림"} · ${it.channelName}`)}</span>
-      <span class="mention-item-preview">${escHtml(it.messagePreview || "(미리보기 없음)")}</span>
+      <div class="mention-item-body">
+        <span class="mention-item-title">${escHtml(`${it.senderName || "알림"} · ${it.channelName}`)}</span>
+        <span class="mention-item-preview">${escHtml(it.messagePreview || "(미리보기 없음)")}</span>
+      </div>
+      ${quickKanban}
     `;
     listEl.appendChild(li);
   });
@@ -3530,6 +3539,183 @@ async function openWorkHubFromTopNav(panelFocus) {
   await openWorkflowPickerFromSidebar();
 }
 
+/** 메시지에 연결된 업무 목록(JSON `data` 배열). */
+async function fetchWorkItemsForMessageApi(messageId) {
+  const mid = Number(messageId);
+  if (!Number.isFinite(mid)) return [];
+  const res = await apiFetch(`/api/messages/${mid}/work-items`);
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) return [];
+  return Array.isArray(j.data) ? j.data : [];
+}
+
+function kanbanBoardHasCardForWorkItem(workItemId) {
+  const wi = Number(workItemId);
+  if (!Number.isFinite(wi) || wi <= 0) return false;
+  for (const col of activeWorkHubColumns || []) {
+    const cards = Array.isArray(col?.cards) ? col.cards : [];
+    for (const c of cards) {
+      const cwi = Number(c.workItemId ?? c.work_item_id ?? 0);
+      if (cwi === wi) return true;
+    }
+  }
+  return false;
+}
+
+async function ensureWorkItemFromMessageApi(messageId) {
+  const mid = Number(messageId);
+  if (!currentUser || !Number.isFinite(mid)) {
+    throw new Error("로그인 또는 메시지 정보가 없습니다.");
+  }
+  const existing = await fetchWorkItemsForMessageApi(mid);
+  if (existing.length > 0) {
+    return existing[0];
+  }
+  const res = await apiFetch(`/api/messages/${mid}/work-items`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ createdByEmployeeNo: currentUser.employeeNo }),
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(j.error?.message || "메시지에서 업무를 만들 수 없습니다.");
+  }
+  return j.data;
+}
+
+/**
+ * 메시지 기준 업무 확보 → 칸반 첫 컬럼에 카드가 없으면 생성(API 즉시 저장) → 워크플로우 칸반으로 포커스.
+ * 기존 허브 미저장 변경은 clearWorkHubPendingMaps로 초기화(통합검색 결과 진입과 동일 정책).
+ */
+async function runMessageToWorkKanbanFlow(messageId) {
+  const mid = Number(messageId);
+  if (!currentUser || !Number.isFinite(mid)) return;
+  clearWorkHubPendingMaps();
+  clearPendingNewKanbanAssignees();
+  let newCardId = null;
+  try {
+    const workItem = await ensureWorkItemFromMessageApi(mid);
+    const wid = Number(workItem?.id ?? workItem?.workItemId ?? 0);
+    if (!Number.isFinite(wid) || wid <= 0) {
+      throw new Error("업무 항목을 확인할 수 없습니다.");
+    }
+
+    try {
+      await loadChannelKanbanBoard();
+    } catch (e) {
+      await Promise.all([
+        loadWorkHubChannelMembersForAssignee(),
+        loadChannelWorkItems(),
+        loadWorkHubCalendarPanel(),
+      ]);
+      ensureWorkHubWorkListDeleteBound();
+      ensureWorkHubCalendarBound();
+      workflowNeedsChannelPick = false;
+      pendingWorkHubPanelFocus = "work";
+      openWorkflowPage();
+      renderWorkflowChannelPicker();
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          focusWorkHubPanel("work");
+          const rowEl = document.querySelector(`#channelWorkItemsList .channel-work-item[data-work-item-id="${wid}"]`);
+          if (rowEl) {
+            rowEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            rowEl.classList.add("channel-work-item-highlight");
+            setTimeout(() => rowEl.classList.remove("channel-work-item-highlight"), 2200);
+          }
+        });
+      });
+      await uiAlert(e?.message || "칸반 보드를 불러오지 못했습니다. 업무 목록만 열었습니다.");
+      return;
+    }
+
+    if (activeWorkHubBoardId && activeWorkHubFirstColumnId && !kanbanBoardHasCardForWorkItem(wid)) {
+      const colId = Number(activeWorkHubFirstColumnId);
+      const title = String(workItem.title || "").trim() || `업무 #${wid}`;
+      const selfEmp = String(currentUser.employeeNo || "").trim();
+      const cardRes = await apiFetch(
+        `/api/kanban/boards/${activeWorkHubBoardId}/columns/${colId}/cards`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            actorEmployeeNo: currentUser.employeeNo,
+            workItemId: wid,
+            title,
+            description: null,
+            status: statusForKanbanColumnId(colId),
+            assigneeEmployeeNos: selfEmp ? [selfEmp] : [],
+          }),
+        }
+      );
+      const cj = await cardRes.json().catch(() => ({}));
+      if (!cardRes.ok) {
+        throw new Error(cj.error?.message || "칸반 카드를 만들 수 없습니다.");
+      }
+      newCardId = Number(cj.data?.id ?? cj.data?.cardId ?? 0);
+    }
+
+    await Promise.all([
+      loadWorkHubChannelMembersForAssignee(),
+      loadChannelWorkItems(),
+      loadChannelKanbanBoard(),
+      loadWorkHubCalendarPanel(),
+    ]);
+    ensureWorkHubWorkListDeleteBound();
+    ensureWorkHubCalendarBound();
+    workflowNeedsChannelPick = false;
+    pendingWorkHubPanelFocus = null;
+    openWorkflowPage();
+    renderWorkflowChannelPicker();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        focusWorkHubPanel("kanban");
+        if (Number.isFinite(newCardId) && newCardId > 0) {
+          const cardEl = document.querySelector(
+            `#channelKanbanBoard .kanban-card-item[data-kanban-card-id="${newCardId}"]`
+          );
+          if (cardEl) {
+            cardEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            cardEl.classList.add("kanban-card-highlight");
+            setTimeout(() => cardEl.classList.remove("kanban-card-highlight"), 2200);
+          }
+        }
+        const rowEl = document.querySelector(`#channelWorkItemsList .channel-work-item[data-work-item-id="${wid}"]`);
+        if (rowEl) {
+          rowEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          rowEl.classList.add("channel-work-item-highlight");
+          setTimeout(() => rowEl.classList.remove("channel-work-item-highlight"), 2200);
+        }
+      });
+    });
+  } catch (e) {
+    await uiAlert(e?.message || "처리할 수 없습니다.");
+  }
+}
+
+async function navigateToMessageThenWorkKanban(channelId, channelName, channelType, messageId) {
+  const cid = Number(channelId);
+  const mid = Number(messageId);
+  if (!currentUser || !Number.isFinite(cid) || !Number.isFinite(mid)) return;
+  const needSwitch = activeChannelId == null || Number(activeChannelId) !== cid;
+  if (needSwitch) {
+    await selectChannel(cid, channelName, channelType, { targetMessageId: mid });
+  } else {
+    focusMessageByIdInCurrentTimeline(mid);
+    removeUnreadMentionById(`m_${mid}`);
+  }
+  await runMessageToWorkKanbanFlow(mid);
+}
+
+async function openUnreadMentionWorkKanban(mentionRowId) {
+  const id = String(mentionRowId || "").trim();
+  if (!id) return;
+  const item = mentionInboxItems.find((x) => x.id === id);
+  if (!item || item.messageId == null || !Number.isFinite(Number(item.messageId))) return;
+  removeUnreadMentionById(id);
+  await navigateToMessageThenWorkKanban(item.channelId, item.channelName, item.channelType, Number(item.messageId));
+}
+
 function setSidebarCollapsedUi(collapsed) {
   mainApp.classList.toggle("sidebar-collapsed", collapsed);
   const btn = document.getElementById("btnSidebarEdgeToggle");
@@ -5856,6 +6042,11 @@ if (messageContextMenuEl) {
       closeMentionSuggest();
       return;
     }
+
+    if (action === "work-kanban") {
+      if (!selectedId || !Number.isFinite(Number(selectedId))) return;
+      await runMessageToWorkKanbanFlow(Number(selectedId));
+    }
   });
 }
 
@@ -6916,13 +7107,17 @@ function pushMentionToast(p) {
 
   if (isEchElectronClient()) return;
 
-  const toast = document.createElement("button");
-  toast.type = "button";
-  toast.className = "mention-toast";
-  toast.innerHTML = `<span class="mention-toast-title">새 멘션</span><span class="mention-toast-sub">${escHtml(senderText)}</span><span class="mention-toast-loc">${escHtml(locationText)}</span><span class="mention-toast-preview">${escHtml(preview)}</span>`;
-  toast.addEventListener("click", () => {
-    toast.remove();
-    // Request permission from user gesture (click).
+  const wrap = document.createElement("div");
+  wrap.className = "mention-toast mention-toast--split";
+  wrap.setAttribute("role", "group");
+  wrap.setAttribute("aria-label", "새 멘션 알림");
+
+  const mainBtn = document.createElement("button");
+  mainBtn.type = "button";
+  mainBtn.className = "mention-toast-main";
+  mainBtn.innerHTML = `<span class="mention-toast-title">새 멘션</span><span class="mention-toast-sub">${escHtml(senderText)}</span><span class="mention-toast-loc">${escHtml(locationText)}</span><span class="mention-toast-preview">${escHtml(preview)}</span>`;
+  mainBtn.addEventListener("click", () => {
+    wrap.remove();
     void ensureOsNotificationPermissionFromUserGesture();
     if (p.messageId != null) {
       removeUnreadMentionById(`m_${Number(p.messageId)}`);
@@ -6931,9 +7126,26 @@ function pushMentionToast(p) {
       targetMessageId: p.messageId != null ? Number(p.messageId) : null,
     });
   });
-  stack.appendChild(toast);
+  wrap.appendChild(mainBtn);
+
+  if (p.messageId != null && Number.isFinite(Number(p.messageId))) {
+    const quickBtn = document.createElement("button");
+    quickBtn.type = "button";
+    quickBtn.className = "mention-toast-quick";
+    quickBtn.textContent = "업무·칸반";
+    quickBtn.title = "업무를 만들고 칸반 첫 컬럼에 카드를 둡니다";
+    quickBtn.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      wrap.remove();
+      void ensureOsNotificationPermissionFromUserGesture();
+      void navigateToMessageThenWorkKanban(cid, channelName, channelType, Number(p.messageId));
+    });
+    wrap.appendChild(quickBtn);
+  }
+
+  stack.appendChild(wrap);
   setTimeout(() => {
-    if (toast.parentNode) toast.remove();
+    if (wrap.parentNode) wrap.remove();
   }, 25_000);
 }
 
@@ -11561,6 +11773,14 @@ function initEvents() {
   if (!mentionInboxUiBound) {
     mentionInboxUiBound = true;
     document.getElementById("mentionList")?.addEventListener("click", (e) => {
+      const kb = e.target.closest(".mention-item-kanban-btn");
+      if (kb) {
+        e.preventDefault();
+        e.stopPropagation();
+        const rid = String(kb.dataset.mentionKanbanId || "").trim();
+        if (rid) void openUnreadMentionWorkKanban(rid);
+        return;
+      }
       const row = e.target.closest(".mention-item[data-mention-id]");
       if (!row) return;
       e.preventDefault();
