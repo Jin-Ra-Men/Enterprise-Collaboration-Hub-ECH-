@@ -100,6 +100,20 @@
 
 ---
 
+## AI 게이트웨이 (Phase 7-1 스텁)
+
+- 목적: 협업 **원문을 공용 인터넷 LLM으로 기본 전송하지 않는다**는 정책을 **코드 단 일 진입점**으로 강제하고, 호출 시도를 **메타만** 감사한다.
+- 사용자: 인증된 멤버(JWT). 클라이언트는 LLM에 직접 연결하지 않고 백엔드 게이트웨이만 호출한다.
+- 관련 문서: `docs/AI_GATEWAY_POLICY.md`, `docs/COLLABORATION_TOOL_DIRECTION.md` §5~7.
+- 관련 설정: `application.yml` — `app.ai.allow-external-llm`(기본 `false`, 환경변수 `AI_ALLOW_EXTERNAL_LLM`), `app.ai.policy-version`(표시용).
+- 관련 API:
+  - `GET /api/ai/gateway/status` — 정책 요약(`externalLlmAllowed`, `policyVersion`, `defaultPolicySummary`).
+  - `POST /api/ai/gateway/chat` — 본문 JSON `purpose`, 선택 `employeeNo`(JWT와 일치), 선택 `channelId`(감사 메타), `prompt`(최대 8000자). **`allow-external-llm=false` 이면 HTTP 403** (`AI_GATEWAY_BLOCKED`). **`true` 이면 현재 HTTP 501** 스텁 (`AI_GATEWAY_NOT_CONFIGURED`) — 제공자 연동 전 오동작 방지.
+- 감사: `AI_GATEWAY_POLICY_BLOCKED`, `AI_GATEWAY_PROVIDER_NOT_CONFIGURED` — **프롬프트 원문 미저장**, detail 에 `purpose`·`promptChars`·`channelId` 등만.
+- 테스트: `AiGatewayApiTest`, `AiGatewayServiceTest`.
+
+---
+
 ## 채널 자료실 (기존 첨부·파일 허브 확장)
 - 목적: 채널 첨부를 **폴더·핀·설명·태그**로 정리하고, **첨부가 달린 대화**로 이동해 맥락을 잃지 않게 한다(위키 전 단계·자료 **거주지**).
 - 사용자: 채널/DM 멤버(기존 파일 API와 동일)

@@ -1,0 +1,109 @@
+package com.ech.backend.api.aigateway;
+
+import com.ech.backend.api.aigateway.dto.AiGatewayChatRequest;
+import com.ech.backend.api.aigateway.dto.AiGatewayStatusResponse;
+import com.ech.backend.api.auditlog.AuditLogService;
+import com.ech.backend.common.api.ApiResponse;
+import com.ech.backend.common.security.UserPrincipal;
+import com.ech.backend.domain.audit.AuditEventType;
+import com.ech.backend.domain.user.User;
+import com.ech.backend.domain.user.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+@Service
+public class AiGatewayService {
+
+    private static final String DEFAULT_POLICY_SUMMARY_KO =
+            "협업 원문(채널·DM·첨부)은 기본적으로 공용 인터넷 LLM으로 전송하지 않습니다. 예외는 전용망·계약 경로만 법무·보안 합의 후 검토합니다.";
+
+    private final AiGatewayProperties properties;
+    private final AuditLogService auditLogService;
+    private final UserRepository userRepository;
+
+    public AiGatewayService(
+            AiGatewayProperties properties,
+            AuditLogService auditLogService,
+            UserRepository userRepository
+    ) {
+        this.properties = properties;
+        this.auditLogService = auditLogService;
+        this.userRepository = userRepository;
+    }
+
+    public AiGatewayStatusResponse statusSnapshot() {
+        String ver = properties.getPolicyVersion();
+        if (ver == null || ver.isBlank()) {
+            ver = "unknown";
+        }
+        return new AiGatewayStatusResponse(properties.isAllowExternalLlm(), ver, DEFAULT_POLICY_SUMMARY_KO);
+    }
+
+    public ResponseEntity<ApiResponse<Void>> chat(
+            UserPrincipal principal,
+            AiGatewayChatRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        String actorEmp = resolveSelfEmployeeNo(principal, request.employeeNo());
+        Long actorUserId = userRepository.findByEmployeeNo(actorEmp).map(User::getId).orElse(null);
+        String detail = buildAuditDetail(request);
+        String requestId = httpRequest != null ? httpRequest.getHeader("X-Request-Id") : null;
+
+        if (!properties.isAllowExternalLlm()) {
+            auditLogService.safeRecord(
+                    AuditEventType.AI_GATEWAY_POLICY_BLOCKED,
+                    actorUserId,
+                    "AI_GATEWAY",
+                    null,
+                    null,
+                    detail,
+                    requestId
+            );
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.fail(
+                            "AI_GATEWAY_BLOCKED",
+                            "AI 게이트웨이 정책상 외부 LLM 전송이 비활성화되어 있습니다(app.ai.allow-external-llm=false). "
+                                    + "전용망·승인 제공자 연동 및 운영 설정 변경은 보안 절차 후 진행합니다."
+                    ));
+        }
+
+        auditLogService.safeRecord(
+                AuditEventType.AI_GATEWAY_PROVIDER_NOT_CONFIGURED,
+                actorUserId,
+                "AI_GATEWAY",
+                null,
+                null,
+                detail + ",phase=stub",
+                requestId
+        );
+        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
+                .body(ApiResponse.fail(
+                        "AI_GATEWAY_NOT_CONFIGURED",
+                        "외부 LLM 허용 플래그는 켜져 있으나 제공자 호출 경로는 아직 연결되지 않았습니다."
+                ));
+    }
+
+    private static String resolveSelfEmployeeNo(UserPrincipal principal, String employeeNo) {
+        if (principal == null) {
+            throw new IllegalArgumentException("인증이 필요합니다.");
+        }
+        if (employeeNo == null || employeeNo.isBlank()) {
+            return principal.employeeNo();
+        }
+        if (!principal.employeeNo().equals(employeeNo.trim())) {
+            throw new IllegalArgumentException("다른 사용자로 AI 게이트웨이를 호출할 수 없습니다.");
+        }
+        return employeeNo.trim();
+    }
+
+    private static String buildAuditDetail(AiGatewayChatRequest req) {
+        int len = req.prompt() != null ? req.prompt().length() : 0;
+        String purpose = req.purpose() == null ? "" : req.purpose().trim();
+        if (purpose.length() > 64) {
+            purpose = purpose.substring(0, 64);
+        }
+        return "purpose=" + purpose + ",promptChars=" + len + ",channelId=" + req.channelId();
+    }
+}

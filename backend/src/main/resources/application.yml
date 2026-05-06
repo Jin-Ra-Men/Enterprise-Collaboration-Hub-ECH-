@@ -47,6 +47,10 @@ jwt:
   expiration-ms: ${JWT_EXPIRATION_MS:28800000}
 
 app:
+  # Phase 7 AI 게이트웨이 — 기본 비유출: 공용 인터넷 LLM 전송 금지(app.ai.allow-external-llm=false).
+  ai:
+    allow-external-llm: ${AI_ALLOW_EXTERNAL_LLM:false}
+    policy-version: ${AI_POLICY_VERSION:2026-05-06}
   # true이면 500 응답에 예외 요약을 붙임(로컬 디버깅). 운영은 EXPOSE_ERROR_DETAIL=false 권장
   expose-error-detail: ${EXPOSE_ERROR_DETAIL:true}
   # 릴리즈 파일 저장 디렉토리 (운영 환경에서 절대 경로 지정 권장)
