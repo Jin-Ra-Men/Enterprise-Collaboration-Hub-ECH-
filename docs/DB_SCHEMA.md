@@ -759,10 +759,10 @@ CREATE TABLE app_settings (
 | 테이블 | 목적 |
 |--------|------|
 | `channel_ai_assistant_preferences` | 채널별 프로액티브 옵트인(관리자만 변경·**DM 채널 비허용**) |
-| `user_ai_assistant_preferences` | 사용자 어조·다이제스트 모드·제안 **거절 후 쿨다운** 시각 |
+| `user_ai_assistant_preferences` | 사용자 어조·다이제스트 모드·제안 **거절 후 쿨다운** 시각·**`ai_assistant_enabled`**(AI 비서 마스터 스위치, 기본 TRUE) |
 | `ai_suggestion_inbox` | 업무·일정 등 공통 **제안함 큐**(후속 백그라운드/규칙 엔진이 적재) |
 
-- DDL 이관안: `docs/sql/migrate_ai_phase_7_3.sql`
+- DDL 이관안: `docs/sql/migrate_ai_phase_7_3.sql`, 마스터 컬럼 추가만 필요 시 `docs/sql/migrate_user_ai_assistant_master_toggle.sql`
 - 도메인·API: `com.ech.backend.domain.aiassistant`, `com.ech.backend.api.aiassistant`
 
 ---

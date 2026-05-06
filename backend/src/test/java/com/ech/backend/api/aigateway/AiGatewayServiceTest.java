@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.ech.backend.api.aigateway.dto.AiGatewayChatRequest;
 import com.ech.backend.api.aigateway.llm.LlmCompletionResult;
 import com.ech.backend.api.aigateway.llm.LlmInvocationPort;
+import com.ech.backend.api.aiassistant.AiAssistantService;
 import com.ech.backend.api.auditlog.AuditLogService;
 import com.ech.backend.common.api.ApiResponse;
 import com.ech.backend.common.rbac.AppRole;
@@ -61,10 +62,14 @@ class AiGatewayServiceTest {
     @Mock
     private AiGatewayConfigurable gatewaySettings;
 
+    @Mock
+    private AiAssistantService aiAssistantService;
+
     private AiGatewayService service;
 
     @BeforeEach
     void setUp() {
+        when(aiAssistantService.isAiAssistantEnabled(any())).thenReturn(true);
         when(gatewaySettings.isAllowExternalLlm()).thenReturn(true);
         when(gatewaySettings.getChatMaxRequestsPerMinute()).thenReturn(30);
         when(gatewaySettings.getChatMaxRequestsPerHour()).thenReturn(300);
@@ -77,7 +82,25 @@ class AiGatewayServiceTest {
                 channelMemberRepository,
                 messageRepository,
                 rateLimiter,
-                llmInvocationPort);
+                llmInvocationPort,
+                aiAssistantService);
+    }
+
+    @Test
+    @DisplayName("사용자 AI 비활성 시 403 및 레이트 리미터 미호출")
+    void chat_when_user_ai_disabled_returns_forbidden_without_rate_limit() {
+        when(aiAssistantService.isAiAssistantEnabled("E001")).thenReturn(false);
+        UserPrincipal principal = new UserPrincipal(
+                99L,
+                "E001",
+                "x@test.com",
+                "Tester",
+                "",
+                AppRole.MEMBER);
+        AiGatewayChatRequest req = new AiGatewayChatRequest("p", null, null, "hi", List.of());
+        ResponseEntity<ApiResponse<?>> res = service.chat(principal, req, new MockHttpServletRequest());
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        verifyNoInteractions(rateLimiter);
     }
 
     @Test

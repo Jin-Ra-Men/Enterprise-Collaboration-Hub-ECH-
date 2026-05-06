@@ -5,6 +5,7 @@ import com.ech.backend.api.aigateway.dto.AiGatewayChatResponse;
 import com.ech.backend.api.aigateway.dto.AiGatewayStatusResponse;
 import com.ech.backend.api.aigateway.llm.LlmCompletionResult;
 import com.ech.backend.api.aigateway.llm.LlmInvocationPort;
+import com.ech.backend.api.aiassistant.AiAssistantService;
 import com.ech.backend.api.auditlog.AuditLogService;
 import com.ech.backend.common.api.ApiResponse;
 import com.ech.backend.common.exception.AiGatewayLlmUpstreamException;
@@ -36,6 +37,7 @@ public class AiGatewayService {
     private final MessageRepository messageRepository;
     private final AiGatewayRateLimiter rateLimiter;
     private final LlmInvocationPort llmInvocationPort;
+    private final AiAssistantService aiAssistantService;
 
     public AiGatewayService(
             AiGatewayConfigurable gatewaySettings,
@@ -44,7 +46,8 @@ public class AiGatewayService {
             ChannelMemberRepository channelMemberRepository,
             MessageRepository messageRepository,
             AiGatewayRateLimiter rateLimiter,
-            LlmInvocationPort llmInvocationPort
+            LlmInvocationPort llmInvocationPort,
+            AiAssistantService aiAssistantService
     ) {
         this.gatewaySettings = gatewaySettings;
         this.auditLogService = auditLogService;
@@ -53,13 +56,16 @@ public class AiGatewayService {
         this.messageRepository = messageRepository;
         this.rateLimiter = rateLimiter;
         this.llmInvocationPort = llmInvocationPort;
+        this.aiAssistantService = aiAssistantService;
     }
 
-    public AiGatewayStatusResponse statusSnapshot() {
+    public AiGatewayStatusResponse statusSnapshot(String employeeNoForPreference) {
         String ver = gatewaySettings.getPolicyVersion();
         if (ver == null || ver.isBlank()) {
             ver = "unknown";
         }
+        boolean aiOn = employeeNoForPreference == null || employeeNoForPreference.isBlank()
+                || aiAssistantService.isAiAssistantEnabled(employeeNoForPreference);
         return new AiGatewayStatusResponse(
                 gatewaySettings.isAllowExternalLlm(),
                 ver,
@@ -67,7 +73,8 @@ public class AiGatewayService {
                 gatewaySettings.getChatMaxRequestsPerMinute(),
                 gatewaySettings.getChatMaxRequestsPerHour(),
                 llmInvocationPort.isConfigured(),
-                gatewaySettings.getLlmMaxInputChars()
+                gatewaySettings.getLlmMaxInputChars(),
+                aiOn
         );
     }
 
@@ -77,6 +84,13 @@ public class AiGatewayService {
             HttpServletRequest httpRequest
     ) {
         String actorEmp = resolveSelfEmployeeNo(principal, request.employeeNo());
+        if (!aiAssistantService.isAiAssistantEnabled(actorEmp)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.fail(
+                            "AI_ASSISTANT_DISABLED_BY_USER",
+                            "본인 계정 설정에서 AI 비서 기능을 사용하지 않도록 선택되어 있습니다. 테마 설정에서 다시 켤 수 있습니다."
+                    ));
+        }
         rateLimiter.checkChatOrThrow(actorEmp, gatewaySettings);
         Long actorUserId = userRepository.findByEmployeeNo(actorEmp).map(User::getId).orElse(null);
         List<Long> citedNorm = normalizeCitedIds(request.citedMessageIds());

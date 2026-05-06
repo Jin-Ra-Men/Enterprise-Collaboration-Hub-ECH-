@@ -119,6 +119,9 @@ public class ProactiveAiSuggestionScheduler {
                     }
                     String emp = cm.getUser().getEmployeeNo();
                     UserAiAssistantPreference up = userAiAssistantPreferenceRepository.findById(emp).orElse(null);
+                    if (up != null && !up.isAiAssistantEnabled()) {
+                        continue;
+                    }
                     AiSuggestionDigestMode mode =
                             up != null ? up.getDigestMode() : AiSuggestionDigestMode.REALTIME;
                     if (mode != AiSuggestionDigestMode.REALTIME) {
@@ -158,6 +161,9 @@ public class ProactiveAiSuggestionScheduler {
 
         for (UserAiAssistantPreference up : digestUsers) {
             try {
+                if (!up.isAiAssistantEnabled()) {
+                    continue;
+                }
                 if (up.getDigestMode() == AiSuggestionDigestMode.WEEKLY && nowSeoul.getDayOfWeek() != DayOfWeek.MONDAY) {
                     continue;
                 }

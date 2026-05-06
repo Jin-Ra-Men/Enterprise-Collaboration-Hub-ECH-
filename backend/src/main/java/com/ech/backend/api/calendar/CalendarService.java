@@ -1,5 +1,6 @@
 package com.ech.backend.api.calendar;
 
+import com.ech.backend.api.aiassistant.AiAssistantService;
 import com.ech.backend.api.auditlog.AuditLogService;
 import com.ech.backend.api.calendar.dto.CalendarConflictCheckResponse;
 import com.ech.backend.api.calendar.dto.CalendarEventOverlapRow;
@@ -11,6 +12,7 @@ import com.ech.backend.api.calendar.dto.CreateCalendarEventRequest;
 import com.ech.backend.api.calendar.dto.CreateCalendarShareRequest;
 import com.ech.backend.api.calendar.dto.CreateCalendarSuggestionRequest;
 import com.ech.backend.api.calendar.dto.UpdateCalendarEventRequest;
+import com.ech.backend.common.exception.ForbiddenException;
 import com.ech.backend.common.security.UserPrincipal;
 import com.ech.backend.domain.audit.AuditEventType;
 import com.ech.backend.domain.calendar.CalendarEvent;
@@ -49,6 +51,7 @@ public class CalendarService {
     private final ChannelMemberRepository channelMemberRepository;
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
+    private final AiAssistantService aiAssistantService;
 
     public CalendarService(
             CalendarEventRepository calendarEventRepository,
@@ -57,7 +60,8 @@ public class CalendarService {
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
             UserRepository userRepository,
-            AuditLogService auditLogService
+            AuditLogService auditLogService,
+            AiAssistantService aiAssistantService
     ) {
         this.calendarEventRepository = calendarEventRepository;
         this.calendarShareRequestRepository = calendarShareRequestRepository;
@@ -66,6 +70,7 @@ public class CalendarService {
         this.channelMemberRepository = channelMemberRepository;
         this.userRepository = userRepository;
         this.auditLogService = auditLogService;
+        this.aiAssistantService = aiAssistantService;
     }
 
     @Transactional(readOnly = true)
@@ -428,15 +433,18 @@ public class CalendarService {
     ) {
         String owner = resolveSelfEmployeeNo(principal, employeeNo);
         CalendarSuggestionStatus st = status != null ? status : CalendarSuggestionStatus.PENDING;
+        boolean aiOn = aiAssistantService.isAiAssistantEnabled(owner);
         return calendarSuggestionRepository
                 .findByOwnerEmployeeNoAndStatusOrderByCreatedAtDesc(owner, st)
                 .stream()
+                .filter(s -> aiOn || !"AI_ASSISTANT".equalsIgnoreCase(s.getCreatedByActor()))
                 .map(this::toSuggestionResponse)
                 .toList();
     }
 
     @Transactional
     public CalendarSuggestionResponse createSuggestion(UserPrincipal principal, CreateCalendarSuggestionRequest request) {
+        String callerEmp = principal.employeeNo() != null ? principal.employeeNo().trim() : "";
         String owner = resolveSelfEmployeeNo(principal, request.ownerEmployeeNo());
         validateTimeRange(request.startsAt(), request.endsAt());
         String title = trimTitle(request.title());
@@ -446,6 +454,9 @@ public class CalendarService {
                 CalendarOriginIdsJson.normalizeIncoming(request.originMessageIds()));
 
         String actor = normalizeSuggestionActor(request.createdByActor());
+        if ("AI_ASSISTANT".equals(actor) && !aiAssistantService.isAiAssistantEnabled(callerEmp)) {
+            throw new ForbiddenException("AI 비서 기능을 사용하지 않도록 설정되어 있어 AI 출처 일정 제안을 만들 수 없습니다.");
+        }
 
         CalendarSuggestion saved = calendarSuggestionRepository.save(new CalendarSuggestion(
                 owner,
@@ -484,6 +495,9 @@ public class CalendarService {
         }
         if (s.getStatus() != CalendarSuggestionStatus.PENDING) {
             throw new IllegalArgumentException("이미 처리된 제안입니다.");
+        }
+        if ("AI_ASSISTANT".equalsIgnoreCase(s.getCreatedByActor()) && !aiAssistantService.isAiAssistantEnabled(owner)) {
+            throw new ForbiddenException("AI 비서 기능을 사용하지 않도록 설정되어 있어 AI 출처 일정 제안을 확정할 수 없습니다.");
         }
         validateTimeRange(s.getStartsAt(), s.getEndsAt());
 

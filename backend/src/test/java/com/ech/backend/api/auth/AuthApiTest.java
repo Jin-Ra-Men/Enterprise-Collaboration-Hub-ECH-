@@ -64,7 +64,8 @@ class AuthApiTest extends BaseIntegrationTest {
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.email").value(TEST_ADMIN_EMAIL))
-                .andExpect(jsonPath("$.data.role").value("ADMIN"));
+                .andExpect(jsonPath("$.data.role").value("ADMIN"))
+                .andExpect(jsonPath("$.data.aiAssistantEnabled").value(true));
     }
 
     @Test

@@ -152,7 +152,7 @@ graph LR
 
 ### 로그인 / JWT 인증
 - `POST /api/auth/login` — 사원번호 또는 이메일 + 비밀번호로 JWT 발급
-- `GET /api/auth/me` — 현재 로그인 사용자 정보 반환
+- `GET /api/auth/me` — 현재 로그인 사용자 정보 반환(`aiAssistantEnabled`: 개인 AI 비서 마스터 스위치, 기본 true)
 - `AuthProvider` 인터페이스 — 현재 `TestAuthProvider`(로컬 BCrypt), 향후 `GroupwareAuthProvider` 추가 가능
 - 서버 기동 시 비밀번호 미설정 계정에 초기 평문 비밀번호 자동 적용 (`DataInitializer`). 기본 시드 키 `auth.initial-password-plaintext`(기본값 `Test1234!`)는 관리자 **설정** 화면에서 변경 가능하며, **이미 해시가 있는 계정은 덮어쓰지 않음**
 - 프론트엔드: sessionStorage에 JWT 저장, 모든 API 호출에 `Authorization: Bearer` 자동 첨부

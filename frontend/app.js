@@ -101,6 +101,39 @@ function syncThemeOptions() {
   });
 }
 
+/** 서버·`/api/auth/me`의 마스터 스위치. `undefined`는 허용(레거시 세션)으로 간주한다. */
+function userAiAssistantMasterDisabled() {
+  return currentUser?.aiAssistantEnabled === false;
+}
+
+function syncAiAssistantToggleFromUser() {
+  const chk = document.getElementById("chkThemeAiAssistantEnabled");
+  if (!(chk instanceof HTMLInputElement)) return;
+  chk.checked = !userAiAssistantMasterDisabled();
+}
+
+function applyAiAssistantUiVisibility() {
+  const off = userAiAssistantMasterDisabled();
+  const toggleHidden = (id) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle("hidden", off);
+  };
+  [
+    "btnWelcomeAiInbox",
+    "btnComposerAiReplyDraft",
+    "btnComposerAiSummarize",
+    "btnThreadAiCommentDraft",
+    "btnThreadAiSummarize",
+    "btnWorkItemDescAiDraft",
+    "btnKanbanCardDescAiDraft",
+    "btnWorkItemDetailDescAiDraft",
+    "btnKanbanCardDetailDescAiDraft",
+  ].forEach(toggleHidden);
+  document.getElementById("searchModalAiBar")?.classList.toggle("hidden", off);
+  document.querySelector(".composer-ai-evidence-hint")?.classList.toggle("hidden", off);
+  document.querySelectorAll(".work-hub-ai-desc-row").forEach((row) => row.classList.toggle("hidden", off));
+}
+
 function syncDesktopWindowTheme(theme) {
   try {
     const api = window.electronAPI;
@@ -3068,6 +3101,7 @@ function showMain(user) {
   initEvents();
   initPresenceUserActivityListeners();
   syncTopNavFromMainView();
+  applyAiAssistantUiVisibility();
   updateComposerAiButtonStates();
 }
 
@@ -3175,7 +3209,39 @@ loginForm.addEventListener("submit", async (e) => {
 
 themeSettingsBtn?.addEventListener("click", () => {
   syncThemeOptions();
+  syncAiAssistantToggleFromUser();
   openModal("modalThemePicker");
+});
+
+document.getElementById("chkThemeAiAssistantEnabled")?.addEventListener("change", async (ev) => {
+  if (!currentUser?.employeeNo) return;
+  const t = ev.target;
+  if (!(t instanceof HTMLInputElement)) return;
+  const enabled = t.checked;
+  const empEnc = encodeURIComponent(currentUser.employeeNo);
+  try {
+    const res = await apiFetch(`/api/me/ai-assistant/preferences?employeeNo=${empEnc}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ aiAssistantEnabled: enabled }),
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || j.success === false) {
+      t.checked = !enabled;
+      await uiAlert(j.error?.message || "설정을 저장하지 못했습니다.");
+      return;
+    }
+    const d = j.data || {};
+    currentUser = { ...currentUser, aiAssistantEnabled: d.aiAssistantEnabled !== false };
+    const tok = getToken();
+    if (tok) saveSession(tok, { ...getUser(), ...currentUser });
+    applyAiAssistantUiVisibility();
+    updateComposerAiButtonStates();
+  } catch (e) {
+    console.error(e);
+    t.checked = !enabled;
+    await uiAlert(e.message || "설정을 저장하지 못했습니다.");
+  }
 });
 
 sidebarAvatar?.addEventListener("click", () => {
@@ -7535,6 +7601,9 @@ function pickSearchItemsForAiGateway(items) {
 function messageFromAiGatewayFailure(json, status) {
   const code = String(json?.error?.code || "");
   const msg = String(json?.error?.message || "");
+  if (code === "AI_ASSISTANT_DISABLED_BY_USER") {
+    return msg || "계정 설정에서 AI 비서 기능이 꺼져 있습니다. 테마 설정에서 켤 수 있습니다.";
+  }
   if (status === 403 || code === "AI_GATEWAY_BLOCKED") {
     return "AI 게이트웨이가 외부 LLM 전송을 차단했습니다. 관리자 기초설정(ai.gateway.allow-external-llm 등)·정책을 확인하세요.";
   }
@@ -7573,6 +7642,7 @@ function updateComposerAiButtonStates() {
   const replyBtn = document.getElementById("btnComposerAiReplyDraft");
   const sumBtn = document.getElementById("btnComposerAiSummarize");
   const loggedIn = !!currentUser?.employeeNo;
+  const aiOff = userAiAssistantMasterDisabled();
   const viewChat = document.getElementById("viewChat");
   const inChat = !!activeChannelId && viewChat && !viewChat.classList.contains("hidden");
   const hasReplyTarget =
@@ -7581,15 +7651,15 @@ function updateComposerAiButtonStates() {
   const hasTimeline = ids.length > 0;
   const busy = !!composerAiDraftInFlight;
   if (replyBtn) {
-    replyBtn.disabled = busy || !loggedIn || !inChat || !hasReplyTarget;
+    replyBtn.disabled = aiOff || busy || !loggedIn || !inChat || !hasReplyTarget;
   }
   if (sumBtn) {
-    sumBtn.disabled = busy || !loggedIn || !inChat || !hasTimeline;
+    sumBtn.disabled = aiOff || busy || !loggedIn || !inChat || !hasTimeline;
   }
   const searchAiBtn = document.getElementById("btnSearchModalAiAsk");
   if (searchAiBtn && !busy) {
     const prepared = pickSearchItemsForAiGateway(lastWorkspaceSearchItemsForAi);
-    searchAiBtn.disabled = !loggedIn || !prepared.ok;
+    searchAiBtn.disabled = aiOff || !loggedIn || !prepared.ok;
     searchAiBtn.title = prepared.ok
       ? "검색 결과 메시지·댓글을 근거로 질문합니다(검색어가 질문이 됩니다)."
       : prepared.reason;
@@ -7606,6 +7676,7 @@ function updateThreadAiButtonStates() {
   if (!draftBtn && !sumBtn) return;
   const busy = !!composerAiDraftInFlight;
   const loggedIn = !!currentUser?.employeeNo;
+  const aiOff = userAiAssistantMasterDisabled();
   const threadModal = document.getElementById("modalThread");
   const threadOpen = threadModal && !threadModal.classList.contains("hidden");
   const rootOk = threadRootMessageId != null && Number.isFinite(Number(threadRootMessageId));
@@ -7614,17 +7685,32 @@ function updateThreadAiButtonStates() {
   const hasMsgs = ids.length > 0;
   if (draftBtn) {
     draftBtn.disabled =
-      busy || !loggedIn || !threadOpen || !chOk || !rootOk || !hasMsgs || draftBtn.dataset.forceDisabled === "1";
+      aiOff ||
+      busy ||
+      !loggedIn ||
+      !threadOpen ||
+      !chOk ||
+      !rootOk ||
+      !hasMsgs ||
+      draftBtn.dataset.forceDisabled === "1";
   }
   if (sumBtn) {
     sumBtn.disabled =
-      busy || !loggedIn || !threadOpen || !chOk || !rootOk || !hasMsgs || sumBtn.dataset.forceDisabled === "1";
+      aiOff ||
+      busy ||
+      !loggedIn ||
+      !threadOpen ||
+      !chOk ||
+      !rootOk ||
+      !hasMsgs ||
+      sumBtn.dataset.forceDisabled === "1";
   }
 }
 
 function updateWorkHubAiButtonStates() {
   const busy = !!composerAiDraftInFlight;
   const loggedIn = !!currentUser?.employeeNo;
+  const aiOff = userAiAssistantMasterDisabled();
   const chOk = !!activeChannelId;
   const hub = document.getElementById("modalWorkHub");
   const hubOpen = hub && !hub.classList.contains("hidden");
@@ -7632,6 +7718,7 @@ function updateWorkHubAiButtonStates() {
   const wCreate = document.getElementById("btnWorkItemDescAiDraft");
   if (wCreate) {
     wCreate.disabled =
+      aiOff ||
       busy ||
       !loggedIn ||
       !hubOpen ||
@@ -7643,6 +7730,7 @@ function updateWorkHubAiButtonStates() {
   const selWi = Number(document.getElementById("kanbanNewCardWorkItemSelect")?.value || "");
   if (kCreate) {
     kCreate.disabled =
+      aiOff ||
       busy ||
       !loggedIn ||
       !hubOpen ||
@@ -7656,6 +7744,7 @@ function updateWorkHubAiButtonStates() {
   const detailWorkOpen = modalWi && !modalWi.classList.contains("hidden");
   if (detailWork) {
     detailWork.disabled =
+      aiOff ||
       busy ||
       !loggedIn ||
       !detailWorkOpen ||
@@ -7668,6 +7757,7 @@ function updateWorkHubAiButtonStates() {
   const detailKbOpen = modalKb && !modalKb.classList.contains("hidden");
   if (detailKb) {
     detailKb.disabled =
+      aiOff ||
       busy ||
       !loggedIn ||
       !detailKbOpen ||
@@ -7688,6 +7778,10 @@ async function executeAiGatewayChat({
   if (!currentUser?.employeeNo) {
     await uiAlert("로그인이 필요합니다.");
     return;
+  }
+  if (userAiAssistantMasterDisabled()) {
+    await uiAlert("AI 비서 기능이 꺼져 있습니다. 좌측 하단 테마 설정에서 켤 수 있습니다.");
+    return null;
   }
   const body = {
     purpose,
@@ -12731,6 +12825,8 @@ function initEvents() {
         saveSession(token, { ...prev, ...me });
         currentUser = { ...currentUser, ...me };
         applySelfAvatarPhotos(currentUser);
+        applyAiAssistantUiVisibility();
+        updateComposerAiButtonStates();
       }
     }
     const emp = String(currentUser.employeeNo || "").trim();
@@ -14123,6 +14219,10 @@ async function openAiSuggestionInboxModal() {
     await uiAlert("로그인이 필요합니다.");
     return;
   }
+  if (userAiAssistantMasterDisabled()) {
+    await uiAlert("AI 비서 기능이 꺼져 있습니다. 좌측 하단 테마 설정에서 켤 수 있습니다.");
+    return;
+  }
   await loadAiAssistantPrefsIntoForm();
   await refreshAiSuggestionInboxList();
   openModal("modalAiSuggestionInbox");
@@ -14141,6 +14241,15 @@ async function loadAiAssistantPrefsIntoForm() {
     const d = json.data || {};
     toneSel.value = d.proactiveTone || "BALANCED";
     digestSel.value = d.digestMode || "REALTIME";
+    if (d.aiAssistantEnabled === false) {
+      currentUser = { ...currentUser, aiAssistantEnabled: false };
+      applyAiAssistantUiVisibility();
+      updateComposerAiButtonStates();
+    } else if (d.aiAssistantEnabled === true) {
+      currentUser = { ...currentUser, aiAssistantEnabled: true };
+      applyAiAssistantUiVisibility();
+      updateComposerAiButtonStates();
+    }
     if (hint) hint.classList.toggle("hidden", !d.proactiveCooldownActive);
   } catch (e) {
     console.error(e);

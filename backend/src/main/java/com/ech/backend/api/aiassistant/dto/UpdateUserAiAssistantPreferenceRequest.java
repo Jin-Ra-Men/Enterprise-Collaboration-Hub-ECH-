@@ -5,6 +5,7 @@ import com.ech.backend.domain.aiassistant.AiSuggestionDigestMode;
 
 public record UpdateUserAiAssistantPreferenceRequest(
         AiAssistantTone proactiveTone,
-        AiSuggestionDigestMode digestMode
+        AiSuggestionDigestMode digestMode,
+        Boolean aiAssistantEnabled
 ) {
 }

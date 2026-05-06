@@ -96,7 +96,8 @@ class AiAssistantApiTest extends BaseIntegrationTest {
                         .content("{\"proactiveTone\":\"QUIET\",\"digestMode\":\"DAILY\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.proactiveTone").value("QUIET"))
-                .andExpect(jsonPath("$.data.digestMode").value("DAILY"));
+                .andExpect(jsonPath("$.data.digestMode").value("DAILY"))
+                .andExpect(jsonPath("$.data.aiAssistantEnabled").value(true));
 
         mockMvc.perform(get("/api/me/ai-assistant/preferences")
                         .param("employeeNo", normalEmployeeNo)
@@ -173,6 +174,73 @@ class AiAssistantApiTest extends BaseIntegrationTest {
                         null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("옵트인");
+    }
+
+    @Test
+    @DisplayName("AI 비서 비활성화 시 제안함 목록·거절은 403, 설정 조회·변경은 허용")
+    void master_toggle_blocks_inbox_but_allows_pref_updates() throws Exception {
+        mockMvc.perform(put("/api/me/ai-assistant/preferences")
+                        .param("employeeNo", normalEmployeeNo)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"aiAssistantEnabled\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.aiAssistantEnabled").value(false));
+
+        mockMvc.perform(get("/api/me/ai-assistant/preferences")
+                        .param("employeeNo", normalEmployeeNo)
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.aiAssistantEnabled").value(false));
+
+        mockMvc.perform(get("/api/me/ai-suggestions")
+                        .param("employeeNo", normalEmployeeNo)
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(put("/api/me/ai-assistant/preferences")
+                        .param("employeeNo", normalEmployeeNo)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"aiAssistantEnabled\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.aiAssistantEnabled").value(true));
+    }
+
+    @Test
+    @DisplayName("수신자 AI 비활성화 시 프로액티브 적재 거부")
+    void enqueue_blocked_when_recipient_ai_disabled() throws Exception {
+        mockMvc.perform(put("/api/me/ai-assistant/preferences")
+                        .param("employeeNo", normalEmployeeNo)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"aiAssistantEnabled\":false}"))
+                .andExpect(status().isOk());
+
+        long cid = createPublicChannelAndJoinNormalAsMember();
+        mockMvc.perform(put("/api/channels/" + cid + "/ai-assistant/preference")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"proactiveOptIn\":true}"))
+                .andExpect(status().isOk());
+
+        assertThatThrownBy(() -> aiAssistantService.enqueueSuggestion(
+                        normalEmployeeNo,
+                        AiSuggestionKind.GENERIC,
+                        cid,
+                        "x",
+                        null,
+                        "{}",
+                        null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("사용하지 않도록");
+
+        mockMvc.perform(put("/api/me/ai-assistant/preferences")
+                        .param("employeeNo", normalEmployeeNo)
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"aiAssistantEnabled\":true}"))
+                .andExpect(status().isOk());
     }
 
     private long createPublicChannelAndJoinNormalAsMember() throws Exception {

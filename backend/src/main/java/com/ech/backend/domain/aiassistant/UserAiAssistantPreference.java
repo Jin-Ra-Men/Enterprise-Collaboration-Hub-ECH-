@@ -30,6 +30,10 @@ public class UserAiAssistantPreference {
     @Column(name = "proactive_cooldown_until")
     private OffsetDateTime proactiveCooldownUntil;
 
+    /** When false, the user must not invoke gateway AI, proactive inbox, or AI-origin calendar suggestions. */
+    @Column(name = "ai_assistant_enabled", nullable = false)
+    private boolean aiAssistantEnabled = true;
+
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt = OffsetDateTime.now();
 
@@ -79,6 +83,15 @@ public class UserAiAssistantPreference {
 
     public void setProactiveCooldownUntil(OffsetDateTime proactiveCooldownUntil) {
         this.proactiveCooldownUntil = proactiveCooldownUntil;
+        touch();
+    }
+
+    public boolean isAiAssistantEnabled() {
+        return aiAssistantEnabled;
+    }
+
+    public void setAiAssistantEnabled(boolean aiAssistantEnabled) {
+        this.aiAssistantEnabled = aiAssistantEnabled;
         touch();
     }
 

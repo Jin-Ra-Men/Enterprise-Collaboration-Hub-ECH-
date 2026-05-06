@@ -9,6 +9,8 @@ public record AiGatewayStatusResponse(
         int chatMaxRequestsPerHour,
         boolean llmHttpConfigured,
         /** Effective max Unicode code points forwarded to LLM after masking (see {@code ai.gateway.llm-max-input-chars}). */
-        int llmMaxInputChars
+        int llmMaxInputChars,
+        /** Current user's preference: master toggle for all AI assistant features. */
+        boolean aiAssistantEnabled
 ) {
 }

@@ -138,10 +138,11 @@
 
 - 목적: 프로액티브 출력은 인라인 스팸 대신 **제안함 큐**에 쌓고, 채널은 **옵트인**, **DM은 자동 관찰 제외**(정책 `COLLABORATION_TOOL_DIRECTION.md` §6). 변이(업무 저장·일정 확정)는 **각 도메인 기존 API**에서만 수행하고, 본 큐의 「처리함」은 우선 **상태만 `ACTED`** 로 표시한다.
 - 사용자: JWT 채널 멤버·본인 설정만 조회/변경.
-- 관련 테이블: `channel_ai_assistant_preferences`, `user_ai_assistant_preferences`, `ai_suggestion_inbox`(DDL `docs/sql/migrate_ai_phase_7_3.sql`).
+- **개인 AI 마스터 스위치** (`user_ai_assistant_preferences.ai_assistant_enabled`, 기본 true): 끄면 게이트웨이 chat·프로액티브 제안함 목록/거절/처리·`AI_ASSISTANT` 출처 캘린더 제안(목록 숨김·생성·확정 거부)·프로액티브 적재 수신 거부가 **서버에서** 차단된다. **설정 조회·변경**(켜기 포함)과 채널 관리자의 채널 옵트인 변경은 허용. 테마 설정 UI(`modalThemePicker`)에서 토글, `/api/auth/me`·`GET /api/ai/gateway/status`에 `aiAssistantEnabled` 포함.
+- 관련 테이블: `channel_ai_assistant_preferences`, `user_ai_assistant_preferences`, `ai_suggestion_inbox`(DDL `docs/sql/migrate_ai_phase_7_3.sql`; 기존 DB 컬럼 추가는 `docs/sql/migrate_user_ai_assistant_master_toggle.sql`).
 - 관련 API:
   - `GET|PUT /api/channels/{channelId}/ai-assistant/preference` — 채널 프로액티브 옵트인 조회·변경(**채널 관리자만 PUT**). DM 채널은 조회 시 `dmProactiveBlocked=true`, PUT 시 400.
-  - `GET|PUT /api/me/ai-assistant/preferences?employeeNo=` — 어조(`QUIET`/`BALANCED`/`ASSERTIVE`), 다이제스트(`REALTIME`/`DAILY`/`WEEKLY`). 응답에 거절 쿨다운 활성 여부(`proactiveCooldownActive`).
+  - `GET|PUT /api/me/ai-assistant/preferences?employeeNo=` — 어조(`QUIET`/`BALANCED`/`ASSERTIVE`), 다이제스트(`REALTIME`/`DAILY`/`WEEKLY`), **`aiAssistantEnabled`(마스터 스위치)**. 응답에 거절 쿨다운 활성 여부(`proactiveCooldownActive`).
   - `GET /api/me/ai-suggestions?employeeNo=&status=` — 제안 목록(기본 `PENDING`, 최대 50건). 항목에 **`payloadJson`**(딥링크 메타; 클라이언트 해석) 포함.
   - `POST /api/me/ai-suggestions/{id}/dismiss?employeeNo=` — 거절 + 사용자 쿨다운 시작(기초설정 시간).
   - `POST /api/me/ai-suggestions/{id}/acknowledge?employeeNo=` — 비변 처리 완료(`ACTED`).
@@ -150,9 +151,9 @@
   - 매시 **:07** — 옵트인 비-DM 채널에서 최근 1시간 타임라인 활동 건수가 기준 이상이면, **`REALTIME`** 다이제스트 사용자인 **채널 관리자**에게 `WORK_ITEM_HINT` 1건(동일 채널·수신자·종류 **24시간 디듀프**). `payloadJson` 예: `{"deepLink":"workHub","channelId":…}`.
   - 매일 **09:15 Asia/Seoul** — 다이제스트 **`DAILY`** 또는 (**월요일만** `WEEKLY`)이며 **옵트인 채널에 소속**한 사용자에게 `DIGEST_SUMMARY` 1건(당일 서울 자정 이후 디듀프). `payloadJson` 예: `{"deepLink":"aiInbox","digest":true}`.
 - 기초설정 시드: `ai.proactive.dismiss-cooldown-hours`, `ai.proactive.max-suggestions-per-channel-hour`, `ai.proactive.activity-min-messages-per-hour`, `ai.proactive.jobs-enabled`.
-- 프론트: 환영 화면 **AI 제안함** 버튼·`modalAiSuggestionInbox`; 채팅 **멤버 패널**에서 채널 관리자만 **프로액티브 옵트인** 토글; 제안 행 **바로가기**(`deepLink`: `workHub`·`chatChannel`·`aiInbox`).
+- 프론트: 환영 화면 **AI 제안함** 버튼·`modalAiSuggestionInbox`; 채팅 **멤버 패널**에서 채널 관리자만 **프로액티브 옵트인** 토글; 제안 행 **바로가기**(`deepLink`: `workHub`·`chatChannel`·`aiInbox`). 마스터 스위치 꺼짐 시 AI 버튼·검색 AI 바·제안함 진입 등 UI 비표시.
 - 테스트: `AiAssistantApiTest`.
-- 예외: `enqueueSuggestion` 미옵트인 채널·쿨다운·상한 위반 시 `IllegalStateException`(통합 테스트)·관리자 아닌 채널 옵트인 변경 시 403.
+- 예외: `enqueueSuggestion` 미옵트인 채널·쿨다운·상한·수신자 AI 비활성 시 `IllegalStateException`(통합 테스트)·관리자 아닌 채널 옵트인 변경 시 403·마스터 오프 시 제안함 API **403**·게이트웨이 chat **`AI_ASSISTANT_DISABLED_BY_USER`**.
 
 ---
 

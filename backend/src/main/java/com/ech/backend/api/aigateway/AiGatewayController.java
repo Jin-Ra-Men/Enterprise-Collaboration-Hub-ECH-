@@ -26,7 +26,7 @@ public class AiGatewayController {
     @GetMapping("/api/ai/gateway/status")
     public ApiResponse<AiGatewayStatusResponse> status(@AuthenticationPrincipal UserPrincipal principal) {
         requireAuth(principal);
-        return ApiResponse.success(aiGatewayService.statusSnapshot());
+        return ApiResponse.success(aiGatewayService.statusSnapshot(principal.employeeNo()));
     }
 
     @PostMapping("/api/ai/gateway/chat")

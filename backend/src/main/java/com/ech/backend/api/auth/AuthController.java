@@ -5,6 +5,7 @@ import com.ech.backend.api.auth.dto.LoginRequest;
 import com.ech.backend.api.auth.dto.LoginResponse;
 import com.ech.backend.api.auth.dto.MeResponse;
 import com.ech.backend.api.auth.dto.UpdateThemePreferenceRequest;
+import com.ech.backend.api.aiassistant.AiAssistantService;
 import com.ech.backend.common.api.ApiResponse;
 import com.ech.backend.common.exception.UnauthorizedException;
 import com.ech.backend.common.security.UserPrincipal;
@@ -24,12 +25,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final AiAssistantService aiAssistantService;
 
     @Value("${app.allow-user-profile-self-upload:true}")
     private boolean allowUserProfileSelfUpload;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, AiAssistantService aiAssistantService) {
         this.authService = authService;
+        this.aiAssistantService = aiAssistantService;
     }
 
     /**
@@ -68,6 +71,7 @@ public class AuthController {
         String themePreference = authService.getThemePreference(user.getEmployeeNo());
         boolean present = user.getProfileImageRelPath() != null && !user.getProfileImageRelPath().isBlank();
         long ver = user.getUpdatedAt() != null ? user.getUpdatedAt().toInstant().toEpochMilli() : 0L;
+        boolean aiOn = aiAssistantService.isAiAssistantEnabled(user.getEmployeeNo());
         return ApiResponse.success(new MeResponse(
                 user.getId(),
                 user.getEmployeeNo(),
@@ -78,7 +82,8 @@ public class AuthController {
                 themePreference,
                 allowUserProfileSelfUpload,
                 present,
-                ver
+                ver,
+                aiOn
         ));
     }
 

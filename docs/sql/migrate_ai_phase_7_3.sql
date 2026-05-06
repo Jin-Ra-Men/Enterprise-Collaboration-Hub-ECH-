@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS user_ai_assistant_preferences (
     proactive_tone            VARCHAR(20) NOT NULL DEFAULT 'BALANCED',
     digest_mode               VARCHAR(20) NOT NULL DEFAULT 'REALTIME',
     proactive_cooldown_until  TIMESTAMPTZ NULL,
+    ai_assistant_enabled      BOOLEAN NOT NULL DEFAULT TRUE,
     updated_at                TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

@@ -23,6 +23,7 @@ import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -254,5 +255,54 @@ class CalendarApiTest extends BaseIntegrationTest {
                         .param("to", "2030-11-30T00:00:00+09:00"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].title").value("ICS 가져오기 회의"));
+    }
+
+    @Test
+    @DisplayName("AI 비서 비활성화 시 AI 출처 일정 제안 생성 불가·USER 출처는 허용")
+    void ai_assistant_off_blocks_ai_calendar_suggestion_actor() throws Exception {
+        mockMvc.perform(put("/api/me/ai-assistant/preferences")
+                        .param("employeeNo", adminEmployeeNo)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"aiAssistantEnabled\":false}"))
+                .andExpect(status().isOk());
+
+        String aiBody = """
+                {
+                  "ownerEmployeeNo": "%s",
+                  "title": "AI 제안",
+                  "startsAt": "2026-07-02T09:00:00+09:00",
+                  "endsAt": "2026-07-02T10:00:00+09:00",
+                  "createdByActor": "AI_ASSISTANT"
+                }
+                """.formatted(adminEmployeeNo);
+        mockMvc.perform(post("/api/calendar/suggestions")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(aiBody))
+                .andExpect(status().isForbidden());
+
+        String userBody = """
+                {
+                  "ownerEmployeeNo": "%s",
+                  "title": "수동 제안",
+                  "startsAt": "2026-07-03T09:00:00+09:00",
+                  "endsAt": "2026-07-03T10:00:00+09:00",
+                  "createdByActor": "USER"
+                }
+                """.formatted(adminEmployeeNo);
+        mockMvc.perform(post("/api/calendar/suggestions")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(userBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.title").value("수동 제안"));
+
+        mockMvc.perform(put("/api/me/ai-assistant/preferences")
+                        .param("employeeNo", adminEmployeeNo)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"aiAssistantEnabled\":true}"))
+                .andExpect(status().isOk());
     }
 }

@@ -70,6 +70,27 @@ public class AiAssistantService {
     }
 
     @Transactional(readOnly = true)
+    public boolean isAiAssistantEnabled(String employeeNo) {
+        if (employeeNo == null || employeeNo.isBlank()) {
+            return true;
+        }
+        String emp = employeeNo.trim();
+        return userAiPreferenceRepository.findById(emp)
+                .map(UserAiAssistantPreference::isAiAssistantEnabled)
+                .orElse(true);
+    }
+
+    public void requireAiAssistantEnabled(UserPrincipal principal, String employeeNoParam) {
+        requireAiAssistantEnabled(resolveSelfEmployeeNo(principal, employeeNoParam));
+    }
+
+    public void requireAiAssistantEnabled(String employeeNo) {
+        if (!isAiAssistantEnabled(employeeNo)) {
+            throw new ForbiddenException("AI 비서 기능이 꺼져 있습니다. 테마 설정에서 활성화한 뒤 이용할 수 있습니다.");
+        }
+    }
+
+    @Transactional(readOnly = true)
     public ChannelAiAssistantPreferenceResponse getChannelPreference(UserPrincipal principal, Long channelId) {
         String emp = requireEmployee(principal);
         Channel channel = loadChannelAndRequireMembership(channelId, emp);
@@ -125,13 +146,15 @@ public class AiAssistantService {
             return new UserAiAssistantPreferenceResponse(
                     com.ech.backend.domain.aiassistant.AiAssistantTone.BALANCED.name(),
                     com.ech.backend.domain.aiassistant.AiSuggestionDigestMode.REALTIME.name(),
-                    cooldown
+                    cooldown,
+                    true
             );
         }
         return new UserAiAssistantPreferenceResponse(
                 row.getProactiveTone().name(),
                 row.getDigestMode().name(),
-                cooldown
+                cooldown,
+                row.isAiAssistantEnabled()
         );
     }
 
@@ -150,6 +173,9 @@ public class AiAssistantService {
         if (body.digestMode() != null) {
             row.setDigestMode(body.digestMode());
         }
+        if (body.aiAssistantEnabled() != null) {
+            row.setAiAssistantEnabled(body.aiAssistantEnabled());
+        }
         userAiPreferenceRepository.save(row);
         auditLogService.safeRecord(
                 AuditEventType.AI_ASSISTANT_USER_PREF_UPDATED,
@@ -157,7 +183,8 @@ public class AiAssistantService {
                 "USER_AI_ASSISTANT",
                 null,
                 null,
-                "tone=" + row.getProactiveTone() + ",digest=" + row.getDigestMode(),
+                "tone=" + row.getProactiveTone() + ",digest=" + row.getDigestMode()
+                        + ",aiAssistantEnabled=" + row.isAiAssistantEnabled(),
                 null
         );
         return getUserPreference(principal, emp);
@@ -166,6 +193,7 @@ public class AiAssistantService {
     @Transactional(readOnly = true)
     public List<AiSuggestionInboxItemResponse> listInbox(UserPrincipal principal, String employeeNo, AiSuggestionInboxStatus status) {
         String emp = resolveSelfEmployeeNo(principal, employeeNo);
+        requireAiAssistantEnabled(emp);
         AiSuggestionInboxStatus st = status != null ? status : AiSuggestionInboxStatus.PENDING;
         return inboxRepository.findTop50ByRecipientEmployeeNoAndStatusOrderByCreatedAtDesc(emp, st).stream()
                 .map(this::toInboxResponse)
@@ -175,6 +203,7 @@ public class AiAssistantService {
     @Transactional
     public void dismissInboxItem(UserPrincipal principal, Long suggestionId, String employeeNo) {
         String emp = resolveSelfEmployeeNo(principal, employeeNo);
+        requireAiAssistantEnabled(emp);
         AiSuggestionInboxItem item = inboxRepository.findByIdAndRecipientEmployeeNo(suggestionId, emp)
                 .orElseThrow(() -> new IllegalArgumentException("제안을 찾을 수 없습니다."));
         if (item.getStatus() != AiSuggestionInboxStatus.PENDING) {
@@ -213,6 +242,7 @@ public class AiAssistantService {
     @Transactional
     public void acknowledgeInboxItem(UserPrincipal principal, Long suggestionId, String employeeNo) {
         String emp = resolveSelfEmployeeNo(principal, employeeNo);
+        requireAiAssistantEnabled(emp);
         AiSuggestionInboxItem item = inboxRepository.findByIdAndRecipientEmployeeNo(suggestionId, emp)
                 .orElseThrow(() -> new IllegalArgumentException("제안을 찾을 수 없습니다."));
         if (item.getStatus() != AiSuggestionInboxStatus.PENDING) {
@@ -247,6 +277,9 @@ public class AiAssistantService {
         String recipient = Objects.requireNonNull(recipientEmployeeNo, "recipient").trim();
         if (recipient.isEmpty()) {
             throw new IllegalArgumentException("수신자 사번이 필요합니다.");
+        }
+        if (!isAiAssistantEnabled(recipient)) {
+            throw new IllegalStateException("수신자가 AI 비서 기능을 사용하지 않도록 설정되어 있습니다.");
         }
         UserAiAssistantPreference up = userAiPreferenceRepository.findById(recipient).orElse(null);
         if (up != null && up.getProactiveCooldownUntil() != null && OffsetDateTime.now().isBefore(up.getProactiveCooldownUntil())) {

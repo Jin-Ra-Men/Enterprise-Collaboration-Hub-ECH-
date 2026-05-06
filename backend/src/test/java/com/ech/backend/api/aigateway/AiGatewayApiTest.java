@@ -7,6 +7,7 @@ import org.springframework.http.MediaType;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -25,7 +26,43 @@ class AiGatewayApiTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.chatMaxRequestsPerMinute").value(30))
                 .andExpect(jsonPath("$.data.chatMaxRequestsPerHour").value(300))
                 .andExpect(jsonPath("$.data.llmHttpConfigured").value(false))
-                .andExpect(jsonPath("$.data.llmMaxInputChars").value(8000));
+                .andExpect(jsonPath("$.data.llmMaxInputChars").value(8000))
+                .andExpect(jsonPath("$.data.aiAssistantEnabled").value(true));
+    }
+
+    @Test
+    @DisplayName("사용자 AI 비활성화 시 chat는 AI_ASSISTANT_DISABLED_BY_USER(정책 차단보다 우선)")
+    void chat_blocked_when_user_ai_disabled() throws Exception {
+        mockMvc.perform(put("/api/me/ai-assistant/preferences")
+                        .param("employeeNo", adminEmployeeNo)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"aiAssistantEnabled\":false}"))
+                .andExpect(status().isOk());
+
+        String body = """
+                {
+                  "purpose": "test-purpose",
+                  "employeeNo": "%s",
+                  "channelId": null,
+                  "prompt": "hello"
+                }
+                """.formatted(adminEmployeeNo);
+
+        mockMvc.perform(post("/api/ai/gateway/chat")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("AI_ASSISTANT_DISABLED_BY_USER"));
+
+        mockMvc.perform(put("/api/me/ai-assistant/preferences")
+                        .param("employeeNo", adminEmployeeNo)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"aiAssistantEnabled\":true}"))
+                .andExpect(status().isOk());
     }
 
     @Test
