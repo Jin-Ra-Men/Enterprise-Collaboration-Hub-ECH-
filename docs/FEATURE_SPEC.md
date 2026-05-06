@@ -150,7 +150,19 @@
 - 스케줄 트리거(`ProactiveAiSuggestionScheduler`, LLM 미호출):
   - 매시 **:07** — 옵트인 비-DM 채널에서 최근 1시간 타임라인 활동 건수가 기준 이상이면, **`REALTIME`** 다이제스트 사용자인 **채널 관리자**에게 `WORK_ITEM_HINT` 1건(동일 채널·수신자·종류 **24시간 디듀프**). `payloadJson` 예: `{"deepLink":"workHub","channelId":…}`.
   - 매일 **09:15 Asia/Seoul** — 다이제스트 **`DAILY`** 또는 (**월요일만** `WEEKLY`)이며 **옵트인 채널에 소속**한 사용자에게 `DIGEST_SUMMARY` 1건(당일 서울 자정 이후 디듀프). `payloadJson` 예: `{"deepLink":"aiInbox","digest":true}`.
-- 기초설정 시드: `ai.proactive.dismiss-cooldown-hours`, `ai.proactive.max-suggestions-per-channel-hour`, `ai.proactive.activity-min-messages-per-hour`, `ai.proactive.jobs-enabled`.
+- 기초설정 시드: `ai.proactive.dismiss-cooldown-hours`, `ai.proactive.max-suggestions-per-channel-hour`, `ai.proactive.activity-min-messages-per-hour`, `ai.proactive.jobs-enabled`, `ai.proactive.llm-conversation-insight-enabled`, `ai.proactive.llm-conversation-confidence-min`, `ai.proactive.llm-conversation-max-llm-calls-per-channel-hour`.
+- **LLM 대화 인사이트** (`ProactiveConversationInsightScheduler`): 매시 **:23** 서버 로컬 크론. 전제: `ai.proactive.jobs-enabled`·`ai.proactive.llm-conversation-insight-enabled`, `ai.gateway.allow-external-llm`, HTTP LLM 구성(`ai.llm.*`). 옵트인 **비-DM** 채널에서 최근 약 **2시간** 루트 `TEXT` 메시지를 스캔(페이지 상한)하고, 발신자별로 **아직 PENDING AI 일정 제안·최근 동일 `sourceMessageId` 워크플로 힌트가 없을 때만** LLM 호출. 채널당 롤링 **1시간 JVM 메모리** 기준 호출 상한(`ai.proactive.llm-conversation-max-llm-calls-per-channel-hour`).
+  - **모델**: 기초설정·`application.yml` 의 `ai.llm.model`(기본값 `gpt-5-mini`). 제공자에 모델이 없으면 운영에서 `gpt-4o-mini` 등으로 교체.
+  - **LLM 출력(JSON만, 코드펜스 금지)** 예시:
+    `{"suggestionKind":"NONE|CALENDAR|WORKFLOW","confidence":0.0,"ambiguous":false,"title":null,"description":null,"startsAt":null,"endsAt":null,"workflowReason":null}`
+    — `startsAt`/`endsAt`는 **Asia/Seoul 벽시계** 의미로 **`+09:00` 오프셋 필수**(예: `2026-05-08T17:00:00+09:00`).
+  - **서버 검증(자동 적재 전)**:
+    - `suggestionKind==NONE` 또는 `ambiguous==true` → 적재 안 함.
+    - `confidence`가 `ai.proactive.llm-conversation-confidence-min`(기본 0.55) 미만이거나 NaN → 적재 안 함.
+    - **CALENDAR**: 시작·종료 시각 존재·종료가 시작보다 이후·길이 5분~14일·시작 시각이 현재 기준 대략 **−6h ~ +120d**·**양쪽 모두 `+09:00`** 일 때만 `calendar_suggestions`에 **`AI_ASSISTANT`·`PENDING`** 적재(`CalendarService.createAiAssistantSuggestionFromProactivePipeline`). 종료만 비면 **+1시간** 기본.
+    - **WORKFLOW**: 제목이 비면 `workflowReason` 또는 고정 문구로 보강 후 `WORK_ITEM_HINT` 적재; `payloadJson` 에 `deepLink=workHub`,`channelId`,`sourceMessageId`.
+  - 프롬프트는 `AiGatewayPiiMasker` 후 **`ai.gateway.llm-max-input-chars`** 로 코드포인트 자름. 감사는 `AI_GATEWAY_LLM_SUCCEEDED|FAILED`, `purpose=PROACTIVE_CONVERSATION_INSIGHT`.
+  - 테스트: `ConversationInsightJsonSupportTest`.
 - 프론트: 환영 화면 **AI 제안함** 버튼·`modalAiSuggestionInbox`; 채팅 **멤버 패널**에서 채널 관리자만 **프로액티브 옵트인** 토글; 제안 행 **바로가기**(`deepLink`: `workHub`·`chatChannel`·`aiInbox`). 마스터 스위치 꺼짐 시 AI 버튼·검색 AI 바·제안함 진입 등 UI 비표시.
 - 테스트: `AiAssistantApiTest`.
 - 예외: `enqueueSuggestion` 미옵트인 채널·쿨다운·상한·수신자 AI 비활성 시 `IllegalStateException`(통합 테스트)·관리자 아닌 채널 옵트인 변경 시 403·마스터 오프 시 제안함 API **403**·게이트웨이 chat **`AI_ASSISTANT_DISABLED_BY_USER`**.

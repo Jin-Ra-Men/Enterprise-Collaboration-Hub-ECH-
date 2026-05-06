@@ -29,4 +29,19 @@ public interface AiSuggestionInboxRepository extends JpaRepository<AiSuggestionI
             Long channelId,
             AiSuggestionKind suggestionKind,
             OffsetDateTime since);
+
+    @Query(value = """
+            SELECT COUNT(*) FROM ai_suggestion_inbox a
+            WHERE a.recipient_employee_no = :emp
+              AND a.suggestion_kind = 'WORK_ITEM_HINT'
+              AND a.channel_id = :channelId
+              AND a.created_at > :since
+              AND a.payload_json LIKE CONCAT('%\"sourceMessageId\":', CAST(:mid AS VARCHAR), '%')
+            """, nativeQuery = true)
+    long countRecentWorkItemHintForSourceMessage(
+            @Param("emp") String recipientEmployeeNo,
+            @Param("channelId") long channelId,
+            @Param("mid") long sourceMessageId,
+            @Param("since") OffsetDateTime since
+    );
 }

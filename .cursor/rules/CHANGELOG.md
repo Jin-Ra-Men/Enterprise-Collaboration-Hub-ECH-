@@ -2,6 +2,16 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-05-07
+
+### Added
+- **프로액티브 LLM 대화 인사이트**: `ProactiveConversationInsightScheduler`(매시 `:23`) — 옵트인 채널 최근 루트 텍스트 메시지를 PII 마스킹 후 LLM 분류, JSON 파싱(`ConversationInsightJsonSupport`)·서버 검증(모호 플래그·confidence·`+09:00` 일정 구간·중복 방지) 후 `CalendarService.createAiAssistantSuggestionFromProactivePipeline` 또는 `WORK_ITEM_HINT` 적재. JVM 내 채널별 롤링 1시간 LLM 호출 상한. 기초설정 시드 `ai.proactive.llm-conversation-insight-enabled`(기본 false)·`ai.proactive.llm-conversation-confidence-min`·`ai.proactive.llm-conversation-max-llm-calls-per-channel-hour`. 테스트 `ConversationInsightJsonSupportTest`.
+
+### Changed
+- **기본 LLM 모델**: `application.yml`·`AiGatewayProperties`·`DataInitializer` 시드 기본값을 **`gpt-5-mini`** 로 통일(미제공 시 운영에서 `gpt-4o-mini` 등으로 교체).
+- `application.yml`에 `app.ai.proactive.*` 폴백 블록 추가(LLM 인사이트 토글·confidence·호출 상한 포함).
+- 문서: `docs/FEATURE_SPEC.md`·`docs/HANDOVER.md`·`docs/ROADMAP.md`(7-3-3-c)·`README.md`·`docs/DEVELOPER_README.md`에 LLM 인사이트·스키마·검증 요약 반영.
+
 ## 2026-05-06
 
 ### Changed

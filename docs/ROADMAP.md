@@ -181,6 +181,7 @@
   - [v] 7-3-2. 제안함 큐 테이블(`ai_suggestion_inbox`)·목록·거절·**거절 쿨다운**(`ai.proactive.dismiss-cooldown-hours`)·채널 **시간당 적재 상한**(`ai.proactive.max-suggestions-per-channel-hour`, 서버 적재 시)·통합 테스트
   - [v] 7-3-3-a. **확인(비변)**: `acknowledge`로 제안 상태만 `ACTED` 처리 — 업무 생성·일정 확정 등 변이는 기존 `calendar_suggestions`·업무 API에서 사용자 확인 후 실행(본 큐는 메타·딥링크 확장 전제)
   - [v] 7-3-3-b. **옵트인 UI·적재 가드·스케줄 MVP**: 멤버 패널 관리자 토글, 적재 시 채널 옵트인 필수, `ProactiveAiSuggestionScheduler`(활동 힌트·다이제스트 배치), `payloadJson`·바로가기 — 고급 규칙 엔진·도메인 변이 API 연계는 후속
+  - [v] 7-3-3-c. **LLM 대화 인사이트**: `ProactiveConversationInsightScheduler`(매시 `:23`), 구조화 JSON 파싱·서버 검증 후 `AI_ASSISTANT` 일정 제안 또는 `WORK_ITEM_HINT` 적재; 기초설정 `ai.proactive.llm-conversation-*`, 기본 모델 `gpt-5-mini`
 - [ ] 7-4. 비용·토큰 통제
   - [v] 7-4-0. 게이트웨이 **사번별 분·시간 레이트 리밋**(인메모리)·**OpenAI 호환 HTTP 어댑터**(`app.ai.llm.*`)·상태 요약 필드·429/502 분기
   - [ ] 7-4-1. 컨텍스트 캡·윈도우 해시 캐시·배치 호출

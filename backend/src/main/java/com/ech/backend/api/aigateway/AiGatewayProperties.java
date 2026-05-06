@@ -93,7 +93,7 @@ public class AiGatewayProperties {
 
         private String baseUrl = "";
         private String apiKey = "";
-        private String model = "gpt-4o-mini";
+        private String model = "gpt-5-mini";
         private int maxTokens = 1024;
 
         public boolean isHttpEnabled() {
@@ -125,7 +125,7 @@ public class AiGatewayProperties {
         }
 
         public void setModel(String model) {
-            this.model = model == null || model.isBlank() ? "gpt-4o-mini" : model;
+            this.model = model == null || model.isBlank() ? "gpt-5-mini" : model;
         }
 
         public int getMaxTokens() {

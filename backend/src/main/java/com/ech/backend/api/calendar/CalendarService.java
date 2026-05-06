@@ -32,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -479,6 +480,61 @@ public class CalendarService {
                 null
         );
         return toSuggestionResponse(saved);
+    }
+
+    /**
+     * 프로액티브 LLM 인사이트 전용: 발신자(제안 수신자) 본인에게 {@code AI_ASSISTANT} 출처 일정 제안을 생성한다.
+     * 스케줄러 등 비웹 컨텍스트에서만 호출한다.
+     */
+    @Transactional
+    public Optional<Long> createAiAssistantSuggestionFromProactivePipeline(
+            String ownerEmployeeNo,
+            long originChannelId,
+            long originMessageId,
+            String title,
+            String description,
+            OffsetDateTime startsAt,
+            OffsetDateTime endsAt
+    ) {
+        String owner = ownerEmployeeNo == null ? "" : ownerEmployeeNo.trim();
+        if (owner.isEmpty()) {
+            return Optional.empty();
+        }
+        if (!aiAssistantService.isAiAssistantEnabled(owner)) {
+            return Optional.empty();
+        }
+        String exactJson = "[" + originMessageId + "]";
+        if (calendarSuggestionRepository.countPendingAiTouchingOriginMessage(owner, exactJson, originMessageId) > 0) {
+            return Optional.empty();
+        }
+        validateTimeRange(startsAt, endsAt);
+        String safeTitle = title == null || title.isBlank() ? "일정 제안" : title;
+        String t = trimTitle(safeTitle);
+        String d = trimDescription(description);
+        ResolvedOrigin origin = resolveOrigins(owner, originChannelId, null);
+        String idsJson = CalendarOriginIdsJson.serialize(List.of(originMessageId));
+
+        CalendarSuggestion saved = calendarSuggestionRepository.save(new CalendarSuggestion(
+                owner,
+                t,
+                d,
+                startsAt,
+                endsAt,
+                origin.originChannel(),
+                origin.originDmChannel(),
+                idsJson,
+                "AI_ASSISTANT"
+        ));
+        auditLogService.safeRecord(
+                AuditEventType.CALENDAR_SUGGESTION_CREATED,
+                userId(owner),
+                "CALENDAR_SUGGESTION",
+                saved.getId(),
+                null,
+                "owner=" + owner + ",actor=AI_ASSISTANT,proactiveConversationInsight=1",
+                null
+        );
+        return Optional.of(saved.getId());
     }
 
     /**

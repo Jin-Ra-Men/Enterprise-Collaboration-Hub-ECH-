@@ -54,4 +54,19 @@ public final class AppSettingKey {
 
     /** When false, hourly/digest proactive schedulers no-op (ops toggle via app_settings). */
     public static final String AI_PROACTIVE_JOBS_ENABLED = "ai.proactive.jobs-enabled";
+
+    /**
+     * When false, LLM 기반 대화 인사이트(일정·워크플로 제안) 스케줄러가 동작하지 않는다.
+     * 외부 LLM 미구성·정책 차단 시에도 내부에서 무동작 처리된다.
+     */
+    public static final String AI_PROACTIVE_LLM_CONVERSATION_INSIGHT_ENABLED =
+            "ai.proactive.llm-conversation-insight-enabled";
+
+    /** LLM이 반환한 confidence 최소값(0~1). 미만이면 적재하지 않는다. */
+    public static final String AI_PROACTIVE_LLM_CONVERSATION_CONFIDENCE_MIN =
+            "ai.proactive.llm-conversation-confidence-min";
+
+    /** 채널당 롤링 1시간 동안 허용하는 LLM 호출 최대 횟수(비용 상한). */
+    public static final String AI_PROACTIVE_LLM_CONVERSATION_MAX_LLM_CALLS_PER_CHANNEL_PER_HOUR =
+            "ai.proactive.llm-conversation-max-llm-calls-per-channel-hour";
 }

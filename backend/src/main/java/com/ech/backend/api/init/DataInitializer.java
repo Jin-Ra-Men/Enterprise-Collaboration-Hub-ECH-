@@ -64,7 +64,7 @@ public class DataInitializer implements ApplicationRunner {
     @Value("${app.ai.llm.api-key:}")
     private String seedAiLlmApiKey;
 
-    @Value("${app.ai.llm.model:gpt-4o-mini}")
+    @Value("${app.ai.llm.model:gpt-5-mini}")
     private String seedAiLlmModel;
 
     @Value("${app.ai.llm.max-tokens:1024}")
@@ -81,6 +81,15 @@ public class DataInitializer implements ApplicationRunner {
 
     @Value("${app.ai.proactive.jobs-enabled:true}")
     private String seedAiProactiveJobsEnabled;
+
+    @Value("${app.ai.proactive.llm-conversation-insight-enabled:false}")
+    private String seedAiProactiveLlmConversationInsightEnabled;
+
+    @Value("${app.ai.proactive.llm-conversation-confidence-min:0.55}")
+    private String seedAiProactiveLlmConversationConfidenceMin;
+
+    @Value("${app.ai.proactive.llm-conversation-max-llm-calls-per-channel-hour:8}")
+    private String seedAiProactiveLlmConversationMaxCallsPerChannelHour;
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -185,7 +194,15 @@ public class DataInitializer implements ApplicationRunner {
         seedSetting(AppSettingKey.AI_PROACTIVE_ACTIVITY_MIN_MESSAGES_PER_HOUR, seedAiProactiveActivityMinPerHour,
                 "프로액티브 활동 힌트: 최근 1시간 타임라인 메시지가 이 건수 이상일 때 채널 관리자에게 힌트 적재(1~500).");
         seedSetting(AppSettingKey.AI_PROACTIVE_JOBS_ENABLED, seedAiProactiveJobsEnabled,
-                "프로액티브 스케줄 작업(활동 힌트·다이제스트) 활성화(true/false).");
+                "프로액티브 스케줄 작업(활동 힌트·다이제스트·LLM 인사이트) 활성화(true/false).");
+        seedSetting(AppSettingKey.AI_PROACTIVE_LLM_CONVERSATION_INSIGHT_ENABLED, seedAiProactiveLlmConversationInsightEnabled,
+                "프로액티브 LLM 대화 인사이트(일정·워크플로 제안) 스케줄러 활성화. 외부 LLM 허용·구성 시에만 동작.");
+        seedSetting(AppSettingKey.AI_PROACTIVE_LLM_CONVERSATION_CONFIDENCE_MIN, seedAiProactiveLlmConversationConfidenceMin,
+                "인사이트 LLM confidence 최소값(0~1). 미만이면 제안 적재 안 함.");
+        seedSetting(
+                AppSettingKey.AI_PROACTIVE_LLM_CONVERSATION_MAX_LLM_CALLS_PER_CHANNEL_PER_HOUR,
+                seedAiProactiveLlmConversationMaxCallsPerChannelHour,
+                "옵트인 채널당 롤링 1시간 JVM 내 LLM 호출 상한(비용 근사).");
     }
 
     private void seedSetting(String key, String value, String description) {

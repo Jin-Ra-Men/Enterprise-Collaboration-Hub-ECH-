@@ -59,8 +59,16 @@ app:
       http-enabled: ${AI_LLM_HTTP_ENABLED:false}
       base-url: ${AI_LLM_BASE_URL:}
       api-key: ${AI_LLM_API_KEY:}
-      model: ${AI_LLM_MODEL:gpt-4o-mini}
+      model: ${AI_LLM_MODEL:gpt-5-mini}
       max-tokens: ${AI_LLM_MAX_TOKENS:1024}
+    proactive:
+      dismiss-cooldown-hours: ${AI_PROACTIVE_DISMISS_COOLDOWN_HOURS:24}
+      max-suggestions-per-channel-hour: ${AI_PROACTIVE_MAX_PER_CHANNEL_HOUR:30}
+      activity-min-messages-per-hour: ${AI_PROACTIVE_ACTIVITY_MIN:5}
+      jobs-enabled: ${AI_PROACTIVE_JOBS_ENABLED:true}
+      llm-conversation-insight-enabled: ${AI_PROACTIVE_LLM_INSIGHT:false}
+      llm-conversation-confidence-min: ${AI_PROACTIVE_LLM_CONF_MIN:0.55}
+      llm-conversation-max-llm-calls-per-channel-hour: ${AI_PROACTIVE_LLM_MAX_CALLS_PER_CH_HOUR:8}
   # true이면 500 응답에 예외 요약을 붙임(로컬 디버깅). 운영은 EXPOSE_ERROR_DETAIL=false 권장
   expose-error-detail: ${EXPOSE_ERROR_DETAIL:true}
   # 릴리즈 파일 저장 디렉토리 (운영 환경에서 절대 경로 지정 권장)
