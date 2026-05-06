@@ -87,6 +87,6 @@
 | 🪟 [배포·Windows](docs/DEPLOYMENT_WINDOWS.md) | 서버·설치·내부망 업데이트 |
 | 📋 [인수인계](docs/HANDOVER.md) | 운영·개발 인수인계 요약 |
 | 🧭 [협업 툴 방향](docs/COLLABORATION_TOOL_DIRECTION.md) | 멘션→업무→마감→칸반 갭, 자료실 1차 축, 캘린더·AI·프로액티브·비용 원칙 |
-| 🤖 [AI 게이트웨이 정책](docs/AI_GATEWAY_POLICY.md) | 기본 비유출·레이트 리밋·선택 HTTP LLM·엔드포인트·감사 메타(Phase 7-1·7-4-0) |
+| 🤖 [AI 게이트웨이 정책](docs/AI_GATEWAY_POLICY.md) | 기본 비유출·레이트 리밋·선택 HTTP LLM·**관리자 기초설정(app_settings)**·엔드포인트·감사 메타 |
 
 SQL·로드맵·RBAC 매트릭스 등은 **[개발자용 저장소 안내](docs/DEVELOPER_README.md)** 의 **핵심 문서 바로가기**를 참고하면 됩니다.

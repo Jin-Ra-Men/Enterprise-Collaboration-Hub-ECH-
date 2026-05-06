@@ -29,11 +29,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("AiGatewayService 단위")
 class AiGatewayServiceTest {
 
@@ -55,16 +58,19 @@ class AiGatewayServiceTest {
     @Mock
     private LlmInvocationPort llmInvocationPort;
 
-    private AiGatewayProperties properties;
+    @Mock
+    private AiGatewayConfigurable gatewaySettings;
+
     private AiGatewayService service;
 
     @BeforeEach
     void setUp() {
-        properties = new AiGatewayProperties();
-        properties.setAllowExternalLlm(true);
-        properties.setPolicyVersion("unit-test");
+        when(gatewaySettings.isAllowExternalLlm()).thenReturn(true);
+        when(gatewaySettings.getChatMaxRequestsPerMinute()).thenReturn(30);
+        when(gatewaySettings.getChatMaxRequestsPerHour()).thenReturn(300);
+        when(gatewaySettings.getPolicyVersion()).thenReturn("unit-test");
         service = new AiGatewayService(
-                properties,
+                gatewaySettings,
                 auditLogService,
                 userRepository,
                 channelMemberRepository,
@@ -94,7 +100,7 @@ class AiGatewayServiceTest {
         ResponseEntity<ApiResponse<?>> res = service.chat(principal, req, http);
 
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.NOT_IMPLEMENTED);
-        verify(rateLimiter).checkChatOrThrow(eq("E001"), eq(properties));
+        verify(rateLimiter).checkChatOrThrow(eq("E001"), eq(gatewaySettings));
         ArgumentCaptor<AuditEventType> cap = ArgumentCaptor.forClass(AuditEventType.class);
         verify(auditLogService).safeRecord(
                 cap.capture(),
@@ -132,7 +138,7 @@ class AiGatewayServiceTest {
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(res.getBody()).isNotNull();
         assertThat(res.getBody().success()).isTrue();
-        verify(rateLimiter).checkChatOrThrow(eq("E001"), eq(properties));
+        verify(rateLimiter).checkChatOrThrow(eq("E001"), eq(gatewaySettings));
         ArgumentCaptor<AuditEventType> cap = ArgumentCaptor.forClass(AuditEventType.class);
         verify(auditLogService).safeRecord(
                 cap.capture(),
@@ -163,7 +169,7 @@ class AiGatewayServiceTest {
         MockHttpServletRequest http = new MockHttpServletRequest();
 
         assertThrows(IllegalArgumentException.class, () -> service.chat(principal, req, http));
-        verify(rateLimiter).checkChatOrThrow(eq("E001"), eq(properties));
+        verify(rateLimiter).checkChatOrThrow(eq("E001"), eq(gatewaySettings));
         verifyNoInteractions(channelMemberRepository);
         verifyNoInteractions(messageRepository);
         verifyNoInteractions(llmInvocationPort);

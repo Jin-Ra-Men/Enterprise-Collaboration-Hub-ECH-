@@ -40,6 +40,33 @@ public class DataInitializer implements ApplicationRunner {
     @Value("${app.file-storage-dir:D:/testStorage}")
     private String defaultFileStorageDir;
 
+    @Value("${app.ai.allow-external-llm:false}")
+    private String seedAiAllowExternalLlm;
+
+    @Value("${app.ai.policy-version:2026-05-06}")
+    private String seedAiPolicyVersion;
+
+    @Value("${app.ai.chat-max-requests-per-minute:30}")
+    private String seedAiChatRlPerMinute;
+
+    @Value("${app.ai.chat-max-requests-per-hour:300}")
+    private String seedAiChatRlPerHour;
+
+    @Value("${app.ai.llm.http-enabled:false}")
+    private String seedAiLlmHttpEnabled;
+
+    @Value("${app.ai.llm.base-url:}")
+    private String seedAiLlmBaseUrl;
+
+    @Value("${app.ai.llm.api-key:}")
+    private String seedAiLlmApiKey;
+
+    @Value("${app.ai.llm.model:gpt-4o-mini}")
+    private String seedAiLlmModel;
+
+    @Value("${app.ai.llm.max-tokens:1024}")
+    private String seedAiLlmMaxTokens;
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RetentionPolicyRepository retentionPolicyRepository;
@@ -116,6 +143,24 @@ public class DataInitializer implements ApplicationRunner {
                 "단일 첨부파일 최대 업로드 크기(MB).");
         seedSetting(AppSettingKey.AUTH_INITIAL_PASSWORD_PLAINTEXT, DEFAULT_PASSWORD,
                 "비밀번호가 없는 사용자에게 기동 시 적용되는 초기 평문 비밀번호. 이미 해시가 있는 계정은 변경되지 않음.");
+        seedSetting(AppSettingKey.AI_GATEWAY_ALLOW_EXTERNAL_LLM, seedAiAllowExternalLlm,
+                "AI 게이트웨이: 공용 인터넷 LLM 전송 허용(true/false). false 권장.");
+        seedSetting(AppSettingKey.AI_GATEWAY_POLICY_VERSION, seedAiPolicyVersion,
+                "AI 게이트웨이 정책 표시 버전(클라이언트 노출용 문자열).");
+        seedSetting(AppSettingKey.AI_GATEWAY_CHAT_MAX_REQUESTS_PER_MINUTE, seedAiChatRlPerMinute,
+                "AI 게이트웨이 chat 분당 호출 상한(0=비활성).");
+        seedSetting(AppSettingKey.AI_GATEWAY_CHAT_MAX_REQUESTS_PER_HOUR, seedAiChatRlPerHour,
+                "AI 게이트웨이 chat 시간당 호출 상한(0=비활성).");
+        seedSetting(AppSettingKey.AI_LLM_HTTP_ENABLED, seedAiLlmHttpEnabled,
+                "OpenAI 호환 HTTP LLM 호출 활성화(true/false). base-url·api-key와 함께 사용.");
+        seedSetting(AppSettingKey.AI_LLM_BASE_URL, seedAiLlmBaseUrl == null ? "" : seedAiLlmBaseUrl,
+                "LLM API 베이스 URL(예: https://api.openai.com). 끝 슬래시 없이.");
+        seedSetting(AppSettingKey.AI_LLM_API_KEY, seedAiLlmApiKey == null ? "" : seedAiLlmApiKey,
+                "LLM Bearer 토큰. 관리자만 조회 가능하나 화면 노출에 유의. 비우면 yml/환경변수 폴백.");
+        seedSetting(AppSettingKey.AI_LLM_MODEL, seedAiLlmModel,
+                "chat/completions model 이름.");
+        seedSetting(AppSettingKey.AI_LLM_MAX_TOKENS, seedAiLlmMaxTokens,
+                "요청 max_tokens 정수.");
     }
 
     private void seedSetting(String key, String value, String description) {

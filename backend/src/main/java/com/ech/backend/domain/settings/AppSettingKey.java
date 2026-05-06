@@ -19,4 +19,24 @@ public final class AppSettingKey {
      * 관리자 설정에서 변경 가능. 값이 비어 있으면 내장 기본값을 사용한다.
      */
     public static final String AUTH_INITIAL_PASSWORD_PLAINTEXT = "auth.initial-password-plaintext";
+
+    // --- AI 게이트웨이 (app.ai.* 와 동일 의미; 기초설정에서 관리자가 덮어쓸 수 있음) ---
+
+    public static final String AI_GATEWAY_ALLOW_EXTERNAL_LLM = "ai.gateway.allow-external-llm";
+
+    public static final String AI_GATEWAY_POLICY_VERSION = "ai.gateway.policy-version";
+
+    public static final String AI_GATEWAY_CHAT_MAX_REQUESTS_PER_MINUTE = "ai.gateway.chat-max-requests-per-minute";
+
+    public static final String AI_GATEWAY_CHAT_MAX_REQUESTS_PER_HOUR = "ai.gateway.chat-max-requests-per-hour";
+
+    public static final String AI_LLM_HTTP_ENABLED = "ai.llm.http-enabled";
+
+    public static final String AI_LLM_BASE_URL = "ai.llm.base-url";
+
+    public static final String AI_LLM_API_KEY = "ai.llm.api-key";
+
+    public static final String AI_LLM_MODEL = "ai.llm.model";
+
+    public static final String AI_LLM_MAX_TOKENS = "ai.llm.max-tokens";
 }

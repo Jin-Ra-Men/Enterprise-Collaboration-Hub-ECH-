@@ -732,6 +732,15 @@ CREATE TABLE app_settings (
 |-------------|--------|------|
 | `file.storage.base-dir` | `D:/testStorage` (환경변수 `FILE_STORAGE_DIR`) | 첨부파일 저장 기본 경로 |
 | `file.max-size-mb` | `100` | 단일 파일 최대 크기 (MB) |
+| `ai.gateway.allow-external-llm` | `app.ai`·환경과 동일 시드 | AI 게이트웨이 외부 LLM 허용 (`true`/`false`) |
+| `ai.gateway.policy-version` | 동일 시드 | 상태 API 정책 버전 문자열 |
+| `ai.gateway.chat-max-requests-per-minute` | 동일 시드 | 분당 chat 호출 상한 (`0`=비활성) |
+| `ai.gateway.chat-max-requests-per-hour` | 동일 시드 | 시간당 chat 호출 상한 (`0`=비활성) |
+| `ai.llm.http-enabled` | 동일 시드 | OpenAI 호환 HTTP 호출 활성화 |
+| `ai.llm.base-url` | 동일 시드 | LLM 베이스 URL; 비우면 yml/환경 폴백 |
+| `ai.llm.api-key` | 동일 시드 | Bearer 토큰; 비우면 yml/환경 폴백 |
+| `ai.llm.model` | 동일 시드 | 모델 이름 |
+| `ai.llm.max-tokens` | 동일 시드 | `max_tokens` 정수 |
 
 **인덱스**
 - `idx_app_settings_key ON app_settings(setting_key)`

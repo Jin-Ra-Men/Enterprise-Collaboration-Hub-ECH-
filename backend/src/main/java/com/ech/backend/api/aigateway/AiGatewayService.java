@@ -29,7 +29,7 @@ public class AiGatewayService {
     private static final String DEFAULT_POLICY_SUMMARY_KO =
             "협업 원문(채널·DM·첨부)은 기본적으로 공용 인터넷 LLM으로 전송하지 않습니다. 예외는 전용망·계약 경로만 법무·보안 합의 후 검토합니다.";
 
-    private final AiGatewayProperties properties;
+    private final AiGatewayConfigurable gatewaySettings;
     private final AuditLogService auditLogService;
     private final UserRepository userRepository;
     private final ChannelMemberRepository channelMemberRepository;
@@ -38,7 +38,7 @@ public class AiGatewayService {
     private final LlmInvocationPort llmInvocationPort;
 
     public AiGatewayService(
-            AiGatewayProperties properties,
+            AiGatewayConfigurable gatewaySettings,
             AuditLogService auditLogService,
             UserRepository userRepository,
             ChannelMemberRepository channelMemberRepository,
@@ -46,7 +46,7 @@ public class AiGatewayService {
             AiGatewayRateLimiter rateLimiter,
             LlmInvocationPort llmInvocationPort
     ) {
-        this.properties = properties;
+        this.gatewaySettings = gatewaySettings;
         this.auditLogService = auditLogService;
         this.userRepository = userRepository;
         this.channelMemberRepository = channelMemberRepository;
@@ -56,16 +56,16 @@ public class AiGatewayService {
     }
 
     public AiGatewayStatusResponse statusSnapshot() {
-        String ver = properties.getPolicyVersion();
+        String ver = gatewaySettings.getPolicyVersion();
         if (ver == null || ver.isBlank()) {
             ver = "unknown";
         }
         return new AiGatewayStatusResponse(
-                properties.isAllowExternalLlm(),
+                gatewaySettings.isAllowExternalLlm(),
                 ver,
                 DEFAULT_POLICY_SUMMARY_KO,
-                properties.getChatMaxRequestsPerMinute(),
-                properties.getChatMaxRequestsPerHour(),
+                gatewaySettings.getChatMaxRequestsPerMinute(),
+                gatewaySettings.getChatMaxRequestsPerHour(),
                 llmInvocationPort.isConfigured()
         );
     }
@@ -76,7 +76,7 @@ public class AiGatewayService {
             HttpServletRequest httpRequest
     ) {
         String actorEmp = resolveSelfEmployeeNo(principal, request.employeeNo());
-        rateLimiter.checkChatOrThrow(actorEmp, properties);
+        rateLimiter.checkChatOrThrow(actorEmp, gatewaySettings);
         Long actorUserId = userRepository.findByEmployeeNo(actorEmp).map(User::getId).orElse(null);
         List<Long> citedNorm = normalizeCitedIds(request.citedMessageIds());
         validateCitations(request.channelId(), actorEmp, citedNorm);
@@ -84,7 +84,7 @@ public class AiGatewayService {
         String detail = buildAuditDetail(request, piiRedactions, citedNorm.size());
         String requestId = httpRequest != null ? httpRequest.getHeader("X-Request-Id") : null;
 
-        if (!properties.isAllowExternalLlm()) {
+        if (!gatewaySettings.isAllowExternalLlm()) {
             auditLogService.safeRecord(
                     AuditEventType.AI_GATEWAY_POLICY_BLOCKED,
                     actorUserId,
@@ -97,7 +97,8 @@ public class AiGatewayService {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(ApiResponse.fail(
                             "AI_GATEWAY_BLOCKED",
-                            "AI 게이트웨이 정책상 외부 LLM 전송이 비활성화되어 있습니다(app.ai.allow-external-llm=false). "
+                            "AI 게이트웨이 정책상 외부 LLM 전송이 비활성화되어 있습니다(기초설정 "
+                                    + "`ai.gateway.allow-external-llm` 또는 app.ai). "
                                     + "전용망·승인 제공자 연동 및 운영 설정 변경은 보안 절차 후 진행합니다."
                     ));
         }

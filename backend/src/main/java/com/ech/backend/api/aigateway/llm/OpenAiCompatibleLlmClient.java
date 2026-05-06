@@ -1,6 +1,6 @@
 package com.ech.backend.api.aigateway.llm;
 
-import com.ech.backend.api.aigateway.AiGatewayProperties;
+import com.ech.backend.api.aigateway.AiGatewayConfigurable;
 import com.ech.backend.common.exception.AiGatewayLlmUpstreamException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,30 +20,29 @@ import org.springframework.web.client.RestTemplate;
 
 /**
  * Minimal OpenAI-compatible chat completions client ({@code POST /v1/chat/completions}).
- * Enabled only when {@link AiGatewayProperties.LlmHttp} credentials are present.
+ * Reads {@link AiGatewayConfigurable} on each call so 기초설정(app_settings) 변경이 재기동 없이 반영된다.
  */
 public final class OpenAiCompatibleLlmClient implements LlmInvocationPort {
 
     private static final Logger log = LoggerFactory.getLogger(OpenAiCompatibleLlmClient.class);
 
     private final RestTemplate restTemplate;
-    private final AiGatewayProperties properties;
+    private final AiGatewayConfigurable gatewaySettings;
     private final ObjectMapper objectMapper;
 
-    public OpenAiCompatibleLlmClient(RestTemplate restTemplate, AiGatewayProperties properties, ObjectMapper objectMapper) {
+    public OpenAiCompatibleLlmClient(
+            RestTemplate restTemplate,
+            AiGatewayConfigurable gatewaySettings,
+            ObjectMapper objectMapper
+    ) {
         this.restTemplate = restTemplate;
-        this.properties = properties;
+        this.gatewaySettings = gatewaySettings;
         this.objectMapper = objectMapper;
     }
 
     @Override
     public boolean isConfigured() {
-        AiGatewayProperties.LlmHttp llm = properties.getLlm();
-        return llm.isHttpEnabled()
-                && llm.getBaseUrl() != null
-                && !llm.getBaseUrl().isBlank()
-                && llm.getApiKey() != null
-                && !llm.getApiKey().isBlank();
+        return gatewaySettings.isLlmHttpConfigured();
     }
 
     @Override
@@ -51,24 +50,24 @@ public final class OpenAiCompatibleLlmClient implements LlmInvocationPort {
         if (!isConfigured()) {
             return Optional.empty();
         }
-        AiGatewayProperties.LlmHttp llm = properties.getLlm();
-        String base = llm.getBaseUrl().trim();
+        String base = gatewaySettings.getLlmBaseUrl().trim();
         if (base.endsWith("/")) {
             base = base.substring(0, base.length() - 1);
         }
         URI uri = URI.create(base + "/v1/chat/completions");
 
+        String model = gatewaySettings.getLlmModel();
         ObjectNode root = objectMapper.createObjectNode();
-        root.put("model", llm.getModel());
+        root.put("model", model);
         ArrayNode messages = root.putArray("messages");
         ObjectNode userMsg = messages.addObject();
         userMsg.put("role", "user");
         userMsg.put("content", maskedUserPrompt == null ? "" : maskedUserPrompt);
-        root.put("max_tokens", llm.getMaxTokens());
+        root.put("max_tokens", gatewaySettings.getLlmMaxTokens());
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(llm.getApiKey());
+        headers.setBearerAuth(gatewaySettings.getLlmApiKey());
 
         HttpEntity<String> entity;
         try {
@@ -90,12 +89,12 @@ public final class OpenAiCompatibleLlmClient implements LlmInvocationPort {
                 return Optional.empty();
             }
             String text = choices.get(0).path("message").path("content").asText("");
-            String model = body.path("model").asText(llm.getModel());
+            String resolvedModel = body.path("model").asText(model);
             Integer tokens = null;
             if (body.path("usage").path("total_tokens").canConvertToInt()) {
                 tokens = body.path("usage").path("total_tokens").asInt();
             }
-            return Optional.of(new LlmCompletionResult(text, model, tokens));
+            return Optional.of(new LlmCompletionResult(text, resolvedModel, tokens));
         } catch (RestClientResponseException ex) {
             log.warn("LLM HTTP error status={} purpose={}", ex.getStatusCode().value(), purpose);
             throw new AiGatewayLlmUpstreamException(

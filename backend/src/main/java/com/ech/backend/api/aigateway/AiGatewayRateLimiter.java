@@ -15,12 +15,12 @@ public class AiGatewayRateLimiter {
 
     private final ConcurrentHashMap<String, MutableBuckets> buckets = new ConcurrentHashMap<>();
 
-    public void checkChatOrThrow(String employeeNo, AiGatewayProperties properties) {
+    public void checkChatOrThrow(String employeeNo, AiGatewayConfigurable gateway) {
         if (employeeNo == null || employeeNo.isBlank()) {
             return;
         }
-        int perMin = Math.max(0, properties.getChatMaxRequestsPerMinute());
-        int perHour = Math.max(0, properties.getChatMaxRequestsPerHour());
+        int perMin = Math.max(0, gateway.getChatMaxRequestsPerMinute());
+        int perHour = Math.max(0, gateway.getChatMaxRequestsPerHour());
         if (perMin <= 0 && perHour <= 0) {
             return;
         }

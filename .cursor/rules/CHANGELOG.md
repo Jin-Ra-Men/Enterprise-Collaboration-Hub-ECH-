@@ -4,6 +4,9 @@
 
 ## 2026-05-06
 
+### Changed
+- **AI 게이트웨이 설정**: `ai.gateway.*`, `ai.llm.*`를 **기초설정(app_settings)**에 시드·관리자 UI에서 수정 가능. `AiGatewayEffectiveSettings`가 DB 값(비어 있지 않을 때)과 `app.ai.*`/환경 폴백을 병합. LLM 클라이언트는 호출 시점 설정을 읽어 재기동 없이 반영. `AppSettingKey`, `DataInitializer`, 문서·`frontend/index.html` 안내.
+
 ### Added
 - **AI 게이트웨이 Phase 7-4-0**: 사번별 분·시간 **레이트 리밋**(`AiGatewayRateLimiter`, 초과 시 **429**·`AI_GATEWAY_RATE_LIMITED`), **OpenAI 호환 HTTP 어댑터**(`app.ai.llm.*`, 설정 시에만 마스킹 프롬프트 전송·성공 **200**·`AiGatewayChatResponse`). `GET /status`에 `chatMaxRequestsPerMinute`/`Hour`, `llmHttpConfigured`. 감사 `AI_GATEWAY_LLM_SUCCEEDED`/`FAILED`. `GlobalExceptionHandler`·`AiGatewayRateLimitApiTest` 등.
 
