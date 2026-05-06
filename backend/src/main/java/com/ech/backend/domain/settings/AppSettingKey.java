@@ -42,4 +42,10 @@ public final class AppSettingKey {
     public static final String AI_LLM_MODEL = "ai.llm.model";
 
     public static final String AI_LLM_MAX_TOKENS = "ai.llm.max-tokens";
+
+    /** Hours to suppress new proactive suggestions after user dismisses one (Phase 7-3-2). */
+    public static final String AI_PROACTIVE_DISMISS_COOLDOWN_HOURS = "ai.proactive.dismiss-cooldown-hours";
+
+    /** Max proactive inbox rows per channel per rolling hour (enqueue guard). */
+    public static final String AI_PROACTIVE_MAX_PER_CHANNEL_PER_HOUR = "ai.proactive.max-suggestions-per-channel-hour";
 }

@@ -8404,6 +8404,118 @@ html:not([data-theme="light"]) .org-tab--rail.active {
 .btn-workspace-tool svg { display: block; }
 
 /* =========================================================
+ * AI 제안함 모달 (Phase 7-3)
+ * ========================================================= */
+.modal-ai-inbox {
+  width: min(92vw, 520px) !important;
+  max-width: min(92vw, 520px) !important;
+  max-height: min(88vh, 720px);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+.modal-ai-inbox-body {
+  padding: 14px 18px 18px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+.ai-inbox-lead {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin: 0 0 14px;
+}
+.ai-inbox-subtitle {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.ai-inbox-prefs-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.ai-inbox-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  min-width: 140px;
+}
+.ai-inbox-select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+.ai-inbox-cooldown {
+  font-size: 12px;
+  color: var(--accent-warning, #b45309);
+  margin: 0 0 10px;
+}
+.ai-inbox-prefs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.ai-inbox-list-section {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 14px;
+}
+.ai-inbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ai-inbox-hint,
+.ai-inbox-error {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+.ai-inbox-error { color: var(--accent-danger, #b91c1c); }
+.ai-inbox-row {
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--bg-sidebar-elevated, var(--bg-sidebar));
+}
+.ai-inbox-row-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.ai-inbox-kind { font-weight: 600; text-transform: lowercase; }
+.ai-inbox-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.ai-inbox-summary {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+.ai-inbox-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+/* =========================================================
  * 조직도 모달
  * ========================================================= */
 .modal-orgchart {

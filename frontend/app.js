@@ -12611,6 +12611,15 @@ function initEvents() {
     document.getElementById("btnWelcomeQuickSelfDm")?.addEventListener("click", () => {
       void openOrCreateSelfDm();
     });
+    document.getElementById("btnWelcomeAiInbox")?.addEventListener("click", () => {
+      void openAiSuggestionInboxModal();
+    });
+    document.getElementById("btnAiUserPrefsSave")?.addEventListener("click", () => {
+      void saveAiAssistantUserPrefsFromModal();
+    });
+    document.getElementById("btnAiInboxRefresh")?.addEventListener("click", () => {
+      void refreshAiSuggestionInboxList();
+    });
     document.getElementById("appHeaderSearchInput")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -13951,6 +13960,138 @@ function findDefaultOrgChartNodeButton(scrollEl, data) {
   }
 
   return null;
+}
+
+async function openAiSuggestionInboxModal() {
+  if (!currentUser?.employeeNo) {
+    await uiAlert("로그인이 필요합니다.");
+    return;
+  }
+  await loadAiAssistantPrefsIntoForm();
+  await refreshAiSuggestionInboxList();
+  openModal("modalAiSuggestionInbox");
+}
+
+async function loadAiAssistantPrefsIntoForm() {
+  const empEnc = encodeURIComponent(currentUser.employeeNo);
+  const hint = document.getElementById("aiUserCooldownHint");
+  const toneSel = document.getElementById("aiUserToneSelect");
+  const digestSel = document.getElementById("aiUserDigestSelect");
+  if (!toneSel || !digestSel) return;
+  try {
+    const res = await apiFetch(`/api/me/ai-assistant/preferences?employeeNo=${empEnc}`);
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json.success === false) throw new Error(json.error?.message || "설정을 불러오지 못했습니다.");
+    const d = json.data || {};
+    toneSel.value = d.proactiveTone || "BALANCED";
+    digestSel.value = d.digestMode || "REALTIME";
+    if (hint) hint.classList.toggle("hidden", !d.proactiveCooldownActive);
+  } catch (e) {
+    console.error(e);
+    await uiAlert(e.message || "AI 비서 설정을 불러오지 못했습니다.");
+  }
+}
+
+async function saveAiAssistantUserPrefsFromModal() {
+  if (!currentUser?.employeeNo) return;
+  const empEnc = encodeURIComponent(currentUser.employeeNo);
+  const toneSel = document.getElementById("aiUserToneSelect");
+  const digestSel = document.getElementById("aiUserDigestSelect");
+  const body = {
+    proactiveTone: toneSel?.value || "BALANCED",
+    digestMode: digestSel?.value || "REALTIME",
+  };
+  try {
+    const res = await apiFetch(`/api/me/ai-assistant/preferences?employeeNo=${empEnc}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json.success === false) throw new Error(json.error?.message || "저장하지 못했습니다.");
+    await loadAiAssistantPrefsIntoForm();
+    await uiAlert("저장했습니다.");
+  } catch (e) {
+    console.error(e);
+    await uiAlert(e.message || "저장하지 못했습니다.");
+  }
+}
+
+async function refreshAiSuggestionInboxList() {
+  const listEl = document.getElementById("aiSuggestionInboxList");
+  if (!listEl || !currentUser?.employeeNo) return;
+  const empEnc = encodeURIComponent(currentUser.employeeNo);
+  listEl.innerHTML = '<p class="ai-inbox-hint">불러오는 중…</p>';
+  try {
+    const res = await apiFetch(`/api/me/ai-suggestions?employeeNo=${empEnc}&status=PENDING`);
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json.success === false) throw new Error(json.error?.message || "목록을 불러오지 못했습니다.");
+    const rows = Array.isArray(json.data) ? json.data : [];
+    if (rows.length === 0) {
+      listEl.innerHTML = '<p class="ai-inbox-hint">대기 중인 제안이 없습니다.</p>';
+      return;
+    }
+    listEl.innerHTML = rows
+      .map((r) => {
+        const id = Number(r.id);
+        const title = escHtml(String(r.title || ""));
+        const sum = escHtml(String(r.summary || ""));
+        const kind = escHtml(String(r.suggestionKind || ""));
+        const ch = r.channelId != null ? escHtml(String(r.channelId)) : "—";
+        return `<div class="ai-inbox-row" data-suggestion-id="${id}">
+        <div class="ai-inbox-row-head"><span class="ai-inbox-kind">${kind}</span><span class="ai-inbox-ch">채널 ${ch}</span></div>
+        <div class="ai-inbox-title">${title}</div>
+        ${sum ? `<div class="ai-inbox-summary">${sum}</div>` : ""}
+        <div class="ai-inbox-actions">
+          <button type="button" class="btn-secondary btn-sm btn-ai-inbox-dismiss" data-suggestion-id="${id}">거절</button>
+          <button type="button" class="btn-secondary btn-sm btn-ai-inbox-ack" data-suggestion-id="${id}">처리함</button>
+        </div>
+      </div>`;
+      })
+      .join("");
+    listEl.querySelectorAll(".btn-ai-inbox-dismiss").forEach((btn) => {
+      btn.addEventListener("click", () => void dismissAiSuggestion(Number(btn.dataset.suggestionId)));
+    });
+    listEl.querySelectorAll(".btn-ai-inbox-ack").forEach((btn) => {
+      btn.addEventListener("click", () => void acknowledgeAiSuggestion(Number(btn.dataset.suggestionId)));
+    });
+  } catch (e) {
+    console.error(e);
+    listEl.innerHTML = `<p class="ai-inbox-error">${escHtml(e.message || "오류")}</p>`;
+  }
+}
+
+async function dismissAiSuggestion(suggestionId) {
+  if (!currentUser?.employeeNo) return;
+  const empEnc = encodeURIComponent(currentUser.employeeNo);
+  try {
+    const res = await apiFetch(`/api/me/ai-suggestions/${suggestionId}/dismiss?employeeNo=${empEnc}`, {
+      method: "POST",
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json.success === false) throw new Error(json.error?.message || "거절하지 못했습니다.");
+    await loadAiAssistantPrefsIntoForm();
+    await refreshAiSuggestionInboxList();
+  } catch (e) {
+    console.error(e);
+    await uiAlert(e.message || "거절하지 못했습니다.");
+  }
+}
+
+async function acknowledgeAiSuggestion(suggestionId) {
+  if (!currentUser?.employeeNo) return;
+  const empEnc = encodeURIComponent(currentUser.employeeNo);
+  try {
+    const res = await apiFetch(`/api/me/ai-suggestions/${suggestionId}/acknowledge?employeeNo=${empEnc}`, {
+      method: "POST",
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || json.success === false) throw new Error(json.error?.message || "처리하지 못했습니다.");
+    await refreshAiSuggestionInboxList();
+  } catch (e) {
+    console.error(e);
+    await uiAlert(e.message || "처리하지 못했습니다.");
+  }
 }
 
 async function loadOrgChart() {

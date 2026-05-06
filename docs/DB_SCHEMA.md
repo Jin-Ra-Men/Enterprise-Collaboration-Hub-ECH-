@@ -737,6 +737,8 @@ CREATE TABLE app_settings (
 | `ai.gateway.chat-max-requests-per-minute` | 동일 시드 | 분당 chat 호출 상한 (`0`=비활성) |
 | `ai.gateway.chat-max-requests-per-hour` | 동일 시드 | 시간당 chat 호출 상한 (`0`=비활성) |
 | `ai.gateway.llm-max-input-chars` | `app.ai.llm-max-input-chars`·`AI_GATEWAY_LLM_MAX_INPUT_CHARS` 시드 | 마스킹 후 LLM 프롬프트 최대 코드포인트(256–8000) |
+| `ai.proactive.dismiss-cooldown-hours` | `app.ai.proactive.dismiss-cooldown-hours` 시드 | 제안함 거절 후 사용자별 재적재 쿨다운(시간) |
+| `ai.proactive.max-suggestions-per-channel-hour` | 동일 시드 | 채널당 1시간 롤링 최대 프로액티브 적재 건수 |
 | `ai.llm.http-enabled` | 동일 시드 | OpenAI 호환 HTTP 호출 활성화 |
 | `ai.llm.base-url` | 동일 시드 | LLM 베이스 URL; 비우면 yml/환경 폴백 |
 | `ai.llm.api-key` | 동일 시드 | Bearer 토큰; 비우면 yml/환경 폴백 |
@@ -747,6 +749,19 @@ CREATE TABLE app_settings (
 - `idx_app_settings_key ON app_settings(setting_key)`
 
 **관련 Java Entity**: `com.ech.backend.domain.settings.AppSetting`
+
+---
+
+### 4-15-1. Phase 7-3 AI 프로액티브 비서 관련 테이블
+
+| 테이블 | 목적 |
+|--------|------|
+| `channel_ai_assistant_preferences` | 채널별 프로액티브 옵트인(관리자만 변경·**DM 채널 비허용**) |
+| `user_ai_assistant_preferences` | 사용자 어조·다이제스트 모드·제안 **거절 후 쿨다운** 시각 |
+| `ai_suggestion_inbox` | 업무·일정 등 공통 **제안함 큐**(후속 백그라운드/규칙 엔진이 적재) |
+
+- DDL 이관안: `docs/sql/migrate_ai_phase_7_3.sql`
+- 도메인·API: `com.ech.backend.domain.aiassistant`, `com.ech.backend.api.aiassistant`
 
 ---
 

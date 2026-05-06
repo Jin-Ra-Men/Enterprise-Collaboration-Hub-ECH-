@@ -70,6 +70,12 @@ public class DataInitializer implements ApplicationRunner {
     @Value("${app.ai.llm.max-tokens:1024}")
     private String seedAiLlmMaxTokens;
 
+    @Value("${app.ai.proactive.dismiss-cooldown-hours:24}")
+    private String seedAiProactiveDismissCooldownHours;
+
+    @Value("${app.ai.proactive.max-suggestions-per-channel-hour:30}")
+    private String seedAiProactiveMaxPerChannelHour;
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RetentionPolicyRepository retentionPolicyRepository;
@@ -166,6 +172,10 @@ public class DataInitializer implements ApplicationRunner {
                 "chat/completions model 이름.");
         seedSetting(AppSettingKey.AI_LLM_MAX_TOKENS, seedAiLlmMaxTokens,
                 "요청 max_tokens 정수.");
+        seedSetting(AppSettingKey.AI_PROACTIVE_DISMISS_COOLDOWN_HOURS, seedAiProactiveDismissCooldownHours,
+                "프로액티브 제안함 항목 거절 후 동일 사용자에게 새 제안 적재 금지 시간(시간 단위, 1~168).");
+        seedSetting(AppSettingKey.AI_PROACTIVE_MAX_PER_CHANNEL_PER_HOUR, seedAiProactiveMaxPerChannelHour,
+                "동일 채널 기준 1시간 롤링 창에서 허용하는 프로액티브 제안 최대 건수(1~500).");
     }
 
     private void seedSetting(String key, String value, String description) {

@@ -134,6 +134,25 @@
 
 ---
 
+## AI 프로액티브 비서 및 제안함 (Phase 7-3 MVP)
+
+- 목적: 프로액티브 출력은 인라인 스팸 대신 **제안함 큐**에 쌓고, 채널은 **옵트인**, **DM은 자동 관찰 제외**(정책 `COLLABORATION_TOOL_DIRECTION.md` §6). 변이(업무 저장·일정 확정)는 **각 도메인 기존 API**에서만 수행하고, 본 큐의 「처리함」은 우선 **상태만 `ACTED`** 로 표시한다.
+- 사용자: JWT 채널 멤버·본인 설정만 조회/변경.
+- 관련 테이블: `channel_ai_assistant_preferences`, `user_ai_assistant_preferences`, `ai_suggestion_inbox`(DDL `docs/sql/migrate_ai_phase_7_3.sql`).
+- 관련 API:
+  - `GET|PUT /api/channels/{channelId}/ai-assistant/preference` — 채널 프로액티브 옵트인 조회·변경(**채널 관리자만 PUT**). DM 채널은 조회 시 `dmProactiveBlocked=true`, PUT 시 400.
+  - `GET|PUT /api/me/ai-assistant/preferences?employeeNo=` — 어조(`QUIET`/`BALANCED`/`ASSERTIVE`), 다이제스트(`REALTIME`/`DAILY`/`WEEKLY`). 응답에 거절 쿨다운 활성 여부(`proactiveCooldownActive`).
+  - `GET /api/me/ai-suggestions?employeeNo=&status=` — 제안 목록(기본 `PENDING`, 최대 50건).
+  - `POST /api/me/ai-suggestions/{id}/dismiss?employeeNo=` — 거절 + 사용자 쿨다운 시작(기초설정 시간).
+  - `POST /api/me/ai-suggestions/{id}/acknowledge?employeeNo=` — 비변 처리 완료(`ACTED`).
+- 적재(`AiAssistantService.enqueueSuggestion`): 채널 맥락 시 DM 거부·멤버 검증·시간당 상한·사용자 쿨다운 검사 — **향후** 규칙/스케줄러가 호출.
+- 기초설정 시드: `ai.proactive.dismiss-cooldown-hours`, `ai.proactive.max-suggestions-per-channel-hour`.
+- 프론트: 환영 화면 **AI 제안함** 버튼·`modalAiSuggestionInbox`(`frontend/app.js`, `styles.css`).
+- 테스트: `AiAssistantApiTest`.
+- 예외: `enqueueSuggestion` 쿨다운·상한 위반 시 `IllegalStateException`(통합 테스트)·관리자 아닌 채널 옵트인 변경 시 403.
+
+---
+
 ## 채널 자료실 (기존 첨부·파일 허브 확장)
 - 목적: 채널 첨부를 **폴더·핀·설명·태그**로 정리하고, **첨부가 달린 대화**로 이동해 맥락을 잃지 않게 한다(위키 전 단계·자료 **거주지**).
 - 사용자: 채널/DM 멤버(기존 파일 API와 동일)

@@ -331,6 +331,10 @@
                       <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
                       <span>나에게 쓰기</span>
                     </button>
+                    <button type="button" class="ech-welcome-quick-action-btn" id="btnWelcomeAiInbox" title="Phase 7-3 제안함">
+                      <span class="material-symbols-outlined" aria-hidden="true">lightbulb</span>
+                      <span>AI 제안함</span>
+                    </button>
                   </div>
                 </div>
               </section>
@@ -636,7 +640,7 @@
             <div class="settings-add-card">
               <h3 class="settings-add-title">기초설정 추가</h3>
               <p class="settings-add-hint">키는 영문·숫자·점(.)·하이픈(-)·밑줄(_)만 사용, 최대 100자입니다. 앱에서 읽는 키는 코드와 일치해야 합니다.</p>
-              <p class="settings-add-hint">AI 게이트웨이는 기본 시드 키 <code>ai.gateway.*</code>(레이트·<code>llm-max-input-chars</code> 등), <code>ai.llm.*</code>로 관리합니다(API 키 노출에 유의). 자세한 키 목록은 <code>docs/FEATURE_SPEC.md</code> · <code>docs/DB_SCHEMA.md</code> 참고.</p>
+              <p class="settings-add-hint">AI 게이트웨이는 기본 시드 키 <code>ai.gateway.*</code>(레이트·<code>llm-max-input-chars</code> 등), <code>ai.llm.*</code>, 프로액티브 <code>ai.proactive.*</code>(제안함 쿨다운·채널 시간당 상한)로 관리합니다(API 키 노출에 유의). 자세한 키 목록은 <code>docs/FEATURE_SPEC.md</code> · <code>docs/DB_SCHEMA.md</code> 참고.</p>
               <div class="settings-add-grid">
                 <div class="form-group">
                   <label for="newSettingKey">설정 키 <span class="required">*</span></label>
@@ -663,6 +667,51 @@
       </main>
       </div>
 
+    </div>
+
+    <!-- ===================== AI 제안함 · 사용자 비서 설정 (Phase 7-3) ===================== -->
+    <div id="modalAiSuggestionInbox" class="modal-overlay hidden">
+      <div class="modal modal-ai-inbox">
+        <div class="modal-header">
+          <h3>AI 제안함</h3>
+          <button class="modal-close" data-modal="modalAiSuggestionInbox" type="button">✕</button>
+        </div>
+        <div class="modal-body modal-ai-inbox-body">
+          <p class="ai-inbox-lead">
+            프로액티브 제안은 이 목록에만 쌓입니다. 업무·일정 확정은 각 기능 화면에서 직접 저장합니다(비변 처리 표시만 여기서 가능).
+          </p>
+          <section class="ai-inbox-prefs" aria-label="개인 AI 비서 설정">
+            <h4 class="ai-inbox-subtitle">내 설정</h4>
+            <div class="ai-inbox-prefs-grid">
+              <label class="ai-inbox-label">
+                어조
+                <select id="aiUserToneSelect" class="ai-inbox-select">
+                  <option value="QUIET">조용함</option>
+                  <option value="BALANCED">균형</option>
+                  <option value="ASSERTIVE">적극</option>
+                </select>
+              </label>
+              <label class="ai-inbox-label">
+                알림 방식
+                <select id="aiUserDigestSelect" class="ai-inbox-select">
+                  <option value="REALTIME">실시간</option>
+                  <option value="DAILY">일 다이제스트</option>
+                  <option value="WEEKLY">주 다이제스트</option>
+                </select>
+              </label>
+            </div>
+            <p id="aiUserCooldownHint" class="ai-inbox-cooldown hidden" role="status">제안을 거절한 직후에는 일정 시간 재제안이 제한됩니다(쿨다운).</p>
+            <div class="ai-inbox-prefs-actions">
+              <button type="button" class="btn-primary btn-sm" id="btnAiUserPrefsSave">설정 저장</button>
+              <button type="button" class="btn-secondary btn-sm" id="btnAiInboxRefresh">목록 새로고침</button>
+            </div>
+          </section>
+          <section class="ai-inbox-list-section" aria-label="대기 중 제안">
+            <h4 class="ai-inbox-subtitle">대기 중</h4>
+            <div id="aiSuggestionInboxList" class="ai-inbox-list"><p class="ai-inbox-hint">로그인 후 불러옵니다.</p></div>
+          </section>
+        </div>
+      </div>
     </div>
 
     <!-- ===================== 조직도 모달 ===================== -->

@@ -176,10 +176,10 @@
   - [v] 7-2-1-a. **프론트 연동**: 채팅 컴포저 `POST /api/ai/gateway/chat`(답장 초안·근거=citedMessageIds, 최근 타임라인 요약), 검색 모달 **AI에게 물어보기**(메시지·댓글 결과가 단일 채널일 때 근거)·전송 전 편집 안내
   - [v] 7-2-1-b. **스레드 모달**: 스레드 루트·댓글 DOM 기준 근거로 댓글 초안(`thread-comment-draft`)·요약(`thread-summary`), 결과는 스레드 입력창 채움·`frontend/app.js`
   - [v] 7-2-2. 메시지·업무·칸반과 연계한 자연어 초안: 워크 허브 신규 업무·칸반 카드 설명, 업무·카드 상세 모달 설명 AI(`work-item-desc-draft`, `kanban-card-desc-draft`, `work-item-detail-desc-draft`, `kanban-card-detail-desc-draft`; 업무 출처 메시지·타임라인 폴백)·`frontend/app.js`
-- [ ] 7-3. 프로액티브 비서 및 제안함
-  - [ ] 7-3-1. 채널 단위 옵트인·DM 프로액티브 비관찰·사용자 톤(조용함/균형/적극)
-  - [ ] 7-3-2. 제안함 큐(업무·일정 공통)·시간당 상한·거절 후 쿨다운·다이제스트 모드
-  - [ ] 7-3-3. 확인 후 변이(mutating) 작업만 실행(업무 생성·일정 확정 등)
+- [ ] 7-3. 프로액티브 비서 및 제안함 (스케줄 트리거·규칙 엔진·제품 UX 후속)
+  - [v] 7-3-1. 채널 단위 옵트인 API(`channel_ai_assistant_preferences`)·**DM 프로액티브 차단**·사용자 톤·다이제스트 모드 저장(`user_ai_assistant_preferences`)·환영 화면 **AI 제안함** 모달
+  - [v] 7-3-2. 제안함 큐 테이블(`ai_suggestion_inbox`)·목록·거절·**거절 쿨다운**(`ai.proactive.dismiss-cooldown-hours`)·채널 **시간당 적재 상한**(`ai.proactive.max-suggestions-per-channel-hour`, 서버 적재 시)·통합 테스트
+  - [v] 7-3-3-a. **확인(비변)**: `acknowledge`로 제안 상태만 `ACTED` 처리 — 업무 생성·일정 확정 등 변이는 기존 `calendar_suggestions`·업무 API에서 사용자 확인 후 실행(본 큐는 메타·딥링크 확장 전제)
 - [ ] 7-4. 비용·토큰 통제
   - [v] 7-4-0. 게이트웨이 **사번별 분·시간 레이트 리밋**(인메모리)·**OpenAI 호환 HTTP 어댑터**(`app.ai.llm.*`)·상태 요약 필드·429/502 분기
   - [ ] 7-4-1. 컨텍스트 캡·윈도우 해시 캐시·배치 호출
