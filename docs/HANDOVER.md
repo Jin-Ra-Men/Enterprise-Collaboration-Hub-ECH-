@@ -53,7 +53,7 @@
   - **협업 툴 인식·AI 전제:** `docs/COLLABORATION_TOOL_DIRECTION.md`(멘션→업무→마감→칸반 갭, 자료실 1차 축, 캘린더·AI·프로액티브·비용 원칙).
   - **채널 자료실:** 첨부 메타 `library_*`·`channel_library_folders`, API는 `docs/FEATURE_SPEC.md` §채널 자료실; 운영 DB는 `docs/sql/migrate_channel_library_v1.sql` 참고.
   - **업무 마감·우선순위:** `work_items.due_at`, `work_items.priority`; 기존 PostgreSQL DB는 `docs/sql/migrate_work_items_due_priority.sql` 적용. 로컬/H2는 JPA `ddl-auto: update`로 컬럼 추가.
-  - **내 할 일 사이드바:** `GET /api/work-items/me/todos` — 오늘·지연 구간은 서버 **Asia/Seoul** 자정 기준. 멘션 연계는 원본 메시지 본문의 `@{사번|표시명}` 토큰 문자열 매칭으로 판별한다.
+  - **내 할 일 사이드바:** `GET /api/work-items/me/todos` — 오늘·지연 구간은 서버 **Asia/Seoul** 자정 기준. 멘션 연계는 원본 메시지 본문의 `@{사번|표시명}` 토큰 문자열 매칭으로 판별한다. **`badgeCounts`**로 지연·48시간 내 임박 **총건**(목록 상한과 무관)을 표시하며, 채널 미읽음 배지와 색·정책이 다르다.
   - DB 구조: `docs/sql/postgresql_schema_draft.sql` 및 **3-1)**. 로컬에서 사람 데이터가 필요하면 `docs/sql/seed_test_users.sql` (`docs/ENVIRONMENT_SETUP.md` 5-1절).
   - Java는 `backend/`, 실시간은 `realtime/`(Express 없이 `http`+Socket.io), 데모 UI 소스는 `frontend/`(로컬에서는 `bootRun` 시 8080에서 위 3개 파일만 서빙, **`/**` 전체를 정적으로 열지 않음** — `/api/**` 가 리소스 핸들러에 먹히는 404 방지).
 - **운영·관리자**

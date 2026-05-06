@@ -1287,6 +1287,13 @@ html:not([data-theme="light"]) .sidebar-item.active::before {
   text-align: center;
   box-sizing: border-box;
 }
+/* 내 할 일: 지연(캘린더 기준)·48h 내 마감 임박 — 미읽음 메시지 배지(동일 섹션 스타일)과 색으로 구분 */
+.work-todo-due-badge.work-todo-due-badge--overdue {
+  background: #9f1239;
+}
+.work-todo-due-badge.work-todo-due-badge--soon-only {
+  background: #b45309;
+}
 .msg-row.msg-mention-focus {
   animation: mentionFlash 1.2s ease;
 }

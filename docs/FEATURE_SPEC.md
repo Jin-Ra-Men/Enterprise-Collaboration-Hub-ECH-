@@ -619,6 +619,7 @@
   - `POST /api/work-items/{workItemId}/restore?actorEmployeeNo=` — 소프트 삭제된 업무 복원(`in_use=true`)
   - `GET /api/work-items/sidebar/by-assigned-cards?employeeNo=&limit=` — 내가 **칸반 카드 담당**인 업무 목록(레거시 단일 버킷; 응답에 `dueAt`, `priority`, `sourceMessageId` 포함)
   - `GET /api/work-items/me/todos?employeeNo=&limitPerBucket=` — 사이드바 **내 할 일**: `overdue`(서버 기준 오늘 시작은 **Asia/Seoul**)·`dueToday`·`mentionLinked`(원본 메시지 본문에 `@{내사번|…}` 또는 `@{내사번}` 토큰)·`kanbanAssigned`(담당 칸반과 동일 소스). 행에 `sourceMessageId`가 있으면 멘션 연계 행에서 채팅 타임라인 포커스에 사용
+  - 동일 응답의 **`badgeCounts`**: `overdueTotal`(목록과 동일 조건의 **전체** 지연 건수)·`dueSoonTotal`(활성·미완료·`dueAt ∈ (now, now+dueSoonHours]` 집계)·`dueSoonHours`(기본 48). 채널 **미읽음 배지**와 별도로 사이드바 «내 할 일» 헤더에 합산 배지 표시; 지연 포함 시 진한 적색, 임박만 있으면 주황 톤. 폴링 시 지연·임박 건수가 **직전보다 증가**하면 활동 토스트(`업무 마감 알림`, OS 태그 `ech_os_work_due_badge`) — 목록 행 변경만 있을 때의 일반 «업무 항목 변경» 토스트와 중복되면 **마감 토스트 우선**(한 주기 1건)
   - `GET /api/kanban/channels/{channelId}/board?employeeNo=` — 채널 기본 칸반 보드 조회/없으면 자동 생성
 - 입력/출력:
   - 업무 상태는 API 값은 `OPEN`/`IN_PROGRESS`/`DONE`이며, UI 셀렉트·목록은 한글 라벨(예: 미착수·진행 중·완료)로 표시

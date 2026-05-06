@@ -5,6 +5,7 @@
 ## 2026-05-06
 
 ### Added
+- **마감 배지·알림(2-7-1-3)**: `me/todos` 응답에 `badgeCounts`(지연 총건·48h 임박 총건·상수 시간). 사이드바 «내 할 일» 옆 배지(색으로 미읽음 구분), 건수 증가 시 전용 활동 토스트/OS 알림 태그 `ech_os_work_due_badge`(목록 갱신 토스트와 동시 발생 시 마감 우선).
 - **내 할 일(2-7-1-2)**: `GET /api/work-items/me/todos` — 지연·오늘 마감(Asia/Seoul)·멘션 연계 원본 메시지·담당 칸반 버킷. `WorkItemSidebarResponse.sourceMessageId`, `WorkItemMyTodosApiTest`. 사이드바 섹션 «내 할 일»·멘션 행 클릭 시 해당 채널 타임라인에서 원본 메시지 포커스.
 - **채널 자료실**: `channel_library_folders`, `channel_files` 확장(폴더·핀·캡션·태그·`attachment_message_id`), REST(`ChannelLibraryController`, 파일 목록 필터·PATCH), 감사 타입, `ChannelLibraryApiTest`. 프론트 파일 허브(`modalFileHub`)에 자료실 필터·폴더 추가·행 단위 편집.
 - **문서/SQL**: `docs/sql/migrate_channel_library_v1.sql`, `postgresql_schema_draft.sql` 갱신, `FEATURE_SPEC`·`ROADMAP` 2-7-2 완료 처리·`COLLABORATION_TOOL_DIRECTION` 반영.

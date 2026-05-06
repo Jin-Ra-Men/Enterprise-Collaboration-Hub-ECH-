@@ -136,6 +136,9 @@ class WorkItemMyTodosApiTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.overdue").isArray())
                 .andExpect(jsonPath("$.data.dueToday").isArray())
                 .andExpect(jsonPath("$.data.mentionLinked").isArray())
-                .andExpect(jsonPath("$.data.kanbanAssigned").isArray());
+                .andExpect(jsonPath("$.data.kanbanAssigned").isArray())
+                .andExpect(jsonPath("$.data.badgeCounts.overdueTotal").exists())
+                .andExpect(jsonPath("$.data.badgeCounts.dueSoonTotal").exists())
+                .andExpect(jsonPath("$.data.badgeCounts.dueSoonHours").value(48));
     }
 }

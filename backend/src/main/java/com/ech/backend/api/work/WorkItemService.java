@@ -5,6 +5,7 @@ import com.ech.backend.api.work.dto.CreateWorkItemFromMessageRequest;
 import com.ech.backend.api.work.dto.CreateWorkItemRequest;
 import com.ech.backend.api.work.dto.UpdateWorkItemRequest;
 import com.ech.backend.api.work.dto.MyWorkTodosResponse;
+import com.ech.backend.api.work.dto.TodoBadgeCounts;
 import com.ech.backend.api.work.dto.WorkItemResponse;
 import com.ech.backend.api.work.dto.WorkItemSidebarResponse;
 import com.ech.backend.domain.channel.Channel;
@@ -22,6 +23,7 @@ import com.ech.backend.domain.work.WorkItem;
 import com.ech.backend.domain.work.WorkItemPriority;
 import com.ech.backend.domain.work.WorkItemRepository;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
@@ -36,6 +38,8 @@ public class WorkItemService {
 
     private static final int DEFAULT_TITLE_MAX = 80;
     private static final int DEFAULT_DESCRIPTION_MAX = 4000;
+    /** 마감 임박 배지·집계: 현재 시각부터 이 시간 안에 마감인 활성 미완료 업무 */
+    private static final int DUE_SOON_HOURS = 48;
 
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
@@ -308,7 +312,12 @@ public class WorkItemService {
                 .map(this::toSidebarResponse)
                 .toList();
         List<WorkItemSidebarResponse> kanbanAssigned = listWorkItemsWithMyCardAssignment(employeeNo, size);
-        return new MyWorkTodosResponse(overdue, dueToday, mentionLinked, kanbanAssigned);
+        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime soonEnd = now.plusHours(DUE_SOON_HOURS);
+        long overdueTotal = workItemRepository.countOverdueForMember(emp, startOfToday);
+        long dueSoonTotal = workItemRepository.countDueSoonForMember(emp, now, soonEnd);
+        TodoBadgeCounts badgeCounts = new TodoBadgeCounts(overdueTotal, dueSoonTotal, DUE_SOON_HOURS);
+        return new MyWorkTodosResponse(overdue, dueToday, mentionLinked, kanbanAssigned, badgeCounts);
     }
 
     private WorkItemSidebarResponse toSidebarResponse(WorkItem w) {

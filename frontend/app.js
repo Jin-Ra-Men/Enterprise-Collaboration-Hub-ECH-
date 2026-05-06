@@ -293,6 +293,8 @@ let mySidebarWorkTodos = {
 };
 /** `loadMyChannels` 간 내 업무 사이드바 스냅샷 비교용(변경 시 토스트). */
 let lastWorkSidebarSig = null;
+/** 이전 마감 배지 집계(증가 시 전용 토스트; 미읽음 멘션과 별도 정책) */
+let lastWorkTodoBadgeCounts = null;
 /** Last loaded channel work items for work hub (new card parent select + labels). */
 let lastChannelWorkItemsForHub = [];
 /** 메인 입력창 대기 첨부(다중 이미지·파일) */
@@ -3012,6 +3014,7 @@ function showLogin() {
 function showMain(user) {
   currentUser = user;
   lastWorkSidebarSig = null;
+  lastWorkTodoBadgeCounts = null;
   lastSidebarChannelsSnapshot = [];
   loginPage.classList.add("hidden");
   mainApp.classList.remove("hidden");
@@ -3192,6 +3195,45 @@ function syncAllSidebarSectionChevrons() {
   });
 }
 
+function updateWorkTodoDueBadgeUi(overdue, dueSoon) {
+  const el = document.getElementById("workTodoDueBadge");
+  if (!el) return;
+  const o = Math.max(0, Number(overdue) || 0);
+  const s = Math.max(0, Number(dueSoon) || 0);
+  const total = o + s;
+  if (total <= 0) {
+    el.classList.add("hidden");
+    el.textContent = "0";
+    el.classList.remove("work-todo-due-badge--overdue", "work-todo-due-badge--soon-only");
+    return;
+  }
+  el.textContent = total > 99 ? "99+" : String(total);
+  el.classList.remove("hidden");
+  el.classList.toggle("work-todo-due-badge--overdue", o > 0);
+  el.classList.toggle("work-todo-due-badge--soon-only", o === 0 && s > 0);
+}
+
+/** 지연·임박 건수가 직전 폴링보다 늘었을 때만 토스트(미읽음 멘션과 별도 정책). 증가 알림이면 true. */
+function maybeToastWorkTodoDueIncreases(next, prev) {
+  if (!next || !prev) return false;
+  const o = next.overdue;
+  const s = next.dueSoon;
+  const po = prev.overdue;
+  const ps = prev.dueSoon;
+  if (o <= po && s <= ps) return false;
+  const parts = [];
+  if (o > po) parts.push(`지연 ${o - po}건`);
+  if (s > ps) parts.push(`마감 임박 ${s - ps}건`);
+  pushActivityToast({
+    title: "업무 마감 알림",
+    locationLine: "내 할 일",
+    preview: `${parts.join(" · ")} · 채널 미읽음과 무관합니다.`,
+    osTag: "ech_os_work_due_badge",
+    onClick: () => document.querySelector('.section-toggle[data-target="myKanbanList"]')?.click(),
+  });
+  return true;
+}
+
 async function loadMyChannels() {
   if (!currentUser) return;
   try {
@@ -3217,6 +3259,22 @@ async function loadMyChannels() {
           kanbanAssigned: Array.isArray(d.kanbanAssigned) ? d.kanbanAssigned : [],
         }
       : emptyTodos;
+    const bc = d?.badgeCounts;
+    let workDueBadgeToastFired = false;
+    if (bc != null) {
+      const nextBadge = {
+        overdue: Number(bc.overdueTotal ?? bc.overdue_total ?? 0),
+        dueSoon: Number(bc.dueSoonTotal ?? bc.due_soon_total ?? 0),
+      };
+      if (lastWorkTodoBadgeCounts != null) {
+        workDueBadgeToastFired = Boolean(maybeToastWorkTodoDueIncreases(nextBadge, lastWorkTodoBadgeCounts));
+      }
+      lastWorkTodoBadgeCounts = nextBadge;
+      updateWorkTodoDueBadgeUi(nextBadge.overdue, nextBadge.dueSoon);
+    } else {
+      lastWorkTodoBadgeCounts = null;
+      updateWorkTodoDueBadgeUi(0, 0);
+    }
     const todoBucketsSig = (t) =>
       ["overdue", "dueToday", "mentionLinked", "kanbanAssigned"].flatMap((key) =>
         (t[key] || []).map((r) => ({
@@ -3226,7 +3284,7 @@ async function loadMyChannels() {
         }))
       );
     const nextWorkSig = JSON.stringify(todoBucketsSig(mySidebarWorkTodos));
-    if (lastWorkSidebarSig !== null && lastWorkSidebarSig !== nextWorkSig) {
+    if (!workDueBadgeToastFired && lastWorkSidebarSig !== null && lastWorkSidebarSig !== nextWorkSig) {
       pushActivityToast({
         title: "업무 항목 변경",
         locationLine: "내 할 일",
@@ -6534,8 +6592,8 @@ function openChannelSidebarContextMenu(clientX, clientY, channelId, channelName,
   channelSidebarContextMenuEl.classList.remove("hidden");
 }
 
-/** 일반 활동 알림(업무 사이드바 변경 등). */
-function pushActivityToast({ title, locationLine, preview, onClick }) {
+/** 일반 활동 알림(업무 사이드바 변경 등). {@code osTag}로 OS 알림 태그 구분(마감 배지 vs 목록 갱신). */
+function pushActivityToast({ title, locationLine, preview, onClick, osTag }) {
   const titleStr = String(title || "알림");
   const loc = String(locationLine || "").trim();
   const prev = String(preview || "").trim();
@@ -6543,7 +6601,7 @@ function pushActivityToast({ title, locationLine, preview, onClick }) {
 
   // OS notification when window/ tab is in background (same rule as messages; Electron + browser with permission).
   showOsNotificationIfAllowed({
-    tag: "ech_os_work_sidebar",
+    tag: String(osTag || "ech_os_work_sidebar"),
     title: titleStr,
     body: bodyLine,
     kind: "workActivity",

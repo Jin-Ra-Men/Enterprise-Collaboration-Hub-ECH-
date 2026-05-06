@@ -97,6 +97,47 @@ public interface WorkItemRepository extends JpaRepository<WorkItem, Long> {
     )
     List<WorkItem> findMentionLinkedForMember(@Param("emp") String employeeNo, Pageable pageable);
 
+    @Query(
+            """
+                    select count(w) from WorkItem w
+                    join w.sourceChannel ch
+                    where w.inUse = true
+                      and w.status <> 'DONE'
+                      and w.dueAt is not null
+                      and w.dueAt < :startOfToday
+                      and exists (
+                          select 1 from ChannelMember cm
+                          where cm.channel.id = ch.id and cm.user.employeeNo = :emp
+                      )
+                    """
+    )
+    long countOverdueForMember(
+            @Param("emp") String employeeNo,
+            @Param("startOfToday") OffsetDateTime startOfToday);
+
+    /**
+     * 마감 임박: 아직 시각상 미래이지만 soonEnd 이전인 업무(지연 집계와 별도).
+     */
+    @Query(
+            """
+                    select count(w) from WorkItem w
+                    join w.sourceChannel ch
+                    where w.inUse = true
+                      and w.status <> 'DONE'
+                      and w.dueAt is not null
+                      and w.dueAt > :now
+                      and w.dueAt <= :soonEnd
+                      and exists (
+                          select 1 from ChannelMember cm
+                          where cm.channel.id = ch.id and cm.user.employeeNo = :emp
+                      )
+                    """
+    )
+    long countDueSoonForMember(
+            @Param("emp") String employeeNo,
+            @Param("now") OffsetDateTime now,
+            @Param("soonEnd") OffsetDateTime soonEnd);
+
     /**
      * 통합 검색: 업무 제목 또는 설명에서 키워드를 검색한다 (워크스페이스 전체 대상).
      */
