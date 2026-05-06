@@ -5854,6 +5854,30 @@ html[data-theme="cream"] .workflow-section {
   gap: 8px;
   margin-bottom: 10px;
 }
+.work-hub-ai-desc-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.work-hub-ai-desc-row textarea {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.btn-hub-ai {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+.work-item-detail-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.work-item-detail-label-row label {
+  margin-bottom: 0;
+}
 .work-item-create-form input,
 .work-item-create-form textarea,
 .work-item-create-form select {

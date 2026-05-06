@@ -110,19 +110,26 @@
   - `GET /api/ai/gateway/status` — 정책 요약(`externalLlmAllowed`, `policyVersion`, `defaultPolicySummary`, `chatMaxRequestsPerMinute`, `chatMaxRequestsPerHour`, `llmHttpConfigured`).
   - `POST /api/ai/gateway/chat` — 본문 JSON `purpose`, 선택 `employeeNo`(JWT와 일치), 선택 `channelId`, `prompt`(최대 8000자), 선택 `citedMessageIds`(최대 20). **근거 ID가 1개 이상이면 `channelId` 필수**이며, 각 ID는 해당 채널의 메시지이고 호출자는 채널 멤버여야 한다. 처리 순서: **레이트 리밋 → 검증 → 정책**. **`allow-external-llm=false` 이면 HTTP 403** (`AI_GATEWAY_BLOCKED`). **`true` 이면** `llm.http-enabled` 및 `base-url`·`api-key`가 모두 있을 때만 **마스킹된 프롬프트**로 OpenAI 호환 `POST .../v1/chat/completions` 호출·성공 시 **200**과 `replyText`·`model`·`totalTokens`; 제공자 미구성 시 **501** (`AI_GATEWAY_NOT_CONFIGURED`); 한도 초과 시 **429** (`AI_GATEWAY_RATE_LIMITED`); 업스트림 오류 시 **502** (`AI_GATEWAY_LLM_UPSTREAM_ERROR` 등).
 - 감사: `AI_GATEWAY_POLICY_BLOCKED`, `AI_GATEWAY_PROVIDER_NOT_CONFIGURED`, `AI_GATEWAY_LLM_SUCCEEDED`, `AI_GATEWAY_LLM_FAILED` — **프롬프트 원문 미저장**, detail 에 `purpose`·`promptChars`·`channelId`·`citedDistinct`·`piiRedactions` 등만.
-- UI: 채팅 컴포저 하단 `.composer-ai-evidence-hint` — 근거 `message_id`·전송 전 편집 안내(Phase 7-1-2). **Phase 7-2-1-a**: 컴포저 버튼(✨ 답장 초안, 요약), 검색 모달 **AI에게 물어보기**(단일 채널 메시지·댓글 근거)·`frontend/app.js`.
+- UI: 채팅 컴포저 하단 `.composer-ai-evidence-hint` — 근거 `message_id`·전송 전 편집 안내(Phase 7-1-2). **Phase 7-2-1-a**: 컴포저 버튼(✨ 답장 초안, 요약), 검색 모달 **AI에게 물어보기**(단일 채널 메시지·댓글 근거). **7-2-1-b·7-2-2**: 스레드 모달 AI, 워크 허브 업무·칸반 설명 필드·상세 모달·`frontend/app.js`.
 - 테스트: `AiGatewayApiTest`, `AiGatewayRateLimitApiTest`, `AiGatewayServiceTest`, `AiGatewayPiiMaskerTest`.
 
 ---
 
-## AI 대화 보조 (Phase 7-2-1-a, 게이트웨이 호출 UI)
+## AI 대화 보조 (Phase 7-2-1-a ~ 7-2-2, 게이트웨이 호출 UI)
 
 - 목적: 백엔드 게이트웨이만 통해 초안·요약·검색 맥락 질의를 호출하고, **전송 전 사용자 편집**을 전제로 한다.
-- 관련 화면: 채팅 컴포저 `btnComposerAiReplyDraft` · `btnComposerAiSummarize`, 통합 검색 모달 `btnSearchModalAiAsk`.
+- 관련 화면: 채팅 컴포저 `btnComposerAiReplyDraft` · `btnComposerAiSummarize`, 통합 검색 모달 `btnSearchModalAiAsk`, 스레드 모달 `btnThreadAiCommentDraft` · `btnThreadAiSummarize`, 워크 허브 `btnWorkItemDescAiDraft` · `btnKanbanCardDescAiDraft`, 업무 상세 `btnWorkItemDetailDescAiDraft`, 칸반 카드 상세 `btnKanbanCardDetailDescAiDraft`.
 - 동작 요약:
   - **답장 초안** (`purpose`: `reply-draft`): 답글 대상 메시지 1건을 `citedMessageIds`로 전달. 입력창에 추가 지시가 있으면 프롬프트에 포함.
   - **최근 요약** (`channel-recent-summary`): 현재 타임라인 DOM에서 최근 채팅 행 ID 최대 20개를 근거로 요약 요청.
   - **검색 근거 질문** (`search-context-qa`): 마지막 검색 응답의 `MESSAGE`·`COMMENT` 항목만 모아 **동일 `contextId`(채널)** 일 때만 활성화; 검색창 텍스트가 질문으로 사용됨.
+  - **스레드 댓글 초안** (`thread-comment-draft`): 스레드 모달 DOM에서 루트·댓글 메시지 ID(최대 20)를 근거로 댓글 초안; 결과는 스레드 입력창에 채움(스레드 컴포저에 추가 지시가 있으면 프롬프트에 포함).
+  - **스레드 요약** (`thread-summary`): 동일 근거로 요약; 결과는 스레드 입력창에 채워 사용자가 편집·전송.
+  - **신규 업무 설명** (`work-item-desc-draft`): 채널 타임라인에서 수집한 최근 메시지 ID(있을 때만 `citedMessageIds`)·제목 입력값을 참고해 `#workItemDescInput`에 설명 초안.
+  - **신규 칸반 카드 설명** (`kanban-card-desc-draft`): 선택된 연결 업무의 출처 메시지가 있으면 우선 인용, 없으면 최근 타임라인 폴백; `#kanbanCardDescInput` 채움.
+  - **업무 상세 설명** (`work-item-detail-desc-draft`): 저장 전 업무·임시 업무 구분 없이 모달 필드 기준; 확정 업무는 `sourceMessageId` 우선·없으면 타임라인 폴백, 임시 업무는 타임라인 근거만; 기존 설명 텍스트가 있으면「다듬기」프롬프트.
+  - **칸반 카드 상세 설명** (`kanban-card-detail-desc-draft`): 카드에 연결된 업무 기준으로 동일 cite 규칙; `#kanbanCardDetailDesc` 채움.
+- 테스트 기준(수동): 각 버튼은 로그인·채널 선택·모달 열림 조건에서만 활성화; 호출 중 다른 AI 버튼 비활성; 채널 불일치 시 `executeAiGatewayChat`이 알림으로 폴백(스레드·textarea 채움 실패 시).
 - 예외: 정책 차단·미구성·레이트·업스트림 오류 시 토스트식 `uiAlert`로 코드별 안내.
 
 ---

@@ -910,6 +910,12 @@
           <div class="thread-composer-controls">
             <input id="threadFileInput" type="file" class="hidden" multiple />
             <button id="threadBtnAttach" type="button" class="composer-attach-btn" title="파일·이미지 첨부">📎</button>
+            <button type="button" class="composer-ai-btn" id="btnThreadAiCommentDraft" disabled title="댓글 초안 (스레드 근거)" aria-label="댓글 초안">
+              <span class="material-symbols-outlined" aria-hidden="true">auto_awesome</span>
+            </button>
+            <button type="button" class="composer-ai-btn" id="btnThreadAiSummarize" disabled title="스레드 요약" aria-label="스레드 요약">
+              <span class="material-symbols-outlined" aria-hidden="true">summarize</span>
+            </button>
             <textarea id="threadMessageInput" class="composer-input" rows="1" placeholder="댓글 입력… Enter 전송 · Shift+Enter 줄바꿈 · @멘션" autocomplete="off"></textarea>
             <button id="threadBtnSend" type="button" class="composer-send-btn" title="전송">➤</button>
           </div>
@@ -1174,7 +1180,10 @@
               <div class="work-hub-panel-body">
                 <form id="workItemCreateForm" class="work-item-create-form" onsubmit="return false;">
                   <input id="workItemTitleInput" type="text" maxlength="500" placeholder="새 업무 제목" />
-                  <textarea id="workItemDescInput" rows="3" maxlength="8000" placeholder="업무 설명(선택)"></textarea>
+                  <div class="work-hub-ai-desc-row">
+                    <textarea id="workItemDescInput" rows="3" maxlength="8000" placeholder="업무 설명(선택)"></textarea>
+                    <button type="button" class="btn-cancel btn-sm btn-hub-ai" id="btnWorkItemDescAiDraft" disabled>AI 설명</button>
+                  </div>
                   <div class="work-item-create-row work-item-create-row--split">
                     <select id="workItemStatusSelect" aria-label="신규 업무 상태">
                       <option value="OPEN">대기</option>
@@ -1209,7 +1218,10 @@
                     <option value="">업무 항목 선택(필수)</option>
                   </select>
                   <input id="kanbanCardTitleInput" type="text" maxlength="500" placeholder="새 카드 제목" />
-                  <textarea id="kanbanCardDescInput" rows="2" maxlength="8000" placeholder="카드 설명(선택)"></textarea>
+                  <div class="work-hub-ai-desc-row">
+                    <textarea id="kanbanCardDescInput" rows="2" maxlength="8000" placeholder="카드 설명(선택)"></textarea>
+                    <button type="button" class="btn-cancel btn-sm btn-hub-ai" id="btnKanbanCardDescAiDraft" disabled>AI 설명</button>
+                  </div>
                   <div id="kanbanNewCardAssigneeWrap" class="kanban-new-card-assignee-wrap">
                     <div class="kanban-new-card-assignee-label">담당자(선택)</div>
                     <div id="kanbanNewCardAssigneeChips" class="kanban-assignee-chips" aria-live="polite"></div>
@@ -1303,7 +1315,10 @@
             <input id="workItemDetailTitle" type="text" maxlength="500" />
           </div>
           <div class="form-group">
-            <label for="workItemDetailDesc">설명</label>
+            <div class="work-item-detail-label-row">
+              <label for="workItemDetailDesc">설명</label>
+              <button type="button" class="btn-cancel btn-sm btn-hub-ai" id="btnWorkItemDetailDescAiDraft" disabled>AI로 다듬기</button>
+            </div>
             <textarea id="workItemDetailDesc" rows="5" maxlength="8000"></textarea>
           </div>
           <div class="form-group">
@@ -1352,7 +1367,10 @@
             <input id="kanbanCardDetailTitle" type="text" maxlength="500" />
           </div>
           <div class="form-group">
-            <label for="kanbanCardDetailDesc">설명</label>
+            <div class="work-item-detail-label-row">
+              <label for="kanbanCardDetailDesc">설명</label>
+              <button type="button" class="btn-cancel btn-sm btn-hub-ai" id="btnKanbanCardDetailDescAiDraft" disabled>AI로 다듬기</button>
+            </div>
             <textarea id="kanbanCardDetailDesc" rows="5" maxlength="8000"></textarea>
           </div>
           <div class="form-group">

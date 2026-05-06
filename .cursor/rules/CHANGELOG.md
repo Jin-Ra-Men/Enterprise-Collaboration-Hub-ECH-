@@ -8,6 +8,7 @@
 - **AI 게이트웨이 설정**: `ai.gateway.*`, `ai.llm.*`를 **기초설정(app_settings)**에 시드·관리자 UI에서 수정 가능. `AiGatewayEffectiveSettings`가 DB 값(비어 있지 않을 때)과 `app.ai.*`/환경 폴백을 병합. LLM 클라이언트는 호출 시점 설정을 읽어 재기동 없이 반영. `AppSettingKey`, `DataInitializer`, 문서·`frontend/index.html` 안내.
 
 ### Added
+- **Phase 7-2-1-b·7-2-2 (프론트)**: 스레드 모달 AI(댓글 초안·스레드 요약·스레드 입력창 채움), 워크 허브 업무·칸반 설명 필드 및 상세 모달 **AI 설명/다듬기**(`executeAiGatewayChat`의 `fillTarget` textarea·업무 `sourceMessageId`/타임라인 cite 폴백). 모달 닫힘·칸반 연결 업무 변경 시 버튼 상태 갱신. `FEATURE_SPEC`·`ROADMAP` 반영.
 - **Phase 7-2-1-a (프론트)**: 채팅 컴포저 AI 버튼(답장 초안·최근 타임라인 요약), 검색 모달 **AI에게 물어보기**(단일 채널 메시지·댓글 근거), 스타일·안내 문구. 로드맵 `7-2-1-a` 완료 처리.
 - **AI 게이트웨이 Phase 7-4-0**: 사번별 분·시간 **레이트 리밋**(`AiGatewayRateLimiter`, 초과 시 **429**·`AI_GATEWAY_RATE_LIMITED`), **OpenAI 호환 HTTP 어댑터**(`app.ai.llm.*`, 설정 시에만 마스킹 프롬프트 전송·성공 **200**·`AiGatewayChatResponse`). `GET /status`에 `chatMaxRequestsPerMinute`/`Hour`, `llmHttpConfigured`. 감사 `AI_GATEWAY_LLM_SUCCEEDED`/`FAILED`. `GlobalExceptionHandler`·`AiGatewayRateLimitApiTest` 등.
 

@@ -5862,6 +5862,7 @@ async function openThreadModal(rootMessageId, { targetCommentMessageId = null } 
     isRenderingThreadModal = false;
   }
   isRenderingThreadModal = false;
+  updateComposerAiButtonStates();
 }
 
 async function sendThreadComment() {
@@ -7395,6 +7396,60 @@ function collectRecentChatMessageIdsFromTimeline(maxN) {
   return ids.slice(ids.length - cap);
 }
 
+function collectThreadModalMessageIdsForAi(maxN) {
+  const cap = Math.min(Math.max(1, Number(maxN) || 20), AI_GATEWAY_TIMELINE_MAX_CITED);
+  const rootEl = document.getElementById("threadRootContainer");
+  const commentsEl = document.getElementById("threadCommentsContainer");
+  const raw = [];
+  [rootEl, commentsEl].forEach((c) => {
+    if (!c) return;
+    c.querySelectorAll(".msg-row.msg-chat[data-message-id]").forEach((row) => {
+      const mid = Number(row.dataset.messageId);
+      if (Number.isFinite(mid)) raw.push(mid);
+    });
+  });
+  const seen = new Set();
+  const dedup = [];
+  for (const id of raw) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    dedup.push(id);
+  }
+  if (dedup.length <= cap) return dedup;
+  return dedup.slice(dedup.length - cap);
+}
+
+function getWorkItemSourceMessageIdFromHub(workItemId) {
+  const wid = Number(workItemId);
+  if (!Number.isFinite(wid) || wid <= 0) return null;
+  const rowItem = lastChannelWorkItemsForHub.find((x) => Number(x.id) === wid);
+  const sm = rowItem?.sourceMessageId ?? rowItem?.source_message_id;
+  const n = Number(sm);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function resolveWorkHubCitedMessageIds(workItemId) {
+  const fromWi = getWorkItemSourceMessageIdFromHub(workItemId);
+  if (fromWi != null) return [fromWi];
+  return collectRecentChatMessageIdsFromTimeline(10);
+}
+
+function getSelectedKanbanCardWorkItemId() {
+  const meta = workHubSelectedKanbanCardMeta;
+  if (!meta) return null;
+  if (meta.isDraft) {
+    const idx = Number(meta.idx);
+    const card = Number.isFinite(idx) ? workHubPendingNewKanbanCards[idx] : null;
+    const w = Number(card?.workItemId ?? card?.work_item_id);
+    return Number.isFinite(w) && w > 0 ? w : null;
+  }
+  const cid = Number(meta.id);
+  if (!Number.isFinite(cid)) return null;
+  const cardEl = document.querySelector(`.kanban-card-item[data-kanban-card-id="${cid}"]`);
+  const w = Number(cardEl?.dataset.workItemId || "");
+  return Number.isFinite(w) && w > 0 ? w : null;
+}
+
 function pickSearchItemsForAiGateway(items) {
   const list = Array.isArray(items) ? items : [];
   const hits = list.filter((it) => it && (it.type === "MESSAGE" || it.type === "COMMENT"));
@@ -7451,7 +7506,17 @@ function messageFromAiGatewayFailure(json, status) {
 }
 
 function setComposerAiBusy(busy) {
-  ["btnComposerAiReplyDraft", "btnComposerAiSummarize", "btnSearchModalAiAsk"].forEach((id) => {
+  [
+    "btnComposerAiReplyDraft",
+    "btnComposerAiSummarize",
+    "btnSearchModalAiAsk",
+    "btnThreadAiCommentDraft",
+    "btnThreadAiSummarize",
+    "btnWorkItemDescAiDraft",
+    "btnKanbanCardDescAiDraft",
+    "btnWorkItemDetailDescAiDraft",
+    "btnKanbanCardDetailDescAiDraft",
+  ].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.disabled = !!busy;
   });
@@ -7485,9 +7550,95 @@ function updateComposerAiButtonStates() {
   } else if (searchAiBtn && busy) {
     searchAiBtn.disabled = true;
   }
+  updateThreadAiButtonStates();
+  updateWorkHubAiButtonStates();
 }
 
-async function executeAiGatewayChat({ purpose, channelId, citedMessageIds, prompt, preferComposerChannelId }) {
+function updateThreadAiButtonStates() {
+  const draftBtn = document.getElementById("btnThreadAiCommentDraft");
+  const sumBtn = document.getElementById("btnThreadAiSummarize");
+  if (!draftBtn && !sumBtn) return;
+  const busy = !!composerAiDraftInFlight;
+  const loggedIn = !!currentUser?.employeeNo;
+  const threadModal = document.getElementById("modalThread");
+  const threadOpen = threadModal && !threadModal.classList.contains("hidden");
+  const rootOk = threadRootMessageId != null && Number.isFinite(Number(threadRootMessageId));
+  const chOk = !!activeChannelId;
+  const ids = collectThreadModalMessageIdsForAi(AI_GATEWAY_TIMELINE_MAX_CITED);
+  const hasMsgs = ids.length > 0;
+  if (draftBtn) {
+    draftBtn.disabled =
+      busy || !loggedIn || !threadOpen || !chOk || !rootOk || !hasMsgs || draftBtn.dataset.forceDisabled === "1";
+  }
+  if (sumBtn) {
+    sumBtn.disabled =
+      busy || !loggedIn || !threadOpen || !chOk || !rootOk || !hasMsgs || sumBtn.dataset.forceDisabled === "1";
+  }
+}
+
+function updateWorkHubAiButtonStates() {
+  const busy = !!composerAiDraftInFlight;
+  const loggedIn = !!currentUser?.employeeNo;
+  const chOk = !!activeChannelId;
+  const hub = document.getElementById("modalWorkHub");
+  const hubOpen = hub && !hub.classList.contains("hidden");
+
+  const wCreate = document.getElementById("btnWorkItemDescAiDraft");
+  if (wCreate) {
+    wCreate.disabled =
+      busy ||
+      !loggedIn ||
+      !hubOpen ||
+      !chOk ||
+      wCreate.dataset.forceDisabled === "1";
+  }
+
+  const kCreate = document.getElementById("btnKanbanCardDescAiDraft");
+  const selWi = Number(document.getElementById("kanbanNewCardWorkItemSelect")?.value || "");
+  if (kCreate) {
+    kCreate.disabled =
+      busy ||
+      !loggedIn ||
+      !hubOpen ||
+      !chOk ||
+      !(Number.isFinite(selWi) && selWi > 0) ||
+      kCreate.dataset.forceDisabled === "1";
+  }
+
+  const detailWork = document.getElementById("btnWorkItemDetailDescAiDraft");
+  const modalWi = document.getElementById("modalWorkItemDetail");
+  const detailWorkOpen = modalWi && !modalWi.classList.contains("hidden");
+  if (detailWork) {
+    detailWork.disabled =
+      busy ||
+      !loggedIn ||
+      !detailWorkOpen ||
+      !chOk ||
+      detailWork.dataset.forceDisabled === "1";
+  }
+
+  const detailKb = document.getElementById("btnKanbanCardDetailDescAiDraft");
+  const modalKb = document.getElementById("modalKanbanCardDetail");
+  const detailKbOpen = modalKb && !modalKb.classList.contains("hidden");
+  if (detailKb) {
+    detailKb.disabled =
+      busy ||
+      !loggedIn ||
+      !detailKbOpen ||
+      !chOk ||
+      detailKb.dataset.forceDisabled === "1";
+  }
+}
+
+async function executeAiGatewayChat({
+  purpose,
+  channelId,
+  citedMessageIds,
+  prompt,
+  preferComposerChannelId,
+  fillTarget = "main",
+  fillTextareaEl = null,
+}) {
   if (!currentUser?.employeeNo) {
     await uiAlert("로그인이 필요합니다.");
     return;
@@ -7516,18 +7667,46 @@ async function executeAiGatewayChat({ purpose, channelId, citedMessageIds, promp
     await uiAlert("모델이 빈 응답을 반환했습니다.");
     return null;
   }
+  const textOut = String(replyText).trim();
   const targetCh = preferComposerChannelId != null ? Number(preferComposerChannelId) : Number(channelId);
-  const viewChat = document.getElementById("viewChat");
-  const inChat = !!activeChannelId && viewChat && !viewChat.classList.contains("hidden");
-  if (inChat && activeChannelId != null && Number(activeChannelId) === targetCh && messageInputEl) {
-    messageInputEl.value = String(replyText).trim();
-    scheduleComposerInputHeight();
-    messageInputEl.focus();
-  } else {
-    await uiAlert(
-      `${String(replyText).trim().slice(0, 2400)}${String(replyText).trim().length > 2400 ? "…" : ""}\n\n— 현재 보고 있는 채널과 다르면 입력창에는 넣지 않았습니다.`
-    );
+  const channelMatches = activeChannelId != null && Number(activeChannelId) === targetCh;
+
+  if (fillTarget === "textarea" && fillTextareaEl) {
+    fillTextareaEl.value = textOut;
+    try {
+      fillTextareaEl.dispatchEvent(new Event("input", { bubbles: true }));
+    } catch {
+      /* ignore */
+    }
+    fillTextareaEl.focus();
+    return replyText;
   }
+
+  if (fillTarget === "thread" && channelMatches) {
+    const threadModal = document.getElementById("modalThread");
+    const threadOpen = threadModal && !threadModal.classList.contains("hidden");
+    if (threadOpen && threadMessageInputEl) {
+      threadMessageInputEl.value = textOut;
+      scheduleThreadComposerInputHeight();
+      threadMessageInputEl.focus();
+      return replyText;
+    }
+  }
+
+  if (fillTarget === "main" && channelMatches) {
+    const viewChat = document.getElementById("viewChat");
+    const inChat = viewChat && !viewChat.classList.contains("hidden");
+    if (inChat && messageInputEl) {
+      messageInputEl.value = textOut;
+      scheduleComposerInputHeight();
+      messageInputEl.focus();
+      return replyText;
+    }
+  }
+
+  await uiAlert(
+    `${textOut.slice(0, 2400)}${textOut.length > 2400 ? "…" : ""}\n\n— 채널이 다르거나 입력 대상을 찾지 못해 알림으로만 표시합니다.`
+  );
   return replyText;
 }
 
@@ -7613,6 +7792,205 @@ async function runWorkspaceSearchAiAsk() {
   }
 }
 
+async function runThreadAiCommentDraft() {
+  if (!activeChannelId || composerAiDraftInFlight) return;
+  const ids = collectThreadModalMessageIdsForAi(AI_GATEWAY_TIMELINE_MAX_CITED);
+  if (ids.length === 0) return;
+  const extra = threadMessageInputEl?.value?.trim() || "";
+  const prompt = extra
+    ? `사용자 지시: ${extra}\n\n아래 근거는 현재 스레드에 표시된 루트·댓글 메시지입니다. 스레드에 붙일 댓글 초안을 한국어로 작성해 주세요. 사용자가 전송 전 편집합니다.`
+    : `아래 근거는 현재 스레드에 표시된 루트·댓글 메시지입니다. 맥락에 맞는 댓글 초안을 한국어로 작성해 주세요. 사용자가 전송 전 편집합니다.`;
+  composerAiDraftInFlight = true;
+  setComposerAiBusy(true);
+  try {
+    await executeAiGatewayChat({
+      purpose: "thread-comment-draft",
+      channelId: Number(activeChannelId),
+      citedMessageIds: ids,
+      prompt,
+      preferComposerChannelId: Number(activeChannelId),
+      fillTarget: "thread",
+    });
+  } catch (e) {
+    console.error(e);
+    await uiAlert("AI 게이트웨이 호출 중 오류가 발생했습니다.");
+  } finally {
+    composerAiDraftInFlight = false;
+    setComposerAiBusy(false);
+  }
+}
+
+async function runThreadAiSummarize() {
+  if (!activeChannelId || composerAiDraftInFlight) return;
+  const ids = collectThreadModalMessageIdsForAi(AI_GATEWAY_TIMELINE_MAX_CITED);
+  if (ids.length === 0) return;
+  const prompt =
+    "아래 근거는 현재 스레드(루트·댓글)입니다. 핵심 결정·질문·할 일만 한국어로 6줄 이내로 요약하고, 근거에 없으면 추측하지 마세요.";
+  composerAiDraftInFlight = true;
+  setComposerAiBusy(true);
+  try {
+    await executeAiGatewayChat({
+      purpose: "thread-summary",
+      channelId: Number(activeChannelId),
+      citedMessageIds: ids,
+      prompt,
+      preferComposerChannelId: Number(activeChannelId),
+      fillTarget: "thread",
+    });
+  } catch (e) {
+    console.error(e);
+    await uiAlert("AI 게이트웨이 호출 중 오류가 발생했습니다.");
+  } finally {
+    composerAiDraftInFlight = false;
+    setComposerAiBusy(false);
+  }
+}
+
+async function runWorkHubNewWorkItemDescAiDraft() {
+  if (!activeChannelId || composerAiDraftInFlight) return;
+  const hub = document.getElementById("modalWorkHub");
+  if (!hub || hub.classList.contains("hidden")) return;
+  const fillEl = document.getElementById("workItemDescInput");
+  if (!fillEl) return;
+  const titleHint = String(document.getElementById("workItemTitleInput")?.value || "").trim();
+  const ids = collectRecentChatMessageIdsFromTimeline(AI_GATEWAY_TIMELINE_MAX_CITED);
+  let prompt =
+    "워크플로 허브에서 새 업무 항목에 넣을 설명 초안을 한국어로 작성해 주세요. 실행 가능하고 간결하게 하며, 사용자가 저장 전 편집합니다.";
+  if (titleHint) {
+    prompt += `\n업무 제목(참고): ${titleHint}`;
+  }
+  if (ids.length > 0) {
+    prompt += "\n아래 근거 메시지는 현재 채널 타임라인에서 보이는 최근 메시지입니다.";
+  }
+  composerAiDraftInFlight = true;
+  setComposerAiBusy(true);
+  try {
+    await executeAiGatewayChat({
+      purpose: "work-item-desc-draft",
+      channelId: Number(activeChannelId),
+      citedMessageIds: ids,
+      prompt,
+      preferComposerChannelId: Number(activeChannelId),
+      fillTarget: "textarea",
+      fillTextareaEl: fillEl,
+    });
+  } catch (e) {
+    console.error(e);
+    await uiAlert("AI 게이트웨이 호출 중 오류가 발생했습니다.");
+  } finally {
+    composerAiDraftInFlight = false;
+    setComposerAiBusy(false);
+  }
+}
+
+async function runWorkHubNewKanbanCardDescAiDraft() {
+  if (!activeChannelId || composerAiDraftInFlight) return;
+  const hub = document.getElementById("modalWorkHub");
+  if (!hub || hub.classList.contains("hidden")) return;
+  const fillEl = document.getElementById("kanbanCardDescInput");
+  const wiSel = document.getElementById("kanbanNewCardWorkItemSelect");
+  const workItemId = Number(wiSel?.value || 0);
+  if (!fillEl || !Number.isFinite(workItemId) || workItemId <= 0) return;
+  const cardTitle = String(document.getElementById("kanbanCardTitleInput")?.value || "").trim();
+  const cited = resolveWorkHubCitedMessageIds(workItemId);
+  let prompt =
+    "연결된 업무에 붙일 칸반 카드 설명 초안을 한국어로 짧게 작성해 주세요(목표·완료 기준 중심). 사용자가 저장 전 편집합니다.";
+  if (cardTitle) prompt += `\n카드 제목(참고): ${cardTitle}`;
+  composerAiDraftInFlight = true;
+  setComposerAiBusy(true);
+  try {
+    await executeAiGatewayChat({
+      purpose: "kanban-card-desc-draft",
+      channelId: Number(activeChannelId),
+      citedMessageIds: cited,
+      prompt,
+      preferComposerChannelId: Number(activeChannelId),
+      fillTarget: "textarea",
+      fillTextareaEl: fillEl,
+    });
+  } catch (e) {
+    console.error(e);
+    await uiAlert("AI 게이트웨이 호출 중 오류가 발생했습니다.");
+  } finally {
+    composerAiDraftInFlight = false;
+    setComposerAiBusy(false);
+  }
+}
+
+async function runWorkItemDetailDescAiDraft() {
+  if (!activeChannelId || composerAiDraftInFlight) return;
+  const modal = document.getElementById("modalWorkItemDetail");
+  if (!modal || modal.classList.contains("hidden")) return;
+  const fillEl = document.getElementById("workItemDetailDesc");
+  const meta = workHubSelectedWorkItemMeta;
+  if (!fillEl || !meta) return;
+  const workItemId = meta.isDraft ? null : Number(meta.id);
+  const cited =
+    workItemId != null && Number.isFinite(workItemId) && workItemId > 0
+      ? resolveWorkHubCitedMessageIds(workItemId)
+      : collectRecentChatMessageIdsFromTimeline(AI_GATEWAY_TIMELINE_MAX_CITED);
+  const titleHint = String(document.getElementById("workItemDetailTitle")?.value || "").trim();
+  const cur = String(fillEl.value || "").trim();
+  let prompt = cur
+    ? `다음은 업무 설명 초안입니다. 근거 메시지와 제목 맥락을 참고해 더 명확하고 실행 가능하게 한국어로 다듬어 주세요. 새 사실은 추가하지 마세요.\n\n[초안]\n${cur}`
+    : `업무 제목과 채널 근거를 참고해 업무 설명을 한국어로 작성해 주세요. 사용자가 저장 전 편집합니다.`;
+  if (titleHint) prompt += `\n업무 제목(참고): ${titleHint}`;
+  composerAiDraftInFlight = true;
+  setComposerAiBusy(true);
+  try {
+    await executeAiGatewayChat({
+      purpose: "work-item-detail-desc-draft",
+      channelId: Number(activeChannelId),
+      citedMessageIds: cited,
+      prompt,
+      preferComposerChannelId: Number(activeChannelId),
+      fillTarget: "textarea",
+      fillTextareaEl: fillEl,
+    });
+  } catch (e) {
+    console.error(e);
+    await uiAlert("AI 게이트웨이 호출 중 오류가 발생했습니다.");
+  } finally {
+    composerAiDraftInFlight = false;
+    setComposerAiBusy(false);
+  }
+}
+
+async function runKanbanCardDetailDescAiDraft() {
+  if (!activeChannelId || composerAiDraftInFlight) return;
+  const modal = document.getElementById("modalKanbanCardDetail");
+  if (!modal || modal.classList.contains("hidden")) return;
+  const fillEl = document.getElementById("kanbanCardDetailDesc");
+  if (!fillEl) return;
+  const wiId = getSelectedKanbanCardWorkItemId();
+  const cited = wiId != null ? resolveWorkHubCitedMessageIds(wiId) : collectRecentChatMessageIdsFromTimeline(AI_GATEWAY_TIMELINE_MAX_CITED);
+  const cardTitle = String(document.getElementById("kanbanCardDetailTitle")?.value || "").trim();
+  const cur = String(fillEl.value || "").trim();
+  let prompt = cur
+    ? `다음은 칸반 카드 설명 초안입니다. 근거 메시지와 제목 맥락을 참고해 간결하게 한국어로 다듬어 주세요.\n\n[초안]\n${cur}`
+    : `연결된 업무·대화 맥락을 참고해 칸반 카드 설명을 한국어로 작성해 주세요. 사용자가 저장 전 편집합니다.`;
+  if (cardTitle) prompt += `\n카드 제목(참고): ${cardTitle}`;
+  composerAiDraftInFlight = true;
+  setComposerAiBusy(true);
+  try {
+    await executeAiGatewayChat({
+      purpose: "kanban-card-detail-desc-draft",
+      channelId: Number(activeChannelId),
+      citedMessageIds: cited,
+      prompt,
+      preferComposerChannelId: Number(activeChannelId),
+      fillTarget: "textarea",
+      fillTextareaEl: fillEl,
+    });
+  } catch (e) {
+    console.error(e);
+    await uiAlert("AI 게이트웨이 호출 중 오류가 발생했습니다.");
+  } finally {
+    composerAiDraftInFlight = false;
+    setComposerAiBusy(false);
+  }
+}
+
 document.getElementById("btnComposerAiReplyDraft")?.addEventListener("click", () => {
   void runComposerAiReplyDraft();
 });
@@ -7621,6 +7999,27 @@ document.getElementById("btnComposerAiSummarize")?.addEventListener("click", () 
 });
 document.getElementById("btnSearchModalAiAsk")?.addEventListener("click", () => {
   void runWorkspaceSearchAiAsk();
+});
+document.getElementById("btnThreadAiCommentDraft")?.addEventListener("click", () => {
+  void runThreadAiCommentDraft();
+});
+document.getElementById("btnThreadAiSummarize")?.addEventListener("click", () => {
+  void runThreadAiSummarize();
+});
+document.getElementById("btnWorkItemDescAiDraft")?.addEventListener("click", () => {
+  void runWorkHubNewWorkItemDescAiDraft();
+});
+document.getElementById("btnKanbanCardDescAiDraft")?.addEventListener("click", () => {
+  void runWorkHubNewKanbanCardDescAiDraft();
+});
+document.getElementById("btnWorkItemDetailDescAiDraft")?.addEventListener("click", () => {
+  void runWorkItemDetailDescAiDraft();
+});
+document.getElementById("btnKanbanCardDetailDescAiDraft")?.addEventListener("click", () => {
+  void runKanbanCardDetailDescAiDraft();
+});
+document.getElementById("kanbanNewCardWorkItemSelect")?.addEventListener("change", () => {
+  updateWorkHubAiButtonStates();
 });
 
 /* ==========================================================================
@@ -11507,6 +11906,7 @@ function openModal(id) {
     setTopNavActive("projects");
     syncWorkHubChannelContext();
   } else if (id === "modalOrgChart") setTopNavActive("team");
+  queueMicrotask(() => updateComposerAiButtonStates());
 }
 function closeModal(id) {
   document.getElementById(id)?.classList.add("hidden");
@@ -11523,6 +11923,7 @@ function closeModal(id) {
   }
   if (id === "modalWorkHub") clearWorkHubScopedChannel();
   if (id === "modalWorkHub" || id === "modalOrgChart") syncTopNavFromMainView();
+  queueMicrotask(() => updateComposerAiButtonStates());
 }
 
 document.querySelectorAll(".modal-close, .btn-cancel, .btn-secondary[data-modal]").forEach(btn => {
