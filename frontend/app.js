@@ -9484,21 +9484,53 @@ async function loadWorkHubCalendarPanel() {
   const range = formatCalendarRangeIso(30, 180);
   const fromQ = encodeURIComponent(range.from);
   const toQ = encodeURIComponent(range.to);
-  const [evRes, inRes] = await Promise.all([
+  const [evRes, inRes, sugRes] = await Promise.all([
     apiFetch(`/api/calendar/events?employeeNo=${emp}&from=${fromQ}&to=${toQ}`),
     apiFetch(`/api/calendar/shares/incoming?employeeNo=${emp}`),
+    apiFetch(`/api/calendar/suggestions?employeeNo=${emp}`),
   ]);
   const evJson = await evRes.json().catch(() => ({}));
   const inJson = await inRes.json().catch(() => ({}));
+  const sugJson = await sugRes.json().catch(() => ({}));
   if (!evRes.ok) throw new Error(evJson.error?.message || "일정 목록 조회 실패");
   if (!inRes.ok) throw new Error(inJson.error?.message || "받은 공유 조회 실패");
+  if (!sugRes.ok) throw new Error(sugJson.error?.message || "일정 제안 조회 실패");
   const events = Array.isArray(evJson.data) ? evJson.data : [];
   const incoming = Array.isArray(inJson.data) ? inJson.data : [];
-  renderWorkHubCalendarLists(events, incoming);
+  const suggestions = Array.isArray(sugJson.data) ? sugJson.data : [];
+  renderWorkHubCalendarLists(events, incoming, suggestions);
   populateCalendarShareRecipientSelect();
 }
 
-function renderWorkHubCalendarLists(events, incoming) {
+async function downloadWorkHubCalendarIcsExport() {
+  if (!currentUser) return;
+  const token = getToken();
+  const emp = encodeURIComponent(currentUser.employeeNo);
+  const range = formatCalendarRangeIso(30, 180);
+  const fromQ = encodeURIComponent(range.from);
+  const toQ = encodeURIComponent(range.to);
+  const url = `${API_BASE}/api/calendar/export.ics?employeeNo=${emp}&from=${fromQ}&to=${toQ}`;
+  try {
+    const headers = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(url, { headers });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j.error?.message || "iCal 내보내기 실패");
+    }
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    const href = URL.createObjectURL(blob);
+    a.href = href;
+    a.download = "cstalk-calendar.ics";
+    a.click();
+    URL.revokeObjectURL(href);
+  } catch (e) {
+    await uiAlert(e?.message || "iCal 내보내기 실패");
+  }
+}
+
+function renderWorkHubCalendarLists(events, incoming, suggestions) {
   const listEl = document.getElementById("calendarEventsList");
   const inEl = document.getElementById("calendarIncomingSharesList");
   if (listEl) {
@@ -9533,6 +9565,33 @@ function renderWorkHubCalendarLists(events, incoming) {
         .join("");
     }
   }
+  const sugEl = document.getElementById("calendarSuggestionsList");
+  if (sugEl) {
+    const sugList = Array.isArray(suggestions) ? suggestions : [];
+    if (!sugList.length) {
+      sugEl.innerHTML = `<li class="channel-work-item channel-work-item--muted">대기 중인 제안이 없습니다.</li>`;
+    } else {
+      sugEl.innerHTML = sugList
+        .map((s) => {
+          const id = Number(s.id);
+          const actor = String(s.createdByActor || "USER").toUpperCase();
+          const actorLabel = actor === "AI_ASSISTANT" ? "AI 제안" : "사용자 제안";
+          const start = escHtml(String(s.startsAt || ""));
+          const end = escHtml(String(s.endsAt || ""));
+          return `<li class="channel-work-item channel-work-item--with-actions" data-calendar-suggestion-id="${id}">
+            <div class="channel-work-item-main">
+              <div class="channel-work-item-title">${escHtml(String(s.title || ""))} <span class="calendar-origin">${escHtml(actorLabel)}</span></div>
+              <div class="channel-work-item-meta">${start} — ${end}</div>
+            </div>
+            <div class="channel-work-item-actions">
+              <button type="button" class="btn-primary btn-sm calendar-suggestion-confirm" data-calendar-suggestion-id="${id}">확정</button>
+              <button type="button" class="btn-cancel btn-sm calendar-suggestion-dismiss" data-calendar-suggestion-id="${id}">해제</button>
+            </div>
+          </li>`;
+        })
+        .join("");
+    }
+  }
   if (inEl) {
     if (!incoming.length) {
       inEl.innerHTML = `<li class="channel-work-item channel-work-item--muted">대기 중인 공유가 없습니다.</li>`;
@@ -9562,6 +9621,32 @@ function renderWorkHubCalendarLists(events, incoming) {
 function ensureWorkHubCalendarBound() {
   if (workHubCalendarBound) return;
   workHubCalendarBound = true;
+  document.getElementById("btnCalendarIcsExport")?.addEventListener("click", () => {
+    void downloadWorkHubCalendarIcsExport();
+  });
+  document.getElementById("btnCalendarIcsImport")?.addEventListener("click", () => {
+    document.getElementById("calendarIcsFileInput")?.click();
+  });
+  document.getElementById("calendarIcsFileInput")?.addEventListener("change", async (e) => {
+    const input = e.target;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file || !currentUser) return;
+    try {
+      const fd = new FormData();
+      fd.append("employeeNo", currentUser.employeeNo);
+      fd.append("file", file, file.name || "import.ics");
+      const res = await apiFetch("/api/calendar/import", { method: "POST", body: fd });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error?.message || "iCal 가져오기 실패");
+      const imp = Number(json.data?.importedCount ?? 0);
+      const skip = Number(json.data?.skippedCount ?? 0);
+      await uiAlert(`가져오기 완료: ${imp}건 추가, ${skip}건 건너뜀`);
+      await loadWorkHubCalendarPanel();
+    } catch (err) {
+      await uiAlert(err?.message || "iCal 가져오기 실패");
+    }
+  });
   document.getElementById("btnCalendarEventAdd")?.addEventListener("click", async () => {
     if (!currentUser) return;
     const title = String(document.getElementById("calendarEventTitleInput")?.value || "").trim();
@@ -9648,6 +9733,31 @@ function ensureWorkHubCalendarBound() {
       await loadWorkHubCalendarPanel();
     } catch (err) {
       await uiAlert(err?.message || "삭제 실패");
+    }
+  });
+  document.getElementById("calendarSuggestionsList")?.addEventListener("click", async (e) => {
+    if (!currentUser) return;
+    const conf = e.target.closest(".calendar-suggestion-confirm");
+    const dis = e.target.closest(".calendar-suggestion-dismiss");
+    const btn = conf || dis;
+    if (!btn) return;
+    e.preventDefault();
+    const id = Number(btn.dataset.calendarSuggestionId);
+    if (!id) return;
+    const emp = encodeURIComponent(currentUser.employeeNo);
+    try {
+      if (conf) {
+        const res = await apiFetch(`/api/calendar/suggestions/${id}/confirm?employeeNo=${emp}`, { method: "POST" });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json.error?.message || "제안 확정 실패");
+      } else {
+        const res = await apiFetch(`/api/calendar/suggestions/${id}/dismiss?employeeNo=${emp}`, { method: "POST" });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json.error?.message || "제안 해제 실패");
+      }
+      await loadWorkHubCalendarPanel();
+    } catch (err) {
+      await uiAlert(err?.message || "처리 실패");
     }
   });
   document.getElementById("calendarIncomingSharesList")?.addEventListener("click", async (e) => {

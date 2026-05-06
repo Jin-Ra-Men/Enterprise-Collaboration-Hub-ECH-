@@ -5,6 +5,7 @@
 ## 2026-05-06
 
 ### Added
+- **캘린더 iCal Phase 6-5**: `CalendarIcsCodec` 기반 `GET /api/calendar/export.ics`(UTC ICS)·`POST /api/calendar/import`(multipart, 직접 생성과 동일 저장 경로, 크기·건수 상한·파싱 실패 건너뜀). 워크 허브에 내보내기/가져오기 버튼 및 **제안 대기** 목록 UI(`GET /api/calendar/suggestions` 기본 PENDING). `CalendarApiTest`·문서·로드맵 6-5 완료 처리.
 - **캘린더 AI 접점 Phase 6-4**: `calendar_suggestions` 엔티티·REST(목록/생성/확정·해제), 확정 시 `calendar_events`는 직접 생성과 동일 경로(`USER`). 직접 `POST /api/calendar/events` 에서 `AI_ASSISTANT` 거부. `calendar_events`에 `origin_dm_channel_id`, `origin_message_ids`; 이벤트 생성 시 선택 출처·메시지 ID(멤버 검증). `GET /api/calendar/events/conflicts` 겹침 검사. 감사 `CALENDAR_SUGGESTION_*`. 이관 SQL `docs/sql/migrate_calendar_phase_6_4.sql`, `postgresql_schema_draft.sql` 반영, `CalendarApiTest` 확장.
 - **멘션→업무→칸반 빠른 연계(2-7-1-4)**: 멘션 인앱 토스트「업무·칸반」, 미확인 멘션 목록 동일 단축 버튼, 채팅 메시지 우클릭「업무·칸반으로…». `POST /api/messages/{id}/work-items`로 업무 확보 후 해당 업무에 연결된 칸반 카드가 없으면 `POST .../boards/{boardId}/columns/{columnId}/cards`로 첫 컬럼에 카드 즉시 생성·워크플로 칸반 포커스(보드 없을 때는 업무 목록만 안내). `docs/DEVELOPER_README.md` 반영.
 - **마감 배지·알림(2-7-1-3)**: `me/todos` 응답에 `badgeCounts`(지연 총건·48h 임박 총건·상수 시간). 사이드바 «내 할 일» 옆 배지(색으로 미읽음 구분), 건수 증가 시 전용 활동 토스트/OS 알림 태그 `ech_os_work_due_badge`(목록 갱신 토스트와 동시 발생 시 마감 우선).

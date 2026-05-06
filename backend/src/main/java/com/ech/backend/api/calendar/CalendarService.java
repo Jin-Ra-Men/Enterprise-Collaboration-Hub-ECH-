@@ -4,6 +4,7 @@ import com.ech.backend.api.auditlog.AuditLogService;
 import com.ech.backend.api.calendar.dto.CalendarConflictCheckResponse;
 import com.ech.backend.api.calendar.dto.CalendarEventOverlapRow;
 import com.ech.backend.api.calendar.dto.CalendarEventResponse;
+import com.ech.backend.api.calendar.dto.CalendarImportResponse;
 import com.ech.backend.api.calendar.dto.CalendarShareResponse;
 import com.ech.backend.api.calendar.dto.CalendarSuggestionResponse;
 import com.ech.backend.api.calendar.dto.CreateCalendarEventRequest;
@@ -25,6 +26,7 @@ import com.ech.backend.domain.channel.ChannelMemberRepository;
 import com.ech.backend.domain.channel.ChannelRepository;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
+import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Locale;
@@ -37,6 +39,8 @@ public class CalendarService {
 
     private static final int TITLE_MAX = 500;
     private static final int DESCRIPTION_MAX = 8000;
+    private static final int ICS_IMPORT_MAX_BYTES = 512 * 1024;
+    private static final int ICS_IMPORT_MAX_EVENTS = 64;
 
     private final CalendarEventRepository calendarEventRepository;
     private final CalendarShareRequestRepository calendarShareRequestRepository;
@@ -80,6 +84,67 @@ public class CalendarService {
         return calendarEventRepository.findActiveForOwnerInRange(owner, rangeStart, rangeEnd).stream()
                 .map(this::toEventResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] exportIcs(
+            UserPrincipal principal,
+            String ownerEmployeeNo,
+            OffsetDateTime from,
+            OffsetDateTime to
+    ) {
+        String owner = resolveSelfEmployeeNo(principal, ownerEmployeeNo);
+        OffsetDateTime rangeStart = from != null ? from : OffsetDateTime.now().minusDays(30);
+        OffsetDateTime rangeEnd = to != null ? to : OffsetDateTime.now().plusDays(180);
+        if (!rangeEnd.isAfter(rangeStart)) {
+            throw new IllegalArgumentException("조회 종료 시각은 시작 시각보다 이후여야 합니다.");
+        }
+        List<CalendarEvent> events = calendarEventRepository.findActiveForOwnerInRange(owner, rangeStart, rangeEnd);
+        return CalendarIcsCodec.buildUtf8(events).getBytes(StandardCharsets.UTF_8);
+    }
+
+    @Transactional
+    public CalendarImportResponse importIcs(UserPrincipal principal, String ownerEmployeeNo, byte[] fileBytes) {
+        if (fileBytes == null || fileBytes.length == 0) {
+            throw new IllegalArgumentException("파일이 비어 있습니다.");
+        }
+        if (fileBytes.length > ICS_IMPORT_MAX_BYTES) {
+            throw new IllegalArgumentException(
+                    "iCal 파일이 너무 큽니다. 최대 " + (ICS_IMPORT_MAX_BYTES / 1024) + "KB까지 허용됩니다.");
+        }
+        String owner = resolveSelfEmployeeNo(principal, ownerEmployeeNo);
+        List<CalendarIcsCodec.ParsedVEvent> parsed = CalendarIcsCodec.parse(fileBytes);
+        if (parsed.size() > ICS_IMPORT_MAX_EVENTS) {
+            throw new IllegalArgumentException(
+                    "한 번에 가져올 수 있는 일정은 최대 " + ICS_IMPORT_MAX_EVENTS + "개입니다.");
+        }
+        int imported = 0;
+        int skipped = 0;
+        for (CalendarIcsCodec.ParsedVEvent pe : parsed) {
+            try {
+                String title = pe.summary() != null && !pe.summary().isBlank()
+                        ? trimTitle(pe.summary())
+                        : "(제목 없음)";
+                String desc = trimDescription(pe.description());
+                validateTimeRange(pe.startsAt(), pe.endsAt());
+                CreateCalendarEventRequest req = new CreateCalendarEventRequest(
+                        owner,
+                        title,
+                        desc,
+                        pe.startsAt(),
+                        pe.endsAt(),
+                        null,
+                        null,
+                        null,
+                        "USER"
+                );
+                createEvent(principal, req);
+                imported++;
+            } catch (IllegalArgumentException ex) {
+                skipped++;
+            }
+        }
+        return new CalendarImportResponse(imported, skipped);
     }
 
     @Transactional

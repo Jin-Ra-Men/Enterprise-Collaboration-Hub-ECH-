@@ -11,13 +11,20 @@ import com.ech.backend.domain.user.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import java.nio.charset.StandardCharsets;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.http.HttpHeaders;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -180,5 +187,72 @@ class CalendarApiTest extends BaseIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.hasConflict").value(true))
                 .andExpect(jsonPath("$.data.overlappingEvents[0].title").value("블록"));
+    }
+
+    @Test
+    @DisplayName("iCal 내보내기에 활성 일정이 포함된다")
+    void export_ics_includes_active_events() throws Exception {
+        String body = """
+                {
+                  "ownerEmployeeNo": "%s",
+                  "title": "내보내기테스트",
+                  "startsAt": "2030-01-15T10:00:00+09:00",
+                  "endsAt": "2030-01-15T11:00:00+09:00"
+                }
+                """.formatted(adminEmployeeNo);
+        mockMvc.perform(post("/api/calendar/events")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/calendar/export.ics")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("employeeNo", adminEmployeeNo)
+                        .param("from", "2030-01-01T00:00:00+09:00")
+                        .param("to", "2030-02-01T00:00:00+09:00"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, containsString("attachment")))
+                .andExpect(content().contentType("text/calendar;charset=UTF-8"))
+                .andExpect(content().string(containsString("BEGIN:VCALENDAR")))
+                .andExpect(content().string(containsString("내보내기테스트")));
+    }
+
+    @Test
+    @DisplayName("iCal 가져오기로 일정을 추가한다")
+    void import_ics_creates_events() throws Exception {
+        String ics = """
+                BEGIN:VCALENDAR
+                VERSION:2.0
+                PRODID:-//Test//Test//EN
+                BEGIN:VEVENT
+                UID:import-test-1@test
+                DTSTAMP:20300101T000000Z
+                DTSTART:20301102T010000Z
+                DTEND:20301102T020000Z
+                SUMMARY:ICS 가져오기 회의
+                END:VEVENT
+                END:VCALENDAR
+                """;
+
+        mockMvc.perform(multipart("/api/calendar/import")
+                        .file(new MockMultipartFile(
+                                "file",
+                                "meetings.ics",
+                                "text/calendar",
+                                ics.getBytes(StandardCharsets.UTF_8)))
+                        .param("employeeNo", adminEmployeeNo)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.importedCount").value(1))
+                .andExpect(jsonPath("$.data.skippedCount").value(0));
+
+        mockMvc.perform(get("/api/calendar/events")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("employeeNo", adminEmployeeNo)
+                        .param("from", "2030-11-01T00:00:00+09:00")
+                        .param("to", "2030-11-30T00:00:00+09:00"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].title").value("ICS 가져오기 회의"));
     }
 }

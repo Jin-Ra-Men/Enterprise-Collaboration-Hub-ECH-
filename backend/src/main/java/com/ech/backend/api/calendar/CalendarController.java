@@ -2,6 +2,7 @@ package com.ech.backend.api.calendar;
 
 import com.ech.backend.api.calendar.dto.CalendarConflictCheckResponse;
 import com.ech.backend.api.calendar.dto.CalendarEventResponse;
+import com.ech.backend.api.calendar.dto.CalendarImportResponse;
 import com.ech.backend.api.calendar.dto.CalendarShareResponse;
 import com.ech.backend.api.calendar.dto.CalendarSuggestionResponse;
 import com.ech.backend.api.calendar.dto.CreateCalendarEventRequest;
@@ -13,9 +14,13 @@ import com.ech.backend.common.api.ApiResponse;
 import com.ech.backend.common.exception.UnauthorizedException;
 import com.ech.backend.common.security.UserPrincipal;
 import jakarta.validation.Valid;
+import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,7 +30,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 public class CalendarController {
@@ -34,6 +41,32 @@ public class CalendarController {
 
     public CalendarController(CalendarService calendarService) {
         this.calendarService = calendarService;
+    }
+
+    @GetMapping(value = "/api/calendar/export.ics", produces = "text/calendar;charset=UTF-8")
+    public ResponseEntity<byte[]> exportIcs(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(required = false) String employeeNo,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime to
+    ) {
+        requireAuth(principal);
+        byte[] body = calendarService.exportIcs(principal, employeeNo, from, to);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"cstalk-calendar.ics\"")
+                .contentType(MediaType.parseMediaType("text/calendar;charset=UTF-8"))
+                .body(body);
+    }
+
+    @PostMapping(value = "/api/calendar/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<CalendarImportResponse> importIcs(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam String employeeNo,
+            @RequestPart("file") MultipartFile file
+    ) throws IOException {
+        requireAuth(principal);
+        return ApiResponse.success(
+                calendarService.importIcs(principal, employeeNo, file.getBytes()));
     }
 
     @GetMapping("/api/calendar/events")
