@@ -393,6 +393,12 @@
                 <button type="button" class="composer-attach-btn" id="btnAttach" title="파일·이미지 첨부(다중 선택 가능)">
                   <span class="material-symbols-outlined" aria-hidden="true">add_circle</span>
                 </button>
+                <button type="button" class="composer-ai-btn" id="btnComposerAiReplyDraft" disabled title="답장 초안 (답글 대상 선택 후)" aria-label="답장 초안">
+                  <span class="material-symbols-outlined" aria-hidden="true">auto_awesome</span>
+                </button>
+                <button type="button" class="composer-ai-btn" id="btnComposerAiSummarize" disabled title="최근 타임라인 요약" aria-label="최근 대화 요약">
+                  <span class="material-symbols-outlined" aria-hidden="true">summarize</span>
+                </button>
                 <input type="file" id="fileInput" class="hidden" multiple />
                 <textarea id="messageInput" class="composer-input" rows="1" placeholder="메시지 보내기… Enter 전송 · Shift+Enter 줄바꿈 · @멘션 · Ctrl+V · 드롭 첨부" autocomplete="off"></textarea>
                 <button type="button" class="composer-send-btn" id="btnSend" title="전송">
@@ -401,7 +407,8 @@
               </div>
             </div>
             <p class="composer-ai-evidence-hint" role="note">
-              AI 게이트웨이·초안 연동 시 근거가 되는 메시지는 요청에 <code>citedMessageIds</code>로 넣고,
+              <strong>✨ 답장 초안</strong>·<strong>요약</strong>은 게이트웨이로 근거 메시지 ID를 붙여 호출합니다.
+              검색 모달의 <strong>AI에게 물어보기</strong>는 같은 채널의 메시지·댓글 결과만 근거로 쓸 수 있습니다.
               <strong>전송 전 본문을 반드시 검토·편집</strong>하세요.
             </p>
             <p class="ech-composer-footnote">Enter로 전송 · Shift+Enter로 줄바꿈</p>
@@ -1448,6 +1455,10 @@
           </div>
         </div>
         <div id="searchResults" class="search-results"></div>
+        <div class="search-modal-ai-bar" id="searchModalAiBar">
+          <button type="button" class="btn-secondary btn-sm" id="btnSearchModalAiAsk" disabled>AI에게 물어보기 (검색 근거)</button>
+          <span class="search-modal-ai-hint">메시지·댓글 검색 결과가 <strong>한 채널</strong>에만 있을 때 활성화됩니다.</span>
+        </div>
       </div>
     </div>
 

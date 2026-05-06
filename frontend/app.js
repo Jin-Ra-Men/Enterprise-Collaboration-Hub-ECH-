@@ -322,6 +322,10 @@ let contextMenuSelectedIsReply = false;
 let memberContextSelectedEmployeeNo = "";
 // 타임라인에서 로드된 ROOT 메시지 캐시(스레드 모달 렌더용)
 let timelineRootMessageById = new Map();
+/** 마지막 통합 검색 원본 항목(AI 근거 후보) */
+let lastWorkspaceSearchItemsForAi = [];
+/** AI 게이트웨이 초안·요약 요청 중(중복 클릭 방지) */
+let composerAiDraftInFlight = false;
 /** 타임라인 `hasMoreOlder`(서버 페이지네이션) */
 let chatTimelineHasMoreOlder = false;
 let chatTimelineLoadingOlder = false;
@@ -3060,6 +3064,7 @@ function showMain(user) {
   initEvents();
   initPresenceUserActivityListeners();
   syncTopNavFromMainView();
+  updateComposerAiButtonStates();
 }
 
 /** Stratos-style top bar: 워크플로우 · 팀(조직도)만 강조. 대시보드 없음. */
@@ -4364,6 +4369,7 @@ async function loadMessages(channelId, { preserveScroll = false, skipNewMsgsDivi
   } finally {
     pendingScrollRestoreRatio = null;
     skipAutoScrollToBottomOnce = false;
+    updateComposerAiButtonStates();
   }
 }
 
@@ -4714,6 +4720,7 @@ function updateReplyComposerBanner() {
   if (!replyComposerBannerEl) return;
   if (replyComposerTargetMessageId == null || !Number.isFinite(replyComposerTargetMessageId)) {
     replyComposerBannerEl.classList.add("hidden");
+    updateComposerAiButtonStates();
     return;
   }
   const { senderLabel, snippet } = snippetForReplyComposerBanner(replyComposerTargetMessageId);
@@ -4724,6 +4731,7 @@ function updateReplyComposerBanner() {
     replyComposerBannerPreviewEl.textContent = clipReplyPreviewText(snippet, 18);
   }
   replyComposerBannerEl.classList.remove("hidden");
+  updateComposerAiButtonStates();
 }
 
 /** 직전 채팅 행(시스템·날짜선 뒤에 있어도 탐색) */
@@ -5563,6 +5571,7 @@ function clearReplyComposerTarget() {
   replyComposerTargetMessageId = null;
   if (messageInputEl) messageInputEl.placeholder = replyComposerOriginalPlaceholder || "메시지 보내기… @이름 멘션 · 이미지 Ctrl+V";
   if (replyComposerBannerEl) replyComposerBannerEl.classList.add("hidden");
+  updateComposerAiButtonStates();
 }
 
 function revokeAllThreadPendingPreviewUrls() {
@@ -7365,6 +7374,253 @@ messageInputEl.addEventListener("input", () => {
 });
 messageInputEl.addEventListener("blur", () => {
   setTimeout(() => closeMentionSuggest(), 250);
+});
+messageInputEl.addEventListener("focus", () => {
+  updateComposerAiButtonStates();
+});
+
+const AI_GATEWAY_TIMELINE_MAX_CITED = 20;
+
+function collectRecentChatMessageIdsFromTimeline(maxN) {
+  const cap = Math.min(Math.max(1, Number(maxN) || 20), AI_GATEWAY_TIMELINE_MAX_CITED);
+  const messagesElLoc = document.getElementById("messages");
+  if (!messagesElLoc) return [];
+  const rows = messagesElLoc.querySelectorAll(".msg-row.msg-chat[data-message-id]");
+  const ids = [];
+  rows.forEach((row) => {
+    const mid = Number(row.dataset.messageId);
+    if (Number.isFinite(mid)) ids.push(mid);
+  });
+  if (ids.length <= cap) return ids;
+  return ids.slice(ids.length - cap);
+}
+
+function pickSearchItemsForAiGateway(items) {
+  const list = Array.isArray(items) ? items : [];
+  const hits = list.filter((it) => it && (it.type === "MESSAGE" || it.type === "COMMENT"));
+  if (hits.length === 0) {
+    return {
+      ok: false,
+      reason:
+        "검색 결과에 메시지·댓글이 없습니다. 필터를「메시지」 또는「댓글」로 좁히거나 다른 검색어를 써 보세요.",
+    };
+  }
+  const channelIds = new Set(
+    hits.map((h) => Number(h.contextId)).filter((n) => Number.isFinite(n))
+  );
+  if (channelIds.size !== 1) {
+    return {
+      ok: false,
+      reason:
+        "검색된 메시지가 여러 채널에 걸쳐 있어 AI 근거로 묶을 수 없습니다. 채널명·키워드로 범위를 좁혀 주세요.",
+    };
+  }
+  const channelId = [...channelIds][0];
+  const messageIds = [];
+  const seen = new Set();
+  for (const h of hits) {
+    const id = Number(h.id);
+    if (!Number.isFinite(id) || seen.has(id)) continue;
+    seen.add(id);
+    messageIds.push(id);
+    if (messageIds.length >= AI_GATEWAY_TIMELINE_MAX_CITED) break;
+  }
+  if (messageIds.length === 0) {
+    return { ok: false, reason: "근거로 사용할 메시지 ID를 확보하지 못했습니다." };
+  }
+  return { ok: true, channelId, messageIds };
+}
+
+function messageFromAiGatewayFailure(json, status) {
+  const code = String(json?.error?.code || "");
+  const msg = String(json?.error?.message || "");
+  if (status === 403 || code === "AI_GATEWAY_BLOCKED") {
+    return "AI 게이트웨이가 외부 LLM 전송을 차단했습니다. 관리자 기초설정(ai.gateway.allow-external-llm 등)·정책을 확인하세요.";
+  }
+  if (status === 429 || code === "AI_GATEWAY_RATE_LIMITED") {
+    return msg || "호출 한도를 초과했습니다. 잠시 후 다시 시도하세요.";
+  }
+  if (status === 501 || code === "AI_GATEWAY_NOT_CONFIGURED") {
+    return "외부 LLM 제공자가 아직 구성되지 않았습니다(ai.llm.http-enabled·base-url·api-key).";
+  }
+  if (status === 502 || code === "AI_GATEWAY_LLM_UPSTREAM_ERROR") {
+    return msg || "LLM 서비스 응답 오류입니다.";
+  }
+  if (msg) return msg;
+  return "AI 요청에 실패했습니다.";
+}
+
+function setComposerAiBusy(busy) {
+  ["btnComposerAiReplyDraft", "btnComposerAiSummarize", "btnSearchModalAiAsk"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = !!busy;
+  });
+  updateComposerAiButtonStates();
+}
+
+function updateComposerAiButtonStates() {
+  const replyBtn = document.getElementById("btnComposerAiReplyDraft");
+  const sumBtn = document.getElementById("btnComposerAiSummarize");
+  const loggedIn = !!currentUser?.employeeNo;
+  const viewChat = document.getElementById("viewChat");
+  const inChat = !!activeChannelId && viewChat && !viewChat.classList.contains("hidden");
+  const hasReplyTarget =
+    replyComposerTargetMessageId != null && Number.isFinite(replyComposerTargetMessageId);
+  const ids = collectRecentChatMessageIdsFromTimeline(AI_GATEWAY_TIMELINE_MAX_CITED);
+  const hasTimeline = ids.length > 0;
+  const busy = !!composerAiDraftInFlight;
+  if (replyBtn) {
+    replyBtn.disabled = busy || !loggedIn || !inChat || !hasReplyTarget;
+  }
+  if (sumBtn) {
+    sumBtn.disabled = busy || !loggedIn || !inChat || !hasTimeline;
+  }
+  const searchAiBtn = document.getElementById("btnSearchModalAiAsk");
+  if (searchAiBtn && !busy) {
+    const prepared = pickSearchItemsForAiGateway(lastWorkspaceSearchItemsForAi);
+    searchAiBtn.disabled = !loggedIn || !prepared.ok;
+    searchAiBtn.title = prepared.ok
+      ? "검색 결과 메시지·댓글을 근거로 질문합니다(검색어가 질문이 됩니다)."
+      : prepared.reason;
+  } else if (searchAiBtn && busy) {
+    searchAiBtn.disabled = true;
+  }
+}
+
+async function executeAiGatewayChat({ purpose, channelId, citedMessageIds, prompt, preferComposerChannelId }) {
+  if (!currentUser?.employeeNo) {
+    await uiAlert("로그인이 필요합니다.");
+    return;
+  }
+  const body = {
+    purpose,
+    employeeNo: currentUser.employeeNo,
+    channelId: channelId != null ? Number(channelId) : null,
+    prompt,
+  };
+  if (Array.isArray(citedMessageIds) && citedMessageIds.length > 0) {
+    body.citedMessageIds = citedMessageIds;
+  }
+  const res = await apiFetch("/api/ai/gateway/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok || json.success !== true) {
+    await uiAlert(messageFromAiGatewayFailure(json, res.status));
+    return null;
+  }
+  const replyText = json.data?.replyText ?? "";
+  if (!String(replyText).trim()) {
+    await uiAlert("모델이 빈 응답을 반환했습니다.");
+    return null;
+  }
+  const targetCh = preferComposerChannelId != null ? Number(preferComposerChannelId) : Number(channelId);
+  const viewChat = document.getElementById("viewChat");
+  const inChat = !!activeChannelId && viewChat && !viewChat.classList.contains("hidden");
+  if (inChat && activeChannelId != null && Number(activeChannelId) === targetCh && messageInputEl) {
+    messageInputEl.value = String(replyText).trim();
+    scheduleComposerInputHeight();
+    messageInputEl.focus();
+  } else {
+    await uiAlert(
+      `${String(replyText).trim().slice(0, 2400)}${String(replyText).trim().length > 2400 ? "…" : ""}\n\n— 현재 보고 있는 채널과 다르면 입력창에는 넣지 않았습니다.`
+    );
+  }
+  return replyText;
+}
+
+async function runComposerAiReplyDraft() {
+  if (!replyComposerTargetMessageId || !activeChannelId || composerAiDraftInFlight) return;
+  const extra = messageInputEl?.value?.trim() || "";
+  const prompt = extra
+    ? `사용자 지시: ${extra}\n\n위 근거 메시지에 정중하게 답장하는 초안을 한국어로 작성해 주세요. 사용자가 전송 전 편집합니다.`
+    : `아래 근거 메시지에 정중하게 답장하는 초안을 한국어로 작성해 주세요. 사용자가 전송 전 편집합니다.`;
+  composerAiDraftInFlight = true;
+  setComposerAiBusy(true);
+  try {
+    await executeAiGatewayChat({
+      purpose: "reply-draft",
+      channelId: Number(activeChannelId),
+      citedMessageIds: [replyComposerTargetMessageId],
+      prompt,
+      preferComposerChannelId: Number(activeChannelId),
+    });
+  } catch (e) {
+    console.error(e);
+    await uiAlert("AI 게이트웨이 호출 중 오류가 발생했습니다.");
+  } finally {
+    composerAiDraftInFlight = false;
+    setComposerAiBusy(false);
+  }
+}
+
+async function runComposerAiSummarize() {
+  if (!activeChannelId || composerAiDraftInFlight) return;
+  const ids = collectRecentChatMessageIdsFromTimeline(AI_GATEWAY_TIMELINE_MAX_CITED);
+  if (ids.length === 0) return;
+  const prompt =
+    "아래 근거는 현재 채널 타임라인에 보이는 최근 메시지입니다. 핵심만 5줄 이내 한국어로 요약하고, 불확실하면 불확실함을 밝혀 주세요.";
+  composerAiDraftInFlight = true;
+  setComposerAiBusy(true);
+  try {
+    await executeAiGatewayChat({
+      purpose: "channel-recent-summary",
+      channelId: Number(activeChannelId),
+      citedMessageIds: ids,
+      prompt,
+      preferComposerChannelId: Number(activeChannelId),
+    });
+  } catch (e) {
+    console.error(e);
+    await uiAlert("AI 게이트웨이 호출 중 오류가 발생했습니다.");
+  } finally {
+    composerAiDraftInFlight = false;
+    setComposerAiBusy(false);
+  }
+}
+
+async function runWorkspaceSearchAiAsk() {
+  if (!currentUser?.employeeNo || composerAiDraftInFlight) return;
+  const q = String(document.getElementById("searchModalInput")?.value || "").trim();
+  if (q.length < 2) {
+    await uiAlert("검색창에 질문할 내용을 두 글자 이상 입력해 주세요.");
+    return;
+  }
+  const prepared = pickSearchItemsForAiGateway(lastWorkspaceSearchItemsForAi);
+  if (!prepared.ok) {
+    await uiAlert(prepared.reason);
+    return;
+  }
+  const prompt = `아래 검색·탐색 맥락과 근거 메시지·댓글만을 참고하여 질문에 답해 주세요. 근거에 없는 내용은 추측하지 마세요.\n질문: ${q}`;
+  composerAiDraftInFlight = true;
+  setComposerAiBusy(true);
+  try {
+    await executeAiGatewayChat({
+      purpose: "search-context-qa",
+      channelId: prepared.channelId,
+      citedMessageIds: prepared.messageIds,
+      prompt,
+      preferComposerChannelId: prepared.channelId,
+    });
+  } catch (e) {
+    console.error(e);
+    await uiAlert("AI 게이트웨이 호출 중 오류가 발생했습니다.");
+  } finally {
+    composerAiDraftInFlight = false;
+    setComposerAiBusy(false);
+  }
+}
+
+document.getElementById("btnComposerAiReplyDraft")?.addEventListener("click", () => {
+  void runComposerAiReplyDraft();
+});
+document.getElementById("btnComposerAiSummarize")?.addEventListener("click", () => {
+  void runComposerAiSummarize();
+});
+document.getElementById("btnSearchModalAiAsk")?.addEventListener("click", () => {
+  void runWorkspaceSearchAiAsk();
 });
 
 /* ==========================================================================
@@ -11760,13 +12016,24 @@ async function runSearch(q, type) {
   try {
     const res  = await apiFetch(`/api/search?q=${encodeURIComponent(qt)}&type=${type}&limit=30`);
     const json = await res.json();
-    if (!res.ok) { resultsEl.innerHTML = `<p class="empty-notice">${json.error?.message || "오류"}</p>`; return; }
+    if (!res.ok) {
+      lastWorkspaceSearchItemsForAi = [];
+      updateComposerAiButtonStates();
+      resultsEl.innerHTML = `<p class="empty-notice">${json.error?.message || "오류"}</p>`;
+      return;
+    }
     const rawItems = Array.isArray(json.data?.items) ? json.data.items : [];
+    lastWorkspaceSearchItemsForAi = rawItems.slice();
+    updateComposerAiButtonStates();
     const allowTypes = SEARCH_TYPE_ITEM_MAP[String(type || "ALL").toUpperCase()] || null;
     const items = allowTypes
       ? rawItems.filter((it) => allowTypes.includes(String(it?.type || "").toUpperCase()))
       : rawItems;
-    if (items.length === 0) { resultsEl.innerHTML = '<p class="empty-notice">검색 결과가 없습니다.</p>'; return; }
+    if (items.length === 0) {
+      resultsEl.innerHTML = '<p class="empty-notice">검색 결과가 없습니다.</p>';
+      updateComposerAiButtonStates();
+      return;
+    }
     resultsEl.innerHTML = "";
     items.forEach(item => {
       const div = document.createElement("div");
@@ -11793,7 +12060,12 @@ async function runSearch(q, type) {
       });
       resultsEl.appendChild(div);
     });
-  } catch { resultsEl.innerHTML = '<p class="empty-notice">서버 연결 오류</p>'; }
+    updateComposerAiButtonStates();
+  } catch {
+    lastWorkspaceSearchItemsForAi = [];
+    updateComposerAiButtonStates();
+    resultsEl.innerHTML = '<p class="empty-notice">서버 연결 오류</p>';
+  }
 }
 
 /* ==========================================================================

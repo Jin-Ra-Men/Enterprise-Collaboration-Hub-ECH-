@@ -110,8 +110,20 @@
   - `GET /api/ai/gateway/status` — 정책 요약(`externalLlmAllowed`, `policyVersion`, `defaultPolicySummary`, `chatMaxRequestsPerMinute`, `chatMaxRequestsPerHour`, `llmHttpConfigured`).
   - `POST /api/ai/gateway/chat` — 본문 JSON `purpose`, 선택 `employeeNo`(JWT와 일치), 선택 `channelId`, `prompt`(최대 8000자), 선택 `citedMessageIds`(최대 20). **근거 ID가 1개 이상이면 `channelId` 필수**이며, 각 ID는 해당 채널의 메시지이고 호출자는 채널 멤버여야 한다. 처리 순서: **레이트 리밋 → 검증 → 정책**. **`allow-external-llm=false` 이면 HTTP 403** (`AI_GATEWAY_BLOCKED`). **`true` 이면** `llm.http-enabled` 및 `base-url`·`api-key`가 모두 있을 때만 **마스킹된 프롬프트**로 OpenAI 호환 `POST .../v1/chat/completions` 호출·성공 시 **200**과 `replyText`·`model`·`totalTokens`; 제공자 미구성 시 **501** (`AI_GATEWAY_NOT_CONFIGURED`); 한도 초과 시 **429** (`AI_GATEWAY_RATE_LIMITED`); 업스트림 오류 시 **502** (`AI_GATEWAY_LLM_UPSTREAM_ERROR` 등).
 - 감사: `AI_GATEWAY_POLICY_BLOCKED`, `AI_GATEWAY_PROVIDER_NOT_CONFIGURED`, `AI_GATEWAY_LLM_SUCCEEDED`, `AI_GATEWAY_LLM_FAILED` — **프롬프트 원문 미저장**, detail 에 `purpose`·`promptChars`·`channelId`·`citedDistinct`·`piiRedactions` 등만.
-- UI: 채팅 컴포저 하단 `.composer-ai-evidence-hint` — 근거 `message_id`·전송 전 편집 안내(Phase 7-1-2).
+- UI: 채팅 컴포저 하단 `.composer-ai-evidence-hint` — 근거 `message_id`·전송 전 편집 안내(Phase 7-1-2). **Phase 7-2-1-a**: 컴포저 버튼(✨ 답장 초안, 요약), 검색 모달 **AI에게 물어보기**(단일 채널 메시지·댓글 근거)·`frontend/app.js`.
 - 테스트: `AiGatewayApiTest`, `AiGatewayRateLimitApiTest`, `AiGatewayServiceTest`, `AiGatewayPiiMaskerTest`.
+
+---
+
+## AI 대화 보조 (Phase 7-2-1-a, 게이트웨이 호출 UI)
+
+- 목적: 백엔드 게이트웨이만 통해 초안·요약·검색 맥락 질의를 호출하고, **전송 전 사용자 편집**을 전제로 한다.
+- 관련 화면: 채팅 컴포저 `btnComposerAiReplyDraft` · `btnComposerAiSummarize`, 통합 검색 모달 `btnSearchModalAiAsk`.
+- 동작 요약:
+  - **답장 초안** (`purpose`: `reply-draft`): 답글 대상 메시지 1건을 `citedMessageIds`로 전달. 입력창에 추가 지시가 있으면 프롬프트에 포함.
+  - **최근 요약** (`channel-recent-summary`): 현재 타임라인 DOM에서 최근 채팅 행 ID 최대 20개를 근거로 요약 요청.
+  - **검색 근거 질문** (`search-context-qa`): 마지막 검색 응답의 `MESSAGE`·`COMMENT` 항목만 모아 **동일 `contextId`(채널)** 일 때만 활성화; 검색창 텍스트가 질문으로 사용됨.
+- 예외: 정책 차단·미구성·레이트·업스트림 오류 시 토스트식 `uiAlert`로 코드별 안내.
 
 ---
 

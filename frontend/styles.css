@@ -3304,6 +3304,65 @@ html[data-theme="light"] .composer-ai-evidence-hint code {
   background: rgba(0, 0, 0, 0.06);
 }
 
+/* Phase 7-2: 컴포저 AI 단추 (게이트웨이 호출) */
+.composer-ai-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  margin-right: 2px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(224, 224, 230, 0.9);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+.composer-ai-btn .material-symbols-outlined {
+  font-size: 22px;
+  font-variation-settings: "FILL" 0, "wght" 400;
+}
+.composer-ai-btn:hover:not(:disabled) {
+  background: rgba(138, 180, 255, 0.18);
+  color: #fff;
+}
+.composer-ai-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+html[data-theme="light"] .composer-ai-btn {
+  background: rgba(0, 0, 0, 0.05);
+  color: rgba(40, 40, 48, 0.82);
+}
+html[data-theme="light"] .composer-ai-btn:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.16);
+  color: #1e293b;
+}
+.search-modal-ai-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 12px 4px 4px;
+  margin-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+html[data-theme="light"] .search-modal-ai-bar {
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+.search-modal-ai-hint {
+  font-size: 12px;
+  color: rgba(174, 179, 184, 0.72);
+  line-height: 1.35;
+  flex: 1;
+  min-width: 180px;
+}
+html[data-theme="light"] .search-modal-ai-hint {
+  color: rgba(60, 60, 67, 0.58);
+}
+
 /* 답글 모드: 입력창 위 미리보기(참조 UI — 반투명 바) */
 .reply-composer-banner {
   display: flex;
