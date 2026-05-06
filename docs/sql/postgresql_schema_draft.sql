@@ -169,6 +169,8 @@ CREATE TABLE IF NOT EXISTS work_items (
     title VARCHAR(500) NOT NULL,
     description TEXT,
     status VARCHAR(50) NOT NULL DEFAULT 'OPEN',
+    due_at TIMESTAMPTZ,
+    priority VARCHAR(20) NOT NULL DEFAULT 'NORMAL',
     in_use BOOLEAN NOT NULL DEFAULT TRUE,
     source_message_id BIGINT UNIQUE REFERENCES messages(id) ON DELETE SET NULL,
     source_channel_id BIGINT NOT NULL REFERENCES channels(id),

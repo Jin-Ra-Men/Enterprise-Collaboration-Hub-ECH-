@@ -6,6 +6,8 @@ import com.ech.backend.domain.message.Message;
 import com.ech.backend.domain.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -54,6 +56,14 @@ public class WorkItem {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt = OffsetDateTime.now();
 
+    @Column(name = "due_at")
+    private OffsetDateTime dueAt;
+
+    @Enumerated(EnumType.STRING)
+    @ColumnDefault("'NORMAL'")
+    @Column(name = "priority", nullable = false, length = 20)
+    private WorkItemPriority priority = WorkItemPriority.NORMAL;
+
     /**
      * {@code false} when soft-deleted (hidden / grey in UI); restore sets back to {@code true}.
      * {@link ColumnDefault} so ddl-auto can add NOT NULL to existing rows (PostgreSQL needs DEFAULT on add).
@@ -76,12 +86,27 @@ public class WorkItem {
             Channel sourceChannel,
             User createdBy
     ) {
+        this(title, description, status, sourceMessage, sourceChannel, createdBy, null, WorkItemPriority.NORMAL);
+    }
+
+    public WorkItem(
+            String title,
+            String description,
+            String status,
+            Message sourceMessage,
+            Channel sourceChannel,
+            User createdBy,
+            OffsetDateTime dueAt,
+            WorkItemPriority priority
+    ) {
         this.title = title;
         this.description = description;
         this.status = status != null && !status.isBlank() ? status : "OPEN";
         this.sourceMessage = sourceMessage;
         this.sourceChannel = sourceChannel;
         this.createdBy = createdBy;
+        this.dueAt = dueAt;
+        this.priority = priority != null ? priority : WorkItemPriority.NORMAL;
         this.inUse = true;
     }
 
@@ -119,6 +144,31 @@ public class WorkItem {
 
     public OffsetDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public OffsetDateTime getDueAt() {
+        return dueAt;
+    }
+
+    public WorkItemPriority getPriority() {
+        return priority;
+    }
+
+    public void setDueAt(OffsetDateTime dueAt) {
+        this.dueAt = dueAt;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void clearDueAt() {
+        this.dueAt = null;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
+    public void setPriority(WorkItemPriority priority) {
+        if (priority != null) {
+            this.priority = priority;
+            this.updatedAt = OffsetDateTime.now();
+        }
     }
 
     public void update(String title, String description, String status) {

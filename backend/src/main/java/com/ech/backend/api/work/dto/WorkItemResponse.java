@@ -11,6 +11,8 @@ public record WorkItemResponse(
         Long sourceMessageId,
         Long sourceChannelId,
         String createdByEmployeeNo,
+        OffsetDateTime dueAt,
+        String priority,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {

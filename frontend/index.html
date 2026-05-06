@@ -1161,12 +1161,21 @@
                 <form id="workItemCreateForm" class="work-item-create-form" onsubmit="return false;">
                   <input id="workItemTitleInput" type="text" maxlength="500" placeholder="새 업무 제목" />
                   <textarea id="workItemDescInput" rows="3" maxlength="8000" placeholder="업무 설명(선택)"></textarea>
-                  <div class="work-item-create-row">
+                  <div class="work-item-create-row work-item-create-row--split">
                     <select id="workItemStatusSelect" aria-label="신규 업무 상태">
                       <option value="OPEN">대기</option>
                       <option value="IN_PROGRESS">진행 중</option>
                       <option value="DONE">완료</option>
                     </select>
+                    <select id="workItemPrioritySelect" aria-label="신규 업무 우선순위">
+                      <option value="LOW">우선순위 · 낮음</option>
+                      <option value="NORMAL" selected>우선순위 · 보통</option>
+                      <option value="HIGH">우선순위 · 높음</option>
+                    </select>
+                  </div>
+                  <label class="work-item-due-label" for="workItemDueInput">마감(선택)</label>
+                  <input id="workItemDueInput" type="datetime-local" aria-label="신규 업무 마감" />
+                  <div class="work-item-create-row">
                     <button type="button" class="btn-primary btn-sm btn-work-add" id="btnQueueWorkItem">업무 추가</button>
                   </div>
                 </form>
@@ -1277,6 +1286,19 @@
               <option value="IN_PROGRESS">진행 중</option>
               <option value="DONE">완료</option>
             </select>
+          </div>
+          <div class="form-group">
+            <label for="workItemDetailPriority">우선순위</label>
+            <select id="workItemDetailPriority">
+              <option value="LOW">낮음</option>
+              <option value="NORMAL">보통</option>
+              <option value="HIGH">높음</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="workItemDetailDue">마감</label>
+            <input id="workItemDetailDue" type="datetime-local" />
+            <p class="muted work-item-due-hint">비우면 마감 없음(저장 시 반영)</p>
           </div>
           <div id="workItemDetailInactiveActions" class="work-item-inactive-actions hidden">
             <p class="muted work-item-inactive-hint">비활성 처리된 업무입니다. <strong>복원</strong>·<strong>완전 삭제</strong> 선택은 즉시 서버로 가지 않으며, 상위 <strong>워크플로우</strong> 창의 <strong>저장</strong>을 누를 때 함께 반영됩니다. 목록에서도 동일하게 선택할 수 있습니다.</p>

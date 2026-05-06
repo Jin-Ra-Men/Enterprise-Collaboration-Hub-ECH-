@@ -1181,10 +1181,24 @@ html:not([data-theme="light"]) .sidebar-item.active::before {
   font-size: 13px;
   line-height: 1.25;
 }
-.assigned-kanban-meta {
+.assigned-kanban-meta-stack {
   grid-area: meta;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.assigned-kanban-meta {
   font-size: 11px;
   color: var(--text-secondary);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.assigned-kanban-meta-extra {
+  font-size: 10px;
+  color: var(--text-muted);
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -5688,6 +5702,19 @@ html[data-theme="cream"] .workflow-section {
   height: auto;
   align-self: center;
 }
+.work-item-create-row--split {
+  flex-wrap: wrap;
+}
+.work-item-due-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 2px 0 0;
+}
+.work-item-due-hint {
+  margin: 4px 0 0;
+  font-size: 11px;
+}
 .kanban-assignee-add {
   position: relative;
   display: flex;
@@ -5841,6 +5868,30 @@ html[data-theme="cream"] .channel-work-item--selected {
   font-size: 12px;
   color: var(--text-muted);
   overflow-wrap: anywhere;
+}
+.channel-work-item-schedule {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.channel-work-item-due {
+  font-weight: 600;
+}
+.channel-work-item-chip--pri {
+  font-size: 10px;
+  padding: 2px 6px;
+}
+.channel-work-item-chip--PRI_LOW {
+  background: color-mix(in srgb, var(--text-muted) 22%, transparent);
+  color: var(--text-secondary);
+}
+.channel-work-item-chip--PRI_HIGH {
+  background: color-mix(in srgb, #f97316 28%, transparent);
+  color: var(--text-primary);
 }
 .channel-kanban-board {
   display: flex;

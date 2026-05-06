@@ -373,6 +373,10 @@ let workHubChannelMembersForAssignee = [];
 let workHubPendingWorkStatus = new Map();
 let workHubPendingWorkTitle = new Map();
 let workHubPendingWorkDescription = new Map();
+/** 업무 허브: 저장 시 반영할 마감(ISO 문자열). `clear` 세트가 있으면 마감 제거 우선 */
+let workHubPendingWorkDueAt = new Map();
+let workHubPendingWorkClearDueAt = new Set();
+let workHubPendingWorkPriority = new Map();
 /** 업무 허브: 저장 시 반영할 칸반 카드 컬럼 이동 (cardId → columnId) */
 let workHubPendingCardColumn = new Map();
 /** 업무 허브: 저장 시 반영할 칸반 카드 정렬값 (cardId -> sortOrder) */
@@ -3693,9 +3697,16 @@ function renderMyWorkItemsSidebar(channels) {
     li.dataset.channelId = String(Number(row.channelId ?? 0));
     li.dataset.channelType = channelTypeById.get(Number(row.channelId ?? 0)) || "PUBLIC";
     li.dataset.channelName = channelLabel;
-    li.title = `${String(row.title || "(제목 없음)")} · ${channelLabel}`;
+    const dueIso = row.dueAt != null ? String(row.dueAt) : row.due_at != null ? String(row.due_at) : "";
+    const pri = normalizeWorkPriorityLabel(row.priority);
+    const extraBits = [pri !== "NORMAL" ? WORK_ITEM_PRIORITY_LABEL[pri] || pri : null, dueIso ? `마감 ${formatWorkItemDueShort(dueIso)}` : null]
+      .filter(Boolean)
+      .join(" · ");
+    li.title = `${String(row.title || "(제목 없음)")} · ${channelLabel}${extraBits ? ` · ${extraBits}` : ""}`;
     li.innerHTML = `<span class="item-icon">📋</span><span class="item-label">${escHtml(String(row.title || "(제목 없음)"))}</span>
-      <span class="assigned-kanban-meta">${escHtml(channelLabel)}</span>`;
+      <div class="assigned-kanban-meta-stack">
+        <span class="assigned-kanban-meta">${escHtml(channelLabel)}</span>${extraBits ? `<span class="assigned-kanban-meta-extra">${escHtml(extraBits)}</span>` : ""}
+      </div>`;
     li.addEventListener("click", async () => {
       const cid = Number(row.channelId ?? 0);
       const wid = Number(row.workItemId ?? 0);
@@ -7944,6 +7955,60 @@ document.getElementById("btnFileHubAddFolder")?.addEventListener("click", async 
 });
 
 const WORK_ITEM_STATUS_LABEL = { OPEN: "대기", IN_PROGRESS: "진행 중", DONE: "완료" };
+const WORK_ITEM_PRIORITY_LABEL = { LOW: "낮음", NORMAL: "보통", HIGH: "높음" };
+
+function workItemDueIsoFromApi(item) {
+  if (!item || item.dueAt == null) return item?.due_at != null ? String(item.due_at) : null;
+  return String(item.dueAt);
+}
+
+function workItemDueAtToDatetimeLocalValue(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function datetimeLocalToIsoOffset(localVal) {
+  const s = String(localVal || "").trim();
+  if (!s) return null;
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
+function formatWorkItemDueShort(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getMonth() + 1}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function normalizeWorkPriorityLabel(p) {
+  const s = String(p || "NORMAL").toUpperCase();
+  if (s === "LOW" || s === "HIGH") return s;
+  return "NORMAL";
+}
+
+function workItemEffectiveDueMsForSort(row, isDraft) {
+  let iso = null;
+  if (isDraft) {
+    const idx = Number(row?._draftIdx ?? NaN);
+    const d = Number.isFinite(idx) ? workHubPendingNewWorkItems[idx] : null;
+    iso = d?.dueAt || null;
+  } else {
+    const idNum = Number(row?.id);
+    if (!Number.isFinite(idNum)) return null;
+    if (workHubPendingWorkClearDueAt.has(idNum)) iso = null;
+    else if (workHubPendingWorkDueAt.has(idNum)) iso = workHubPendingWorkDueAt.get(idNum);
+    else iso = workItemDueIsoFromApi(row);
+  }
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  return Number.isFinite(t) ? t : null;
+}
 
 function normalizeWorkStatusLabel(status) {
   const s = String(status || "OPEN").toUpperCase();
@@ -7981,6 +8046,9 @@ function queueWorkItemPurge(workItemId) {
   workHubPendingWorkStatus.delete(id);
   workHubPendingWorkTitle.delete(id);
   workHubPendingWorkDescription.delete(id);
+  workHubPendingWorkDueAt.delete(id);
+  workHubPendingWorkClearDueAt.delete(id);
+  workHubPendingWorkPriority.delete(id);
   clearPendingKanbanStateForWorkItem(id);
   removeDraftKanbanCardsForWorkItem(id);
   void loadChannelWorkItems();
@@ -8076,6 +8144,8 @@ function renderChannelWorkItems(items) {
     title: d.title,
     description: d.description,
     status: d.status || "OPEN",
+    priority: d.priority || "NORMAL",
+    dueAt: d.dueAt || null,
     _isDraft: true,
     _draftIdx: i,
   }));
@@ -8091,6 +8161,11 @@ function renderChannelWorkItems(items) {
     const bInactive = !effectiveWorkItemInUseForUi(bId);
     // Persisted deleted-marked(inactive) work items go to the bottom.
     if (aInactive !== bInactive) return aInactive ? 1 : -1;
+    const aDue = workItemEffectiveDueMsForSort(a, aDraft);
+    const bDue = workItemEffectiveDueMsForSort(b, bDraft);
+    if (aDue != null && bDue != null && aDue !== bDue) return aDue - bDue;
+    if (aDue != null && bDue == null) return -1;
+    if (aDue == null && bDue != null) return 1;
     return aId - bId;
   });
   if (!visibleItems.length) {
@@ -8125,6 +8200,27 @@ function renderChannelWorkItems(items) {
     const base = normalizeWorkStatusLabel(item.status);
     const pending = !isDraft ? workHubPendingWorkStatus.get(id) : null;
     const status = pending != null ? normalizeWorkStatusLabel(pending) : base;
+    const basePri = normalizeWorkPriorityLabel(item.priority);
+    const pendingPri = !isDraft ? workHubPendingWorkPriority.get(idNum) : undefined;
+    const pri =
+      isDraft
+        ? normalizeWorkPriorityLabel(item.priority)
+        : pendingPri !== undefined
+          ? normalizeWorkPriorityLabel(pendingPri)
+          : basePri;
+    let effDueIso = null;
+    if (isDraft) {
+      effDueIso = item.dueAt || null;
+    } else if (workHubPendingWorkClearDueAt.has(idNum)) {
+      effDueIso = null;
+    } else if (workHubPendingWorkDueAt.has(idNum)) {
+      effDueIso = workHubPendingWorkDueAt.get(idNum);
+    } else {
+      effDueIso = workItemDueIsoFromApi(item);
+    }
+    const dueLine = effDueIso
+      ? `<div class="channel-work-item-schedule"><span class="channel-work-item-due">${escHtml(`마감 ${formatWorkItemDueShort(effDueIso)}`)}</span></div>`
+      : "";
 
     let pendingStrip = "";
     let hubActions = "";
@@ -8148,6 +8244,7 @@ function renderChannelWorkItems(items) {
     li.innerHTML = `
       <div class="channel-work-item-chips" aria-hidden="true">
         <span class="channel-work-item-chip channel-work-item-chip--${statusKey}">${escHtml(WORK_ITEM_STATUS_LABEL[statusKey] || statusKey)}</span>
+        ${pri !== "NORMAL" ? `<span class="channel-work-item-chip channel-work-item-chip--pri channel-work-item-chip--PRI_${pri}">${escHtml(WORK_ITEM_PRIORITY_LABEL[pri] || pri)}</span>` : ""}
       </div>
       <div class="channel-work-item-head">
         <strong class="channel-work-item-title">${escHtml(baseTitle || "(제목 없음)")}</strong>
@@ -8161,6 +8258,7 @@ function renderChannelWorkItems(items) {
         </div>
       </div>
       <div class="channel-work-item-meta">${escHtml(baseDesc || "설명 없음")}</div>
+      ${dueLine}
       ${pendingStrip}
       ${hubActions}
     `;
@@ -8256,6 +8354,9 @@ function ensureWorkHubWorkListDeleteBound() {
       workHubPendingWorkStatus.delete(Number(id));
       workHubPendingWorkTitle.delete(Number(id));
       workHubPendingWorkDescription.delete(Number(id));
+      workHubPendingWorkDueAt.delete(Number(id));
+      workHubPendingWorkClearDueAt.delete(Number(id));
+      workHubPendingWorkPriority.delete(Number(id));
       workHubPendingWorkDeleteIds.add(Number(id));
     }
     await loadChannelWorkItems();
@@ -8266,6 +8367,9 @@ function clearWorkHubPendingMaps() {
   workHubPendingWorkStatus.clear();
   workHubPendingWorkTitle.clear();
   workHubPendingWorkDescription.clear();
+  workHubPendingWorkDueAt.clear();
+  workHubPendingWorkClearDueAt.clear();
+  workHubPendingWorkPriority.clear();
   workHubPendingCardColumn.clear();
   workHubPendingCardSortOrder.clear();
   workHubPendingCardTitle.clear();
@@ -8618,6 +8722,9 @@ async function flushWorkHubSave() {
       workHubPendingWorkStatus.size > 0 ||
       workHubPendingWorkTitle.size > 0 ||
       workHubPendingWorkDescription.size > 0 ||
+      workHubPendingWorkDueAt.size > 0 ||
+      workHubPendingWorkClearDueAt.size > 0 ||
+      workHubPendingWorkPriority.size > 0 ||
       workHubPendingWorkRestoreIds.size > 0 ||
       workHubPendingWorkPurgeIds.size > 0 ||
       workHubPendingCardColumn.size > 0 ||
@@ -8641,6 +8748,8 @@ async function flushWorkHubSave() {
           title: draft.title,
           description: draft.description,
           status: draft.status || "OPEN",
+          ...(draft.dueAt ? { dueAt: draft.dueAt } : {}),
+          ...(draft.priority && draft.priority !== "NORMAL" ? { priority: draft.priority } : {}),
         }),
       });
       const j = await res.json().catch(() => ({}));
@@ -8666,6 +8775,9 @@ async function flushWorkHubSave() {
       ...Array.from(workHubPendingWorkStatus.keys()),
       ...Array.from(workHubPendingWorkTitle.keys()),
       ...Array.from(workHubPendingWorkDescription.keys()),
+      ...Array.from(workHubPendingWorkDueAt.keys()),
+      ...Array.from(workHubPendingWorkPriority.keys()),
+      ...Array.from(workHubPendingWorkClearDueAt.values()),
     ]);
     for (const workItemIdRaw of pendingWorkIds.values()) {
       const workItemId = Number(workItemIdRaw);
@@ -8674,14 +8786,23 @@ async function flushWorkHubSave() {
       const status = workHubPendingWorkStatus.get(workItemId);
       const title = workHubPendingWorkTitle.get(workItemId);
       const description = workHubPendingWorkDescription.get(workItemId);
+      const putBody = {
+        actorEmployeeNo: currentUser.employeeNo,
+        ...(status != null ? { status } : {}),
+        ...(title != null ? { title } : {}),
+        ...(description != null ? { description } : {}),
+      };
+      if (workHubPendingWorkClearDueAt.has(workItemId)) {
+        putBody.clearDueAt = true;
+      } else if (workHubPendingWorkDueAt.has(workItemId)) {
+        putBody.dueAt = workHubPendingWorkDueAt.get(workItemId);
+      }
+      if (workHubPendingWorkPriority.has(workItemId)) {
+        putBody.priority = workHubPendingWorkPriority.get(workItemId);
+      }
       const res = await apiFetch(`/api/work-items/${Number(workItemId)}`, {
         method: "PUT",
-        body: JSON.stringify({
-          actorEmployeeNo: currentUser.employeeNo,
-          ...(status != null ? { status } : {}),
-          ...(title != null ? { title } : {}),
-          ...(description != null ? { description } : {}),
-        }),
+        body: JSON.stringify(putBody),
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -8691,6 +8812,9 @@ async function flushWorkHubSave() {
     workHubPendingWorkStatus.clear();
     workHubPendingWorkTitle.clear();
     workHubPendingWorkDescription.clear();
+    workHubPendingWorkDueAt.clear();
+    workHubPendingWorkClearDueAt.clear();
+    workHubPendingWorkPriority.clear();
     for (const workItemId of workHubPendingWorkDeleteIds.values()) {
       if (workHubPendingWorkPurgeIds.has(Number(workItemId))) continue;
       const res = await apiFetch(
@@ -9233,7 +9357,11 @@ function populateKanbanNewCardWorkItemSelect() {
   sel.innerHTML =
     `<option value="">업무 항목 선택(필수)</option>` +
     list
-      .map((w) => `<option value="${Number(w.id)}">${escHtml(String(w.title || "(제목 없음)"))}</option>`)
+      .map((w) => {
+        const due = workItemDueIsoFromApi(w);
+        const suf = due ? ` · ${formatWorkItemDueShort(due)}` : "";
+        return `<option value="${Number(w.id)}">${escHtml(String(w.title || "(제목 없음)"))}${escHtml(suf)}</option>`;
+      })
       .join("");
 }
 
@@ -9474,7 +9602,9 @@ function openWorkItemDetailModal(rawId, isDraft) {
   const titleEl = document.getElementById("workItemDetailTitle");
   const descEl = document.getElementById("workItemDetailDesc");
   const statusEl = document.getElementById("workItemDetailStatus");
-  if (!titleEl || !descEl || !statusEl) return;
+  const priEl = document.getElementById("workItemDetailPriority");
+  const dueEl = document.getElementById("workItemDetailDue");
+  if (!titleEl || !descEl || !statusEl || !priEl || !dueEl) return;
   if (isDraft) {
     const idx = Number(String(rawId).replace("draft-", ""));
     const item = Number.isFinite(idx) ? workHubPendingNewWorkItems[idx] : null;
@@ -9483,6 +9613,8 @@ function openWorkItemDetailModal(rawId, isDraft) {
     titleEl.value = String(item.title || "");
     descEl.value = String(item.description || "");
     statusEl.value = normalizeWorkStatusLabel(item.status || "OPEN");
+    priEl.value = normalizeWorkPriorityLabel(item.priority || "NORMAL");
+    dueEl.value = workItemDueAtToDatetimeLocalValue(item.dueAt || null);
   } else {
     const id = Number(rawId);
     if (!id) return;
@@ -9491,6 +9623,15 @@ function openWorkItemDetailModal(rawId, isDraft) {
     titleEl.value = workHubPendingWorkTitle.get(id) ?? String(row?.querySelector(".channel-work-item-title")?.textContent || "");
     descEl.value = workHubPendingWorkDescription.get(id) ?? String(row?.querySelector(".channel-work-item-meta")?.textContent || "").replace(/^설명 없음$/, "");
     statusEl.value = normalizeWorkStatusLabel(workHubPendingWorkStatus.get(id) || row?.querySelector(".work-item-status-select")?.value || "OPEN");
+    const rowItem = lastChannelWorkItemsForHub.find((x) => Number(x.id) === id);
+    const effDueIso = workHubPendingWorkClearDueAt.has(id)
+      ? null
+      : workHubPendingWorkDueAt.has(id)
+        ? workHubPendingWorkDueAt.get(id)
+        : workItemDueIsoFromApi(rowItem);
+    dueEl.value = workItemDueAtToDatetimeLocalValue(effDueIso);
+    const baseP = normalizeWorkPriorityLabel(rowItem?.priority);
+    priEl.value = workHubPendingWorkPriority.has(id) ? normalizeWorkPriorityLabel(workHubPendingWorkPriority.get(id)) : baseP;
   }
   const inactiveWrap = document.getElementById("workItemDetailInactiveActions");
   if (inactiveWrap) {
@@ -10244,19 +10385,26 @@ document.getElementById("btnQueueWorkItem")?.addEventListener("click", () => {
   const titleEl = document.getElementById("workItemTitleInput");
   const descEl = document.getElementById("workItemDescInput");
   const statusEl = document.getElementById("workItemStatusSelect");
+  const priEl = document.getElementById("workItemPrioritySelect");
+  const dueEl = document.getElementById("workItemDueInput");
   const title = String(titleEl?.value || "").trim();
   if (!title) {
     void uiAlert("업무 제목을 입력하세요.");
     return;
   }
+  const dueIso = datetimeLocalToIsoOffset(dueEl?.value || "");
   workHubPendingNewWorkItems.push({
     title,
     description: String(descEl?.value || "").trim() || null,
     status: statusEl?.value || "OPEN",
+    priority: normalizeWorkPriorityLabel(priEl?.value || "NORMAL"),
+    dueAt: dueIso || null,
   });
   if (titleEl) titleEl.value = "";
   if (descEl) descEl.value = "";
   if (statusEl) statusEl.value = "OPEN";
+  if (priEl) priEl.value = "NORMAL";
+  if (dueEl) dueEl.value = "";
   void loadChannelWorkItems();
 });
 
@@ -10299,6 +10447,8 @@ document.getElementById("btnSaveWorkItemDetail")?.addEventListener("click", asyn
   const title = String(document.getElementById("workItemDetailTitle")?.value || "").trim();
   const description = String(document.getElementById("workItemDetailDesc")?.value || "").trim();
   const status = normalizeWorkStatusLabel(document.getElementById("workItemDetailStatus")?.value || "OPEN");
+  const priority = normalizeWorkPriorityLabel(document.getElementById("workItemDetailPriority")?.value || "NORMAL");
+  const dueIso = datetimeLocalToIsoOffset(document.getElementById("workItemDetailDue")?.value || "");
   if (!title) {
     await uiAlert("업무 제목을 입력하세요.");
     return;
@@ -10309,11 +10459,35 @@ document.getElementById("btnSaveWorkItemDetail")?.addEventListener("click", asyn
     d.title = title;
     d.description = description || null;
     d.status = status;
+    d.priority = priority;
+    d.dueAt = dueIso || null;
   } else {
     const id = Number(meta.id);
     workHubPendingWorkTitle.set(id, title);
     workHubPendingWorkDescription.set(id, description || null);
     workHubPendingWorkStatus.set(id, status);
+    const rowItem = lastChannelWorkItemsForHub.find((x) => Number(x.id) === id);
+    const baseDueIso = workHubPendingWorkClearDueAt.has(id)
+      ? null
+      : workHubPendingWorkDueAt.has(id)
+        ? workHubPendingWorkDueAt.get(id)
+        : workItemDueIsoFromApi(rowItem);
+    const nextDueIso = dueIso || null;
+    if ((baseDueIso || "") !== (nextDueIso || "")) {
+      if (!nextDueIso) {
+        workHubPendingWorkClearDueAt.add(id);
+        workHubPendingWorkDueAt.delete(id);
+      } else {
+        workHubPendingWorkClearDueAt.delete(id);
+        workHubPendingWorkDueAt.set(id, nextDueIso);
+      }
+    }
+    const basePrio = normalizeWorkPriorityLabel(rowItem?.priority);
+    if (priority !== basePrio) {
+      workHubPendingWorkPriority.set(id, priority);
+    } else {
+      workHubPendingWorkPriority.delete(id);
+    }
   }
   closeModal("modalWorkItemDetail");
   await loadChannelWorkItems();

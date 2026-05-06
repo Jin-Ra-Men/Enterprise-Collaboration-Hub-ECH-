@@ -11,6 +11,7 @@
 ## 2026-05-04
 
 ### Added
+- **업무 마감·우선순위(2-7-1-1)**: `work_items.due_at`, `work_items.priority`(LOW/NORMAL/HIGH), API·`WorkItemDuePriorityApiTest`, 워크 허브 UI(신규·상세·목록·사이드바 보조 표시). PostgreSQL 이관안 `docs/sql/migrate_work_items_due_priority.sql`, 스키마 초안 갱신.
 - **로드맵 확장**: `docs/ROADMAP.md`에 Phase 6(개인 캘린더·공유·AI 연동 전제)·Phase 7(AI 비서 게이트웨이·프로액티브·비용)·Phase 8(외부 캘린더 연동) 미완료 항목을 추가해, 대화에서 정리한 제품 방향을 개발 기준 문서에 반영.
 - **캘린더 MVP**: `calendar_events`·`calendar_share_requests` 도메인, REST API, 감사 타입, 워크플로 허브 UI(내 일정·받은 공유·채널 공유 보내기), `CalendarApiTest`, `docs/sql/postgresql_schema_draft.sql` 반영.
 - **협업 툴 인식 강화(플랜 이행)**: `docs/COLLABORATION_TOOL_DIRECTION.md` 추가(우선 여정 갭·지식 축 확정·캘린더·AI 범위·거버넌스·프로액티브·비용). `docs/ROADMAP.md` **Phase 2.7** 체크리스트 추가, Phase 6·7에 교차 링크.

@@ -583,7 +583,7 @@
 - 사용자: 채널 멤버
 - 관련 화면/경로: 메시지 액션 메뉴, 업무 상세
 - 관련 API:
-  - `POST /api/messages/{messageId}/work-items` (생성, body: `createdByEmployeeNo`, 선택 `title`, `description`, `status`)
+  - `POST /api/messages/{messageId}/work-items` (생성, body: `createdByEmployeeNo`, 선택 `title`, `description`, `status`, `dueAt`, `priority`)
   - `GET /api/messages/{messageId}/work-items` (0~1건 리스트, 메시지당 최대 1건)
   - `GET /api/work-items/{workItemId}` (단건 조회)
 - 관련 Socket 이벤트: 해당 없음
@@ -613,11 +613,11 @@
 - 시각·명칭: **워크플로우** — `design/ECH화면설계 (1)` Work Management 톤(단일 패널 `work-hub-panel--workflow`, 키커 Workflow, 섹션 Tasks/Board). 채널·DM 연결은 모달 `#workHubChannelContext`로 표시. 구 `(6)` 칸반 컬럼·카드 스타일 유지. 업무 목록 상태 칩·완료 유사 컬럼 `.kanban-column--done-like` 등 기존과 동일(동작·API 동일).
 - 관련 API:
   - `GET /api/channels/{channelId}/work-items?employeeNo=&limit=` — 채널 업무 목록
-  - `POST /api/channels/{channelId}/work-items` — 채널 업무 생성(`createdByEmployeeNo`, `title`, 선택 `description`, `status`, `sourceMessageId`)
-  - `PUT /api/work-items/{workItemId}` — 채널 업무 수정(`actorEmployeeNo`, 부분 갱신)
+  - `POST /api/channels/{channelId}/work-items` — 채널 업무 생성(`createdByEmployeeNo`, `title`, 선택 `description`, `status`, `sourceMessageId`, `dueAt`, `priority`: `LOW`|`NORMAL`|`HIGH`)
+  - `PUT /api/work-items/{workItemId}` — 채널 업무 수정(`actorEmployeeNo`, 부분 갱신; 마감 제거 시 `clearDueAt: true`, 설정 시 `dueAt` ISO-8601, 우선순위는 `priority`)
   - `DELETE /api/work-items/{workItemId}?actorEmployeeNo=` — 채널 멤버, **기본 소프트 삭제**(`in_use=false`). `hard=true` 시 연결 칸반 카드 삭제 후 업무 행 완전 삭제
   - `POST /api/work-items/{workItemId}/restore?actorEmployeeNo=` — 소프트 삭제된 업무 복원(`in_use=true`)
-  - `GET /api/work-items/sidebar/by-assigned-cards?employeeNo=&limit=` — 내가 **칸반 카드 담당**인 업무 목록(사이드바)
+  - `GET /api/work-items/sidebar/by-assigned-cards?employeeNo=&limit=` — 내가 **칸반 카드 담당**인 업무 목록(사이드바; 응답에 `dueAt`, `priority` 포함)
   - `GET /api/kanban/channels/{channelId}/board?employeeNo=` — 채널 기본 칸반 보드 조회/없으면 자동 생성
 - 입력/출력:
   - 업무 상태는 API 값은 `OPEN`/`IN_PROGRESS`/`DONE`이며, UI 셀렉트·목록은 한글 라벨(예: 미착수·진행 중·완료)로 표시

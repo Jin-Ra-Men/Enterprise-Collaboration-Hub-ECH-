@@ -18,9 +18,11 @@ import com.ech.backend.domain.user.UserRepository;
 import com.ech.backend.domain.kanban.KanbanCard;
 import com.ech.backend.domain.kanban.KanbanCardRepository;
 import com.ech.backend.domain.work.WorkItem;
+import com.ech.backend.domain.work.WorkItemPriority;
 import com.ech.backend.domain.work.WorkItemRepository;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -83,13 +85,16 @@ public class WorkItemService {
                 ? "OPEN"
                 : request.status().trim();
 
+        WorkItemPriority priority = priorityFromRequest(request.priority(), WorkItemPriority.NORMAL);
         WorkItem saved = workItemRepository.save(new WorkItem(
                 title,
                 description,
                 status,
                 message,
                 message.getChannel(),
-                creator
+                creator,
+                request.dueAt(),
+                priority
         ));
 
         auditLogService.safeRecord(
@@ -152,13 +157,16 @@ public class WorkItemService {
             }
         }
         String status = request.status() == null || request.status().isBlank() ? "OPEN" : request.status().trim();
+        WorkItemPriority priority = priorityFromRequest(request.priority(), WorkItemPriority.NORMAL);
         WorkItem saved = workItemRepository.save(new WorkItem(
                 request.title().trim(),
                 request.description(),
                 status,
                 sourceMessage,
                 channel,
-                creator
+                creator,
+                request.dueAt(),
+                priority
         ));
         auditLogService.safeRecord(
                 AuditEventType.WORK_ITEM_CREATED,
@@ -184,6 +192,14 @@ public class WorkItemService {
             throw new IllegalArgumentException("채널 멤버만 업무 항목을 수정할 수 있습니다.");
         }
         item.update(request.title(), request.description(), request.status());
+        if (Boolean.TRUE.equals(request.clearDueAt())) {
+            item.clearDueAt();
+        } else if (request.dueAt() != null) {
+            item.setDueAt(request.dueAt());
+        }
+        if (request.priority() != null && !request.priority().isBlank()) {
+            item.setPriority(priorityFromRequest(request.priority(), WorkItemPriority.NORMAL));
+        }
         WorkItem saved = workItemRepository.save(item);
         return toResponse(saved);
     }
@@ -263,6 +279,8 @@ public class WorkItemService {
                         w.getSourceChannel().getId(),
                         channelDisplayNameForSidebar(w.getSourceChannel()),
                         w.isInUse(),
+                        w.getDueAt(),
+                        w.getPriority() != null ? w.getPriority().name() : WorkItemPriority.NORMAL.name(),
                         w.getUpdatedAt()))
                 .toList();
     }
@@ -315,8 +333,21 @@ public class WorkItemService {
                 messageId,
                 item.getSourceChannel().getId(),
                 item.getCreatedBy().getEmployeeNo(),
+                item.getDueAt(),
+                item.getPriority() != null ? item.getPriority().name() : WorkItemPriority.NORMAL.name(),
                 item.getCreatedAt(),
                 item.getUpdatedAt()
         );
+    }
+
+    private static WorkItemPriority priorityFromRequest(String raw, WorkItemPriority defaultIfBlank) {
+        if (raw == null || raw.isBlank()) {
+            return defaultIfBlank;
+        }
+        try {
+            return WorkItemPriority.valueOf(raw.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("유효하지 않은 우선순위입니다.");
+        }
     }
 }

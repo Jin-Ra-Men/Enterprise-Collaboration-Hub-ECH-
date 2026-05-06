@@ -9,6 +9,8 @@ public record WorkItemSidebarResponse(
         Long channelId,
         String channelName,
         boolean inUse,
+        OffsetDateTime dueAt,
+        String priority,
         OffsetDateTime updatedAt
 ) {
 }
