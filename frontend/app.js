@@ -284,8 +284,13 @@ let imageDownloadChoiceEscHandler = null;
 const activeChannelMemberOrgLineByEmployeeNo = new Map();
 /** 미확인 멘션 목록(사이드바 전용) */
 let mentionInboxItems = [];
-/** Sidebar: work items where user is assignee on ≥1 kanban card (`GET .../sidebar/by-assigned-cards`). */
-let mySidebarWorkItems = [];
+/** Sidebar «내 할 일» (`GET /api/work-items/me/todos`). */
+let mySidebarWorkTodos = {
+  overdue: [],
+  dueToday: [],
+  mentionLinked: [],
+  kanbanAssigned: [],
+};
 /** `loadMyChannels` 간 내 업무 사이드바 스냅샷 비교용(변경 시 토스트). */
 let lastWorkSidebarSig = null;
 /** Last loaded channel work items for work hub (new card parent select + labels). */
@@ -3190,30 +3195,42 @@ function syncAllSidebarSectionChevrons() {
 async function loadMyChannels() {
   if (!currentUser) return;
   try {
-    const [channelRes, workSidebarRes] = await Promise.all([
+    const [channelRes, workTodosRes] = await Promise.all([
       apiFetch(`/api/channels?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`),
       apiFetch(
-        `/api/work-items/sidebar/by-assigned-cards?employeeNo=${encodeURIComponent(currentUser.employeeNo)}&limit=30`
+        `/api/work-items/me/todos?employeeNo=${encodeURIComponent(currentUser.employeeNo)}&limitPerBucket=25`
       ),
     ]);
     const channelJson = await channelRes.json().catch(() => ({}));
-    const workSidebarJson = await workSidebarRes.json().catch(() => ({}));
+    const workTodosJson = await workTodosRes.json().catch(() => ({}));
     if (!channelRes.ok) return;
     const rawChannelRows = Array.isArray(channelJson.data) ? channelJson.data : [];
     const channels = normalizeSidebarChannels(rawChannelRows);
     joinAllChannelSocketRooms(rawChannelRows);
-    mySidebarWorkItems = workSidebarRes.ok && Array.isArray(workSidebarJson.data) ? workSidebarJson.data : [];
-    const nextWorkSig = JSON.stringify(
-      (mySidebarWorkItems || []).map((r) => ({
-        id: Number(r.workItemId ?? 0),
-        iu: r.inUse !== false,
-      }))
-    );
+    const emptyTodos = { overdue: [], dueToday: [], mentionLinked: [], kanbanAssigned: [] };
+    const d = workTodosRes.ok && workTodosJson.data ? workTodosJson.data : null;
+    mySidebarWorkTodos = d
+      ? {
+          overdue: Array.isArray(d.overdue) ? d.overdue : [],
+          dueToday: Array.isArray(d.dueToday) ? d.dueToday : [],
+          mentionLinked: Array.isArray(d.mentionLinked) ? d.mentionLinked : [],
+          kanbanAssigned: Array.isArray(d.kanbanAssigned) ? d.kanbanAssigned : [],
+        }
+      : emptyTodos;
+    const todoBucketsSig = (t) =>
+      ["overdue", "dueToday", "mentionLinked", "kanbanAssigned"].flatMap((key) =>
+        (t[key] || []).map((r) => ({
+          b: key,
+          id: Number(r.workItemId ?? 0),
+          iu: r.inUse !== false,
+        }))
+      );
+    const nextWorkSig = JSON.stringify(todoBucketsSig(mySidebarWorkTodos));
     if (lastWorkSidebarSig !== null && lastWorkSidebarSig !== nextWorkSig) {
       pushActivityToast({
         title: "업무 항목 변경",
-        locationLine: "담당 업무 목록",
-        preview: "담당 업무·칸반 목록이 갱신되었습니다.",
+        locationLine: "내 할 일",
+        preview: "지연·오늘 마감·멘션 연계·담당 칸반 목록이 갱신되었습니다.",
       });
     }
     lastWorkSidebarSig = nextWorkSig;
@@ -3678,70 +3695,114 @@ function displayChannelLabelForWorkSidebar(channels, channelId, apiChannelName) 
   return "다이렉트 메시지";
 }
 
-function renderMyWorkItemsSidebar(channels) {
-  if (!myKanbanListEl) return;
-  myKanbanListEl.innerHTML = "";
-  if (!Array.isArray(mySidebarWorkItems) || !mySidebarWorkItems.length) {
-    myKanbanListEl.innerHTML = `<li class="sidebar-item sidebar-item-empty">담당 칸반 카드가 없습니다</li>`;
-    return;
+function appendWorkTodoRowLi(ul, row, bucket, channels, channelTypeById) {
+  const li = document.createElement("li");
+  const inactive = row.inUse === false;
+  const channelLabel = displayChannelLabelForWorkSidebar(channels, row.channelId, row.channelName);
+  const baseClass =
+    bucket === "mention"
+      ? "sidebar-item assigned-kanban-item sidebar-todo-item sidebar-todo-item--mention"
+      : "sidebar-item assigned-kanban-item sidebar-todo-item";
+  li.className = inactive ? `${baseClass} sidebar-work-item-inactive` : baseClass;
+  const cid = Number(row.channelId ?? 0);
+  const wid = Number(row.workItemId ?? 0);
+  const srcMid = row.sourceMessageId != null ? Number(row.sourceMessageId) : NaN;
+  li.dataset.workItemId = String(wid);
+  li.dataset.channelId = String(cid);
+  li.dataset.todoBucket = bucket;
+  const ct = channelTypeById.get(cid) || "PUBLIC";
+  li.dataset.channelType = ct;
+  li.dataset.channelName = channelLabel;
+  if (bucket === "mention" && Number.isFinite(srcMid) && srcMid > 0) {
+    li.dataset.sourceMessageId = String(srcMid);
   }
-  const channelTypeById = new Map((channels || []).map((ch) => [Number(ch.channelId), String(ch.channelType || "PUBLIC")]));
-  mySidebarWorkItems.forEach((row) => {
-    const li = document.createElement("li");
-    const inactive = row.inUse === false;
-    const channelLabel = displayChannelLabelForWorkSidebar(channels, row.channelId, row.channelName);
-    li.className = inactive
-      ? "sidebar-item assigned-kanban-item sidebar-work-item-inactive"
-      : "sidebar-item assigned-kanban-item";
-    li.dataset.workItemId = String(Number(row.workItemId ?? 0));
-    li.dataset.channelId = String(Number(row.channelId ?? 0));
-    li.dataset.channelType = channelTypeById.get(Number(row.channelId ?? 0)) || "PUBLIC";
-    li.dataset.channelName = channelLabel;
-    const dueIso = row.dueAt != null ? String(row.dueAt) : row.due_at != null ? String(row.due_at) : "";
-    const pri = normalizeWorkPriorityLabel(row.priority);
-    const extraBits = [pri !== "NORMAL" ? WORK_ITEM_PRIORITY_LABEL[pri] || pri : null, dueIso ? `마감 ${formatWorkItemDueShort(dueIso)}` : null]
-      .filter(Boolean)
-      .join(" · ");
-    li.title = `${String(row.title || "(제목 없음)")} · ${channelLabel}${extraBits ? ` · ${extraBits}` : ""}`;
-    li.innerHTML = `<span class="item-icon">📋</span><span class="item-label">${escHtml(String(row.title || "(제목 없음)"))}</span>
+  const icon = bucket === "mention" ? "💬" : bucket === "overdue" ? "⚠️" : bucket === "dueToday" ? "📌" : "📋";
+  const dueIso = row.dueAt != null ? String(row.dueAt) : row.due_at != null ? String(row.due_at) : "";
+  const pri = normalizeWorkPriorityLabel(row.priority);
+  const extraBits = [pri !== "NORMAL" ? WORK_ITEM_PRIORITY_LABEL[pri] || pri : null, dueIso ? `마감 ${formatWorkItemDueShort(dueIso)}` : null]
+    .filter(Boolean)
+    .join(" · ");
+  const hint = bucket === "mention" ? "채팅에서 멘션 메시지로 이동" : "워크플로우에서 업무 열기";
+  li.title = `${String(row.title || "(제목 없음)")} · ${channelLabel}${extraBits ? ` · ${extraBits}` : ""} — ${hint}`;
+  li.innerHTML = `<span class="item-icon">${icon}</span><span class="item-label">${escHtml(String(row.title || "(제목 없음)"))}</span>
       <div class="assigned-kanban-meta-stack">
         <span class="assigned-kanban-meta">${escHtml(channelLabel)}</span>${extraBits ? `<span class="assigned-kanban-meta-extra">${escHtml(extraBits)}</span>` : ""}
       </div>`;
-    li.addEventListener("click", async () => {
-      const cid = Number(row.channelId ?? 0);
-      const wid = Number(row.workItemId ?? 0);
-      if (!cid || !wid) return;
-      workHubScopedChannelId = cid;
-      workHubSelectedListWorkItemKey = String(wid);
-      clearWorkHubPendingMaps();
-      clearPendingNewKanbanAssignees();
+  li.addEventListener("click", async () => {
+    if (!cid || !wid) return;
+    if (bucket === "mention" && Number.isFinite(srcMid) && srcMid > 0) {
+      clearWorkHubScopedChannel();
       try {
-        await Promise.all([
-          loadWorkHubChannelMembersForAssignee(),
-          loadChannelWorkItems(),
-          loadChannelKanbanBoard(),
-          loadWorkHubCalendarPanel(),
-        ]);
-        ensureWorkHubWorkListDeleteBound();
-        ensureWorkHubCalendarBound();
-        workflowNeedsChannelPick = false;
-        openWorkflowPage();
-        renderWorkflowChannelPicker();
-        setTimeout(() => {
-          applyWorkHubWorkListSelection();
-          const rowEl = document.querySelector(`#channelWorkItemsList .channel-work-item[data-work-item-id="${wid}"]`);
-          if (!rowEl) return;
-          rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
-          rowEl.classList.add("work-item-row-highlight");
-          setTimeout(() => rowEl.classList.remove("work-item-row-highlight"), 2200);
-        }, 120);
+        await selectChannel(cid, channelLabel, ct, { targetMessageId: srcMid });
       } catch (e) {
-        clearWorkHubScopedChannel();
-        await uiAlert(e?.message || "워크플로우 정보를 불러오지 못했습니다.");
+        await uiAlert(e?.message || "채널을 열 수 없습니다.");
       }
-    });
-    myKanbanListEl.appendChild(li);
+      return;
+    }
+    workHubScopedChannelId = cid;
+    workHubSelectedListWorkItemKey = String(wid);
+    clearWorkHubPendingMaps();
+    clearPendingNewKanbanAssignees();
+    try {
+      await Promise.all([
+        loadWorkHubChannelMembersForAssignee(),
+        loadChannelWorkItems(),
+        loadChannelKanbanBoard(),
+        loadWorkHubCalendarPanel(),
+      ]);
+      ensureWorkHubWorkListDeleteBound();
+      ensureWorkHubCalendarBound();
+      workflowNeedsChannelPick = false;
+      openWorkflowPage();
+      renderWorkflowChannelPicker();
+      setTimeout(() => {
+        applyWorkHubWorkListSelection();
+        const rowEl = document.querySelector(`#channelWorkItemsList .channel-work-item[data-work-item-id="${wid}"]`);
+        if (!rowEl) return;
+        rowEl.scrollIntoView({ behavior: "smooth", block: "center" });
+        rowEl.classList.add("work-item-row-highlight");
+        setTimeout(() => rowEl.classList.remove("work-item-row-highlight"), 2200);
+      }, 120);
+    } catch (e) {
+      clearWorkHubScopedChannel();
+      await uiAlert(e?.message || "워크플로우 정보를 불러오지 못했습니다.");
+    }
   });
+  ul.appendChild(li);
+}
+
+function renderMyWorkItemsSidebar(channels) {
+  if (!myKanbanListEl) return;
+  myKanbanListEl.innerHTML = "";
+  const sections = [
+    { key: "overdue", title: "지연", bucket: "overdue", rows: mySidebarWorkTodos.overdue || [] },
+    { key: "dueToday", title: "오늘 마감", bucket: "dueToday", rows: mySidebarWorkTodos.dueToday || [] },
+    { key: "mentionLinked", title: "멘션 연계", bucket: "mention", rows: mySidebarWorkTodos.mentionLinked || [] },
+    { key: "kanbanAssigned", title: "담당 칸반", bucket: "kanban", rows: mySidebarWorkTodos.kanbanAssigned || [] },
+  ];
+  const total = sections.reduce((n, s) => n + s.rows.length, 0);
+  if (total === 0) {
+    myKanbanListEl.innerHTML = `<div class="sidebar-item sidebar-item-empty sidebar-work-todos-empty">할 일이 없습니다</div>`;
+    return;
+  }
+  const channelTypeById = new Map((channels || []).map((ch) => [Number(ch.channelId), String(ch.channelType || "PUBLIC")]));
+  const frag = document.createDocumentFragment();
+  for (const sec of sections) {
+    if (!sec.rows.length) continue;
+    const block = document.createElement("div");
+    block.className = "sidebar-todo-section";
+    block.dataset.todoSection = sec.key;
+    const head = document.createElement("div");
+    head.className = "sidebar-todo-section-title";
+    head.textContent = sec.title;
+    const ul = document.createElement("ul");
+    ul.className = "sidebar-list sidebar-todo-sublist";
+    sec.rows.forEach((row) => appendWorkTodoRowLi(ul, row, sec.bucket, channels, channelTypeById));
+    block.appendChild(head);
+    block.appendChild(ul);
+    frag.appendChild(block);
+  }
+  myKanbanListEl.appendChild(frag);
 }
 
 function saveComposerDraftForChannel(channelId) {

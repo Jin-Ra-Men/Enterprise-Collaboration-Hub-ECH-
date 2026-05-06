@@ -53,6 +53,7 @@
   - **협업 툴 인식·AI 전제:** `docs/COLLABORATION_TOOL_DIRECTION.md`(멘션→업무→마감→칸반 갭, 자료실 1차 축, 캘린더·AI·프로액티브·비용 원칙).
   - **채널 자료실:** 첨부 메타 `library_*`·`channel_library_folders`, API는 `docs/FEATURE_SPEC.md` §채널 자료실; 운영 DB는 `docs/sql/migrate_channel_library_v1.sql` 참고.
   - **업무 마감·우선순위:** `work_items.due_at`, `work_items.priority`; 기존 PostgreSQL DB는 `docs/sql/migrate_work_items_due_priority.sql` 적용. 로컬/H2는 JPA `ddl-auto: update`로 컬럼 추가.
+  - **내 할 일 사이드바:** `GET /api/work-items/me/todos` — 오늘·지연 구간은 서버 **Asia/Seoul** 자정 기준. 멘션 연계는 원본 메시지 본문의 `@{사번|표시명}` 토큰 문자열 매칭으로 판별한다.
   - DB 구조: `docs/sql/postgresql_schema_draft.sql` 및 **3-1)**. 로컬에서 사람 데이터가 필요하면 `docs/sql/seed_test_users.sql` (`docs/ENVIRONMENT_SETUP.md` 5-1절).
   - Java는 `backend/`, 실시간은 `realtime/`(Express 없이 `http`+Socket.io), 데모 UI 소스는 `frontend/`(로컬에서는 `bootRun` 시 8080에서 위 3개 파일만 서빙, **`/**` 전체를 정적으로 열지 않음** — `/api/**` 가 리소스 핸들러에 먹히는 404 방지).
 - **운영·관리자**
@@ -498,7 +499,7 @@ Stop-Process -Id <PID> -Force
   - 칸반 담당자 반영 순서를 `담당 해제 -> 담당 추가`로 바꿔 삭제 후 되살아나는 현상을 완화
   - 저장 직전 카드별 담당 추가/해제 맵을 정규화해 상충 상태를 제거하고, 담당 해제 후 저장 시 재바인딩되는 케이스를 보정
 - 좌측 사이드바:
-  - `내 담당 칸반` 섹션(`myKanbanList`)을 추가해 담당 카드 목록을 채널/DM 목록과 같은 영역에서 제공
+  - **내 할 일** 섹션(컨테이너 id `myKanbanList`)을 두어 지연·오늘 마감·멘션 연계·담당 칸반을 채널/DM 목록과 같은 영역에서 제공
   - 데이터 소스: `GET /api/work-items/sidebar/by-assigned-cards?employeeNo=...&limit=...`(내가 담당인 칸반 카드가 하나라도 있는 업무 항목)
 - 클릭 동작:
   - `내 담당 칸반` 행 클릭: 채널 진입 -> 워크플로우 페이지 오픈 -> 대상 카드 스크롤/강조
@@ -518,7 +519,7 @@ Stop-Process -Id <PID> -Force
 - **키보드**: `bindKanbanAssigneeSuggestKeyboard`를 `modalWorkHub`와 `modalKanbanCardDetail` 모두에 붙여, 담당 검색 입력에서 ↑↓·Enter·Escape 동작을 동일하게 유지.
 - **사이드바 빈 문구**: `내 업무 항목`·`멘션` 섹션의 빈 상태는 `sidebar-item sidebar-item-empty`(작은 글자·`--text-muted` 계열).
 - **다크 기본 테마**: `:root`의 `--text-secondary` / `--text-muted`를 약간 밝게 조정해 보조 텍스트 대비를 올림. 범용 보조 문구는 `.muted`.
-- **내 업무 항목 동기화**: `flushWorkHubSave()` 성공 시 `scheduleRefreshMyChannels()`로 사이드바 담당 업무 목록을 갱신한다.
+- **내 할 일 동기화**: `flushWorkHubSave()` 성공 시 `scheduleRefreshMyChannels()`로 사이드바 내 할 일(`me/todos`)을 갱신한다.
 - **채널 전환 없이 워크플로우만**: 사이드바 행 클릭 시 `selectChannel`을 호출하지 않고 `workHubScopedChannelId`만 설정한 뒤 `loadWorkHubChannelMembersForAssignee` / `loadChannelWorkItems` / `loadChannelKanbanBoard`가 `getWorkHubChannelId()`로 해당 채널 API를 호출한다. 채팅 패널의 `activeChannelId`는 그대로. 워크플로우 페이지 닫기(`btnCloseWorkflowPage*`) 시 `clearWorkHubScopedChannel()`. 헤더 `📋`로 열 때는 `workHubScopedChannelId = null`로 현재 채널 기준.
 - **사이드바 워크플로우 진입 분리**: `btnSidebarWorkflow`는 `openWorkflowPickerFromSidebar()`를 호출하며, 이 경로는 즉시 API 로드하지 않고 먼저 선택 UI를 표시한다. 사용자가 `btnWorkflowOpenChannel`로 대상을 확정하면 `selectChannel(...)` 후 `openWorkHubModalForActiveChannel()`로 진입한다.
 - **칸반 반응형 폭 정책**: `#channelKanbanBoard .kanban-column`은 고정 `px` 폭을 사용하지 않고 `flex: 1 1 0`으로 3컬럼 균등 분할한다. 목적은 큰 화면 우측 빈공간 제거와 작은 화면 가로 스크롤 방지(보드 자체 `overflow-x: hidden`).

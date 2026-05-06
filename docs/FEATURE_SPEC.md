@@ -617,7 +617,8 @@
   - `PUT /api/work-items/{workItemId}` — 채널 업무 수정(`actorEmployeeNo`, 부분 갱신; 마감 제거 시 `clearDueAt: true`, 설정 시 `dueAt` ISO-8601, 우선순위는 `priority`)
   - `DELETE /api/work-items/{workItemId}?actorEmployeeNo=` — 채널 멤버, **기본 소프트 삭제**(`in_use=false`). `hard=true` 시 연결 칸반 카드 삭제 후 업무 행 완전 삭제
   - `POST /api/work-items/{workItemId}/restore?actorEmployeeNo=` — 소프트 삭제된 업무 복원(`in_use=true`)
-  - `GET /api/work-items/sidebar/by-assigned-cards?employeeNo=&limit=` — 내가 **칸반 카드 담당**인 업무 목록(사이드바; 응답에 `dueAt`, `priority` 포함)
+  - `GET /api/work-items/sidebar/by-assigned-cards?employeeNo=&limit=` — 내가 **칸반 카드 담당**인 업무 목록(레거시 단일 버킷; 응답에 `dueAt`, `priority`, `sourceMessageId` 포함)
+  - `GET /api/work-items/me/todos?employeeNo=&limitPerBucket=` — 사이드바 **내 할 일**: `overdue`(서버 기준 오늘 시작은 **Asia/Seoul**)·`dueToday`·`mentionLinked`(원본 메시지 본문에 `@{내사번|…}` 또는 `@{내사번}` 토큰)·`kanbanAssigned`(담당 칸반과 동일 소스). 행에 `sourceMessageId`가 있으면 멘션 연계 행에서 채팅 타임라인 포커스에 사용
   - `GET /api/kanban/channels/{channelId}/board?employeeNo=` — 채널 기본 칸반 보드 조회/없으면 자동 생성
 - 입력/출력:
   - 업무 상태는 API 값은 `OPEN`/`IN_PROGRESS`/`DONE`이며, UI 셀렉트·목록은 한글 라벨(예: 미착수·진행 중·완료)로 표시
@@ -626,7 +627,7 @@
   - UI: 레이아웃은 **항상** **업무 항목 패널 위 → 칸반 보드 패널 아래** 한 열 세로 배치(`work-hub-body` flex column; 넓은 화면에서도 좌우 2열로 나누지 않음). 모달 본문 전체 스크롤. 신규 카드는 **저장된 업무**를 선택한 뒤 큐에 넣고, 저장 시 생성. 업무 **✕**는 소프트 삭제를 **저장 전까지** `workHubPendingWorkDeleteIds`에만 넣고, 목록에서는 **삭제 예정**(주황 배지)·**삭제 취소**로 표시(행을 바로 숨기지 않음). 비활성 업무의 **복원**·**완전 삭제**는 **업무 목록 행** 또는 **업무 상세**에서 선택 가능하며, 모두 `workHubPendingWorkRestoreIds` / `workHubPendingWorkPurgeIds`에만 쌓였다가 **업무·칸반 모달 저장(`flushWorkHubSave`)** 시에만 API 호출(즉시 DB 반영 아님). 목록에서 **복원 예정**(녹색 배지)·**완전 삭제 예정**(적색 배지)으로 표시, **취소** 버튼으로 대기 큐에서 제거. **완전 삭제**는 서버에서 연결 칸반 카드를 먼저 지우므로, 저장 시 해당 업무의 카드 ID를 `workHubPendingCard*` pending 맵에서 제거한 뒤 나머지 카드만 `PUT`(없으면 「카드를 찾을 수 없습니다」 방지). 공통 확인창 `#modalAppDialog`는 z-index를 상세 모달보다 높게 두어 **완전 삭제 확인**이 상세 모달에 가리지 않음
   - 저장으로 삭제 마킹이 반영된 업무(`inUse=false`)는 업무 목록에서 **맨 아래**로 정렬한다. 또한 해당 비활성 업무에 연결된 칸반 카드는 각 컬럼 내 정렬에서 **맨 아래**로 배치해, 현재 진행 중인(활성) 업무·카드가 항상 위쪽에 보이게 한다
   - 모달 **저장** 성공 시 사이드바 **내 업무 항목** 목록을 다시 조회해 담당 칸반 변경이 즉시 반영된다
-  - 사이드바 **내 업무 항목** 행 클릭은 채팅 채널 전환 없이 해당 채널의 업무·칸반 모달만 연다(스코프된 `channelId`로 API 호출). 행 **보조 텍스트**는 `channelName`인데, DM은 내부 채널명(`_dm__...`)이 아니라 **표시용 제목**(`channels.description`)을 쓴다 — API `GET /api/work-items/sidebar/by-assigned-cards` 응답의 `channelName`은 백엔드에서 DM일 때 `description` 우선(`WorkItemService.channelDisplayNameForSidebar`). 프론트는 로드된 채널 목록으로 한 번 더 보정(`displayChannelLabelForWorkSidebar`). 업무·칸반 모달 **업무 목록**에서 행을 클릭해 상세를 열면 해당 행에 `channel-work-item--selected`로 **선택 강조**(테두리·그림자·배경 틴트), 사이드바에서 항목을 눌러 들어올 때도 동일 키로 강조
+  - 사이드바 **내 할 일**(`GET /api/work-items/me/todos`)은 **지연 / 오늘 마감 / 멘션 연계 / 담당 칸반** 블록으로 나뉜다. **담당 칸반·지연·오늘 마감** 행 클릭은 채팅 전환 없이 해당 채널의 업무·칸반 모달만 연다(스코프된 `channelId`). **멘션 연계** 행 클릭은 해당 채널 채팅으로 전환하고 원본 메시지(`sourceMessageId`)로 스크롤·하이라이트한다. 행 **보조 텍스트**의 채널명은 DM일 때 표시용 제목 우선(`WorkItemService.channelDisplayNameForSidebar`), 프론트는 `displayChannelLabelForWorkSidebar`로 보정. 업무·칸반 모달 **업무 목록**에서 행을 클릭해 상세를 열면 해당 행에 `channel-work-item--selected`로 **선택 강조**, 사이드바에서 담당 칸반 등 워크플로 진입 시에도 동일 키로 강조
   - 칸반 카드는 컬럼 내 세로 순서뿐 아니라 **컬럼 간 드래그앤드롭**으로 이동 가능. **`article.kanban-card-item`에 `draggable="true"`** 를 두되, `dragstart` 시 이벤트 타깃이 **`input`/`textarea`/`select`/`button`/담당 검색 영역 등**이면 `preventDefault`로 드래그를 막아 본문·제목은 잡고 끌고, 컨트롤은 그대로 쓸 수 있게 한다. Chrome에서 카드가 `draggable` 조상 아래에 있을 때 이동 후 `<select>` 표시가 어긋나는 문제는 **드롭 처리 말미에 `rebuildKanbanCardColumnSelectDom`으로 컬럼 `<select>` 노드를 통째로 교체**하고, 컬럼 변경은 **`#channelKanbanBoard`에 위임한 `change` 리스너 한 개**로 처리한다. 드롭 시 출발·도착 컬럼의 순서·컬럼 임시 상태를 반영하고, **저장** 시 컬럼이 바뀐 카드에 대해 `PUT .../kanban/cards/{id}`에 `columnId`와 함께 컬럼에 대응하는 `status`(`OPEN`/`IN_PROGRESS`/`DONE`, 기본 3컬럼은 정렬 순 0·1·2)를 함께 보낸다
   - 카드가 **연결된 업무(`work_item_id`)** 가 있을 때, 드래그앤드롭·카드 행 컬럼 셀렉트·카드 상세에서 컬럼을 바꾸면 프론트의 **`workHubPendingWorkStatus`**(업무 목록 저장용)를 연결된 **전체 카드 상태 집계**로 계산한다. 즉, 해당 업무의 카드가 **모두 완료 컬럼**일 때만 업무를 `DONE`으로 두고, 하나라도 미완료면 `IN_PROGRESS`/`OPEN`으로 유지해 “카드 하나 완료 = 업무 전체 완료” 오판정을 막는다
   - 드롭 직후에는 보드 **모든 컬럼**의 카드 순서·`columnId` pending을 DOM에서 다시 읽고(`syncKanbanBoardFromDomFull`), 카드 하단 컬럼 `<select>` 값을 카드가 실제로 들어 있는 컬럼(`data-column-id`)과 맞춘다 — `dragend`/`drop` 이벤트 순서 차이로 셀렉트만 어긋나는 현상 방지
@@ -993,7 +994,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   - 저장 직전 카드별 담당 변경 연산을 정규화해(add/remove 충돌 제거), 담당 해제 후 저장 시 기존 담당이 다시 붙는 현상을 보정
   - 정규화 단계에서 로컬 보드 트리에서 카드를 찾지 못하면 서버 기준 assignee diff가 비어 담당 `DELETE`가 생략될 수 있어, `id`/`cardId` 복합 탐색·pending 맵 키 정규화·카드 미탐색 시 스냅샷 해제 목록 폴백으로 보정
 - 좌측 사이드바:
-  - **워크플로우** 고정 진입(`sidebar-section--hub-shortcuts`)과 별도로 **담당 업무 목록** 섹션(`myKanbanList`)을 둔다.
+  - **워크플로우** 고정 진입(`sidebar-section--hub-shortcuts`)과 별도로 **내 할 일** 섹션(컨테이너 id `myKanbanList`, `GET /api/work-items/me/todos`)을 둔다.
   - `GET /api/work-items/sidebar/by-assigned-cards?employeeNo=...&limit=...`로 **내가 칸반 카드 담당으로 지정된 업무 항목** 목록을 조회해 렌더(채널 연동 보드·`kanban_card_assignees` 기준)
   - 목록 항목 클릭 시 채팅 채널 전환 없이 `workHubScopedChannelId`로 **워크플로우** 모달을 열고 해당 행·카드를 스크롤·강조. 이때 사이드바 **워크플로우**로만 먼저 연 **채널 선택 UI**(`workflowNeedsChannelPick`)가 떠 있었다면 채널이 목록에서 확정되므로 플래그를 해제하고 `renderWorkflowChannelPicker()`로 업무·칸반 본문을 표시한다(상단 `연결:`만 바뀌고 본문이 숨겨진 채로 남는 버그 방지).
 

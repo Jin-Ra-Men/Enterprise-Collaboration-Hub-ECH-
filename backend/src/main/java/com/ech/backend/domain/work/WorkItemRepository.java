@@ -1,5 +1,6 @@
 package com.ech.backend.domain.work;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +25,77 @@ public interface WorkItemRepository extends JpaRepository<WorkItem, Long> {
                     + "where a.user.employeeNo = :emp"
     )
     List<WorkItem> findDistinctWithMyCardAssignment(@Param("emp") String employeeNo);
+
+    @Query(
+            """
+                    select w from WorkItem w
+                    join fetch w.sourceChannel ch
+                    join fetch w.createdBy cb
+                    left join fetch w.sourceMessage sm
+                    where w.inUse = true
+                      and w.status <> 'DONE'
+                      and w.dueAt is not null
+                      and w.dueAt < :startOfToday
+                      and exists (
+                          select 1 from ChannelMember cm
+                          where cm.channel.id = ch.id and cm.user.employeeNo = :emp
+                      )
+                    order by w.dueAt asc
+                    """
+    )
+    List<WorkItem> findOverdueForMember(
+            @Param("emp") String employeeNo,
+            @Param("startOfToday") OffsetDateTime startOfToday,
+            Pageable pageable);
+
+    @Query(
+            """
+                    select w from WorkItem w
+                    join fetch w.sourceChannel ch
+                    join fetch w.createdBy cb
+                    left join fetch w.sourceMessage sm
+                    where w.inUse = true
+                      and w.status <> 'DONE'
+                      and w.dueAt is not null
+                      and w.dueAt >= :startInclusive
+                      and w.dueAt < :endExclusive
+                      and exists (
+                          select 1 from ChannelMember cm
+                          where cm.channel.id = ch.id and cm.user.employeeNo = :emp
+                      )
+                    order by w.dueAt asc
+                    """
+    )
+    List<WorkItem> findDueTodayForMember(
+            @Param("emp") String employeeNo,
+            @Param("startInclusive") OffsetDateTime startInclusive,
+            @Param("endExclusive") OffsetDateTime endExclusive,
+            Pageable pageable);
+
+    /**
+     * 원본 메시지 본문에 @{사번|…} 또는 @{사번} 멘션 토큰이 포함된 업무(채널 멤버만).
+     */
+    @Query(
+            """
+                    select distinct w from WorkItem w
+                    join fetch w.sourceChannel ch
+                    join fetch w.createdBy cb
+                    join fetch w.sourceMessage sm
+                    where w.inUse = true
+                      and w.status <> 'DONE'
+                      and sm.isDeleted = false
+                      and (
+                          sm.body like concat('@{', :emp, '|%')
+                          or sm.body like concat('@{', :emp, '}')
+                      )
+                      and exists (
+                          select 1 from ChannelMember cm
+                          where cm.channel.id = ch.id and cm.user.employeeNo = :emp
+                      )
+                    order by w.updatedAt desc
+                    """
+    )
+    List<WorkItem> findMentionLinkedForMember(@Param("emp") String employeeNo, Pageable pageable);
 
     /**
      * 통합 검색: 업무 제목 또는 설명에서 키워드를 검색한다 (워크스페이스 전체 대상).

@@ -4,6 +4,7 @@ import com.ech.backend.api.auditlog.AuditLogService;
 import com.ech.backend.api.work.dto.CreateWorkItemFromMessageRequest;
 import com.ech.backend.api.work.dto.CreateWorkItemRequest;
 import com.ech.backend.api.work.dto.UpdateWorkItemRequest;
+import com.ech.backend.api.work.dto.MyWorkTodosResponse;
 import com.ech.backend.api.work.dto.WorkItemResponse;
 import com.ech.backend.api.work.dto.WorkItemSidebarResponse;
 import com.ech.backend.domain.channel.Channel;
@@ -20,9 +21,12 @@ import com.ech.backend.domain.kanban.KanbanCardRepository;
 import com.ech.backend.domain.work.WorkItem;
 import com.ech.backend.domain.work.WorkItemPriority;
 import com.ech.backend.domain.work.WorkItemRepository;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -273,16 +277,52 @@ public class WorkItemService {
                 .filter(WorkItem::isInUse)
                 .sorted(Comparator.comparing(WorkItem::getUpdatedAt).reversed())
                 .limit(size)
-                .map(w -> new WorkItemSidebarResponse(
-                        w.getId(),
-                        w.getTitle(),
-                        w.getSourceChannel().getId(),
-                        channelDisplayNameForSidebar(w.getSourceChannel()),
-                        w.isInUse(),
-                        w.getDueAt(),
-                        w.getPriority() != null ? w.getPriority().name() : WorkItemPriority.NORMAL.name(),
-                        w.getUpdatedAt()))
+                .map(this::toSidebarResponse)
                 .toList();
+    }
+
+    /**
+     * Sidebar «내 할 일»: 지연·오늘(Asia/Seoul)·멘션 연계 원본 메시지·담당 칸반.
+     */
+    public MyWorkTodosResponse listMyWorkTodos(String employeeNo, int limitPerBucket) {
+        String emp = employeeNo == null ? "" : employeeNo.trim();
+        if (emp.isBlank()) {
+            throw new IllegalArgumentException("employeeNo는 필수입니다.");
+        }
+        int size = Math.min(Math.max(limitPerBucket, 1), 50);
+        var page = PageRequest.of(0, size);
+        ZoneId zone = ZoneId.of("Asia/Seoul");
+        LocalDate today = LocalDate.now(zone);
+        var startOfToday = today.atStartOfDay(zone).toOffsetDateTime();
+        var startOfTomorrow = today.plusDays(1).atStartOfDay(zone).toOffsetDateTime();
+
+        List<WorkItemSidebarResponse> overdue = workItemRepository.findOverdueForMember(emp, startOfToday, page).stream()
+                .map(this::toSidebarResponse)
+                .toList();
+        List<WorkItemSidebarResponse> dueToday = workItemRepository
+                .findDueTodayForMember(emp, startOfToday, startOfTomorrow, page)
+                .stream()
+                .map(this::toSidebarResponse)
+                .toList();
+        List<WorkItemSidebarResponse> mentionLinked = workItemRepository.findMentionLinkedForMember(emp, page).stream()
+                .map(this::toSidebarResponse)
+                .toList();
+        List<WorkItemSidebarResponse> kanbanAssigned = listWorkItemsWithMyCardAssignment(employeeNo, size);
+        return new MyWorkTodosResponse(overdue, dueToday, mentionLinked, kanbanAssigned);
+    }
+
+    private WorkItemSidebarResponse toSidebarResponse(WorkItem w) {
+        Long msgId = w.getSourceMessage() == null ? null : w.getSourceMessage().getId();
+        return new WorkItemSidebarResponse(
+                w.getId(),
+                w.getTitle(),
+                w.getSourceChannel().getId(),
+                channelDisplayNameForSidebar(w.getSourceChannel()),
+                w.isInUse(),
+                w.getDueAt(),
+                w.getPriority() != null ? w.getPriority().name() : WorkItemPriority.NORMAL.name(),
+                msgId,
+                w.getUpdatedAt());
     }
 
     @Transactional

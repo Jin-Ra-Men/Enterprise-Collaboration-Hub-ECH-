@@ -1204,6 +1204,32 @@ html:not([data-theme="light"]) .sidebar-item.active::before {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.sidebar-work-todos-root {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 4px 10px;
+}
+.sidebar-todo-section-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 2px 8px 4px;
+}
+.sidebar-todo-sublist {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sidebar-work-todos-empty {
+  padding: 10px 12px;
+  margin: 0 4px;
+}
+.sidebar-todo-item--mention .item-label {
+  font-weight: 650;
+}
 .sidebar-item-empty {
   cursor: default;
   font-size: 12px;

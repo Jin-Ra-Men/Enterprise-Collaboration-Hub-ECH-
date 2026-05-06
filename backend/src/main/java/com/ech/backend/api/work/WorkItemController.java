@@ -3,6 +3,7 @@ package com.ech.backend.api.work;
 import com.ech.backend.api.work.dto.CreateWorkItemFromMessageRequest;
 import com.ech.backend.api.work.dto.CreateWorkItemRequest;
 import com.ech.backend.api.work.dto.UpdateWorkItemRequest;
+import com.ech.backend.api.work.dto.MyWorkTodosResponse;
 import com.ech.backend.api.work.dto.WorkItemResponse;
 import com.ech.backend.api.work.dto.WorkItemSidebarResponse;
 import com.ech.backend.common.api.ApiResponse;
@@ -55,6 +56,18 @@ public class WorkItemController {
     ) {
         return ApiResponse.success(
                 workItemService.listWorkItemsWithMyCardAssignment(employeeNo, limit == null ? 30 : limit));
+    }
+
+    /**
+     * Sidebar «내 할 일»: 지연·오늘 마감·멘션 연계 업무·담당 칸반 (버킷별 상한).
+     */
+    @GetMapping("/api/work-items/me/todos")
+    public ApiResponse<MyWorkTodosResponse> listMyWorkTodos(
+            @RequestParam String employeeNo,
+            @RequestParam(required = false, defaultValue = "25") Integer limitPerBucket
+    ) {
+        return ApiResponse.success(
+                workItemService.listMyWorkTodos(employeeNo, limitPerBucket == null ? 25 : limitPerBucket));
     }
 
     @GetMapping("/api/channels/{channelId}/work-items")
