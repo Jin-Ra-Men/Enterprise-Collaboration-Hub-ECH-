@@ -30,7 +30,7 @@ public class AiGatewayController {
     }
 
     @PostMapping("/api/ai/gateway/chat")
-    public ResponseEntity<ApiResponse<Void>> chat(
+    public ResponseEntity<ApiResponse<?>> chat(
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody AiGatewayChatRequest request,
             HttpServletRequest httpRequest

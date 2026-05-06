@@ -51,6 +51,14 @@ app:
   ai:
     allow-external-llm: ${AI_ALLOW_EXTERNAL_LLM:false}
     policy-version: ${AI_POLICY_VERSION:2026-05-06}
+    chat-max-requests-per-minute: ${AI_CHAT_RL_PER_MINUTE:30}
+    chat-max-requests-per-hour: ${AI_CHAT_RL_PER_HOUR:300}
+    llm:
+      http-enabled: ${AI_LLM_HTTP_ENABLED:false}
+      base-url: ${AI_LLM_BASE_URL:}
+      api-key: ${AI_LLM_API_KEY:}
+      model: ${AI_LLM_MODEL:gpt-4o-mini}
+      max-tokens: ${AI_LLM_MAX_TOKENS:1024}
   # true이면 500 응답에 예외 요약을 붙임(로컬 디버깅). 운영은 EXPOSE_ERROR_DETAIL=false 권장
   expose-error-detail: ${EXPOSE_ERROR_DETAIL:true}
   # 릴리즈 파일 저장 디렉토리 (운영 환경에서 절대 경로 지정 권장)

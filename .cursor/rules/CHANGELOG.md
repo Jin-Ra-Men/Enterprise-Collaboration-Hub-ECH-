@@ -5,6 +5,10 @@
 ## 2026-05-06
 
 ### Added
+- **AI 게이트웨이 Phase 7-4-0**: 사번별 분·시간 **레이트 리밋**(`AiGatewayRateLimiter`, 초과 시 **429**·`AI_GATEWAY_RATE_LIMITED`), **OpenAI 호환 HTTP 어댑터**(`app.ai.llm.*`, 설정 시에만 마스킹 프롬프트 전송·성공 **200**·`AiGatewayChatResponse`). `GET /status`에 `chatMaxRequestsPerMinute`/`Hour`, `llmHttpConfigured`. 감사 `AI_GATEWAY_LLM_SUCCEEDED`/`FAILED`. `GlobalExceptionHandler`·`AiGatewayRateLimitApiTest` 등.
+
+### Fixed
+- `AiGatewayLlmConfiguration`에 누락된 `RestTemplate` import 추가(컴파일 오류).
 - **AI 게이트웨이 보강**: `citedMessageIds`(최대 20·채널 일치·멤버 검증), `AiGatewayPiiMasker` 휴리스틱(주민번호 형태·16자리 카드)·감사 `citedDistinct`/`piiRedactions`. 채팅 컴포저 `.composer-ai-evidence-hint`. 테스트 확장.
 - **AI 게이트웨이 Phase 7-1(스텁)**: `docs/AI_GATEWAY_POLICY.md`, `app.ai.*` 설정, `GET /api/ai/gateway/status`, `POST /api/ai/gateway/chat`(기본 403·메타 감사·프롬프트 미저장; 허용 플래그 시 501 스텁). `AuditEventType.AI_GATEWAY_*`. `AiGatewayApiTest`·`AiGatewayServiceTest`. 로드맵 `7-1-0`·`7-1-1` 완료 처리.
 - **캘린더 iCal Phase 6-5**: `CalendarIcsCodec` 기반 `GET /api/calendar/export.ics`(UTC ICS)·`POST /api/calendar/import`(multipart, 직접 생성과 동일 저장 경로, 크기·건수 상한·파싱 실패 건너뜀). 워크 허브에 내보내기/가져오기 버튼 및 **제안 대기** 목록 UI(`GET /api/calendar/suggestions` 기본 PENDING). `CalendarApiTest`·문서·로드맵 6-5 완료 처리.

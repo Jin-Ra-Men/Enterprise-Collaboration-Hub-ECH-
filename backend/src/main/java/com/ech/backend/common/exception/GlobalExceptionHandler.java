@@ -89,6 +89,17 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.fail("BAD_REQUEST", exception.getMessage()));
     }
 
+    @ExceptionHandler(AiGatewayRateLimitedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAiGatewayRateLimited(
+            AiGatewayRateLimitedException exception,
+            HttpServletRequest request
+    ) {
+        safeLog("AI_GATEWAY_RATE_LIMITED", exception, request);
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(ApiResponse.fail("AI_GATEWAY_RATE_LIMITED", exception.getMessage()));
+    }
+
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ApiResponse<Void>> handleMaxUpload(
             MaxUploadSizeExceededException exception,

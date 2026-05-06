@@ -4,6 +4,9 @@ package com.ech.backend.api.aigateway.dto;
 public record AiGatewayStatusResponse(
         boolean externalLlmAllowed,
         String policyVersion,
-        String defaultPolicySummary
+        String defaultPolicySummary,
+        int chatMaxRequestsPerMinute,
+        int chatMaxRequestsPerHour,
+        boolean llmHttpConfigured
 ) {
 }

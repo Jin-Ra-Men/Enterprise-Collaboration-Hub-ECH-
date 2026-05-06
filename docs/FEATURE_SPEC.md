@@ -100,18 +100,18 @@
 
 ---
 
-## AI 게이트웨이 (Phase 7-1 스텁)
+## AI 게이트웨이 (Phase 7-1 진입 + 7-4-0 레이트·HTTP 어댑터)
 
 - 목적: 협업 **원문을 공용 인터넷 LLM으로 기본 전송하지 않는다**는 정책을 **코드 단 일 진입점**으로 강제하고, 호출 시도를 **메타만** 감사한다.
 - 사용자: 인증된 멤버(JWT). 클라이언트는 LLM에 직접 연결하지 않고 백엔드 게이트웨이만 호출한다.
 - 관련 문서: `docs/AI_GATEWAY_POLICY.md`, `docs/COLLABORATION_TOOL_DIRECTION.md` §5~7.
-- 관련 설정: `application.yml` — `app.ai.allow-external-llm`(기본 `false`, 환경변수 `AI_ALLOW_EXTERNAL_LLM`), `app.ai.policy-version`(표시용).
+- 관련 설정: `application.yml` — `app.ai.allow-external-llm`(기본 `false`, `AI_ALLOW_EXTERNAL_LLM`), `app.ai.policy-version`, **레이트** `app.ai.chat-max-requests-per-minute` / `chat-max-requests-per-hour` (`AI_CHAT_RL_*`, `0`이면 해당 창 비활성), **선택 HTTP LLM** `app.ai.llm.http-enabled`, `base-url`, `api-key`, `model`, `max-tokens` (`AI_LLM_*`).
 - 관련 API:
-  - `GET /api/ai/gateway/status` — 정책 요약(`externalLlmAllowed`, `policyVersion`, `defaultPolicySummary`).
-  - `POST /api/ai/gateway/chat` — 본문 JSON `purpose`, 선택 `employeeNo`(JWT와 일치), 선택 `channelId`, `prompt`(최대 8000자), 선택 `citedMessageIds`(최대 20). **근거 ID가 1개 이상이면 `channelId` 필수**이며, 각 ID는 해당 채널의 메시지이고 호출자는 채널 멤버여야 한다. **`allow-external-llm=false` 이면 HTTP 403** (`AI_GATEWAY_BLOCKED`). **`true` 이면 현재 HTTP 501** 스텁 (`AI_GATEWAY_NOT_CONFIGURED`) — 제공자 연동 전 오동작 방지.
-- 감사: `AI_GATEWAY_POLICY_BLOCKED`, `AI_GATEWAY_PROVIDER_NOT_CONFIGURED` — **프롬프트 원문 미저장**, detail 에 `purpose`·`promptChars`·`channelId`·`citedDistinct`·`piiRedactions`(휴리스틱 마스킹 치환 건수) 등만.
+  - `GET /api/ai/gateway/status` — 정책 요약(`externalLlmAllowed`, `policyVersion`, `defaultPolicySummary`, `chatMaxRequestsPerMinute`, `chatMaxRequestsPerHour`, `llmHttpConfigured`).
+  - `POST /api/ai/gateway/chat` — 본문 JSON `purpose`, 선택 `employeeNo`(JWT와 일치), 선택 `channelId`, `prompt`(최대 8000자), 선택 `citedMessageIds`(최대 20). **근거 ID가 1개 이상이면 `channelId` 필수**이며, 각 ID는 해당 채널의 메시지이고 호출자는 채널 멤버여야 한다. 처리 순서: **레이트 리밋 → 검증 → 정책**. **`allow-external-llm=false` 이면 HTTP 403** (`AI_GATEWAY_BLOCKED`). **`true` 이면** `llm.http-enabled` 및 `base-url`·`api-key`가 모두 있을 때만 **마스킹된 프롬프트**로 OpenAI 호환 `POST .../v1/chat/completions` 호출·성공 시 **200**과 `replyText`·`model`·`totalTokens`; 제공자 미구성 시 **501** (`AI_GATEWAY_NOT_CONFIGURED`); 한도 초과 시 **429** (`AI_GATEWAY_RATE_LIMITED`); 업스트림 오류 시 **502** (`AI_GATEWAY_LLM_UPSTREAM_ERROR` 등).
+- 감사: `AI_GATEWAY_POLICY_BLOCKED`, `AI_GATEWAY_PROVIDER_NOT_CONFIGURED`, `AI_GATEWAY_LLM_SUCCEEDED`, `AI_GATEWAY_LLM_FAILED` — **프롬프트 원문 미저장**, detail 에 `purpose`·`promptChars`·`channelId`·`citedDistinct`·`piiRedactions` 등만.
 - UI: 채팅 컴포저 하단 `.composer-ai-evidence-hint` — 근거 `message_id`·전송 전 편집 안내(Phase 7-1-2).
-- 테스트: `AiGatewayApiTest`, `AiGatewayServiceTest`, `AiGatewayPiiMaskerTest`.
+- 테스트: `AiGatewayApiTest`, `AiGatewayRateLimitApiTest`, `AiGatewayServiceTest`, `AiGatewayPiiMaskerTest`.
 
 ---
 
