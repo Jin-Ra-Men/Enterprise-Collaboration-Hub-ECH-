@@ -5,6 +5,7 @@
 ## 2026-05-06
 
 ### Changed
+- **README**: AI 게이트웨이 정책 링크 행에 프로액티브 제안함 후속(스케줄·멤버 패널 옵트인·딥링크) 안내 보강.
 - **AI 게이트웨이 설정**: `ai.gateway.*`, `ai.llm.*`를 **기초설정(app_settings)**에 시드·관리자 UI에서 수정 가능. `AiGatewayEffectiveSettings`가 DB 값(비어 있지 않을 때)과 `app.ai.*`/환경 폴백을 병합. LLM 클라이언트는 호출 시점 설정을 읽어 재기동 없이 반영. `AppSettingKey`, `DataInitializer`, 문서·`frontend/index.html` 안내.
 
 ### Added
