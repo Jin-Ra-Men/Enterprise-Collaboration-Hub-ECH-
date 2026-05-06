@@ -105,9 +105,9 @@
 - 목적: 협업 **원문을 공용 인터넷 LLM으로 기본 전송하지 않는다**는 정책을 **코드 단 일 진입점**으로 강제하고, 호출 시도를 **메타만** 감사한다.
 - 사용자: 인증된 멤버(JWT). 클라이언트는 LLM에 직접 연결하지 않고 백엔드 게이트웨이만 호출한다.
 - 관련 문서: `docs/AI_GATEWAY_POLICY.md`, `docs/COLLABORATION_TOOL_DIRECTION.md` §5~7.
-- 관련 설정: **기초설정(app_settings)** 키가 우선하고, 값이 비어 있으면 `application.yml` — `app.ai.allow-external-llm`(기본 `false`, `AI_ALLOW_EXTERNAL_LLM`), `app.ai.policy-version`, 레이트 `app.ai.chat-max-requests-*` (`AI_CHAT_RL_*`, `0`이면 해당 창 비활성), 선택 HTTP LLM `app.ai.llm.*` (`AI_LLM_*`).
+- 관련 설정: **기초설정(app_settings)** 키가 우선하고, 값이 비어 있으면 `application.yml` — `app.ai.allow-external-llm`(기본 `false`, `AI_ALLOW_EXTERNAL_LLM`), `app.ai.policy-version`, 레이트 `app.ai.chat-max-requests-*` (`AI_CHAT_RL_*`, `0`이면 해당 창 비활성), **LLM 입력 상한** `app.ai.llm-max-input-chars` (`AI_GATEWAY_LLM_MAX_INPUT_CHARS`, 기본 8000·실효 256–8000 코드포인트), 선택 HTTP LLM `app.ai.llm.*` (`AI_LLM_*`).
 - 관련 API:
-  - `GET /api/ai/gateway/status` — 정책 요약(`externalLlmAllowed`, `policyVersion`, `defaultPolicySummary`, `chatMaxRequestsPerMinute`, `chatMaxRequestsPerHour`, `llmHttpConfigured`).
+  - `GET /api/ai/gateway/status` — 정책 요약(`externalLlmAllowed`, `policyVersion`, `defaultPolicySummary`, `chatMaxRequestsPerMinute`, `chatMaxRequestsPerHour`, `llmHttpConfigured`, `llmMaxInputChars`).
   - `POST /api/ai/gateway/chat` — 본문 JSON `purpose`, 선택 `employeeNo`(JWT와 일치), 선택 `channelId`, `prompt`(최대 8000자), 선택 `citedMessageIds`(최대 20). **근거 ID가 1개 이상이면 `channelId` 필수**이며, 각 ID는 해당 채널의 메시지이고 호출자는 채널 멤버여야 한다. 처리 순서: **레이트 리밋 → 검증 → 정책**. **`allow-external-llm=false` 이면 HTTP 403** (`AI_GATEWAY_BLOCKED`). **`true` 이면** `llm.http-enabled` 및 `base-url`·`api-key`가 모두 있을 때만 **마스킹된 프롬프트**로 OpenAI 호환 `POST .../v1/chat/completions` 호출·성공 시 **200**과 `replyText`·`model`·`totalTokens`; 제공자 미구성 시 **501** (`AI_GATEWAY_NOT_CONFIGURED`); 한도 초과 시 **429** (`AI_GATEWAY_RATE_LIMITED`); 업스트림 오류 시 **502** (`AI_GATEWAY_LLM_UPSTREAM_ERROR` 등).
 - 감사: `AI_GATEWAY_POLICY_BLOCKED`, `AI_GATEWAY_PROVIDER_NOT_CONFIGURED`, `AI_GATEWAY_LLM_SUCCEEDED`, `AI_GATEWAY_LLM_FAILED` — **프롬프트 원문 미저장**, detail 에 `purpose`·`promptChars`·`channelId`·`citedDistinct`·`piiRedactions` 등만.
 - UI: 채팅 컴포저 하단 `.composer-ai-evidence-hint` — 근거 `message_id`·전송 전 편집 안내(Phase 7-1-2). **Phase 7-2-1-a**: 컴포저 버튼(✨ 답장 초안, 요약), 검색 모달 **AI에게 물어보기**(단일 채널 메시지·댓글 근거). **7-2-1-b·7-2-2**: 스레드 모달 AI, 워크 허브 업무·칸반 설명 필드·상세 모달·`frontend/app.js`.
@@ -451,7 +451,7 @@
 - 목적: `app_settings` 테이블에 전역 키-값을 관리자가 조회·수정하고, **새 행을 직접 추가**할 수 있게 함
 - 사용자: `ADMIN`
 - 관련 화면: 관리자 > **설정** (`viewSettings`) — 기존 목록 + 「기초설정 추가」 카드(설정 키·값·설명·추가 버튼)
-- **AI 게이트웨이**: 기동 시 `DataInitializer`가 다음 키를 시드한다(값은 당시 `application.yml`/환경변수와 동기). **비어 있는 값은 yml·환경 폴백**으로 해석된다(`AppSettingsService.get`). 키: `ai.gateway.allow-external-llm`, `ai.gateway.policy-version`, `ai.gateway.chat-max-requests-per-minute`, `ai.gateway.chat-max-requests-per-hour`, `ai.llm.http-enabled`, `ai.llm.base-url`, `ai.llm.api-key`, `ai.llm.model`, `ai.llm.max-tokens`. 구현: `AiGatewayEffectiveSettings`.
+- **AI 게이트웨이**: 기동 시 `DataInitializer`가 다음 키를 시드한다(값은 당시 `application.yml`/환경변수와 동기). **비어 있는 값은 yml·환경 폴백**으로 해석된다(`AppSettingsService.get`). 키: `ai.gateway.allow-external-llm`, `ai.gateway.policy-version`, `ai.gateway.chat-max-requests-per-minute`, `ai.gateway.chat-max-requests-per-hour`, `ai.gateway.llm-max-input-chars`, `ai.llm.http-enabled`, `ai.llm.base-url`, `ai.llm.api-key`, `ai.llm.model`, `ai.llm.max-tokens`. 구현: `AiGatewayEffectiveSettings`.
 - 관련 API:
   - `GET /api/admin/settings` — 전체 목록
   - `GET /api/admin/settings/{key}` — 단건

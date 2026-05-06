@@ -66,7 +66,8 @@ public class AiGatewayService {
                 DEFAULT_POLICY_SUMMARY_KO,
                 gatewaySettings.getChatMaxRequestsPerMinute(),
                 gatewaySettings.getChatMaxRequestsPerHour(),
-                llmInvocationPort.isConfigured()
+                llmInvocationPort.isConfigured(),
+                gatewaySettings.getLlmMaxInputChars()
         );
     }
 
@@ -80,7 +81,8 @@ public class AiGatewayService {
         Long actorUserId = userRepository.findByEmployeeNo(actorEmp).map(User::getId).orElse(null);
         List<Long> citedNorm = normalizeCitedIds(request.citedMessageIds());
         validateCitations(request.channelId(), actorEmp, citedNorm);
-        int piiRedactions = AiGatewayPiiMasker.mask(request.prompt()).redactionCount();
+        AiGatewayPiiMasker.MaskResult masked = AiGatewayPiiMasker.mask(request.prompt());
+        int piiRedactions = masked.redactionCount();
         String detail = buildAuditDetail(request, piiRedactions, citedNorm.size());
         String requestId = httpRequest != null ? httpRequest.getHeader("X-Request-Id") : null;
 
@@ -120,9 +122,13 @@ public class AiGatewayService {
                     ));
         }
 
-        String maskedPrompt = AiGatewayPiiMasker.mask(request.prompt()).maskedText();
+        int maxInputCp = gatewaySettings.getLlmMaxInputChars();
+        String maskedPrompt = masked.maskedText();
+        boolean inputTruncated = exceedsCodePointLimit(maskedPrompt, maxInputCp);
+        String llmPrompt = inputTruncated ? truncateToMaxCodePoints(maskedPrompt, maxInputCp) : maskedPrompt;
+        String llmAuditDetail = inputTruncated ? detail + ",inputTruncated=true" : detail;
         try {
-            Optional<LlmCompletionResult> out = llmInvocationPort.complete(maskedPrompt, request.purpose());
+            Optional<LlmCompletionResult> out = llmInvocationPort.complete(llmPrompt, request.purpose());
             if (out.isEmpty()) {
                 auditLogService.safeRecord(
                         AuditEventType.AI_GATEWAY_LLM_FAILED,
@@ -130,7 +136,7 @@ public class AiGatewayService {
                         "AI_GATEWAY",
                         null,
                         null,
-                        detail + ",reason=no_choice",
+                        llmAuditDetail + ",reason=no_choice",
                         requestId
                 );
                 return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
@@ -146,7 +152,7 @@ public class AiGatewayService {
                     "AI_GATEWAY",
                     null,
                     null,
-                    detail + ",model=" + truncateAudit(r.model(), 80),
+                    llmAuditDetail + ",model=" + truncateAudit(r.model(), 80),
                     requestId
             );
             return ResponseEntity.ok(ApiResponse.success(new AiGatewayChatResponse(
@@ -161,7 +167,7 @@ public class AiGatewayService {
                     "AI_GATEWAY",
                     null,
                     null,
-                    detail + ",reason=upstream",
+                    llmAuditDetail + ",reason=upstream",
                     requestId
             );
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
@@ -175,6 +181,34 @@ public class AiGatewayService {
         }
         String t = s.trim();
         return t.length() <= max ? t : t.substring(0, max);
+    }
+
+    /** True when {@code text} has more Unicode code points than {@code maxCodePoints}. */
+    static boolean exceedsCodePointLimit(String text, int maxCodePoints) {
+        if (text == null || text.isEmpty()) {
+            return false;
+        }
+        return text.codePointCount(0, text.length()) > maxCodePoints;
+    }
+
+    /**
+     * Truncates to at most {@code maxCodePoints} code points. If truncated, uses {@code maxCodePoints - 1}
+     * content code points plus U+2026 ellipsis so total length stays within the limit.
+     */
+    static String truncateToMaxCodePoints(String text, int maxCodePoints) {
+        if (text == null || text.isEmpty()) {
+            return text == null ? "" : text;
+        }
+        if (maxCodePoints <= 0) {
+            return "";
+        }
+        int totalCp = text.codePointCount(0, text.length());
+        if (totalCp <= maxCodePoints) {
+            return text;
+        }
+        int keep = Math.max(1, maxCodePoints - 1);
+        int endIndex = text.offsetByCodePoints(0, keep);
+        return text.substring(0, endIndex) + "…";
     }
 
     private static String resolveSelfEmployeeNo(UserPrincipal principal, String employeeNo) {

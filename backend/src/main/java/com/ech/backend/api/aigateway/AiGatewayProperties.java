@@ -22,6 +22,12 @@ public class AiGatewayProperties {
     /** 0 disables per-hour limiting. */
     private int chatMaxRequestsPerHour = 300;
 
+    /**
+     * Max Unicode code points sent to LLM after masking ({@code app.ai.llm-max-input-chars}).
+     * Values outside 256–8000 are clamped when applied.
+     */
+    private int llmMaxInputChars = 8000;
+
     private LlmHttp llm = new LlmHttp();
 
     public boolean isAllowExternalLlm() {
@@ -54,6 +60,20 @@ public class AiGatewayProperties {
 
     public void setChatMaxRequestsPerHour(int chatMaxRequestsPerHour) {
         this.chatMaxRequestsPerHour = chatMaxRequestsPerHour;
+    }
+
+    public int getLlmMaxInputChars() {
+        return llmMaxInputChars;
+    }
+
+    public void setLlmMaxInputChars(int llmMaxInputChars) {
+        if (llmMaxInputChars < 256) {
+            this.llmMaxInputChars = 256;
+        } else if (llmMaxInputChars > 8000) {
+            this.llmMaxInputChars = 8000;
+        } else {
+            this.llmMaxInputChars = llmMaxInputChars;
+        }
     }
 
     public LlmHttp getLlm() {

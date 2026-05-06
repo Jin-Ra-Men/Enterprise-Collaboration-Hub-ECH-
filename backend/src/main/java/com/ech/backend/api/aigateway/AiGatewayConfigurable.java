@@ -23,6 +23,12 @@ public interface AiGatewayConfigurable {
 
     int getLlmMaxTokens();
 
+    /**
+     * Maximum Unicode code points forwarded to the LLM after masking (clamped 256–8000).
+     * Longer prompts are truncated at code-point boundaries with an ellipsis suffix.
+     */
+    int getLlmMaxInputChars();
+
     /** True when HTTP LLM outbound is fully configured (enabled + base URL + API key). */
     boolean isLlmHttpConfigured();
 }

@@ -52,6 +52,9 @@ public class DataInitializer implements ApplicationRunner {
     @Value("${app.ai.chat-max-requests-per-hour:300}")
     private String seedAiChatRlPerHour;
 
+    @Value("${app.ai.llm-max-input-chars:8000}")
+    private String seedAiGatewayLlmMaxInputChars;
+
     @Value("${app.ai.llm.http-enabled:false}")
     private String seedAiLlmHttpEnabled;
 
@@ -151,6 +154,8 @@ public class DataInitializer implements ApplicationRunner {
                 "AI 게이트웨이 chat 분당 호출 상한(0=비활성).");
         seedSetting(AppSettingKey.AI_GATEWAY_CHAT_MAX_REQUESTS_PER_HOUR, seedAiChatRlPerHour,
                 "AI 게이트웨이 chat 시간당 호출 상한(0=비활성).");
+        seedSetting(AppSettingKey.AI_GATEWAY_LLM_MAX_INPUT_CHARS, seedAiGatewayLlmMaxInputChars,
+                "PII 마스킹 후 LLM으로 보낼 프롬프트 최대 코드포인트 수(256~8000). 초과 시 코드포인트 경계에서 잘림.");
         seedSetting(AppSettingKey.AI_LLM_HTTP_ENABLED, seedAiLlmHttpEnabled,
                 "OpenAI 호환 HTTP LLM 호출 활성화(true/false). base-url·api-key와 함께 사용.");
         seedSetting(AppSettingKey.AI_LLM_BASE_URL, seedAiLlmBaseUrl == null ? "" : seedAiLlmBaseUrl,

@@ -69,6 +69,7 @@ class AiGatewayServiceTest {
         when(gatewaySettings.getChatMaxRequestsPerMinute()).thenReturn(30);
         when(gatewaySettings.getChatMaxRequestsPerHour()).thenReturn(300);
         when(gatewaySettings.getPolicyVersion()).thenReturn("unit-test");
+        when(gatewaySettings.getLlmMaxInputChars()).thenReturn(8000);
         service = new AiGatewayService(
                 gatewaySettings,
                 auditLogService,
@@ -149,6 +150,49 @@ class AiGatewayServiceTest {
                 any(),
                 eq(null));
         assertThat(cap.getValue()).isEqualTo(AuditEventType.AI_GATEWAY_LLM_SUCCEEDED);
+    }
+
+    @Test
+    @DisplayName("llm-max-input-chars보다 긴 마스킹 프롬프트는 잘린 문자열로 LLM에 전달된다")
+    void chat_truncates_masked_prompt_to_llm_max_input_chars() {
+        UserPrincipal principal = new UserPrincipal(
+                99L,
+                "E001",
+                "x@test.com",
+                "Tester",
+                "",
+                AppRole.MEMBER);
+        User userMock = org.mockito.Mockito.mock(User.class);
+        when(userMock.getId()).thenReturn(99L);
+        when(userRepository.findByEmployeeNo("E001")).thenReturn(Optional.of(userMock));
+        when(llmInvocationPort.isConfigured()).thenReturn(true);
+        when(gatewaySettings.getLlmMaxInputChars()).thenReturn(12);
+        String longPrompt = "a".repeat(80);
+        when(llmInvocationPort.complete(any(), eq("p")))
+                .thenReturn(Optional.of(new LlmCompletionResult("reply", "m", 10)));
+
+        AiGatewayChatRequest req = new AiGatewayChatRequest("p", null, 12L, longPrompt, List.of());
+        MockHttpServletRequest http = new MockHttpServletRequest();
+
+        ResponseEntity<ApiResponse<?>> res = service.chat(principal, req, http);
+
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ArgumentCaptor<String> promptCap = ArgumentCaptor.forClass(String.class);
+        verify(llmInvocationPort).complete(promptCap.capture(), eq("p"));
+        assertThat(promptCap.getValue()).isEqualTo("aaaaaaaaaaa…");
+        assertThat(promptCap.getValue().codePointCount(0, promptCap.getValue().length())).isEqualTo(12);
+
+        ArgumentCaptor<String> auditCap = ArgumentCaptor.forClass(String.class);
+        verify(auditLogService)
+                .safeRecord(
+                        eq(AuditEventType.AI_GATEWAY_LLM_SUCCEEDED),
+                        eq(99L),
+                        eq("AI_GATEWAY"),
+                        eq(null),
+                        eq(null),
+                        auditCap.capture(),
+                        eq(null));
+        assertThat(auditCap.getValue()).contains("inputTruncated=true");
     }
 
     @Test

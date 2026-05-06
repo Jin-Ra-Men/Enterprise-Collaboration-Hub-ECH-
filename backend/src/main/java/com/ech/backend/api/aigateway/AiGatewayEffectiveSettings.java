@@ -77,6 +77,16 @@ public class AiGatewayEffectiveSettings implements AiGatewayConfigurable {
     }
 
     @Override
+    public int getLlmMaxInputChars() {
+        int raw = parseInt(
+                appSettingsService.get(
+                        AppSettingKey.AI_GATEWAY_LLM_MAX_INPUT_CHARS,
+                        Integer.toString(yaml.getLlmMaxInputChars())),
+                yaml.getLlmMaxInputChars());
+        return clampInt(raw, 256, 8000);
+    }
+
+    @Override
     public boolean isLlmHttpConfigured() {
         return isLlmHttpEnabled()
                 && !getLlmBaseUrl().isBlank()
@@ -101,5 +111,9 @@ public class AiGatewayEffectiveSettings implements AiGatewayConfigurable {
         } catch (Exception e) {
             return fallback;
         }
+    }
+
+    private static int clampInt(int v, int lo, int hi) {
+        return Math.max(lo, Math.min(hi, v));
     }
 }

@@ -53,6 +53,8 @@ app:
     policy-version: ${AI_POLICY_VERSION:2026-05-06}
     chat-max-requests-per-minute: ${AI_CHAT_RL_PER_MINUTE:30}
     chat-max-requests-per-hour: ${AI_CHAT_RL_PER_HOUR:300}
+    # Masked prompt max Unicode code points forwarded to LLM (256–8000); aligns with chat prompt cap.
+    llm-max-input-chars: ${AI_GATEWAY_LLM_MAX_INPUT_CHARS:8000}
     llm:
       http-enabled: ${AI_LLM_HTTP_ENABLED:false}
       base-url: ${AI_LLM_BASE_URL:}

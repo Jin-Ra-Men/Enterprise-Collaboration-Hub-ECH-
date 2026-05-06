@@ -30,6 +30,9 @@ public final class AppSettingKey {
 
     public static final String AI_GATEWAY_CHAT_MAX_REQUESTS_PER_HOUR = "ai.gateway.chat-max-requests-per-hour";
 
+    /** Upper bound on Unicode code points sent to the LLM after PII masking (256–8000). */
+    public static final String AI_GATEWAY_LLM_MAX_INPUT_CHARS = "ai.gateway.llm-max-input-chars";
+
     public static final String AI_LLM_HTTP_ENABLED = "ai.llm.http-enabled";
 
     public static final String AI_LLM_BASE_URL = "ai.llm.base-url";

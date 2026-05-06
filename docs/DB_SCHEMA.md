@@ -736,6 +736,7 @@ CREATE TABLE app_settings (
 | `ai.gateway.policy-version` | 동일 시드 | 상태 API 정책 버전 문자열 |
 | `ai.gateway.chat-max-requests-per-minute` | 동일 시드 | 분당 chat 호출 상한 (`0`=비활성) |
 | `ai.gateway.chat-max-requests-per-hour` | 동일 시드 | 시간당 chat 호출 상한 (`0`=비활성) |
+| `ai.gateway.llm-max-input-chars` | `app.ai.llm-max-input-chars`·`AI_GATEWAY_LLM_MAX_INPUT_CHARS` 시드 | 마스킹 후 LLM 프롬프트 최대 코드포인트(256–8000) |
 | `ai.llm.http-enabled` | 동일 시드 | OpenAI 호환 HTTP 호출 활성화 |
 | `ai.llm.base-url` | 동일 시드 | LLM 베이스 URL; 비우면 yml/환경 폴백 |
 | `ai.llm.api-key` | 동일 시드 | Bearer 토큰; 비우면 yml/환경 폴백 |

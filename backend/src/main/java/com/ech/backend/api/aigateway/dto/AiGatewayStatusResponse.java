@@ -7,6 +7,8 @@ public record AiGatewayStatusResponse(
         String defaultPolicySummary,
         int chatMaxRequestsPerMinute,
         int chatMaxRequestsPerHour,
-        boolean llmHttpConfigured
+        boolean llmHttpConfigured,
+        /** Effective max Unicode code points forwarded to LLM after masking (see {@code ai.gateway.llm-max-input-chars}). */
+        int llmMaxInputChars
 ) {
 }

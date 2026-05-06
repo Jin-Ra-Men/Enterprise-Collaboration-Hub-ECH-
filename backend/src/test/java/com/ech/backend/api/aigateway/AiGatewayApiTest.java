@@ -24,7 +24,8 @@ class AiGatewayApiTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.defaultPolicySummary").exists())
                 .andExpect(jsonPath("$.data.chatMaxRequestsPerMinute").value(30))
                 .andExpect(jsonPath("$.data.chatMaxRequestsPerHour").value(300))
-                .andExpect(jsonPath("$.data.llmHttpConfigured").value(false));
+                .andExpect(jsonPath("$.data.llmHttpConfigured").value(false))
+                .andExpect(jsonPath("$.data.llmMaxInputChars").value(8000));
     }
 
     @Test
