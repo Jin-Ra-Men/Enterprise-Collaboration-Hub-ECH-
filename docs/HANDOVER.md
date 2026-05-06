@@ -61,6 +61,12 @@
   - **내 할 일 사이드바:** `GET /api/work-items/me/todos` — 오늘·지연 구간은 서버 **Asia/Seoul** 자정 기준. 멘션 연계는 원본 메시지 본문의 `@{사번|표시명}` 토큰 문자열 매칭으로 판별한다. **`badgeCounts`**로 지연·48시간 내 임박 **총건**(목록 상한과 무관)을 표시하며, 채널 미읽음 배지와 색·정책이 다르다.
   - DB 구조: `docs/sql/postgresql_schema_draft.sql` 및 **3-1)**. 로컬에서 사람 데이터가 필요하면 `docs/sql/seed_test_users.sql` (`docs/ENVIRONMENT_SETUP.md` 5-1절).
   - Java는 `backend/`, 실시간은 `realtime/`(Express 없이 `http`+Socket.io), 데모 UI 소스는 `frontend/`(로컬에서는 `bootRun` 시 8080에서 위 3개 파일만 서빙, **`/**` 전체를 정적으로 열지 않음** — `/api/**` 가 리소스 핸들러에 먹히는 404 방지).
+- **AI 마스터 스위치 운영 점검(추가 권장):**
+  1. 운영 DB에 `docs/sql/migrate_user_ai_assistant_master_toggle.sql` 적용(이미 신규 DDL로 생성된 환경은 생략 가능)
+  2. 관리자/일반 사용자 각 1계정으로 테마 설정에서 AI 비서 OFF → ON 전환 후 즉시 반영 확인
+  3. OFF 상태에서 `POST /api/ai/gateway/chat` 403(`AI_ASSISTANT_DISABLED_BY_USER`) 확인
+  4. OFF 상태에서 제안함 목록/처리 API 403, 캘린더 AI 제안 비노출·확정 차단 확인
+  5. ON 복구 후 기존 AI 기능(컴포저·검색·스레드·워크허브 AI 버튼) 정상 동작 확인
 - **운영·관리자**
   - 구성 요소: Java API 서버, Node 실시간 서버, PostgreSQL, (첨부는 외부 스토리지 연동 전제).
   - **첨부 저장 경로**: DB `app_settings` 의 `file.storage.base-dir` 이 `FILE_STORAGE_DIR` 보다 우선한다. 업로드 전부 실패 시 해당 값·폴더 권한·기동 로그 `[CSTalk] file storage` 를 확인. 절차: `docs/DEPLOYMENT_WINDOWS.md`(트러블슈팅·SQL 예시). UNC 사용 시 **백엔드 프로세스** 기준 쓰기 여부는 관리자 `GET /api/admin/storage/probe` 로 확인(대화형 PowerShell 성공과 불일치할 수 있음).

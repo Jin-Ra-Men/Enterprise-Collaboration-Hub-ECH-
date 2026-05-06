@@ -7,6 +7,7 @@
 ### Changed
 - **README**: AI 게이트웨이 정책 링크 행에 프로액티브 제안함 후속(스케줄·멤버 패널 옵트인·딥링크) 안내 보강.
 - **AI 게이트웨이 설정**: `ai.gateway.*`, `ai.llm.*`를 **기초설정(app_settings)**에 시드·관리자 UI에서 수정 가능. `AiGatewayEffectiveSettings`가 DB 값(비어 있지 않을 때)과 `app.ai.*`/환경 폴백을 병합. LLM 클라이언트는 호출 시점 설정을 읽어 재기동 없이 반영. `AppSettingKey`, `DataInitializer`, 문서·`frontend/index.html` 안내.
+- **운영 문서 보강(AI 마스터 스위치 후속)**: `docs/HANDOVER.md`에 운영 반영/검증 체크리스트(마이그레이션 적용, OFF/ON API 차단·복구 확인)를 추가하고, `docs/DEVELOPER_README.md` SQL 바로가기에 `migrate_user_ai_assistant_master_toggle.sql`를 명시.
 
 ### Added
 - **사용자별 AI 비서 마스터 스위치**: `user_ai_assistant_preferences.ai_assistant_enabled`(기본 true). 테마 설정 모달 토글·`/api/auth/me`·게이트웨이 status 필드. 꺼짐 시 `POST /api/ai/gateway/chat` → `AI_ASSISTANT_DISABLED_BY_USER`, 제안함 조회/거절/처리 403, 캘린더 `AI_ASSISTANT` 제안 목록 제외·생성/확정 차단, 프로액티브 적재 수신 거부. 이관 `docs/sql/migrate_user_ai_assistant_master_toggle.sql`. 테스트 `AiAssistantApiTest`·`AiGatewayApiTest`·`CalendarApiTest`·`AiGatewayServiceTest`.
