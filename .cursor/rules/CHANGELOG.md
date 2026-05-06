@@ -5,7 +5,7 @@
 ## 2026-05-06
 
 ### Added
-- **멘션→업무→칸반 빠른 연계(2-7-1-4)**: 멘션 인앱 토스트「업무·칸반」, 미확인 멘션 목록 동일 단축 버튼, 채팅 메시지 우클릭「업무·칸반으로…». `POST /api/messages/{id}/work-items`로 업무 확보 후 해당 업무에 연결된 칸반 카드가 없으면 `POST .../boards/{boardId}/columns/{columnId}/cards`로 첫 컬럼에 카드 즉시 생성·워크플로 칸반 포커스(보드 없을 때는 업무 목록만 안내).
+- **멘션→업무→칸반 빠른 연계(2-7-1-4)**: 멘션 인앱 토스트「업무·칸반」, 미확인 멘션 목록 동일 단축 버튼, 채팅 메시지 우클릭「업무·칸반으로…». `POST /api/messages/{id}/work-items`로 업무 확보 후 해당 업무에 연결된 칸반 카드가 없으면 `POST .../boards/{boardId}/columns/{columnId}/cards`로 첫 컬럼에 카드 즉시 생성·워크플로 칸반 포커스(보드 없을 때는 업무 목록만 안내). `docs/DEVELOPER_README.md` 반영.
 - **마감 배지·알림(2-7-1-3)**: `me/todos` 응답에 `badgeCounts`(지연 총건·48h 임박 총건·상수 시간). 사이드바 «내 할 일» 옆 배지(색으로 미읽음 구분), 건수 증가 시 전용 활동 토스트/OS 알림 태그 `ech_os_work_due_badge`(목록 갱신 토스트와 동시 발생 시 마감 우선).
 - **내 할 일(2-7-1-2)**: `GET /api/work-items/me/todos` — 지연·오늘 마감(Asia/Seoul)·멘션 연계 원본 메시지·담당 칸반 버킷. `WorkItemSidebarResponse.sourceMessageId`, `WorkItemMyTodosApiTest`. 사이드바 섹션 «내 할 일»·멘션 행 클릭 시 해당 채널 타임라인에서 원본 메시지 포커스.
 - **채널 자료실**: `channel_library_folders`, `channel_files` 확장(폴더·핀·캡션·태그·`attachment_message_id`), REST(`ChannelLibraryController`, 파일 목록 필터·PATCH), 감사 타입, `ChannelLibraryApiTest`. 프론트 파일 허브(`modalFileHub`)에 자료실 필터·폴더 추가·행 단위 편집.
