@@ -1,4 +1,0 @@
-feat: AI 게이트웨이 LLM 입력 코드포인트 상한(7-4-1-a)
-
-기초설정 ai.gateway.llm-max-input-chars 시드, 마스킹 후 초과분 자르기 및 감사 inputTruncated.
-GET /status에 llmMaxInputChars. Phase 7-2 로드맵 완료 처리.
