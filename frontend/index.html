@@ -360,6 +360,16 @@
                 <button class="btn-member-panel-action hidden" id="btnRenameChannel" title="채널 이름 변경"><span class="btn-member-panel-action-icon" aria-hidden="true">✏️</span><span class="btn-member-panel-action-label">채널 이름 변경</span></button>
                 <button class="btn-member-panel-action hidden" id="btnRenameDm" title="DM 이름 변경"><span class="btn-member-panel-action-icon" aria-hidden="true">✏️</span><span class="btn-member-panel-action-label">DM 이름 변경</span></button>
               </div>
+              <div id="memberPanelAiAssistantSection" class="member-panel-ai-assistant hidden">
+                <div class="member-panel-ai-heading">AI 프로액티브 비서</div>
+                <p id="memberPanelAiDmHint" class="member-panel-ai-hint hidden">DM에서는 활동 기반 제안을 사용할 수 없습니다.</p>
+                <p id="memberPanelAiMemberHint" class="member-panel-ai-hint hidden">프로액티브 옵트인은 채널 관리자만 변경할 수 있습니다.</p>
+                <label class="member-panel-ai-row hidden" id="memberPanelAiManagerRow">
+                  <input type="checkbox" id="chkChannelAiProactive" />
+                  <span>이 채널에서 활동 기반 제안 허용</span>
+                </label>
+                <p id="memberPanelAiNote" class="member-panel-ai-note hidden">켠 채널에서 최근 대화가 활발하면 관리자에게 업무 정리 제안이 들어갈 수 있습니다. 수신 빈도는 멤버별 다이제스트 설정(REALTIME 등)과 운영 상한에 따릅니다.</p>
+              </div>
               <div class="member-panel-member-heading" id="memberPanelMemberHeading">멤버 목록</div>
               <ul id="memberList" class="member-list"></ul>
               <div class="member-panel-actions member-panel-actions-bottom">
@@ -640,7 +650,7 @@
             <div class="settings-add-card">
               <h3 class="settings-add-title">기초설정 추가</h3>
               <p class="settings-add-hint">키는 영문·숫자·점(.)·하이픈(-)·밑줄(_)만 사용, 최대 100자입니다. 앱에서 읽는 키는 코드와 일치해야 합니다.</p>
-              <p class="settings-add-hint">AI 게이트웨이는 기본 시드 키 <code>ai.gateway.*</code>(레이트·<code>llm-max-input-chars</code> 등), <code>ai.llm.*</code>, 프로액티브 <code>ai.proactive.*</code>(제안함 쿨다운·채널 시간당 상한)로 관리합니다(API 키 노출에 유의). 자세한 키 목록은 <code>docs/FEATURE_SPEC.md</code> · <code>docs/DB_SCHEMA.md</code> 참고.</p>
+              <p class="settings-add-hint">AI 게이트웨이는 기본 시드 키 <code>ai.gateway.*</code>(레이트·<code>llm-max-input-chars</code> 등), <code>ai.llm.*</code>, 프로액티브 <code>ai.proactive.*</code>(제안함 쿨다운·채널 시간당 상한·활동 힌트 최소 메시지 수·스케줄 작업 on/off)로 관리합니다(API 키 노출에 유의). 자세한 키 목록은 <code>docs/FEATURE_SPEC.md</code> · <code>docs/DB_SCHEMA.md</code> 참고.</p>
               <div class="settings-add-grid">
                 <div class="form-group">
                   <label for="newSettingKey">설정 키 <span class="required">*</span></label>

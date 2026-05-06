@@ -259,6 +259,12 @@ public class AiAssistantService {
             if (channel.getChannelType() == ChannelType.DM) {
                 throw new IllegalArgumentException("DM 채널에는 프로액티브 제안을 적재할 수 없습니다.");
             }
+            boolean optedIn = channelAiPreferenceRepository.findByChannelId(channelIdOrNull)
+                    .map(ChannelAiAssistantPreference::isProactiveOptIn)
+                    .orElse(false);
+            if (!optedIn) {
+                throw new IllegalStateException("채널이 프로액티브 비서 옵트인 상태가 아닙니다.");
+            }
             if (!channelMemberRepository.existsByChannelIdAndUserEmployeeNo(channelIdOrNull, recipient)) {
                 throw new IllegalArgumentException("수신자가 해당 채널 멤버가 아닙니다.");
             }
@@ -307,6 +313,7 @@ public class AiAssistantService {
                 chId,
                 it.getTitle(),
                 it.getSummary(),
+                it.getPayloadJson(),
                 it.getCreatedAt()
         );
     }

@@ -273,6 +273,8 @@ let activeChannelType = null; // PUBLIC / PRIVATE / DM
 /** GET /api/channels/{id} 의 createdByEmployeeNo (멤버 내보내기 버튼 표시용) */
 let activeChannelCreatorEmployeeNo = null;
 let activeChannelMemberCount = 0;
+/** 현재 채널에서 본인 `memberRole`(예: MANAGER) — AI 프로액티브 토글 표시용 */
+let activeChannelMyMemberRole = null;
 /** 현재 채널 멤버만 @자동완성 (전사 검색 대신). selectChannel 시 비움 → loadChannelMembers에서 채움 */
 let activeChannelMemberMentionList = [];
 /** DM 채팅 헤더: 본인 제외 멤버 사번(사이드바와 동일한 프레즌스 점 표시용) */
@@ -375,6 +377,8 @@ let sidebarCtxChannelName = "";
 let sidebarCtxChannelType = "PUBLIC";
 /** `loadMyChannels` 직후 스냅샷 — 알림 음소거 토글 시 목록 아이콘만 다시 그릴 때 사용 */
 let lastSidebarChannelsSnapshot = [];
+/** 제안함 행별 `payloadJson` 캐시(바로가기) */
+const aiSuggestionPayloadById = new Map();
 /** 신규 카드 폼에 미리 넣을 담당자 `{ employeeNo, name }` */
 let pendingNewKanbanCardAssignees = [];
 let kanbanNewCardAssigneeUiBound = false;
@@ -4123,6 +4127,7 @@ async function selectChannel(channelId, channelName, channelType, options = {}) 
   activeChannelType = channelType;
   activeChannelCreatorEmployeeNo = null;
   activeChannelMemberCount = 0;
+  activeChannelMyMemberRole = null;
   activeChannelMemberMentionList = [];
   removeUnreadMentionsByChannelId(channelId);
 
@@ -4411,6 +4416,9 @@ async function loadChannelMembers(channelId) {
     activeChannelCreatorEmployeeNo = creatorEmp || null;
     const members = dedupeChannelMembersByEmp(json.data?.members || []);
     activeChannelMemberCount = members.length;
+    const myEmpForRole = currentUser ? String(currentUser.employeeNo || "").trim() : "";
+    const meMemberRow = members.find((m) => String(m.employeeNo || "").trim() === myEmpForRole);
+    activeChannelMyMemberRole = meMemberRow?.memberRole ? String(meMemberRow.memberRole).trim().toUpperCase() : null;
     syncChannelActionButtons();
     activeChannelMemberOrgLineByEmployeeNo.clear();
     activeChannelMemberAvatarByEmployeeNo.clear();
@@ -4538,8 +4546,46 @@ async function loadChannelMembers(channelId) {
     // 메시지를 먼저 렌더한 경우에도 발신자 조직/직급 라벨을 즉시 동기화한다.
     syncSenderOrgLabelsInMessageList();
     refreshPresenceDots();
+    void syncChannelAiAssistantSection();
   } catch (err) {
     console.error("멤버 로드 실패", err);
+  }
+}
+
+async function syncChannelAiAssistantSection() {
+  const section = document.getElementById("memberPanelAiAssistantSection");
+  const managerRow = document.getElementById("memberPanelAiManagerRow");
+  const dmHint = document.getElementById("memberPanelAiDmHint");
+  const memberHint = document.getElementById("memberPanelAiMemberHint");
+  const note = document.getElementById("memberPanelAiNote");
+  const chk = document.getElementById("chkChannelAiProactive");
+  if (!section || !managerRow || !dmHint || !memberHint || !note || !chk) return;
+  const isDm = String(activeChannelType || "").toUpperCase() === "DM";
+  const hasChannel = activeChannelId != null;
+  const isMgr = String(activeChannelMyMemberRole || "").toUpperCase() === "MANAGER";
+  section.classList.toggle("hidden", !hasChannel);
+  if (!hasChannel) {
+    chk.checked = false;
+    return;
+  }
+  dmHint.classList.toggle("hidden", !isDm);
+  memberHint.classList.toggle("hidden", isDm || isMgr);
+  managerRow.classList.toggle("hidden", isDm || !isMgr);
+  note.classList.toggle("hidden", isDm || !isMgr);
+  chk.disabled = false;
+  if (isDm || !isMgr) {
+    chk.checked = false;
+    return;
+  }
+  try {
+    const res = await apiFetch(`/api/channels/${activeChannelId}/ai-assistant/preference`);
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) return;
+    const d = j.data || {};
+    chk.checked = Boolean(d.proactiveOptIn);
+    chk.disabled = Boolean(d.dmProactiveBlocked);
+  } catch (e) {
+    console.warn(e);
   }
 }
 
@@ -8883,10 +8929,40 @@ async function refreshThreadHubData(channelId) {
  * 멤버 패널 토글
  * ========================================================================== */
 document.getElementById("btnHeaderMenu").addEventListener("click", () => {
-  document.getElementById("memberPanel").classList.toggle("hidden");
+  const panel = document.getElementById("memberPanel");
+  panel.classList.toggle("hidden");
+  if (panel && !panel.classList.contains("hidden")) {
+    void syncChannelAiAssistantSection();
+  }
 });
 document.getElementById("btnCloseMemberPanel").addEventListener("click", () => {
   document.getElementById("memberPanel").classList.add("hidden");
+});
+
+document.getElementById("chkChannelAiProactive")?.addEventListener("change", async (ev) => {
+  const cid = activeChannelId;
+  if (!cid || String(activeChannelMyMemberRole || "").toUpperCase() !== "MANAGER") return;
+  const target = ev.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  const wantOn = target.checked;
+  try {
+    const res = await apiFetch(`/api/channels/${cid}/ai-assistant/preference`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ proactiveOptIn: wantOn }),
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || j.success === false) {
+      target.checked = !wantOn;
+      await uiAlert(j.error?.message || "설정을 저장하지 못했습니다.");
+      return;
+    }
+    target.checked = Boolean(j.data?.proactiveOptIn);
+  } catch (e) {
+    console.error(e);
+    target.checked = !wantOn;
+    await uiAlert(e.message || "설정을 저장하지 못했습니다.");
+  }
 });
 document.getElementById("btnOpenFileHub")?.addEventListener("click", async () => {
   if (!activeChannelId) return;
@@ -13962,6 +14038,86 @@ function findDefaultOrgChartNodeButton(scrollEl, data) {
   return null;
 }
 
+function parseAiSuggestionPayloadJson(raw) {
+  if (raw == null || String(raw).trim() === "") return null;
+  try {
+    const o = JSON.parse(String(raw));
+    return typeof o === "object" && o !== null ? o : null;
+  } catch {
+    return null;
+  }
+}
+
+function aiSuggestionPayloadHasDeepLink(raw) {
+  const o = parseAiSuggestionPayloadJson(raw);
+  const dl = o && typeof o.deepLink === "string" ? String(o.deepLink).trim() : "";
+  return dl.length > 0;
+}
+
+function resolveChannelMetaFromSidebar(channelId) {
+  const id = Number(channelId);
+  if (!Number.isFinite(id)) return null;
+  const list = Array.isArray(lastSidebarChannelsSnapshot) ? lastSidebarChannelsSnapshot : [];
+  const ch = list.find((c) => Number(c.channelId) === id);
+  if (!ch) return null;
+  return {
+    name: String(ch.name || "").trim() || `#${id}`,
+    type: ch.channelType || "PUBLIC",
+  };
+}
+
+async function resolveChannelMetaFromSidebarOrApi(channelId) {
+  const local = resolveChannelMetaFromSidebar(channelId);
+  if (local) return local;
+  const id = Number(channelId);
+  if (!Number.isFinite(id)) return null;
+  try {
+    const res = await apiFetch(`/api/channels/${id}`);
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) return null;
+    const d = j.data || {};
+    return { name: String(d.name || "").trim() || `#${id}`, type: d.channelType || "PUBLIC" };
+  } catch {
+    return null;
+  }
+}
+
+async function followAiSuggestionPayload(rawPayload) {
+  const o = parseAiSuggestionPayloadJson(rawPayload);
+  const dl = o && typeof o.deepLink === "string" ? String(o.deepLink).trim() : "";
+  const cidRaw = o?.channelId;
+  const cid = cidRaw != null ? Number(cidRaw) : null;
+
+  if (dl === "workHub") {
+    closeModal("modalAiSuggestionInbox");
+    if (cid != null && Number.isFinite(cid)) {
+      const meta = await resolveChannelMetaFromSidebarOrApi(cid);
+      if (meta) {
+        pendingWorkHubPanelFocus = "work";
+        await selectChannel(cid, meta.name, meta.type);
+        await openWorkHubModalForActiveChannel();
+        return;
+      }
+    }
+    pendingWorkHubPanelFocus = "work";
+    await openWorkHubFromTopNav("work");
+    return;
+  }
+
+  if (dl === "chatChannel") {
+    if (cid == null || !Number.isFinite(cid)) return;
+    const meta = await resolveChannelMetaFromSidebarOrApi(cid);
+    if (!meta) return;
+    closeModal("modalAiSuggestionInbox");
+    await selectChannel(cid, meta.name, meta.type);
+    return;
+  }
+
+  if (dl === "aiInbox") {
+    await refreshAiSuggestionInboxList();
+  }
+}
+
 async function openAiSuggestionInboxModal() {
   if (!currentUser?.employeeNo) {
     await uiAlert("로그인이 필요합니다.");
@@ -14021,6 +14177,7 @@ async function refreshAiSuggestionInboxList() {
   const listEl = document.getElementById("aiSuggestionInboxList");
   if (!listEl || !currentUser?.employeeNo) return;
   const empEnc = encodeURIComponent(currentUser.employeeNo);
+  aiSuggestionPayloadById.clear();
   listEl.innerHTML = '<p class="ai-inbox-hint">불러오는 중…</p>';
   try {
     const res = await apiFetch(`/api/me/ai-suggestions?employeeNo=${empEnc}&status=PENDING`);
@@ -14034,21 +14191,35 @@ async function refreshAiSuggestionInboxList() {
     listEl.innerHTML = rows
       .map((r) => {
         const id = Number(r.id);
+        const rawPayload = r.payloadJson != null ? String(r.payloadJson) : "";
+        aiSuggestionPayloadById.set(id, rawPayload);
         const title = escHtml(String(r.title || ""));
         const sum = escHtml(String(r.summary || ""));
         const kind = escHtml(String(r.suggestionKind || ""));
         const ch = r.channelId != null ? escHtml(String(r.channelId)) : "—";
+        const showGo = aiSuggestionPayloadHasDeepLink(rawPayload);
+        const goBtn = showGo
+          ? `<button type="button" class="btn-secondary btn-sm btn-ai-inbox-open" data-suggestion-id="${id}">바로가기</button>`
+          : "";
         return `<div class="ai-inbox-row" data-suggestion-id="${id}">
         <div class="ai-inbox-row-head"><span class="ai-inbox-kind">${kind}</span><span class="ai-inbox-ch">채널 ${ch}</span></div>
         <div class="ai-inbox-title">${title}</div>
         ${sum ? `<div class="ai-inbox-summary">${sum}</div>` : ""}
         <div class="ai-inbox-actions">
+          ${goBtn}
           <button type="button" class="btn-secondary btn-sm btn-ai-inbox-dismiss" data-suggestion-id="${id}">거절</button>
           <button type="button" class="btn-secondary btn-sm btn-ai-inbox-ack" data-suggestion-id="${id}">처리함</button>
         </div>
       </div>`;
       })
       .join("");
+    listEl.querySelectorAll(".btn-ai-inbox-open").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const sid = Number(btn.dataset.suggestionId);
+        const raw = aiSuggestionPayloadById.get(sid) ?? "";
+        void followAiSuggestionPayload(raw);
+      });
+    });
     listEl.querySelectorAll(".btn-ai-inbox-dismiss").forEach((btn) => {
       btn.addEventListener("click", () => void dismissAiSuggestion(Number(btn.dataset.suggestionId)));
     });

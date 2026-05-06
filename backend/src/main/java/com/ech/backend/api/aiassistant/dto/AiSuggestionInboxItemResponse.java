@@ -9,6 +9,7 @@ public record AiSuggestionInboxItemResponse(
         Long channelId,
         String title,
         String summary,
+        String payloadJson,
         OffsetDateTime createdAt
 ) {
 }

@@ -739,6 +739,8 @@ CREATE TABLE app_settings (
 | `ai.gateway.llm-max-input-chars` | `app.ai.llm-max-input-chars`·`AI_GATEWAY_LLM_MAX_INPUT_CHARS` 시드 | 마스킹 후 LLM 프롬프트 최대 코드포인트(256–8000) |
 | `ai.proactive.dismiss-cooldown-hours` | `app.ai.proactive.dismiss-cooldown-hours` 시드 | 제안함 거절 후 사용자별 재적재 쿨다운(시간) |
 | `ai.proactive.max-suggestions-per-channel-hour` | 동일 시드 | 채널당 1시간 롤링 최대 프로액티브 적재 건수 |
+| `ai.proactive.activity-min-messages-per-hour` | `app.ai.proactive.activity-min-messages-per-hour` 시드 | 활동 힌트: 최근 1시간 타임라인 최소 메시지 수 |
+| `ai.proactive.jobs-enabled` | `app.ai.proactive.jobs-enabled` 시드 | 프로액티브 스케줄 작업 전역 on/off |
 | `ai.llm.http-enabled` | 동일 시드 | OpenAI 호환 HTTP 호출 활성화 |
 | `ai.llm.base-url` | 동일 시드 | LLM 베이스 URL; 비우면 yml/환경 폴백 |
 | `ai.llm.api-key` | 동일 시드 | Bearer 토큰; 비우면 yml/환경 폴백 |

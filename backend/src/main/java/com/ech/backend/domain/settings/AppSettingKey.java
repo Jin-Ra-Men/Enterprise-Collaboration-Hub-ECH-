@@ -48,4 +48,10 @@ public final class AppSettingKey {
 
     /** Max proactive inbox rows per channel per rolling hour (enqueue guard). */
     public static final String AI_PROACTIVE_MAX_PER_CHANNEL_PER_HOUR = "ai.proactive.max-suggestions-per-channel-hour";
+
+    /** Minimum timeline-visible messages in the last hour to enqueue an activity hint per opted-in channel. */
+    public static final String AI_PROACTIVE_ACTIVITY_MIN_MESSAGES_PER_HOUR = "ai.proactive.activity-min-messages-per-hour";
+
+    /** When false, hourly/digest proactive schedulers no-op (ops toggle via app_settings). */
+    public static final String AI_PROACTIVE_JOBS_ENABLED = "ai.proactive.jobs-enabled";
 }

@@ -76,6 +76,12 @@ public class DataInitializer implements ApplicationRunner {
     @Value("${app.ai.proactive.max-suggestions-per-channel-hour:30}")
     private String seedAiProactiveMaxPerChannelHour;
 
+    @Value("${app.ai.proactive.activity-min-messages-per-hour:5}")
+    private String seedAiProactiveActivityMinPerHour;
+
+    @Value("${app.ai.proactive.jobs-enabled:true}")
+    private String seedAiProactiveJobsEnabled;
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RetentionPolicyRepository retentionPolicyRepository;
@@ -176,6 +182,10 @@ public class DataInitializer implements ApplicationRunner {
                 "프로액티브 제안함 항목 거절 후 동일 사용자에게 새 제안 적재 금지 시간(시간 단위, 1~168).");
         seedSetting(AppSettingKey.AI_PROACTIVE_MAX_PER_CHANNEL_PER_HOUR, seedAiProactiveMaxPerChannelHour,
                 "동일 채널 기준 1시간 롤링 창에서 허용하는 프로액티브 제안 최대 건수(1~500).");
+        seedSetting(AppSettingKey.AI_PROACTIVE_ACTIVITY_MIN_MESSAGES_PER_HOUR, seedAiProactiveActivityMinPerHour,
+                "프로액티브 활동 힌트: 최근 1시간 타임라인 메시지가 이 건수 이상일 때 채널 관리자에게 힌트 적재(1~500).");
+        seedSetting(AppSettingKey.AI_PROACTIVE_JOBS_ENABLED, seedAiProactiveJobsEnabled,
+                "프로액티브 스케줄 작업(활동 힌트·다이제스트) 활성화(true/false).");
     }
 
     private void seedSetting(String key, String value, String description) {

@@ -18,4 +18,15 @@ public interface AiSuggestionInboxRepository extends JpaRepository<AiSuggestionI
     );
 
     Optional<AiSuggestionInboxItem> findByIdAndRecipientEmployeeNo(Long id, String recipientEmployeeNo);
+
+    long countByRecipientEmployeeNoAndSuggestionKindAndCreatedAtAfter(
+            String recipientEmployeeNo,
+            AiSuggestionKind suggestionKind,
+            OffsetDateTime since);
+
+    long countByRecipientEmployeeNoAndChannel_IdAndSuggestionKindAndCreatedAtAfter(
+            String recipientEmployeeNo,
+            Long channelId,
+            AiSuggestionKind suggestionKind,
+            OffsetDateTime since);
 }

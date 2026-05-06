@@ -106,6 +106,12 @@ class AiAssistantApiTest extends BaseIntegrationTest {
 
         long cid = createPublicChannelAndJoinNormalAsMember();
 
+        mockMvc.perform(put("/api/channels/" + cid + "/ai-assistant/preference")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"proactiveOptIn\":true}"))
+                .andExpect(status().isOk());
+
         aiAssistantService.enqueueSuggestion(
                 normalEmployeeNo,
                 AiSuggestionKind.GENERIC,
@@ -151,6 +157,22 @@ class AiAssistantApiTest extends BaseIntegrationTest {
                         null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("쿨다운");
+    }
+
+    @Test
+    @DisplayName("채널 프로액티브 미옵트인이면 적재 시 거부")
+    void enqueue_blocked_without_channel_opt_in() throws Exception {
+        long cid = createPublicChannelAndJoinNormalAsMember();
+        assertThatThrownBy(() -> aiAssistantService.enqueueSuggestion(
+                        normalEmployeeNo,
+                        AiSuggestionKind.GENERIC,
+                        cid,
+                        "blocked",
+                        null,
+                        "{}",
+                        null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("옵트인");
     }
 
     private long createPublicChannelAndJoinNormalAsMember() throws Exception {

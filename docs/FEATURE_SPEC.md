@@ -142,14 +142,17 @@
 - 관련 API:
   - `GET|PUT /api/channels/{channelId}/ai-assistant/preference` — 채널 프로액티브 옵트인 조회·변경(**채널 관리자만 PUT**). DM 채널은 조회 시 `dmProactiveBlocked=true`, PUT 시 400.
   - `GET|PUT /api/me/ai-assistant/preferences?employeeNo=` — 어조(`QUIET`/`BALANCED`/`ASSERTIVE`), 다이제스트(`REALTIME`/`DAILY`/`WEEKLY`). 응답에 거절 쿨다운 활성 여부(`proactiveCooldownActive`).
-  - `GET /api/me/ai-suggestions?employeeNo=&status=` — 제안 목록(기본 `PENDING`, 최대 50건).
+  - `GET /api/me/ai-suggestions?employeeNo=&status=` — 제안 목록(기본 `PENDING`, 최대 50건). 항목에 **`payloadJson`**(딥링크 메타; 클라이언트 해석) 포함.
   - `POST /api/me/ai-suggestions/{id}/dismiss?employeeNo=` — 거절 + 사용자 쿨다운 시작(기초설정 시간).
   - `POST /api/me/ai-suggestions/{id}/acknowledge?employeeNo=` — 비변 처리 완료(`ACTED`).
-- 적재(`AiAssistantService.enqueueSuggestion`): 채널 맥락 시 DM 거부·멤버 검증·시간당 상한·사용자 쿨다운 검사 — **향후** 규칙/스케줄러가 호출.
-- 기초설정 시드: `ai.proactive.dismiss-cooldown-hours`, `ai.proactive.max-suggestions-per-channel-hour`.
-- 프론트: 환영 화면 **AI 제안함** 버튼·`modalAiSuggestionInbox`(`frontend/app.js`, `styles.css`).
+- 적재(`AiAssistantService.enqueueSuggestion`): 채널 맥락 시 **해당 채널 프로액티브 옵트인 필수**·DM 거부·멤버 검증·시간당 상한·사용자 쿨다운 검사.
+- 스케줄 트리거(`ProactiveAiSuggestionScheduler`, LLM 미호출):
+  - 매시 **:07** — 옵트인 비-DM 채널에서 최근 1시간 타임라인 활동 건수가 기준 이상이면, **`REALTIME`** 다이제스트 사용자인 **채널 관리자**에게 `WORK_ITEM_HINT` 1건(동일 채널·수신자·종류 **24시간 디듀프**). `payloadJson` 예: `{"deepLink":"workHub","channelId":…}`.
+  - 매일 **09:15 Asia/Seoul** — 다이제스트 **`DAILY`** 또는 (**월요일만** `WEEKLY`)이며 **옵트인 채널에 소속**한 사용자에게 `DIGEST_SUMMARY` 1건(당일 서울 자정 이후 디듀프). `payloadJson` 예: `{"deepLink":"aiInbox","digest":true}`.
+- 기초설정 시드: `ai.proactive.dismiss-cooldown-hours`, `ai.proactive.max-suggestions-per-channel-hour`, `ai.proactive.activity-min-messages-per-hour`, `ai.proactive.jobs-enabled`.
+- 프론트: 환영 화면 **AI 제안함** 버튼·`modalAiSuggestionInbox`; 채팅 **멤버 패널**에서 채널 관리자만 **프로액티브 옵트인** 토글; 제안 행 **바로가기**(`deepLink`: `workHub`·`chatChannel`·`aiInbox`).
 - 테스트: `AiAssistantApiTest`.
-- 예외: `enqueueSuggestion` 쿨다운·상한 위반 시 `IllegalStateException`(통합 테스트)·관리자 아닌 채널 옵트인 변경 시 403.
+- 예외: `enqueueSuggestion` 미옵트인 채널·쿨다운·상한 위반 시 `IllegalStateException`(통합 테스트)·관리자 아닌 채널 옵트인 변경 시 403.
 
 ---
 

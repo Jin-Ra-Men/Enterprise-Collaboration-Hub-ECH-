@@ -147,6 +147,19 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     long countRootMessagesInChannel(@Param("channelId") long channelId);
 
     /**
+     * 타임라인 가시 메시지(루트 + {@code REPLY*}) 중 {@code since} 이후 건수 — 프로액티브 활동 규칙용.
+     */
+    @Query("""
+            SELECT COUNT(m) FROM Message m
+            WHERE m.channel.id = :channelId
+              AND m.isDeleted = false
+              AND m.archivedAt IS NULL
+              AND (m.parentMessage IS NULL OR m.messageType LIKE 'REPLY%')
+              AND m.createdAt >= :since
+            """)
+    long countTimelineActivitySince(@Param("channelId") long channelId, @Param("since") OffsetDateTime since);
+
+    /**
      * 메인 타임라인(루트) 중 읽음 커서보다 <strong>타임라인상 더 최신</strong>인 건수.
      * 타임라인 정렬과 동일하게 {@code createdAt DESC, id DESC} 기준으로 “더 최신”을 판별한다.
      * {@code cursorTime}/{@code cursorId}는 비-null 이어야 한다(PostgreSQL 바인딩 타입 추론).

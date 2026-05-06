@@ -2293,6 +2293,40 @@ html[data-theme="cream"] .member-panel-actions-bottom {
 .member-panel-actions-top {
   flex-shrink: 0;
 }
+.member-panel-ai-assistant {
+  flex-shrink: 0;
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+.member-panel-ai-heading {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+.member-panel-ai-hint {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.member-panel-ai-note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.member-panel-ai-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.member-panel-ai-row input {
+  margin-top: 3px;
+}
 .member-panel-actions-bottom {
   flex-shrink: 0;
   border-top: 1px solid var(--border-subtle);
