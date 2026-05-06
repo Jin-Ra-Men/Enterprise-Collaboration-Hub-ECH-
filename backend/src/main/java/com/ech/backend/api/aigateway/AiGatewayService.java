@@ -6,9 +6,14 @@ import com.ech.backend.api.auditlog.AuditLogService;
 import com.ech.backend.common.api.ApiResponse;
 import com.ech.backend.common.security.UserPrincipal;
 import com.ech.backend.domain.audit.AuditEventType;
+import com.ech.backend.domain.channel.ChannelMemberRepository;
+import com.ech.backend.domain.message.MessageRepository;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -22,15 +27,21 @@ public class AiGatewayService {
     private final AiGatewayProperties properties;
     private final AuditLogService auditLogService;
     private final UserRepository userRepository;
+    private final ChannelMemberRepository channelMemberRepository;
+    private final MessageRepository messageRepository;
 
     public AiGatewayService(
             AiGatewayProperties properties,
             AuditLogService auditLogService,
-            UserRepository userRepository
+            UserRepository userRepository,
+            ChannelMemberRepository channelMemberRepository,
+            MessageRepository messageRepository
     ) {
         this.properties = properties;
         this.auditLogService = auditLogService;
         this.userRepository = userRepository;
+        this.channelMemberRepository = channelMemberRepository;
+        this.messageRepository = messageRepository;
     }
 
     public AiGatewayStatusResponse statusSnapshot() {
@@ -48,7 +59,10 @@ public class AiGatewayService {
     ) {
         String actorEmp = resolveSelfEmployeeNo(principal, request.employeeNo());
         Long actorUserId = userRepository.findByEmployeeNo(actorEmp).map(User::getId).orElse(null);
-        String detail = buildAuditDetail(request);
+        List<Long> citedNorm = normalizeCitedIds(request.citedMessageIds());
+        validateCitations(request.channelId(), actorEmp, citedNorm);
+        int piiRedactions = AiGatewayPiiMasker.mask(request.prompt()).redactionCount();
+        String detail = buildAuditDetail(request, piiRedactions, citedNorm.size());
         String requestId = httpRequest != null ? httpRequest.getHeader("X-Request-Id") : null;
 
         if (!properties.isAllowExternalLlm()) {
@@ -98,12 +112,55 @@ public class AiGatewayService {
         return employeeNo.trim();
     }
 
-    private static String buildAuditDetail(AiGatewayChatRequest req) {
+    private static List<Long> normalizeCitedIds(List<Long> raw) {
+        if (raw == null || raw.isEmpty()) {
+            return List.of();
+        }
+        LinkedHashSet<Long> dedup = new LinkedHashSet<>();
+        for (Long id : raw) {
+            if (id != null) {
+                dedup.add(id);
+            }
+        }
+        if (dedup.size() > 20) {
+            throw new IllegalArgumentException("근거 메시지는 최대 20개까지 지정할 수 있습니다.");
+        }
+        return new ArrayList<>(dedup);
+    }
+
+    private void validateCitations(Long channelId, String actorEmployeeNo, List<Long> citedIds) {
+        if (citedIds.isEmpty()) {
+            return;
+        }
+        if (channelId == null) {
+            throw new IllegalArgumentException("근거 message_id를 지정하면 channelId가 필요합니다.");
+        }
+        long cid = channelId;
+        if (!channelMemberRepository.existsByChannelIdAndUserEmployeeNo(cid, actorEmployeeNo)) {
+            throw new IllegalArgumentException("해당 채널의 멤버만 근거 메시지를 인용할 수 있습니다.");
+        }
+        for (Long mid : citedIds) {
+            messageRepository.findByIdAndChannel_Id(mid, cid)
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "근거 메시지를 찾을 수 없거나 채널과 일치하지 않습니다."));
+        }
+    }
+
+    private static String buildAuditDetail(AiGatewayChatRequest req, int piiRedactions, int citedDistinctCount) {
         int len = req.prompt() != null ? req.prompt().length() : 0;
         String purpose = req.purpose() == null ? "" : req.purpose().trim();
         if (purpose.length() > 64) {
             purpose = purpose.substring(0, 64);
         }
-        return "purpose=" + purpose + ",promptChars=" + len + ",channelId=" + req.channelId();
+        return "purpose="
+                + purpose
+                + ",promptChars="
+                + len
+                + ",channelId="
+                + req.channelId()
+                + ",citedDistinct="
+                + citedDistinctCount
+                + ",piiRedactions="
+                + piiRedactions;
     }
 }

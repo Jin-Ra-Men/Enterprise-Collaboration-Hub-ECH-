@@ -3281,6 +3281,29 @@ html:not([data-theme="light"]) .ech-composer-footnote {
   color: rgba(174, 179, 184, 0.55);
 }
 
+/* Phase 7-1-2: 근거 인용·전송 전 편집 안내(컴포저 하단) */
+.composer-ai-evidence-hint {
+  margin: 6px 4px 2px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: rgba(174, 179, 184, 0.62);
+}
+html[data-theme="light"] .composer-ai-evidence-hint {
+  color: rgba(60, 60, 67, 0.52);
+}
+html[data-theme="cream"] .composer-ai-evidence-hint {
+  color: rgba(88, 70, 48, 0.58);
+}
+.composer-ai-evidence-hint code {
+  font-size: 10px;
+  padding: 0 3px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+}
+html[data-theme="light"] .composer-ai-evidence-hint code {
+  background: rgba(0, 0, 0, 0.06);
+}
+
 /* 답글 모드: 입력창 위 미리보기(참조 UI — 반투명 바) */
 .reply-composer-banner {
   display: flex;

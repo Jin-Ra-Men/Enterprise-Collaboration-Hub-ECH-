@@ -3,7 +3,9 @@ package com.ech.backend.api.aigateway;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.ech.backend.api.aigateway.dto.AiGatewayChatRequest;
@@ -11,8 +13,11 @@ import com.ech.backend.api.auditlog.AuditLogService;
 import com.ech.backend.common.rbac.AppRole;
 import com.ech.backend.common.security.UserPrincipal;
 import com.ech.backend.domain.audit.AuditEventType;
+import com.ech.backend.domain.channel.ChannelMemberRepository;
+import com.ech.backend.domain.message.MessageRepository;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -35,6 +40,12 @@ class AiGatewayServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private ChannelMemberRepository channelMemberRepository;
+
+    @Mock
+    private MessageRepository messageRepository;
+
     private AiGatewayProperties properties;
     private AiGatewayService service;
 
@@ -43,7 +54,12 @@ class AiGatewayServiceTest {
         properties = new AiGatewayProperties();
         properties.setAllowExternalLlm(true);
         properties.setPolicyVersion("unit-test");
-        service = new AiGatewayService(properties, auditLogService, userRepository);
+        service = new AiGatewayService(
+                properties,
+                auditLogService,
+                userRepository,
+                channelMemberRepository,
+                messageRepository);
     }
 
     @Test
@@ -60,7 +76,7 @@ class AiGatewayServiceTest {
         when(userMock.getId()).thenReturn(99L);
         when(userRepository.findByEmployeeNo("E001")).thenReturn(Optional.of(userMock));
 
-        AiGatewayChatRequest req = new AiGatewayChatRequest("p", null, 12L, "hi");
+        AiGatewayChatRequest req = new AiGatewayChatRequest("p", null, 12L, "hi", List.of());
         MockHttpServletRequest http = new MockHttpServletRequest();
 
         ResponseEntity<?> res = service.chat(principal, req, http);
@@ -76,5 +92,27 @@ class AiGatewayServiceTest {
                 any(),
                 eq(null));
         assertThat(cap.getValue()).isEqualTo(AuditEventType.AI_GATEWAY_PROVIDER_NOT_CONFIGURED);
+    }
+
+    @Test
+    @DisplayName("근거 메시지가 있으면 channelId 없이 호출할 수 없다")
+    void chat_rejects_citations_without_channel_id() {
+        UserPrincipal principal = new UserPrincipal(
+                99L,
+                "E001",
+                "x@test.com",
+                "Tester",
+                "",
+                AppRole.MEMBER);
+        User userMock = org.mockito.Mockito.mock(User.class);
+        when(userMock.getId()).thenReturn(99L);
+        when(userRepository.findByEmployeeNo("E001")).thenReturn(Optional.of(userMock));
+
+        AiGatewayChatRequest req = new AiGatewayChatRequest("p", null, null, "x", List.of(1L));
+        MockHttpServletRequest http = new MockHttpServletRequest();
+
+        assertThrows(IllegalArgumentException.class, () -> service.chat(principal, req, http));
+        verifyNoInteractions(channelMemberRepository);
+        verifyNoInteractions(messageRepository);
     }
 }

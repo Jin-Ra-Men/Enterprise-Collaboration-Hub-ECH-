@@ -168,8 +168,8 @@
 
 - [ ] 7-1. AI 게이트웨이 및 공통 거버넌스
   - [v] 7-1-0. **기본 비유출** 정책 문서화(`docs/AI_GATEWAY_POLICY.md`)·게이트웨이 기본 차단(`POST /api/ai/gateway/chat` → 403)·예외·임베딩/RAG 경계 서술
-  - [v] 7-1-1. LLM 진입 API(`GET /status`, `POST /chat`)·요청 **메타 감사**(본문 미저장)·설정(`app.ai.*`). **PII 마스킹 구현·모델별 선택지 상세**는 후속
-  - [ ] 7-1-2. 환각 완화: 근거 `message_id` 인용·편집 후 전송 UX
+  - [v] 7-1-1. LLM 진입 API(`GET /status`, `POST /chat`)·요청 **메타 감사**(본문 미저장)·설정(`app.ai.*`)·휴리스틱 **PII 마스킹**(`AiGatewayPiiMasker`, 감사 `piiRedactions`). 모델별 라우팅·계약 상세는 후속
+  - [v] 7-1-2. 환각 완화: `POST /chat`에 **`citedMessageIds` + `channelId` 검증**(멤버·메시지 소속), 채팅 컴포저 **전송 전 편집 안내** 문구. 초안 생성 응답·전송 파이프라인은 Phase 7-2와 결합
   - [ ] 7-1-3. (선택) RAG: 권한 필터 이후 임베딩·검색
 - [ ] 7-2. 대화 기반 보조 기능
   - [ ] 7-2-1. 채널/스레드 요약·답장 초안·통합검색 연계 Q&A

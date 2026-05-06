@@ -108,9 +108,10 @@
 - 관련 설정: `application.yml` — `app.ai.allow-external-llm`(기본 `false`, 환경변수 `AI_ALLOW_EXTERNAL_LLM`), `app.ai.policy-version`(표시용).
 - 관련 API:
   - `GET /api/ai/gateway/status` — 정책 요약(`externalLlmAllowed`, `policyVersion`, `defaultPolicySummary`).
-  - `POST /api/ai/gateway/chat` — 본문 JSON `purpose`, 선택 `employeeNo`(JWT와 일치), 선택 `channelId`(감사 메타), `prompt`(최대 8000자). **`allow-external-llm=false` 이면 HTTP 403** (`AI_GATEWAY_BLOCKED`). **`true` 이면 현재 HTTP 501** 스텁 (`AI_GATEWAY_NOT_CONFIGURED`) — 제공자 연동 전 오동작 방지.
-- 감사: `AI_GATEWAY_POLICY_BLOCKED`, `AI_GATEWAY_PROVIDER_NOT_CONFIGURED` — **프롬프트 원문 미저장**, detail 에 `purpose`·`promptChars`·`channelId` 등만.
-- 테스트: `AiGatewayApiTest`, `AiGatewayServiceTest`.
+  - `POST /api/ai/gateway/chat` — 본문 JSON `purpose`, 선택 `employeeNo`(JWT와 일치), 선택 `channelId`, `prompt`(최대 8000자), 선택 `citedMessageIds`(최대 20). **근거 ID가 1개 이상이면 `channelId` 필수**이며, 각 ID는 해당 채널의 메시지이고 호출자는 채널 멤버여야 한다. **`allow-external-llm=false` 이면 HTTP 403** (`AI_GATEWAY_BLOCKED`). **`true` 이면 현재 HTTP 501** 스텁 (`AI_GATEWAY_NOT_CONFIGURED`) — 제공자 연동 전 오동작 방지.
+- 감사: `AI_GATEWAY_POLICY_BLOCKED`, `AI_GATEWAY_PROVIDER_NOT_CONFIGURED` — **프롬프트 원문 미저장**, detail 에 `purpose`·`promptChars`·`channelId`·`citedDistinct`·`piiRedactions`(휴리스틱 마스킹 치환 건수) 등만.
+- UI: 채팅 컴포저 하단 `.composer-ai-evidence-hint` — 근거 `message_id`·전송 전 편집 안내(Phase 7-1-2).
+- 테스트: `AiGatewayApiTest`, `AiGatewayServiceTest`, `AiGatewayPiiMaskerTest`.
 
 ---
 
