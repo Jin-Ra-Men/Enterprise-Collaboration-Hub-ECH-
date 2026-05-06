@@ -1,16 +1,21 @@
 package com.ech.backend.api.calendar;
 
+import com.ech.backend.api.calendar.dto.CalendarConflictCheckResponse;
 import com.ech.backend.api.calendar.dto.CalendarEventResponse;
 import com.ech.backend.api.calendar.dto.CalendarShareResponse;
+import com.ech.backend.api.calendar.dto.CalendarSuggestionResponse;
 import com.ech.backend.api.calendar.dto.CreateCalendarEventRequest;
 import com.ech.backend.api.calendar.dto.CreateCalendarShareRequest;
+import com.ech.backend.api.calendar.dto.CreateCalendarSuggestionRequest;
 import com.ech.backend.api.calendar.dto.UpdateCalendarEventRequest;
+import com.ech.backend.domain.calendar.CalendarSuggestionStatus;
 import com.ech.backend.common.api.ApiResponse;
 import com.ech.backend.common.exception.UnauthorizedException;
 import com.ech.backend.common.security.UserPrincipal;
 import jakarta.validation.Valid;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Locale;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -49,6 +54,63 @@ public class CalendarController {
     ) {
         requireAuth(principal);
         return ApiResponse.success(calendarService.createEvent(principal, request));
+    }
+
+    @GetMapping("/api/calendar/events/conflicts")
+    public ApiResponse<CalendarConflictCheckResponse> checkConflicts(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam String employeeNo,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime startsAt,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime endsAt,
+            @RequestParam(required = false) Long excludeEventId
+    ) {
+        requireAuth(principal);
+        return ApiResponse.success(
+                calendarService.checkConflicts(principal, employeeNo, startsAt, endsAt, excludeEventId));
+    }
+
+    @GetMapping("/api/calendar/suggestions")
+    public ApiResponse<List<CalendarSuggestionResponse>> listSuggestions(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam String employeeNo,
+            @RequestParam(required = false) String status
+    ) {
+        requireAuth(principal);
+        CalendarSuggestionStatus st = null;
+        if (status != null && !status.isBlank()) {
+            st = CalendarSuggestionStatus.valueOf(status.trim().toUpperCase(Locale.ROOT));
+        }
+        return ApiResponse.success(calendarService.listSuggestions(principal, employeeNo, st));
+    }
+
+    @PostMapping("/api/calendar/suggestions")
+    public ApiResponse<CalendarSuggestionResponse> createSuggestion(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody CreateCalendarSuggestionRequest request
+    ) {
+        requireAuth(principal);
+        return ApiResponse.success(calendarService.createSuggestion(principal, request));
+    }
+
+    @PostMapping("/api/calendar/suggestions/{suggestionId}/confirm")
+    public ApiResponse<CalendarEventResponse> confirmSuggestion(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long suggestionId,
+            @RequestParam String employeeNo
+    ) {
+        requireAuth(principal);
+        return ApiResponse.success(calendarService.confirmSuggestion(principal, suggestionId, employeeNo));
+    }
+
+    @PostMapping("/api/calendar/suggestions/{suggestionId}/dismiss")
+    public ApiResponse<Void> dismissSuggestion(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long suggestionId,
+            @RequestParam String employeeNo
+    ) {
+        requireAuth(principal);
+        calendarService.dismissSuggestion(principal, suggestionId, employeeNo);
+        return ApiResponse.success(null);
     }
 
     @PutMapping("/api/calendar/events/{eventId}")

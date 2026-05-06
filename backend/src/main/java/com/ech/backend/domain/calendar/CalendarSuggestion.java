@@ -3,6 +3,8 @@ package com.ech.backend.domain.calendar;
 import com.ech.backend.domain.channel.Channel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -10,12 +12,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import org.hibernate.annotations.ColumnDefault;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "calendar_events")
-public class CalendarEvent {
+@Table(name = "calendar_suggestions")
+public class CalendarSuggestion {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,35 +37,26 @@ public class CalendarEvent {
     @Column(name = "ends_at", nullable = false)
     private OffsetDateTime endsAt;
 
-    /**
-     * When this row was created by accepting a share: channel (or DM channel) where the share was initiated.
-     * Null for self-created events.
-     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private CalendarSuggestionStatus status = CalendarSuggestionStatus.PENDING;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "origin_channel_id")
     private Channel originChannel;
 
-    /**
-     * Optional DM conversation provenance when {@link #originChannel} is used for another context or both are set for traceability.
-     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "origin_dm_channel_id")
     private Channel originDmChannel;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "shared_from_share_id")
-    private CalendarShareRequest sharedFromShare;
-
-    /** JSON array of message ids, e.g. {@code [12,34]} — max length enforced in service. */
     @Column(name = "origin_message_ids", columnDefinition = "TEXT")
     private String originMessageIdsJson;
 
     @Column(name = "created_by_actor", nullable = false, length = 30)
     private String createdByActor = "USER";
 
-    @ColumnDefault("true")
-    @Column(name = "in_use", nullable = false)
-    private boolean inUse = true;
+    @Column(name = "confirmed_event_id")
+    private Long confirmedEventId;
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
@@ -72,10 +64,10 @@ public class CalendarEvent {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt = OffsetDateTime.now();
 
-    protected CalendarEvent() {
+    protected CalendarSuggestion() {
     }
 
-    public CalendarEvent(
+    public CalendarSuggestion(
             String ownerEmployeeNo,
             String title,
             String description,
@@ -83,9 +75,8 @@ public class CalendarEvent {
             OffsetDateTime endsAt,
             Channel originChannel,
             Channel originDmChannel,
-            CalendarShareRequest sharedFromShare,
-            String createdByActor,
-            String originMessageIdsJson
+            String originMessageIdsJson,
+            String createdByActor
     ) {
         this.ownerEmployeeNo = ownerEmployeeNo;
         this.title = title;
@@ -94,10 +85,11 @@ public class CalendarEvent {
         this.endsAt = endsAt;
         this.originChannel = originChannel;
         this.originDmChannel = originDmChannel;
-        this.sharedFromShare = sharedFromShare;
         this.originMessageIdsJson = originMessageIdsJson;
-        this.createdByActor = createdByActor != null && !createdByActor.isBlank() ? createdByActor.trim() : "USER";
-        this.inUse = true;
+        this.createdByActor = createdByActor != null && !createdByActor.isBlank()
+                ? createdByActor.trim()
+                : "USER";
+        this.status = CalendarSuggestionStatus.PENDING;
     }
 
     public Long getId() {
@@ -124,6 +116,10 @@ public class CalendarEvent {
         return endsAt;
     }
 
+    public CalendarSuggestionStatus getStatus() {
+        return status;
+    }
+
     public Channel getOriginChannel() {
         return originChannel;
     }
@@ -136,16 +132,12 @@ public class CalendarEvent {
         return originMessageIdsJson;
     }
 
-    public CalendarShareRequest getSharedFromShare() {
-        return sharedFromShare;
-    }
-
     public String getCreatedByActor() {
         return createdByActor;
     }
 
-    public boolean isInUse() {
-        return inUse;
+    public Long getConfirmedEventId() {
+        return confirmedEventId;
     }
 
     public OffsetDateTime getCreatedAt() {
@@ -156,24 +148,14 @@ public class CalendarEvent {
         return updatedAt;
     }
 
-    public void update(String title, String description, OffsetDateTime startsAt, OffsetDateTime endsAt) {
-        if (title != null && !title.isBlank()) {
-            this.title = title.trim();
-        }
-        if (description != null) {
-            this.description = description.trim().isEmpty() ? null : description.trim();
-        }
-        if (startsAt != null) {
-            this.startsAt = startsAt;
-        }
-        if (endsAt != null) {
-            this.endsAt = endsAt;
-        }
+    public void markConfirmed(Long eventId) {
+        this.status = CalendarSuggestionStatus.CONFIRMED;
+        this.confirmedEventId = eventId;
         this.updatedAt = OffsetDateTime.now();
     }
 
-    public void setInUse(boolean inUse) {
-        this.inUse = inUse;
+    public void markDismissed() {
+        this.status = CalendarSuggestionStatus.DISMISSED;
         this.updatedAt = OffsetDateTime.now();
     }
 }

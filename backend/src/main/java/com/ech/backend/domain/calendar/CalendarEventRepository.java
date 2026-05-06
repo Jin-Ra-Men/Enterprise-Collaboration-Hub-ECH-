@@ -21,4 +21,20 @@ public interface CalendarEventRepository extends JpaRepository<CalendarEvent, Lo
             @Param("rangeStart") OffsetDateTime rangeStart,
             @Param("rangeEnd") OffsetDateTime rangeEnd
     );
+
+    @Query("""
+            SELECT e FROM CalendarEvent e
+            WHERE e.ownerEmployeeNo = :owner
+              AND e.inUse = true
+              AND e.startsAt < :rangeEnd
+              AND e.endsAt > :rangeStart
+              AND (:excludeId IS NULL OR e.id <> :excludeId)
+            ORDER BY e.startsAt ASC
+            """)
+    List<CalendarEvent> findActiveOverlappingForOwner(
+            @Param("owner") String ownerEmployeeNo,
+            @Param("rangeStart") OffsetDateTime rangeStart,
+            @Param("rangeEnd") OffsetDateTime rangeEnd,
+            @Param("excludeId") Long excludeEventId
+    );
 }

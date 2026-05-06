@@ -51,6 +51,7 @@
   - API·도메인 동작: `docs/FEATURE_SPEC.md`, 엔드포인트 목록은 아래 **6)**.
   - 앞으로의 기능 순서: `docs/ROADMAP.md`, 요구 배경: `docs/PROJECT_REQUIREMENTS.md`.
   - **협업 툴 인식·AI 전제:** `docs/COLLABORATION_TOOL_DIRECTION.md`(멘션→업무→마감→칸반 갭, 자료실 1차 축, 캘린더·AI·프로액티브·비용 원칙).
+  - **캘린더 Phase 6-4(백엔드):** 테이블 `calendar_suggestions`(상태 `PENDING`/`CONFIRMED`/`DISMISSED`). 확정(`POST /api/calendar/suggestions/{id}/confirm`)은 본인 제안만 가능하고, 저장되는 `calendar_events` 행은 직접 생성과 동일하게 `created_by_actor=USER`로 남긴다. 제안 생성 시에는 `USER` 또는 `AI_ASSISTANT` 허용. 직접 `POST /api/calendar/events` 에서 `AI_ASSISTANT`는 거부. 타인 달력 반영은 기존 **공유→수락**만 유지. 일정 행에 `origin_dm_channel_id`, `origin_message_ids`(텍스트 JSON 배열) 추가. 충돌 검사: `GET /api/calendar/events/conflicts`. PostgreSQL 이관안 `docs/sql/migrate_calendar_phase_6_4.sql`.
   - **채널 자료실:** 첨부 메타 `library_*`·`channel_library_folders`, API는 `docs/FEATURE_SPEC.md` §채널 자료실; 운영 DB는 `docs/sql/migrate_channel_library_v1.sql` 참고.
   - **업무 마감·우선순위:** `work_items.due_at`, `work_items.priority`; 기존 PostgreSQL DB는 `docs/sql/migrate_work_items_due_priority.sql` 적용. 로컬/H2는 JPA `ddl-auto: update`로 컬럼 추가.
   - **내 할 일 사이드바:** `GET /api/work-items/me/todos` — 오늘·지연 구간은 서버 **Asia/Seoul** 자정 기준. 멘션 연계는 원본 메시지 본문의 `@{사번|표시명}` 토큰 문자열 매칭으로 판별한다. **`badgeCounts`**로 지연·48시간 내 임박 **총건**(목록 상한과 무관)을 표시하며, 채널 미읽음 배지와 색·정책이 다르다.

@@ -98,4 +98,87 @@ class CalendarApiTest extends BaseIntegrationTest {
                 .andExpect(jsonPath("$.data.originChannelId", equalTo(ch.getId().intValue())))
                 .andExpect(jsonPath("$.data.originChannelName").value("캘린더공유채널"));
     }
+
+    @Test
+    @DisplayName("일정 제안(AI_ASSISTANT) 확정 시 이벤트는 USER로 저장")
+    void suggestion_confirm_creates_user_event() throws Exception {
+        String body = """
+                {
+                  "ownerEmployeeNo": "%s",
+                  "title": "제안회의",
+                  "startsAt": "2026-07-01T09:00:00+09:00",
+                  "endsAt": "2026-07-01T10:00:00+09:00",
+                  "createdByActor": "AI_ASSISTANT"
+                }
+                """.formatted(adminEmployeeNo);
+
+        String resp = mockMvc.perform(post("/api/calendar/suggestions")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("PENDING"))
+                .andReturn().getResponse().getContentAsString();
+        long sid = objectMapper.readTree(resp).path("data").path("id").asLong();
+
+        mockMvc.perform(post("/api/calendar/suggestions/{sid}/confirm", sid)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("employeeNo", adminEmployeeNo))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.title").value("제안회의"))
+                .andExpect(jsonPath("$.data.createdByActor").value("USER"));
+
+        mockMvc.perform(get("/api/calendar/suggestions")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("employeeNo", adminEmployeeNo)
+                        .param("status", "CONFIRMED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data", hasSize(1)));
+    }
+
+    @Test
+    @DisplayName("직접 일정 생성 시 AI_ASSISTANT 출처는 거부")
+    void direct_event_rejects_ai_assistant_actor() throws Exception {
+        String body = """
+                {
+                  "ownerEmployeeNo": "%s",
+                  "title": "불가",
+                  "startsAt": "2026-09-01T10:00:00+09:00",
+                  "endsAt": "2026-09-01T11:00:00+09:00",
+                  "createdByActor": "AI_ASSISTANT"
+                }
+                """.formatted(adminEmployeeNo);
+        mockMvc.perform(post("/api/calendar/events")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("충돌 검사 API가 겹치는 일정을 반환")
+    void conflicts_returns_overlap() throws Exception {
+        String ev = """
+                {
+                  "ownerEmployeeNo": "%s",
+                  "title": "블록",
+                  "startsAt": "2026-08-01T10:00:00+09:00",
+                  "endsAt": "2026-08-01T12:00:00+09:00"
+                }
+                """.formatted(adminEmployeeNo);
+        mockMvc.perform(post("/api/calendar/events")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(ev))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/calendar/events/conflicts")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("employeeNo", adminEmployeeNo)
+                        .param("startsAt", "2026-08-01T11:00:00+09:00")
+                        .param("endsAt", "2026-08-01T13:00:00+09:00"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.hasConflict").value(true))
+                .andExpect(jsonPath("$.data.overlappingEvents[0].title").value("블록"));
+    }
 }

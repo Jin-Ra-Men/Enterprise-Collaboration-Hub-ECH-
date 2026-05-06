@@ -66,7 +66,7 @@ CSTalk/ECH를 **메신저가 아니라 협업 허브**로 인식하게 만드는
 | 1인 1달력·직접 일정 | **구현됨** — `Phase 6-1`, `calendar_events` |
 | 채널·DM 수락형 공유·복사본 | **구현됨** — `Phase 6-2`, `calendar_share_requests` |
 | 출처·감사 | **구현됨** — `Phase 6-3`, `origin_channel_id`, `AuditEventType.CALENDAR_*` |
-| `CalendarSuggestion`·확정 API 통일·`originMessageIds`·바쁨/충돌 API | **미구현** — `Phase 6-4` |
+| `CalendarSuggestion`·확정 API 통일·`originMessageIds`·바쁨/충돌 API | **구현됨** — `Phase 6-4`, `calendar_suggestions`, `GET /api/calendar/events/conflicts` |
 | iCal 가져오기/보내기 | **미구현** — `Phase 6-5` |
 | AI가 타인 일정 쓰기 | **원칙 확정** — 반드시 **공유 → 수락** 경로만 (코드·프롬프트 설계 시 동일) |
 

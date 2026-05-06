@@ -1,10 +1,14 @@
 package com.ech.backend.api.calendar;
 
 import com.ech.backend.api.auditlog.AuditLogService;
+import com.ech.backend.api.calendar.dto.CalendarConflictCheckResponse;
+import com.ech.backend.api.calendar.dto.CalendarEventOverlapRow;
 import com.ech.backend.api.calendar.dto.CalendarEventResponse;
 import com.ech.backend.api.calendar.dto.CalendarShareResponse;
+import com.ech.backend.api.calendar.dto.CalendarSuggestionResponse;
 import com.ech.backend.api.calendar.dto.CreateCalendarEventRequest;
 import com.ech.backend.api.calendar.dto.CreateCalendarShareRequest;
+import com.ech.backend.api.calendar.dto.CreateCalendarSuggestionRequest;
 import com.ech.backend.api.calendar.dto.UpdateCalendarEventRequest;
 import com.ech.backend.common.security.UserPrincipal;
 import com.ech.backend.domain.audit.AuditEventType;
@@ -13,6 +17,9 @@ import com.ech.backend.domain.calendar.CalendarEventRepository;
 import com.ech.backend.domain.calendar.CalendarShareRequest;
 import com.ech.backend.domain.calendar.CalendarShareRequestRepository;
 import com.ech.backend.domain.calendar.CalendarShareStatus;
+import com.ech.backend.domain.calendar.CalendarSuggestion;
+import com.ech.backend.domain.calendar.CalendarSuggestionRepository;
+import com.ech.backend.domain.calendar.CalendarSuggestionStatus;
 import com.ech.backend.domain.channel.Channel;
 import com.ech.backend.domain.channel.ChannelMemberRepository;
 import com.ech.backend.domain.channel.ChannelRepository;
@@ -20,6 +27,7 @@ import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Locale;
 import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +40,7 @@ public class CalendarService {
 
     private final CalendarEventRepository calendarEventRepository;
     private final CalendarShareRequestRepository calendarShareRequestRepository;
+    private final CalendarSuggestionRepository calendarSuggestionRepository;
     private final ChannelRepository channelRepository;
     private final ChannelMemberRepository channelMemberRepository;
     private final UserRepository userRepository;
@@ -40,6 +49,7 @@ public class CalendarService {
     public CalendarService(
             CalendarEventRepository calendarEventRepository,
             CalendarShareRequestRepository calendarShareRequestRepository,
+            CalendarSuggestionRepository calendarSuggestionRepository,
             ChannelRepository channelRepository,
             ChannelMemberRepository channelMemberRepository,
             UserRepository userRepository,
@@ -47,6 +57,7 @@ public class CalendarService {
     ) {
         this.calendarEventRepository = calendarEventRepository;
         this.calendarShareRequestRepository = calendarShareRequestRepository;
+        this.calendarSuggestionRepository = calendarSuggestionRepository;
         this.channelRepository = channelRepository;
         this.channelMemberRepository = channelMemberRepository;
         this.userRepository = userRepository;
@@ -77,6 +88,21 @@ public class CalendarService {
         validateTimeRange(request.startsAt(), request.endsAt());
         String title = trimTitle(request.title());
         String description = trimDescription(request.description());
+        ResolvedOrigin origin = resolveOrigins(owner, request.originChannelId(), request.originDmChannelId());
+        String idsJson = CalendarOriginIdsJson.serialize(
+                CalendarOriginIdsJson.normalizeIncoming(request.originMessageIds()));
+
+        String directActor = request.createdByActor();
+        if (directActor != null && !directActor.isBlank()) {
+            String upper = directActor.trim().toUpperCase();
+            if ("AI_ASSISTANT".equals(upper)) {
+                throw new IllegalArgumentException(
+                        "직접 일정 생성에서는 AI_ASSISTANT를 사용할 수 없습니다. 제안 API를 사용하세요.");
+            }
+            if (!"USER".equals(upper)) {
+                throw new IllegalArgumentException("createdByActor는 USER만 허용됩니다.");
+            }
+        }
 
         CalendarEvent saved = calendarEventRepository.save(new CalendarEvent(
                 owner,
@@ -84,9 +110,11 @@ public class CalendarService {
                 description,
                 request.startsAt(),
                 request.endsAt(),
+                origin.originChannel(),
+                origin.originDmChannel(),
                 null,
-                null,
-                "USER"
+                "USER",
+                idsJson
         ));
         auditLogService.safeRecord(
                 AuditEventType.CALENDAR_EVENT_CREATED,
@@ -285,8 +313,10 @@ public class CalendarService {
                 share.getStartsAt(),
                 share.getEndsAt(),
                 share.getOriginChannel(),
+                null,
                 share,
-                "USER"
+                "USER",
+                null
         ));
         share.markAccepted(event.getId());
         auditLogService.safeRecord(
@@ -323,6 +353,148 @@ public class CalendarService {
                 null,
                 null
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<CalendarSuggestionResponse> listSuggestions(
+            UserPrincipal principal,
+            String employeeNo,
+            CalendarSuggestionStatus status
+    ) {
+        String owner = resolveSelfEmployeeNo(principal, employeeNo);
+        CalendarSuggestionStatus st = status != null ? status : CalendarSuggestionStatus.PENDING;
+        return calendarSuggestionRepository
+                .findByOwnerEmployeeNoAndStatusOrderByCreatedAtDesc(owner, st)
+                .stream()
+                .map(this::toSuggestionResponse)
+                .toList();
+    }
+
+    @Transactional
+    public CalendarSuggestionResponse createSuggestion(UserPrincipal principal, CreateCalendarSuggestionRequest request) {
+        String owner = resolveSelfEmployeeNo(principal, request.ownerEmployeeNo());
+        validateTimeRange(request.startsAt(), request.endsAt());
+        String title = trimTitle(request.title());
+        String description = trimDescription(request.description());
+        ResolvedOrigin origin = resolveOrigins(owner, request.originChannelId(), request.originDmChannelId());
+        String idsJson = CalendarOriginIdsJson.serialize(
+                CalendarOriginIdsJson.normalizeIncoming(request.originMessageIds()));
+
+        String actor = normalizeSuggestionActor(request.createdByActor());
+
+        CalendarSuggestion saved = calendarSuggestionRepository.save(new CalendarSuggestion(
+                owner,
+                title,
+                description,
+                request.startsAt(),
+                request.endsAt(),
+                origin.originChannel(),
+                origin.originDmChannel(),
+                idsJson,
+                actor
+        ));
+        auditLogService.safeRecord(
+                AuditEventType.CALENDAR_SUGGESTION_CREATED,
+                userId(owner),
+                "CALENDAR_SUGGESTION",
+                saved.getId(),
+                null,
+                "owner=" + owner + ",actor=" + actor,
+                null
+        );
+        return toSuggestionResponse(saved);
+    }
+
+    /**
+     * Confirms a suggestion by creating a calendar event on the owner's calendar via the same persistence path as
+     * direct creation (always {@code createdByActor=USER} on the saved event).
+     */
+    @Transactional
+    public CalendarEventResponse confirmSuggestion(UserPrincipal principal, Long suggestionId, String employeeNo) {
+        String owner = resolveSelfEmployeeNo(principal, employeeNo);
+        CalendarSuggestion s = calendarSuggestionRepository.findById(suggestionId)
+                .orElseThrow(() -> new IllegalArgumentException("일정 제안을 찾을 수 없습니다."));
+        if (!s.getOwnerEmployeeNo().equals(owner)) {
+            throw new IllegalArgumentException("본인에게 온 제안만 확정할 수 있습니다.");
+        }
+        if (s.getStatus() != CalendarSuggestionStatus.PENDING) {
+            throw new IllegalArgumentException("이미 처리된 제안입니다.");
+        }
+        validateTimeRange(s.getStartsAt(), s.getEndsAt());
+
+        CalendarEvent event = calendarEventRepository.save(new CalendarEvent(
+                owner,
+                s.getTitle(),
+                s.getDescription(),
+                s.getStartsAt(),
+                s.getEndsAt(),
+                s.getOriginChannel(),
+                s.getOriginDmChannel(),
+                null,
+                "USER",
+                s.getOriginMessageIdsJson()
+        ));
+        s.markConfirmed(event.getId());
+        auditLogService.safeRecord(
+                AuditEventType.CALENDAR_EVENT_CREATED,
+                userId(owner),
+                "CALENDAR_EVENT",
+                event.getId(),
+                null,
+                "owner=" + owner + ",fromSuggestionId=" + suggestionId,
+                null
+        );
+        auditLogService.safeRecord(
+                AuditEventType.CALENDAR_SUGGESTION_CONFIRMED,
+                userId(owner),
+                "CALENDAR_SUGGESTION",
+                suggestionId,
+                null,
+                "eventId=" + event.getId(),
+                null
+        );
+        return toEventResponse(event);
+    }
+
+    @Transactional
+    public void dismissSuggestion(UserPrincipal principal, Long suggestionId, String employeeNo) {
+        String owner = resolveSelfEmployeeNo(principal, employeeNo);
+        CalendarSuggestion s = calendarSuggestionRepository.findById(suggestionId)
+                .orElseThrow(() -> new IllegalArgumentException("일정 제안을 찾을 수 없습니다."));
+        if (!s.getOwnerEmployeeNo().equals(owner)) {
+            throw new IllegalArgumentException("본인에게 온 제안만 해제할 수 있습니다.");
+        }
+        if (s.getStatus() != CalendarSuggestionStatus.PENDING) {
+            throw new IllegalArgumentException("이미 처리된 제안입니다.");
+        }
+        s.markDismissed();
+        auditLogService.safeRecord(
+                AuditEventType.CALENDAR_SUGGESTION_DISMISSED,
+                userId(owner),
+                "CALENDAR_SUGGESTION",
+                suggestionId,
+                null,
+                null,
+                null
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public CalendarConflictCheckResponse checkConflicts(
+            UserPrincipal principal,
+            String employeeNo,
+            OffsetDateTime startsAt,
+            OffsetDateTime endsAt,
+            Long excludeEventId
+    ) {
+        String owner = resolveSelfEmployeeNo(principal, employeeNo);
+        validateTimeRange(startsAt, endsAt);
+        List<CalendarEventOverlapRow> rows = calendarEventRepository
+                .findActiveOverlappingForOwner(owner, startsAt, endsAt, excludeEventId)
+                .stream()
+                .map(ev -> new CalendarEventOverlapRow(ev.getId(), ev.getTitle(), ev.getStartsAt(), ev.getEndsAt()))
+                .toList();
+        return new CalendarConflictCheckResponse(!rows.isEmpty(), rows);
     }
 
     /** Marks overdue PENDING shares as EXPIRED (call from write paths only). */
@@ -385,6 +557,41 @@ public class CalendarService {
         return userRepository.findByEmployeeNo(employeeNo).map(User::getId).orElse(null);
     }
 
+    private record ResolvedOrigin(Channel originChannel, Channel originDmChannel) {
+    }
+
+    private ResolvedOrigin resolveOrigins(String actorEmployeeNo, Long originChannelId, Long originDmChannelId) {
+        Channel originChannel = null;
+        Channel originDmChannel = null;
+        if (originChannelId != null) {
+            long cid = originChannelId;
+            Channel ch = channelRepository.findById(cid)
+                    .orElseThrow(() -> new IllegalArgumentException("출처 채널을 찾을 수 없습니다."));
+            if (!channelMemberRepository.existsByChannelIdAndUserEmployeeNo(cid, actorEmployeeNo)) {
+                throw new IllegalArgumentException("출처 채널의 멤버만 해당 채널을 일정 출처로 지정할 수 있습니다.");
+            }
+            originChannel = ch;
+        }
+        if (originDmChannelId != null) {
+            long did = originDmChannelId;
+            Channel dm = channelRepository.findById(did)
+                    .orElseThrow(() -> new IllegalArgumentException("출처 DM 채널을 찾을 수 없습니다."));
+            if (!channelMemberRepository.existsByChannelIdAndUserEmployeeNo(did, actorEmployeeNo)) {
+                throw new IllegalArgumentException("해당 DM의 참여자만 DM 출처를 지정할 수 있습니다.");
+            }
+            originDmChannel = dm;
+        }
+        return new ResolvedOrigin(originChannel, originDmChannel);
+    }
+
+    private static String normalizeSuggestionActor(String raw) {
+        String a = raw == null || raw.isBlank() ? "USER" : raw.trim().toUpperCase(Locale.ROOT);
+        if (!"USER".equals(a) && !"AI_ASSISTANT".equals(a)) {
+            throw new IllegalArgumentException("createdByActor는 USER 또는 AI_ASSISTANT만 허용됩니다.");
+        }
+        return a;
+    }
+
     private CalendarEventResponse toEventResponse(CalendarEvent e) {
         Long originChannelId = null;
         String originChannelName = null;
@@ -394,6 +601,15 @@ public class CalendarService {
             originChannelId = e.getOriginChannel().getId();
             originChannelName = e.getOriginChannel().getName();
             originChannelType = e.getOriginChannel().getChannelType().name();
+        }
+        Long originDmChannelId = null;
+        String originDmChannelName = null;
+        String originDmChannelType = null;
+        if (e.getOriginDmChannel() != null) {
+            Hibernate.initialize(e.getOriginDmChannel());
+            originDmChannelId = e.getOriginDmChannel().getId();
+            originDmChannelName = e.getOriginDmChannel().getName();
+            originDmChannelType = e.getOriginDmChannel().getChannelType().name();
         }
         Long shareId = e.getSharedFromShare() != null ? e.getSharedFromShare().getId() : null;
         return new CalendarEventResponse(
@@ -406,11 +622,56 @@ public class CalendarService {
                 originChannelId,
                 originChannelName,
                 originChannelType,
+                originDmChannelId,
+                originDmChannelName,
+                originDmChannelType,
+                CalendarOriginIdsJson.deserialize(e.getOriginMessageIdsJson()),
                 shareId,
                 e.getCreatedByActor(),
                 e.isInUse(),
                 e.getCreatedAt(),
                 e.getUpdatedAt()
+        );
+    }
+
+    private CalendarSuggestionResponse toSuggestionResponse(CalendarSuggestion s) {
+        Long originChannelId = null;
+        String originChannelName = null;
+        String originChannelType = null;
+        if (s.getOriginChannel() != null) {
+            Hibernate.initialize(s.getOriginChannel());
+            originChannelId = s.getOriginChannel().getId();
+            originChannelName = s.getOriginChannel().getName();
+            originChannelType = s.getOriginChannel().getChannelType().name();
+        }
+        Long originDmChannelId = null;
+        String originDmChannelName = null;
+        String originDmChannelType = null;
+        if (s.getOriginDmChannel() != null) {
+            Hibernate.initialize(s.getOriginDmChannel());
+            originDmChannelId = s.getOriginDmChannel().getId();
+            originDmChannelName = s.getOriginDmChannel().getName();
+            originDmChannelType = s.getOriginDmChannel().getChannelType().name();
+        }
+        return new CalendarSuggestionResponse(
+                s.getId(),
+                s.getOwnerEmployeeNo(),
+                s.getTitle(),
+                s.getDescription(),
+                s.getStartsAt(),
+                s.getEndsAt(),
+                s.getStatus(),
+                originChannelId,
+                originChannelName,
+                originChannelType,
+                originDmChannelId,
+                originDmChannelName,
+                originDmChannelType,
+                CalendarOriginIdsJson.deserialize(s.getOriginMessageIdsJson()),
+                s.getCreatedByActor(),
+                s.getConfirmedEventId(),
+                s.getCreatedAt(),
+                s.getUpdatedAt()
         );
     }
 

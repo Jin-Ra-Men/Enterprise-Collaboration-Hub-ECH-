@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Size;
 import java.time.OffsetDateTime;
 import java.util.List;
 
-public record CreateCalendarEventRequest(
+public record CreateCalendarSuggestionRequest(
         @Size(max = 50) String ownerEmployeeNo,
         @NotBlank @Size(max = 500) String title,
         @Size(max = 8000) String description,

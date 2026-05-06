@@ -72,7 +72,12 @@
 - 관련 화면/경로: `frontend/index.html` — `#modalWorkHub` 내 `#workHubPanelCalendar`(업무·칸반 아래 동일 허브 톤), `frontend/app.js` (`loadWorkHubCalendarPanel`, `ensureWorkHubCalendarBound`)
 - 관련 API:
   - `GET /api/calendar/events?employeeNo=&from=&to=` — 본인 일정 목록(기간 겹침, `in_use=true`)
-  - `POST /api/calendar/events` — 직접 일정 생성(JSON: `ownerEmployeeNo` 생략 시 JWT, `title`, `description`, `startsAt`, `endsAt` ISO-8601)
+  - `POST /api/calendar/events` — 직접 일정 생성(JSON: `ownerEmployeeNo` 생략 시 JWT, `title`, `description`, `startsAt`, `endsAt`, 선택 `originChannelId`·`originDmChannelId`(각각 채널 멤버 검증), 선택 `originMessageIds`(최대 20·중복 제거 후 JSON 저장), `createdByActor`는 **USER만** 허용·`AI_ASSISTANT` 요청 시 400 — AI 출처는 제안 API 사용)
+  - `GET /api/calendar/events/conflicts?employeeNo=&startsAt=&endsAt=&excludeEventId=` — 본인 활성 일정과 시간 구간 겹침 여부·겹치는 행 요약(수정 전 검증·LLM 툴과 동일 엔드포인트)
+  - `GET /api/calendar/suggestions?employeeNo=&status=` — 본인 제안 목록(`status` 생략 시 `PENDING`)
+  - `POST /api/calendar/suggestions` — 제안 생성(`createdByActor`: `USER`|`AI_ASSISTANT`, 출처 채널·DM·메시지 ID 선택)
+  - `POST /api/calendar/suggestions/{id}/confirm?employeeNo=` — **본인 제안만** 확정: `CalendarEvent`를 직접 생성과 동일하게 저장(`created_by_actor=USER`, 출처·메시지 ID 복사), 제안은 `CONFIRMED`
+  - `POST /api/calendar/suggestions/{id}/dismiss?employeeNo=` — `DISMISSED`
   - `PUT /api/calendar/events/{eventId}?employeeNo=` — 수정
   - `DELETE /api/calendar/events/{eventId}?employeeNo=` — 소프트 삭제(`in_use=false`)
   - `POST /api/channels/{channelId}/calendar/shares` — 공유 요청(발신·수신 모두 해당 채널 멤버; `sourceEventId` 있으면 발신자 본인 활성 일정에서 스냅샷)
@@ -81,15 +86,15 @@
   - `POST /api/calendar/shares/{shareId}/accept?employeeNo=` — 수락 후 수신자 달력에 이벤트 생성·출처 `originChannelId` 설정
   - `POST /api/calendar/shares/{shareId}/decline?employeeNo=`
 - 관련 Socket 이벤트: 해당 없음(REST만)
-- 입력/출력: 응답 `CalendarEventResponse`에 `originChannelId`, `originChannelName`, `originChannelType`, `sharedFromShareId`, `createdByActor` 포함. 공유 응답에 `sourceEventId` 포함.
+- 입력/출력: 응답 `CalendarEventResponse`에 `originChannelId`/`Name`/`Type`, `originDmChannelId`/`Name`/`Type`, `originMessageIds`(파싱된 배열), `sharedFromShareId`, `createdByActor` 포함. 공유 응답에 `sourceEventId` 포함.
 - 상태 전이/예외 케이스:
   - `startsAt` < `endsAt` 검증, JWT `employeeNo`와 쿼리/본문 사원번호 불일치 시 거절
   - 공유 **만료**: `expires_at` 경과 시 상태 `EXPIRED`(배치는 쓰기 API 진입 시 `expirePendingBefore`로 정리); 수신 목록은 만료 임박 제외 필터
   - DM은 `channels.channel_type=DM`인 동일 API로 처리
 - 권한/보안: 모든 `/api/calendar/**` 및 채널 공유는 **인증 필요**; 채널 멤버십으로 공유 가능 여부 판단
-- 로그/감사 포인트: `AuditEventType` — `CALENDAR_EVENT_CREATED|UPDATED|DELETED`, `CALENDAR_SHARE_CREATED|ACCEPTED|DECLINED`
-- 테스트 기준: `CalendarApiTest` — 직접 일정 생성·목록, 채널 공유·수락 후 출처 채널명
-- 비고: `CalendarSuggestion`(AI 초안) 엔티티·충돌 검사 API·메시지 ID 출처·iCal 은 로드맵 6-4·6-5·Phase 8에서 확장
+- 로그/감사 포인트: `AuditEventType` — `CALENDAR_EVENT_CREATED|UPDATED|DELETED`, `CALENDAR_SHARE_CREATED|ACCEPTED|DECLINED`, `CALENDAR_SUGGESTION_CREATED|CONFIRMED|DISMISSED`
+- 테스트 기준: `CalendarApiTest` — 직접 일정 생성·목록, 채널 공유·수락 후 출처 채널명, 제안 확정·직접 생성 AI 거부·충돌 검사
+- 비고: **제안→확정**은 타인 달력을 바꾸지 않으며, 타인 반영은 여전히 **공유→수락**만 허용한다. DB 이관: `docs/sql/migrate_calendar_phase_6_4.sql`. iCal 등은 로드맵 6-5·Phase 8.
 
 ---
 

@@ -211,6 +211,8 @@ CREATE TABLE IF NOT EXISTS calendar_events (
     starts_at TIMESTAMPTZ NOT NULL,
     ends_at TIMESTAMPTZ NOT NULL,
     origin_channel_id BIGINT REFERENCES channels(id) ON DELETE SET NULL,
+    origin_dm_channel_id BIGINT REFERENCES channels(id) ON DELETE SET NULL,
+    origin_message_ids TEXT,
     shared_from_share_id BIGINT REFERENCES calendar_share_requests(id) ON DELETE SET NULL,
     created_by_actor VARCHAR(30) NOT NULL DEFAULT 'USER',
     in_use BOOLEAN NOT NULL DEFAULT TRUE,
@@ -219,6 +221,26 @@ CREATE TABLE IF NOT EXISTS calendar_events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_calendar_events_owner_range ON calendar_events(owner_employee_no, starts_at, ends_at) WHERE in_use = TRUE;
+
+-- 일정 제안(확정 전 초안). 타인 달력 반영은 반드시 공유→수락 경로를 유지하고, 제안 본인 확정만 직접 이벤트 생성과 동일 저장 경로로 처리한다.
+CREATE TABLE IF NOT EXISTS calendar_suggestions (
+    id BIGSERIAL PRIMARY KEY,
+    owner_employee_no VARCHAR(50) NOT NULL REFERENCES users(employee_no),
+    title VARCHAR(500) NOT NULL,
+    description TEXT,
+    starts_at TIMESTAMPTZ NOT NULL,
+    ends_at TIMESTAMPTZ NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    origin_channel_id BIGINT REFERENCES channels(id) ON DELETE SET NULL,
+    origin_dm_channel_id BIGINT REFERENCES channels(id) ON DELETE SET NULL,
+    origin_message_ids TEXT,
+    created_by_actor VARCHAR(30) NOT NULL DEFAULT 'USER',
+    confirmed_event_id BIGINT REFERENCES calendar_events(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_calendar_suggestions_owner_status ON calendar_suggestions(owner_employee_no, status);
 
 -- 운영 오류 로그 (대화 본문/파일 원문 등 민감 데이터는 저장하지 않음)
 CREATE TABLE IF NOT EXISTS error_logs (

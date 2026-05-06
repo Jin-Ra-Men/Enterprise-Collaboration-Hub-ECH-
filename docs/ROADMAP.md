@@ -150,11 +150,11 @@
 - [v] 6-3. 출처(프로비넌스) 및 감사
   - [v] 6-3-1. 공유로 수신된 일정에 채널 또는 DM 출처 표시(가능 시 메시지·링크 연계)
   - [v] 6-3-2. 공유/수락/거절·일정 확정을 감사 로그에 반영
-- [ ] 6-4. AI 비서와의 접점(캘린더 MVP 범위 내)
-  - [ ] 6-4-1. `CalendarSuggestion`(가칭) 등 **초안 vs 확정** 분리·확정 시 **직접 생성과 동일 API** 경로
-  - [ ] 6-4-2. 이벤트·제안에 `originChannelId` / `originDmChannelId` / `originMessageIds` / `createdByActor`(USER|AI_ASSISTANT) 등 메타
-  - [ ] 6-4-3. AI가 타인에게 일정을 넣는 제안도 **공유→수락** 모델 우회 금지
-  - [ ] 6-4-4. 권한 내 **바쁨/내 일정 조회·충돌 검사** API(LLM 툴 호출·배치가 동일 엔드포인트 사용)
+- [v] 6-4. AI 비서와의 접점(캘린더 MVP 범위 내)
+  - [v] 6-4-1. `CalendarSuggestion`(가칭) 등 **초안 vs 확정** 분리·확정 시 **직접 생성과 동일 API** 경로
+  - [v] 6-4-2. 이벤트·제안에 `originChannelId` / `originDmChannelId` / `originMessageIds` / `createdByActor`(USER|AI_ASSISTANT) 등 메타
+  - [v] 6-4-3. AI가 타인에게 일정을 넣는 제안도 **공유→수락** 모델 우회 금지
+  - [v] 6-4-4. 권한 내 **바쁨/내 일정 조회·충돌 검사** API(LLM 툴 호출·배치가 동일 엔드포인트 사용)
 - [ ] 6-5. (선택) iCal 가져오기/보내기 — 외부 연동 Phase 이전 단계로 가치 있음
 
 ## Phase 7 - AI 비서 (게이트웨이·프로액티브·비용)
