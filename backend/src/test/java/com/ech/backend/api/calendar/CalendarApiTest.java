@@ -70,6 +70,33 @@ class CalendarApiTest extends BaseIntegrationTest {
     }
 
     @Test
+    @DisplayName("GET /api/calendar/events/{id} 로 단건 조회 시 본문과 attendees 배열을 반환")
+    void get_event_by_id_returns_detail() throws Exception {
+        String body = """
+                {
+                  "ownerEmployeeNo": "%s",
+                  "title": "단건조회",
+                  "startsAt": "2026-06-10T10:00:00+09:00",
+                  "endsAt": "2026-06-10T11:00:00+09:00"
+                }
+                """.formatted(adminEmployeeNo);
+        String created = mockMvc.perform(post("/api/calendar/events")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        long eventId = objectMapper.readTree(created).path("data").path("id").asLong();
+
+        mockMvc.perform(get("/api/calendar/events/{eventId}", eventId)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("employeeNo", adminEmployeeNo))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.title").value("단건조회"))
+                .andExpect(jsonPath("$.data.attendees").isArray());
+    }
+
+    @Test
     @DisplayName("채널에서 일정 공유 후 수신자 수락 시 출처 채널 표시")
     void share_accept_shows_origin_channel() throws Exception {
         User admin = userRepository.findByEmployeeNo(adminEmployeeNo).orElseThrow();
