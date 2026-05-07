@@ -69,7 +69,7 @@
 ## 개인 캘린더·공유 (Phase 6 MVP)
 - 목적: 사용자당 **하나의 논리 캘린더**에 직접 일정을 두고, **채널·DM** 맥락에서 다른 멤버에게 일정을 **공유 요청**한 뒤 수신자가 **수락**하면 본인 달력에 **복사본**이 생기며 **출처(채널/DM)** 를 표시한다. AI 비서·외부 연동 전에도 동작하도록 하며, `created_by_actor` 등 **확장 메타**를 남긴다.
 - 사용자: 로그인한 모든 멤버(채널/DM 멤버십에 따름)
-- 관련 화면/경로: `frontend/index.html` — 전역 **내 일정** `#modalCalendarHub`(글로벌 바「내 일정」·사이드바 허브 단축 동일 진입). 첫 화면은 **월간 그리드**(이전·오늘·다음 달, `#calendarHubGridCells`), 상단 **일정 추가**(`#calendarHubBtnToolbarAdd`), 날짜 칸 클릭 시 해당 일 기준 **`#modalCalendarHubQuickAdd`** 빠른 등록(종일·설명·`datetime-local`). `frontend/app.js`: `renderCalendarHubMonthGrid`, `openCalendarHubQuickModal`, `submitCalendarHubQuickEvent`, `calendarHubVisibleMonthRangeIso`(표시 월 ±여유일 API 조회). 워크플로(`#modalWorkHub`)에는 캘린더 패널 없음. **iCal** `#calendarHubBtnIcsExport`·`calendarHubBtnIcsImport`·`calendarHubIcsFileInput`; **제안 대기** `#calendarHubSuggestionsList`; 공유 출처 `#calendarHubShareChannelSelect`.
+- 관련 화면/경로: `frontend/index.html` — 전역 **내 일정** `#modalCalendarHub`. **월간** 탭: 격자 칸에 `(Asia/Seoul 시각) 제목` 형태로 일정 표시, **목록보기** 탭: 표 **`#calendarHubEventTableBody`**(유형 뱃지·제목·시작/종료 GMT+9 `MM.DD HH:mm`·등록·출처·삭제). 상단 **일정 추가**·달 이동·`#calendarHubViewMonth`/`#calendarHubViewList`. 날짜 클릭 → `#modalCalendarHubQuickAdd`. `frontend/app.js`: `calendarHubFormatSeoulMdHm`, `renderCalendarHubEventTable`, `calendarHubViewMode`. 워크플로(`#modalWorkHub`)에는 캘린더 없음. **iCal**·제안·공유 UI 동일.
 - 관련 API:
   - `GET /api/calendar/events?employeeNo=&from=&to=` — 본인 일정 목록(기간 겹침, `in_use=true`)
   - `POST /api/calendar/events` — 직접 일정 생성(JSON: `ownerEmployeeNo` 생략 시 JWT, `title`, `description`, `startsAt`, `endsAt`, 선택 `originChannelId`·`originDmChannelId`(각각 채널 멤버 검증), 선택 `originMessageIds`(최대 20·중복 제거 후 JSON 저장), `createdByActor`는 **USER만** 허용·`AI_ASSISTANT` 요청 시 400 — AI 출처는 제안 API 사용)

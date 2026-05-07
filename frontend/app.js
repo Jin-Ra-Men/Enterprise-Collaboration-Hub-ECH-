@@ -454,6 +454,8 @@ let calendarHubViewAnchor = null;
 let calendarHubSelectedDateKey = null;
 /** 마지막으로 그린 월간 그리드용 일정 스냅샷(선택 강조만 다시 그릴 때 사용) */
 let calendarHubCachedEventsForGrid = [];
+/** `month` | `list` — 내 일정 허브 표시 형식 */
+let calendarHubViewMode = "month";
 /** 내 일정 허브「공유 보내기」에서 선택한 채널/DM의 멤버 목록 */
 let standaloneCalendarShareMembers = [];
 let workHubSelectedWorkItemMeta = null;
@@ -589,6 +591,7 @@ async function openCalendarHubPage() {
   ensureCalendarHubMountedInChatArea();
   ensureCalendarHubBindings();
   populateCalendarHubShareChannelSelect();
+  calendarHubViewMode = "month";
   const now = new Date();
   calendarHubViewAnchor = { year: now.getFullYear(), month: now.getMonth() };
   calendarHubSelectedDateKey = calendarHubLocalDateKeyFromDate(now);
@@ -10473,16 +10476,22 @@ async function submitCalendarHubQuickEvent() {
 
 /** 전역「내 일정」허브 DOM id 묶음 */
 const CALENDAR_HUB_IDS = Object.freeze({
+  panelRoot: "calendarHubPanelRoot",
   btnToolbarAdd: "calendarHubBtnToolbarAdd",
   btnPrevMonth: "calendarHubBtnPrevMonth",
   btnNextMonth: "calendarHubBtnNextMonth",
   btnToday: "calendarHubBtnToday",
   monthLabel: "calendarHubMonthLabel",
   gridCells: "calendarHubGridCells",
+  viewTabMonth: "calendarHubViewMonth",
+  viewTabList: "calendarHubViewList",
+  monthPane: "calendarHubMonthPane",
+  listPane: "calendarHubListPane",
+  listMonthHint: "calendarHubListMonthHint",
+  eventTableBody: "calendarHubEventTableBody",
   btnIcsExport: "calendarHubBtnIcsExport",
   btnIcsImport: "calendarHubBtnIcsImport",
   icsFileInput: "calendarHubIcsFileInput",
-  eventsList: "calendarHubEventsList",
   suggestionsList: "calendarHubSuggestionsList",
   incomingList: "calendarHubIncomingSharesList",
   shareChannelSelect: "calendarHubShareChannelSelect",
@@ -10492,6 +10501,158 @@ const CALENDAR_HUB_IDS = Object.freeze({
   shareEnd: "calendarHubShareEndInput",
   btnShareSend: "calendarHubBtnShareSend",
 });
+
+/** 일정 시각 표시용 Seoul 타임존 파트 */
+function calendarHubPartsSeoul(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const parts = {};
+  for (const { type, value } of new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(d)) {
+    if (type !== "literal") parts[type] = value;
+  }
+  return parts.year && parts.month && parts.day ? parts : null;
+}
+
+function calendarHubFormatSeoulMdHm(iso) {
+  const p = calendarHubPartsSeoul(iso);
+  if (!p) return "—";
+  return `${p.month}.${p.day} ${p.hour}:${p.minute}`;
+}
+
+function calendarHubFormatSeoulTimeHm(iso) {
+  const p = calendarHubPartsSeoul(iso);
+  if (!p) return "--:--";
+  return `${p.hour}:${p.minute}`;
+}
+
+function calendarHubIsAllDayEvent(ev) {
+  const ps = calendarHubPartsSeoul(ev.startsAt);
+  const pe = calendarHubPartsSeoul(ev.endsAt);
+  if (!ps || !pe) return false;
+  const sameDay =
+    ps.year === pe.year && ps.month === pe.month && ps.day === pe.day;
+  if (!sameDay) return false;
+  const sh = Number(ps.hour);
+  const sm = Number(ps.minute);
+  const eh = Number(pe.hour);
+  const em = Number(pe.minute);
+  if (sh === 0 && sm === 0 && eh === 23 && em >= 59) return true;
+  const ss = new Date(ev.startsAt).getTime();
+  const ee = new Date(ev.endsAt).getTime();
+  const dur = ee - ss;
+  if (dur >= 20 * 3600000 && dur <= 26 * 3600000) return true;
+  return false;
+}
+
+function calendarHubEventsInAnchorMonth(events) {
+  const { year, month } = getCalendarHubDisplayAnchor();
+  const monthStart = new Date(year, month, 1).getTime();
+  const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999).getTime();
+  return (events || []).filter((ev) => {
+    if (!ev || ev.inUse === false) return false;
+    const s = new Date(ev.startsAt).getTime();
+    const e = new Date(ev.endsAt).getTime();
+    if (Number.isNaN(s) || Number.isNaN(e)) return false;
+    return s <= monthEnd && e >= monthStart;
+  });
+}
+
+function calendarHubEventKind(ev) {
+  const actor = String(ev.createdByActor || "USER").toUpperCase();
+  if (actor === "AI_ASSISTANT") return "ai";
+  if (ev.sharedFromShareId != null || ev.originChannelId != null || ev.originDmChannelId != null) return "share";
+  return "direct";
+}
+
+function calendarHubEventRegistrantLabel(ev) {
+  const actor = String(ev.createdByActor || "USER").toUpperCase();
+  if (actor === "AI_ASSISTANT") {
+    return `<span class="calendar-hub-reg-note">AI 제안 확정</span>`;
+  }
+  const oc = ev.originChannelId != null;
+  const od = ev.originDmChannelId != null;
+  if (oc || od) {
+    const name = String(ev.originChannelName || ev.originDmChannelName || "").trim();
+    const typ = String(ev.originChannelType || ev.originDmChannelType || "").trim();
+    const bits = [typ, name].filter(Boolean).join(" · ");
+    return escHtml(bits ? `공유 · ${bits}` : "공유");
+  }
+  const no = String(ev.ownerEmployeeNo || "").trim();
+  const selfNo = String(currentUser?.employeeNo || "").trim();
+  if (currentUser && no && selfNo && no === selfNo) {
+    const nm = String(currentUser.name || "").trim();
+    return escHtml(nm ? `${nm} (${no})` : no || "나");
+  }
+  return escHtml(no || "—");
+}
+
+function renderCalendarHubEventTable(events) {
+  const tbody = document.getElementById(CALENDAR_HUB_IDS.eventTableBody);
+  const hintEl = document.getElementById(CALENDAR_HUB_IDS.listMonthHint);
+  const anchor = getCalendarHubDisplayAnchor();
+  if (hintEl) hintEl.textContent = `${anchor.year}년 ${anchor.month + 1}월`;
+  if (!tbody) return;
+  const rows = calendarHubEventsInAnchorMonth(events).sort(
+    (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()
+  );
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="calendar-hub-table-empty">이 달에 표시할 일정이 없습니다.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows
+    .map((ev) => {
+      const id = Number(ev.id);
+      const kind = calendarHubEventKind(ev);
+      const badge =
+        kind === "ai"
+          ? `<span class="calendar-hub-tag calendar-hub-tag--ai">AI</span>`
+          : kind === "share"
+            ? `<span class="calendar-hub-tag calendar-hub-tag--share">공유</span>`
+            : `<span class="calendar-hub-tag calendar-hub-tag--direct">내 일정</span>`;
+      const title = escHtml(String(ev.title || ""));
+      const start = escHtml(calendarHubFormatSeoulMdHm(ev.startsAt));
+      const end = escHtml(calendarHubFormatSeoulMdHm(ev.endsAt));
+      const reg = calendarHubEventRegistrantLabel(ev);
+      const del =
+        ev.inUse === false
+          ? ""
+          : `<button type="button" class="btn-cancel btn-sm calendar-hub-delete" data-calendar-event-id="${id}">삭제</button>`;
+      return `<tr data-calendar-event-id="${id}">
+      <td>${badge}</td>
+      <td class="calendar-hub-td-title">${title}</td>
+      <td class="calendar-hub-td-dt">${start}</td>
+      <td class="calendar-hub-td-dt">${end}</td>
+      <td class="calendar-hub-td-meta">${reg}</td>
+      <td class="calendar-hub-td-actions">${del}</td>
+    </tr>`;
+    })
+    .join("");
+}
+
+function applyCalendarHubViewModeUi() {
+  const ids = CALENDAR_HUB_IDS;
+  const month = calendarHubViewMode === "month";
+  document.getElementById(ids.monthPane)?.classList.toggle("hidden", !month);
+  document.getElementById(ids.listPane)?.classList.toggle("hidden", month);
+  const tm = document.getElementById(ids.viewTabMonth);
+  const tl = document.getElementById(ids.viewTabList);
+  if (tm) {
+    tm.classList.toggle("calendar-hub-view-tab--active", month);
+    tm.setAttribute("aria-selected", month ? "true" : "false");
+  }
+  if (tl) {
+    tl.classList.toggle("calendar-hub-view-tab--active", !month);
+    tl.setAttribute("aria-selected", month ? "false" : "true");
+  }
+}
 
 function renderCalendarHubMonthGrid(year, monthIndex, events) {
   const ids = CALENDAR_HUB_IDS;
@@ -10537,21 +10698,22 @@ function renderCalendarHubMonthGrid(year, monthIndex, events) {
       const todayCls = isTodayCell ? " calendar-hub-cell--today" : "";
       const selCls = selected ? " calendar-hub-cell--selected" : "";
       const dayEvts = muted ? [] : calendarHubEventsOverlappingLocalDay(events, cellDate);
-      const chips = dayEvts
-        .slice(0, 3)
-        .map((ev) => {
-          const t = escHtml(String(ev.title || "").slice(0, 22));
-          const suf = String(ev.title || "").length > 22 ? "…" : "";
-          return `<span class="calendar-hub-chip">${t}${suf}</span>`;
-        })
-        .join("");
-      const more =
-        dayEvts.length > 3 ? `<span class="calendar-hub-chip calendar-hub-chip--more">+${dayEvts.length - 3}</span>` : "";
-      return `<button type="button" class="calendar-hub-cell${mutedCls}${sunCls}${satCls}${todayCls}${selCls}" data-cal-date="${escHtml(
-        key
-      )}" data-cal-muted="${muted ? "1" : "0"}" aria-label="${muted ? "다른 달 " : ""}${dayNum}일${dayEvts.length ? `, 일정 ${dayEvts.length}건` : ""}">
+      const linesHtml = dayEvts.slice(0, 8).map((ev) => {
+        const titleRaw = String(ev.title || "");
+        const hmLabel = calendarHubIsAllDayEvent(ev) ? "종일" : calendarHubFormatSeoulTimeHm(ev.startsAt);
+        const inner =
+          hmLabel === "종일"
+            ? `(종일) ${escHtml(titleRaw)}`
+            : `(${hmLabel}) ${escHtml(titleRaw)}`;
+        return `<div class="calendar-hub-cell-event-line">${inner}</div>`;
+      });
+      const moreHtml =
+        dayEvts.length > 8
+          ? `<div class="calendar-hub-cell-more">+${dayEvts.length - 8}건 · 목록보기에서 확인</div>`
+          : "";
+      return `<button type="button" class="calendar-hub-cell${mutedCls}${sunCls}${satCls}${todayCls}${selCls}" data-cal-date="${key}" data-cal-muted="${muted ? "1" : "0"}" aria-label="${muted ? "다른 달 " : ""}${dayNum}일${dayEvts.length ? `, 일정 ${dayEvts.length}건` : ""}">
         <span class="calendar-hub-cell-num">${dayNum}</span>
-        <div class="calendar-hub-cell-chips">${chips}${more}</div>
+        <div class="calendar-hub-cell-events-block">${linesHtml.join("")}${moreHtml}</div>
       </button>`;
     })
     .join("");
@@ -10685,42 +10847,8 @@ async function downloadCalendarHubIcsExport() {
 
 function renderCalendarHubLists(events, incoming, suggestions) {
   calendarHubCachedEventsForGrid = Array.isArray(events) ? events : [];
-  const ids = CALENDAR_HUB_IDS;
-  const listEl = document.getElementById(ids.eventsList);
-  const inEl = document.getElementById(ids.incomingList);
-  if (listEl) {
-    if (!events.length) {
-      listEl.innerHTML = `<li class="channel-work-item channel-work-item--muted">등록된 일정이 없습니다.</li>`;
-    } else {
-      listEl.innerHTML = events
-        .map((ev) => {
-          const id = Number(ev.id);
-          const origin =
-            ev.originChannelId != null
-              ? `<span class="calendar-origin">${escHtml(String(ev.originChannelType || ""))} · ${escHtml(
-                  String(ev.originChannelName || "")
-                )}</span>`
-              : `<span class="calendar-origin">직접 등록</span>`;
-          const start = escHtml(String(ev.startsAt || ""));
-          const end = escHtml(String(ev.endsAt || ""));
-          const del =
-            ev.inUse === false
-              ? ""
-              : `<button type="button" class="btn-cancel btn-sm calendar-hub-delete" data-calendar-event-id="${id}">삭제</button>`;
-          const rowCls = del ? "channel-work-item channel-work-item--with-actions" : "channel-work-item";
-          return `<li class="${rowCls}" data-calendar-event-id="${id}">
-            <div class="channel-work-item-main">
-              <div class="channel-work-item-title">${escHtml(String(ev.title || ""))}</div>
-              <div class="channel-work-item-meta">${start} — ${end}</div>
-              <div class="channel-work-item-meta">${origin}</div>
-            </div>
-            <div class="channel-work-item-actions">${del}</div>
-          </li>`;
-        })
-        .join("");
-    }
-  }
-  const sugEl = document.getElementById(ids.suggestionsList);
+  const inEl = document.getElementById(CALENDAR_HUB_IDS.incomingList);
+  const sugEl = document.getElementById(CALENDAR_HUB_IDS.suggestionsList);
   if (sugEl) {
     const sugList = Array.isArray(suggestions) ? suggestions : [];
     if (!sugList.length) {
@@ -10771,8 +10899,10 @@ function renderCalendarHubLists(events, incoming, suggestions) {
         .join("");
     }
   }
+  renderCalendarHubEventTable(calendarHubCachedEventsForGrid);
   const anchor = getCalendarHubDisplayAnchor();
   renderCalendarHubMonthGrid(anchor.year, anchor.month, calendarHubCachedEventsForGrid);
+  applyCalendarHubViewModeUi();
 }
 
 function ensureCalendarHubBindings() {
@@ -10862,6 +10992,32 @@ function ensureCalendarHubBindings() {
   document.getElementById(qids.submit)?.addEventListener("click", () => {
     void submitCalendarHubQuickEvent();
   });
+  document.getElementById(ids.viewTabMonth)?.addEventListener("click", () => {
+    calendarHubViewMode = "month";
+    applyCalendarHubViewModeUi();
+  });
+  document.getElementById(ids.viewTabList)?.addEventListener("click", () => {
+    calendarHubViewMode = "list";
+    renderCalendarHubEventTable(calendarHubCachedEventsForGrid);
+    applyCalendarHubViewModeUi();
+  });
+  document.getElementById(ids.panelRoot)?.addEventListener("click", async (e) => {
+    const del = e.target.closest(".calendar-hub-delete");
+    if (!del || !currentUser) return;
+    e.preventDefault();
+    const id = Number(del.dataset.calendarEventId);
+    if (!id) return;
+    if (!(await uiConfirm("이 일정을 삭제할까요?"))) return;
+    try {
+      const emp = encodeURIComponent(currentUser.employeeNo);
+      const res = await apiFetch(`/api/calendar/events/${id}?employeeNo=${emp}`, { method: "DELETE" });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error?.message || "삭제 실패");
+      await loadCalendarHubPanel();
+    } catch (err) {
+      await uiAlert(err?.message || "삭제 실패");
+    }
+  });
   document.getElementById(ids.btnShareSend)?.addEventListener("click", async () => {
     if (!currentUser) return;
     const cid = Number(document.getElementById(ids.shareChannelSelect)?.value || 0);
@@ -10899,23 +11055,6 @@ function ensureCalendarHubBindings() {
       document.getElementById(ids.shareEnd).value = "";
     } catch (e) {
       await uiAlert(e?.message || "공유 전송 실패");
-    }
-  });
-  document.getElementById(ids.eventsList)?.addEventListener("click", async (e) => {
-    const del = e.target.closest(".calendar-hub-delete");
-    if (!del || !currentUser) return;
-    e.preventDefault();
-    const id = Number(del.dataset.calendarEventId);
-    if (!id) return;
-    if (!(await uiConfirm("이 일정을 삭제할까요?"))) return;
-    try {
-      const emp = encodeURIComponent(currentUser.employeeNo);
-      const res = await apiFetch(`/api/calendar/events/${id}?employeeNo=${emp}`, { method: "DELETE" });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error?.message || "삭제 실패");
-      await loadCalendarHubPanel();
-    } catch (err) {
-      await uiAlert(err?.message || "삭제 실패");
     }
   });
   document.getElementById(ids.suggestionsList)?.addEventListener("click", async (e) => {

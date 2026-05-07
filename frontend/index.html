@@ -1344,28 +1344,51 @@
                     <input type="file" id="calendarHubIcsFileInput" accept=".ics,text/calendar,.ical" class="hidden" aria-label="iCal 파일 선택" />
                   </div>
                 </div>
-                <p class="work-hub-hint workflow-section-hint calendar-hub-grid-hint">
-                  칸을 선택하면 해당 날짜로 <strong>일정 추가</strong> 창이 열립니다. 직접 등록·수락한 공유 일정이 달력에 표시됩니다.
-                </p>
-                <div class="calendar-hub-grid" role="application" aria-label="월간 일정 달력">
-                  <div class="calendar-hub-weekdays" aria-hidden="true">
-                    <span class="calendar-hub-wd calendar-hub-wd--sun">일</span>
-                    <span class="calendar-hub-wd">월</span>
-                    <span class="calendar-hub-wd">화</span>
-                    <span class="calendar-hub-wd">수</span>
-                    <span class="calendar-hub-wd">목</span>
-                    <span class="calendar-hub-wd">금</span>
-                    <span class="calendar-hub-wd">토</span>
+                <div class="calendar-hub-toolbar-view-row">
+                  <div class="calendar-hub-view-toggle" role="tablist" aria-label="캘린더 표시 형식">
+                    <button type="button" role="tab" id="calendarHubViewMonth" class="calendar-hub-view-tab calendar-hub-view-tab--active" aria-selected="true">월간</button>
+                    <button type="button" role="tab" id="calendarHubViewList" class="calendar-hub-view-tab" aria-selected="false">목록보기</button>
                   </div>
-                  <div id="calendarHubGridCells" class="calendar-hub-cells"></div>
+                </div>
+                <div id="calendarHubMonthPane" class="calendar-hub-pane">
+                  <p class="work-hub-hint workflow-section-hint calendar-hub-grid-hint">
+                    날짜 칸에 <strong>(시각) 제목</strong>으로 일정이 보입니다. 칸을 누르면 그 날짜로 일정을 추가합니다.
+                  </p>
+                  <div class="calendar-hub-grid" role="application" aria-label="월간 일정 달력">
+                    <div class="calendar-hub-weekdays" aria-hidden="true">
+                      <span class="calendar-hub-wd calendar-hub-wd--sun">일</span>
+                      <span class="calendar-hub-wd">월</span>
+                      <span class="calendar-hub-wd">화</span>
+                      <span class="calendar-hub-wd">수</span>
+                      <span class="calendar-hub-wd">목</span>
+                      <span class="calendar-hub-wd">금</span>
+                      <span class="calendar-hub-wd">토</span>
+                    </div>
+                    <div id="calendarHubGridCells" class="calendar-hub-cells"></div>
+                  </div>
+                </div>
+                <div id="calendarHubListPane" class="calendar-hub-pane hidden">
+                  <p class="work-hub-hint workflow-section-hint calendar-hub-list-hint">
+                    현재 표시 중인 달(<strong id="calendarHubListMonthHint"></strong>)에 해당하는 일정만 표시합니다. 시각은 <strong>Asia/Seoul (GMT+9)</strong> 기준입니다.
+                  </p>
+                  <div class="calendar-hub-table-scroll">
+                    <table class="calendar-hub-event-table">
+                      <thead>
+                        <tr>
+                          <th scope="col" class="calendar-hub-th-tag">유형</th>
+                          <th scope="col">제목</th>
+                          <th scope="col">일정 시작 (GMT+9)</th>
+                          <th scope="col">일정 종료 (GMT+9)</th>
+                          <th scope="col">등록·출처</th>
+                          <th scope="col" class="calendar-hub-th-actions" aria-label="작업"></th>
+                        </tr>
+                      </thead>
+                      <tbody id="calendarHubEventTableBody"></tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
-              <div class="workflow-section-head workflow-section-head--nested">
-                <span class="workflow-section-kicker">List</span>
-                <h6 class="workflow-section-title">이번 달·주변 구간 일정 목록</h6>
-              </div>
               <div class="work-hub-panel-body">
-                <ul id="calendarHubEventsList" class="channel-work-item-list"></ul>
                 <div class="workflow-section-head workflow-section-head--nested">
                   <span class="workflow-section-kicker">Suggestions</span>
                   <h6 class="workflow-section-title">일정 제안 (대기)</h6>

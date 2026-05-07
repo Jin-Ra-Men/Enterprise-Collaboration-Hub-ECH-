@@ -6,6 +6,7 @@
 
 ### Changed
 - **내 일정 허브 UX**: 진입 시 **월간 달력**을 메인으로 표시하고 상단 **일정 추가**로 빠른 등록 모달(`modalCalendarHubQuickAdd`)을 연다. 날짜 칸 클릭 시 동일 모달에 해당 일 기본값(10:00–11:00 또는 종일). `renderCalendarHubMonthGrid`, 표시 월 범위로 이벤트 API 조회. 스타일 `frontend/styles.css`. `FEATURE_SPEC` 반영.
+- **내 일정 가독성·목록보기**: 월간 칸에 `(시각) 제목`(Seoul)·격자 테두리 강화. 상단 **월간 | 목록보기** 전환, 목록은 표( GMT+9 · 유형 · 삭제). `#calendarHubPanelRoot` 위임으로 일정 삭제 처리.
 
 ### Fixed
 - **`DataInitializer.ensureChannelTypeConstraintAllowsDm`**: `information_schema` 질의에 테이블 별칭 `tc` 누락으로 로컬 기동 시 `BadSqlGrammarException` 발생하던 문제 수정. PostgreSQL에서는 `pg_catalog.pg_constraint` 기반으로 CHECK 제약을 조회·보정하고, 비 Postgres에서는 디버그 로그만 남기고 건너뜀.
