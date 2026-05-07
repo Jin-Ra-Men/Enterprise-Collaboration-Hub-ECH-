@@ -2,6 +2,11 @@
 
 프로젝트 변경 이력을 기록합니다.
 
+## 2026-05-08
+
+### Fixed
+- **`DataInitializer.ensureChannelTypeConstraintAllowsDm`**: `information_schema` 질의에 테이블 별칭 `tc` 누락으로 로컬 기동 시 `BadSqlGrammarException` 발생하던 문제 수정. PostgreSQL에서는 `pg_catalog.pg_constraint` 기반으로 CHECK 제약을 조회·보정하고, 비 Postgres에서는 디버그 로그만 남기고 건너뜀.
+
 ## 2026-05-07
 
 ### Added

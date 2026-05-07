@@ -10,11 +10,13 @@ import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -226,24 +228,30 @@ public class DataInitializer implements ApplicationRunner {
     /**
      * 과거 DB에서 channels_channel_type_check가 PUBLIC/PRIVATE만 허용하는 경우
      * DM 채널 생성이 실패하므로 기동 시 안전하게 보정한다.
+     *
+     * <p>PostgreSQL만 처리한다. {@code pg_catalog}로 CHECK 제약을 조회한다(호환·명확).
      */
     private void ensureChannelTypeConstraintAllowsDm() {
         try {
+            Boolean postgres = jdbcTemplate.execute((ConnectionCallback<Boolean>) conn -> {
+                String product = conn.getMetaData().getDatabaseProductName();
+                return product != null && product.toLowerCase(Locale.ROOT).contains("postgres");
+            });
+            if (!Boolean.TRUE.equals(postgres)) {
+                log.debug("[DataInitializer] channels channel_type 제약 보정: PostgreSQL이 아니어 건너뜁니다.");
+                return;
+            }
+
             List<String> constraintNames = jdbcTemplate.query(
                     """
-                            SELECT tc.constraint_name
-                            FROM information_schema.table_constraints
-                            WHERE tc.table_schema = current_schema()
-                              AND tc.table_name = 'channels'
-                              AND tc.constraint_type = 'CHECK'
-                              AND EXISTS (
-                                  SELECT 1
-                                  FROM information_schema.constraint_column_usage ccu
-                                  WHERE ccu.constraint_schema = tc.constraint_schema
-                                    AND ccu.constraint_name = tc.constraint_name
-                                    AND ccu.table_name = tc.table_name
-                                    AND ccu.column_name = 'channel_type'
-                              )
+                            SELECT c.conname
+                            FROM pg_catalog.pg_constraint c
+                            INNER JOIN pg_catalog.pg_class t ON c.conrelid = t.oid
+                            INNER JOIN pg_catalog.pg_namespace n ON t.relnamespace = n.oid
+                            WHERE c.contype = 'c'
+                              AND t.relname = 'channels'
+                              AND n.nspname = current_schema()
+                              AND pg_catalog.pg_get_constraintdef(c.oid) ILIKE '%channel_type%'
                             """,
                     (rs, rowNum) -> rs.getString(1)
             );
@@ -253,15 +261,17 @@ public class DataInitializer implements ApplicationRunner {
                 }
                 jdbcTemplate.execute("ALTER TABLE channels DROP CONSTRAINT " + name);
             }
-            Integer hasNewConstraint = jdbcTemplate.queryForObject(
+            Long hasNewConstraint = jdbcTemplate.queryForObject(
                     """
                             SELECT COUNT(*)
-                            FROM information_schema.table_constraints
-                            WHERE table_schema = current_schema()
-                              AND table_name = 'channels'
-                              AND constraint_name = 'channels_channel_type_check'
+                            FROM pg_catalog.pg_constraint c
+                            INNER JOIN pg_catalog.pg_class t ON c.conrelid = t.oid
+                            INNER JOIN pg_catalog.pg_namespace n ON t.relnamespace = n.oid
+                            WHERE c.conname = 'channels_channel_type_check'
+                              AND t.relname = 'channels'
+                              AND n.nspname = current_schema()
                             """,
-                    Integer.class
+                    Long.class
             );
             if (hasNewConstraint == null || hasNewConstraint <= 0) {
                 jdbcTemplate.execute(
