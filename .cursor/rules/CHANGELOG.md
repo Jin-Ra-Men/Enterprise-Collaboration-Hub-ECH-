@@ -9,6 +9,7 @@
 - **CalendarApiTest**: `GET /api/calendar/events/{eventId}` 단건 조회·`attendees` 배열 검증(`get_event_by_id_returns_detail`).
 
 ### Changed
+- **일정 세부 모달 참석자 UI**: 검색·외부 이름·이메일을 `.form-group` + 레이블로 정렬하고, 선택된 참석자 영역에 입력 필드와 동일한 테두리·배경(`calendar-detail-attendee-chips--panel`) 적용해 입력 가능 영역 구분을 명확히 함(`frontend/index.html`, `frontend/styles.css`).
 - **내 일정 허브 UX**: 진입 시 **월간 달력**을 메인으로 표시하고 상단 **일정 추가**로 빠른 등록 모달(`modalCalendarHubQuickAdd`)을 연다. 월간 칸의 **날짜 숫자** 클릭 시 동일 모달에 해당 일 기본값(10:00–11:00 또는 종일). `renderCalendarHubMonthGrid`, 표시 월 범위로 이벤트 API 조회. 스타일 `frontend/styles.css`. `FEATURE_SPEC` 반영.
 - **내 일정 가독성·목록보기**: 월간 칸에 `(시각) 제목`(Seoul)·격자 테두리 강화. 상단 **월간 | 목록보기** 전환, 목록은 표( GMT+9 · 유형 · 삭제). `#calendarHubPanelRoot` 위임으로 일정 삭제 처리.
 

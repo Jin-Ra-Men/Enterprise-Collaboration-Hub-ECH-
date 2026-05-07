@@ -1722,17 +1722,31 @@
             <textarea id="calendarEventDetailDescTextarea" rows="5" maxlength="8000" placeholder="메모·장소 등"></textarea>
           </div>
           <div class="calendar-event-detail-attendees">
-            <label class="calendar-event-detail-section-label">참석자</label>
+            <span class="calendar-event-detail-section-label" id="calendarEventDetailAttendeesHeading">참석자</span>
             <p class="calendar-event-detail-hint">내부 사용자는 검색하여 추가합니다. 검색에 없으면 아래에 이름·이메일(선택)로 외부 참석자를 추가할 수 있습니다.</p>
-            <div class="calendar-event-detail-search-wrap">
-              <input id="calendarEventDetailAttendeeSearch" type="text" maxlength="200" placeholder="이름·사번·부서 검색" autocomplete="off" aria-autocomplete="list" aria-controls="calendarEventDetailAttendeeSuggest" />
+            <div class="form-group calendar-event-detail-search-wrap">
+              <label for="calendarEventDetailAttendeeSearch">내부 사용자 검색</label>
+              <input id="calendarEventDetailAttendeeSearch" type="text" maxlength="200" placeholder="이름·사번·부서 입력" autocomplete="off" aria-autocomplete="list" aria-controls="calendarEventDetailAttendeeSuggest" />
               <ul id="calendarEventDetailAttendeeSuggest" class="calendar-detail-suggest-list hidden" role="listbox"></ul>
             </div>
-            <div id="calendarEventDetailAttendeeChips" class="calendar-detail-attendee-chips" aria-live="polite"></div>
-            <div class="calendar-event-detail-external-row">
-              <input id="calendarEventDetailExternalName" type="text" maxlength="200" placeholder="외부 참석자 이름" autocomplete="off" />
-              <input id="calendarEventDetailExternalEmail" type="email" maxlength="320" placeholder="이메일 (선택)" autocomplete="off" />
-              <button type="button" class="btn-cancel btn-sm" id="btnCalendarEventDetailAddExternal">외부 추가</button>
+            <div class="form-group">
+              <span class="calendar-detail-chips-field-label" id="calendarEventDetailChipsLegend">선택된 참석자</span>
+              <div id="calendarEventDetailAttendeeChips" class="calendar-detail-attendee-chips calendar-detail-attendee-chips--panel" role="group" aria-labelledby="calendarEventDetailChipsLegend" aria-live="polite"></div>
+            </div>
+            <span class="calendar-event-detail-section-label calendar-event-detail-section-label--sub">외부 참석자 추가</span>
+            <div class="calendar-event-detail-external-grid">
+              <div class="form-group">
+                <label for="calendarEventDetailExternalName">이름</label>
+                <input id="calendarEventDetailExternalName" type="text" maxlength="200" placeholder="표시 이름" autocomplete="off" />
+              </div>
+              <div class="form-group">
+                <label for="calendarEventDetailExternalEmail">이메일 (선택)</label>
+                <input id="calendarEventDetailExternalEmail" type="email" maxlength="320" placeholder="example@company.com" autocomplete="off" />
+              </div>
+              <div class="form-group calendar-event-detail-external-action">
+                <span class="calendar-event-detail-external-action-label" aria-hidden="true">&#8203;</span>
+                <button type="button" class="btn-cancel btn-sm" id="btnCalendarEventDetailAddExternal">외부 추가</button>
+              </div>
             </div>
           </div>
         </div>
