@@ -222,6 +222,19 @@ CREATE TABLE IF NOT EXISTS calendar_events (
 
 CREATE INDEX IF NOT EXISTS idx_calendar_events_owner_range ON calendar_events(owner_employee_no, starts_at, ends_at) WHERE in_use = TRUE;
 
+CREATE TABLE IF NOT EXISTS calendar_event_attendees (
+    id BIGSERIAL PRIMARY KEY,
+    calendar_event_id BIGINT NOT NULL REFERENCES calendar_events(id) ON DELETE CASCADE,
+    attendee_type VARCHAR(20) NOT NULL CHECK (attendee_type IN ('INTERNAL', 'EXTERNAL')),
+    employee_no VARCHAR(50),
+    display_name VARCHAR(200) NOT NULL,
+    email VARCHAR(320),
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_calendar_event_attendees_event ON calendar_event_attendees(calendar_event_id);
+
 -- 일정 제안(확정 전 초안). 타인 달력 반영은 반드시 공유→수락 경로를 유지하고, 제안 본인 확정만 직접 이벤트 생성과 동일 저장 경로로 처리한다.
 CREATE TABLE IF NOT EXISTS calendar_suggestions (
     id BIGSERIAL PRIMARY KEY,

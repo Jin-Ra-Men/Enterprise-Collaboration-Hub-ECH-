@@ -21,6 +21,7 @@ public record CalendarEventResponse(
         String createdByActor,
         boolean inUse,
         OffsetDateTime createdAt,
-        OffsetDateTime updatedAt
+        OffsetDateTime updatedAt,
+        List<CalendarEventAttendeeResponse> attendees
 ) {
 }

@@ -5,6 +5,7 @@ import com.ech.backend.api.calendar.dto.CalendarEventResponse;
 import com.ech.backend.api.calendar.dto.CalendarImportResponse;
 import com.ech.backend.api.calendar.dto.CalendarShareResponse;
 import com.ech.backend.api.calendar.dto.CalendarSuggestionResponse;
+import com.ech.backend.api.calendar.dto.ReplaceCalendarEventAttendeesRequest;
 import com.ech.backend.api.calendar.dto.CreateCalendarEventRequest;
 import com.ech.backend.api.calendar.dto.CreateCalendarShareRequest;
 import com.ech.backend.api.calendar.dto.CreateCalendarSuggestionRequest;
@@ -69,6 +70,29 @@ public class CalendarController {
                 calendarService.importIcs(principal, employeeNo, file.getBytes()));
     }
 
+    @GetMapping("/api/calendar/events/conflicts")
+    public ApiResponse<CalendarConflictCheckResponse> checkConflicts(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam String employeeNo,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime startsAt,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime endsAt,
+            @RequestParam(required = false) Long excludeEventId
+    ) {
+        requireAuth(principal);
+        return ApiResponse.success(
+                calendarService.checkConflicts(principal, employeeNo, startsAt, endsAt, excludeEventId));
+    }
+
+    @GetMapping("/api/calendar/events/{eventId}")
+    public ApiResponse<CalendarEventResponse> getEvent(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long eventId,
+            @RequestParam String employeeNo
+    ) {
+        requireAuth(principal);
+        return ApiResponse.success(calendarService.getEvent(principal, eventId, employeeNo));
+    }
+
     @GetMapping("/api/calendar/events")
     public ApiResponse<List<CalendarEventResponse>> listEvents(
             @AuthenticationPrincipal UserPrincipal principal,
@@ -87,19 +111,6 @@ public class CalendarController {
     ) {
         requireAuth(principal);
         return ApiResponse.success(calendarService.createEvent(principal, request));
-    }
-
-    @GetMapping("/api/calendar/events/conflicts")
-    public ApiResponse<CalendarConflictCheckResponse> checkConflicts(
-            @AuthenticationPrincipal UserPrincipal principal,
-            @RequestParam String employeeNo,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime startsAt,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime endsAt,
-            @RequestParam(required = false) Long excludeEventId
-    ) {
-        requireAuth(principal);
-        return ApiResponse.success(
-                calendarService.checkConflicts(principal, employeeNo, startsAt, endsAt, excludeEventId));
     }
 
     @GetMapping("/api/calendar/suggestions")
@@ -144,6 +155,17 @@ public class CalendarController {
         requireAuth(principal);
         calendarService.dismissSuggestion(principal, suggestionId, employeeNo);
         return ApiResponse.success(null);
+    }
+
+    @PutMapping("/api/calendar/events/{eventId}/attendees")
+    public ApiResponse<CalendarEventResponse> replaceAttendees(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long eventId,
+            @RequestParam String employeeNo,
+            @Valid @RequestBody ReplaceCalendarEventAttendeesRequest request
+    ) {
+        requireAuth(principal);
+        return ApiResponse.success(calendarService.replaceAttendees(principal, eventId, employeeNo, request));
     }
 
     @PutMapping("/api/calendar/events/{eventId}")

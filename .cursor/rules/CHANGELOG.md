@@ -4,8 +4,11 @@
 
 ## 2026-05-08
 
+### Added
+- **내 일정 세부 모달·참석자(UI)**: `#modalCalendarEventDetail`(본문·`GET /api/calendar/events/{id}`·저장 시 `PUT` 일정 + `PUT .../attendees`). 월간 **일정 줄** 클릭·목록 **행** 클릭으로 진입. 내부 참석자 `GET /api/users/search` 자동완성, 외부는 이름·이메일(선택). 그리드 셀을 `button` 한 장으로 두지 않고 날짜 버튼 + 줄별 버튼으로 분리. 문서·초안 스키마 `docs/sql/postgresql_schema_draft.sql`에 `calendar_event_attendees` 반영.
+
 ### Changed
-- **내 일정 허브 UX**: 진입 시 **월간 달력**을 메인으로 표시하고 상단 **일정 추가**로 빠른 등록 모달(`modalCalendarHubQuickAdd`)을 연다. 날짜 칸 클릭 시 동일 모달에 해당 일 기본값(10:00–11:00 또는 종일). `renderCalendarHubMonthGrid`, 표시 월 범위로 이벤트 API 조회. 스타일 `frontend/styles.css`. `FEATURE_SPEC` 반영.
+- **내 일정 허브 UX**: 진입 시 **월간 달력**을 메인으로 표시하고 상단 **일정 추가**로 빠른 등록 모달(`modalCalendarHubQuickAdd`)을 연다. 월간 칸의 **날짜 숫자** 클릭 시 동일 모달에 해당 일 기본값(10:00–11:00 또는 종일). `renderCalendarHubMonthGrid`, 표시 월 범위로 이벤트 API 조회. 스타일 `frontend/styles.css`. `FEATURE_SPEC` 반영.
 - **내 일정 가독성·목록보기**: 월간 칸에 `(시각) 제목`(Seoul)·격자 테두리 강화. 상단 **월간 | 목록보기** 전환, 목록은 표( GMT+9 · 유형 · 삭제). `#calendarHubPanelRoot` 위임으로 일정 삭제 처리.
 
 ### Fixed

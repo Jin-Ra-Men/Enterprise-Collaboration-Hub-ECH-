@@ -456,6 +456,13 @@ let calendarHubSelectedDateKey = null;
 let calendarHubCachedEventsForGrid = [];
 /** `month` | `list` — 내 일정 허브 표시 형식 */
 let calendarHubViewMode = "month";
+/** 일정 상세 모달 UI 바인딩 여부 */
+let calendarDetailModalUIBound = false;
+/** 상세 모달에서 편집 중인 일정 id */
+let calendarDetailEditingEventId = null;
+/** 상세 모달 참석자 편집 버퍼 (저장 시 PUT attendees로 치환) */
+let calendarDetailPendingAttendees = [];
+let calendarDetailAttendeeSearchTimer = null;
 /** 내 일정 허브「공유 보내기」에서 선택한 채널/DM의 멤버 목록 */
 let standaloneCalendarShareMembers = [];
 let workHubSelectedWorkItemMeta = null;
@@ -590,6 +597,7 @@ async function openCalendarHubPage() {
   }
   ensureCalendarHubMountedInChatArea();
   ensureCalendarHubBindings();
+  ensureCalendarEventDetailBindings();
   populateCalendarHubShareChannelSelect();
   calendarHubViewMode = "month";
   const now = new Date();
@@ -606,8 +614,250 @@ async function openCalendarHubPage() {
 
 function closeCalendarHubToMain() {
   closeCalendarHubQuickModal();
+  closeCalendarEventDetailModal();
   if (activeChannelId) showView("viewChat");
   else showView("viewWelcome");
+}
+
+function closeCalendarEventDetailModal() {
+  document.getElementById("modalCalendarEventDetail")?.classList.add("hidden");
+  calendarDetailEditingEventId = null;
+  calendarDetailPendingAttendees = [];
+  clearCalendarDetailAttendeeSuggest();
+}
+
+function clearCalendarDetailAttendeeSuggest() {
+  const ul = document.getElementById("calendarEventDetailAttendeeSuggest");
+  if (ul) ul.innerHTML = "";
+  ul?.classList.add("hidden");
+}
+
+function renderCalendarDetailAttendeeChips() {
+  const wrap = document.getElementById("calendarEventDetailAttendeeChips");
+  if (!wrap) return;
+  if (!calendarDetailPendingAttendees.length) {
+    wrap.innerHTML = `<span class="calendar-detail-attendee-empty">등록된 참석자가 없습니다.</span>`;
+    return;
+  }
+  wrap.innerHTML = calendarDetailPendingAttendees.map((a, idx) => {
+    const isIn = String(a.attendeeType || "").toUpperCase() === "INTERNAL";
+    const sub = isIn ? escHtml(String(a.employeeNo || "")) : escHtml(a.email ? String(a.email) : "외부");
+    const line = `${escHtml(a.displayName || "")} · ${sub}`;
+    const cls = isIn ? "calendar-detail-chip--internal" : "calendar-detail-chip--external";
+    return `<span class="calendar-detail-chip ${cls}">${line}<button type="button" class="calendar-detail-chip-remove" data-cal-att-idx="${idx}" aria-label="제거">✕</button></span>`;
+  }).join("");
+}
+
+async function openCalendarEventDetailModal(eventId) {
+  if (!currentUser) return;
+  const emp = encodeURIComponent(currentUser.employeeNo);
+  try {
+    const res = await apiFetch(`/api/calendar/events/${eventId}?employeeNo=${emp}`);
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error?.message || "일정을 불러오지 못했습니다.");
+    const ev = json.data;
+    if (!ev) throw new Error("일정 데이터가 없습니다.");
+    calendarDetailEditingEventId = eventId;
+    document.getElementById("calendarEventDetailTitleInput").value = String(ev.title || "");
+    document.getElementById("calendarEventDetailDescTextarea").value = String(ev.description || "");
+    document.getElementById("calendarEventDetailStartInput").value = isoToDatetimeLocalValue(ev.startsAt);
+    document.getElementById("calendarEventDetailEndInput").value = isoToDatetimeLocalValue(ev.endsAt);
+    calendarDetailPendingAttendees = Array.isArray(ev.attendees)
+      ? ev.attendees.map((x) => ({
+          attendeeType: String(x.attendeeType || "").toUpperCase(),
+          employeeNo: x.employeeNo != null ? String(x.employeeNo) : "",
+          displayName: String(x.displayName || ""),
+          email: x.email != null ? String(x.email) : "",
+        }))
+      : [];
+    renderCalendarDetailAttendeeChips();
+    document.getElementById("calendarEventDetailAttendeeSearch").value = "";
+    document.getElementById("calendarEventDetailExternalName").value = "";
+    document.getElementById("calendarEventDetailExternalEmail").value = "";
+    clearCalendarDetailAttendeeSuggest();
+    document.getElementById("modalCalendarEventDetail")?.classList.remove("hidden");
+  } catch (e) {
+    await uiAlert(e?.message || "일정을 불러오지 못했습니다.");
+  }
+}
+
+async function saveCalendarEventDetail() {
+  if (!currentUser || !calendarDetailEditingEventId) return;
+  const id = calendarDetailEditingEventId;
+  const title = String(document.getElementById("calendarEventDetailTitleInput")?.value || "").trim();
+  const descriptionRaw = String(document.getElementById("calendarEventDetailDescTextarea")?.value || "").trim();
+  const description = descriptionRaw ? descriptionRaw : null;
+  const startRaw = document.getElementById("calendarEventDetailStartInput")?.value;
+  const endRaw = document.getElementById("calendarEventDetailEndInput")?.value;
+  const startsAt = localDatetimeInputToIsoOffset(startRaw);
+  const endsAt = localDatetimeInputToIsoOffset(endRaw);
+  if (!title || !startsAt || !endsAt) {
+    await uiAlert("제목·시작·종료를 입력해 주세요.");
+    return;
+  }
+  const empQ = encodeURIComponent(currentUser.employeeNo);
+  try {
+    const res = await apiFetch(`/api/calendar/events/${id}?employeeNo=${empQ}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, description, startsAt, endsAt }),
+    });
+    const j1 = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(j1.error?.message || "일정 저장 실패");
+    const attendeesPayload = calendarDetailPendingAttendees.map((a) => ({
+      attendeeType: a.attendeeType,
+      employeeNo: String(a.attendeeType || "").toUpperCase() === "INTERNAL" ? a.employeeNo : null,
+      displayName: a.displayName,
+      email: a.email || null,
+    }));
+    const res2 = await apiFetch(`/api/calendar/events/${id}/attendees?employeeNo=${empQ}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ attendees: attendeesPayload }),
+    });
+    const j2 = await res2.json().catch(() => ({}));
+    if (!res2.ok) throw new Error(j2.error?.message || "참석자 저장 실패");
+    closeCalendarEventDetailModal();
+    await loadCalendarHubPanel();
+  } catch (e) {
+    await uiAlert(e?.message || "저장 실패");
+  }
+}
+
+async function deleteCalendarEventFromDetail() {
+  if (!currentUser || !calendarDetailEditingEventId) return;
+  if (!(await uiConfirm("이 일정을 삭제할까요?"))) return;
+  const evId = calendarDetailEditingEventId;
+  const emp = encodeURIComponent(currentUser.employeeNo);
+  try {
+    const res = await apiFetch(`/api/calendar/events/${evId}?employeeNo=${emp}`, { method: "DELETE" });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error?.message || "삭제 실패");
+    closeCalendarEventDetailModal();
+    await loadCalendarHubPanel();
+  } catch (e) {
+    await uiAlert(e?.message || "삭제 실패");
+  }
+}
+
+async function runCalendarDetailUserSearch() {
+  const input = document.getElementById("calendarEventDetailAttendeeSearch");
+  const ul = document.getElementById("calendarEventDetailAttendeeSuggest");
+  if (!input || !ul || !currentUser) return;
+  const q = String(input.value || "").trim();
+  if (q.length < 1) {
+    ul.innerHTML = "";
+    ul.classList.add("hidden");
+    return;
+  }
+  try {
+    const res = await apiFetch(`/api/users/search?q=${encodeURIComponent(q)}`);
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      ul.innerHTML = `<li class="calendar-detail-suggest-empty">검색 실패</li>`;
+      ul.classList.remove("hidden");
+      return;
+    }
+    const users = Array.isArray(json.data) ? json.data : [];
+    const selfNo = String(currentUser.employeeNo || "").trim();
+    ul.innerHTML = "";
+    users.slice(0, 12).forEach((u) => {
+      const empNo = String(u.employeeNo || "").trim();
+      if (!empNo || empNo === selfNo) return;
+      const li = document.createElement("li");
+      li.className = "calendar-detail-suggest-item";
+      li.innerHTML = `<span class="calendar-detail-suggest-name">${escHtml(u.name || empNo)}</span><span class="calendar-detail-suggest-meta">${escHtml([u.department, empNo].filter(Boolean).join(" · "))}</span>`;
+      li.addEventListener("click", () => {
+        calendarDetailAddInternalAttendee(empNo, String(u.name || empNo));
+        input.value = "";
+        ul.innerHTML = "";
+        ul.classList.add("hidden");
+      });
+      ul.appendChild(li);
+    });
+    if (!ul.children.length) {
+      ul.innerHTML = `<li class="calendar-detail-suggest-empty">검색 결과 없음 — 아래에서 외부 참석자로 추가하세요.</li>`;
+    }
+    ul.classList.remove("hidden");
+  } catch {
+    ul.innerHTML = `<li class="calendar-detail-suggest-empty">검색 오류</li>`;
+    ul.classList.remove("hidden");
+  }
+}
+
+function calendarDetailAddInternalAttendee(employeeNo, displayName) {
+  const emp = String(employeeNo || "").trim();
+  if (!emp) return;
+  if (
+    calendarDetailPendingAttendees.some(
+      (a) => String(a.attendeeType || "").toUpperCase() === "INTERNAL" && String(a.employeeNo).trim() === emp
+    )
+  ) {
+    void uiAlert("이미 참석자 목록에 있습니다.");
+    return;
+  }
+  if (calendarDetailPendingAttendees.length >= 50) {
+    void uiAlert("참석자는 최대 50명까지 등록할 수 있습니다.");
+    return;
+  }
+  calendarDetailPendingAttendees.push({
+    attendeeType: "INTERNAL",
+    employeeNo: emp,
+    displayName: String(displayName || emp).trim(),
+    email: "",
+  });
+  renderCalendarDetailAttendeeChips();
+}
+
+function calendarDetailAddExternalAttendee() {
+  const name = String(document.getElementById("calendarEventDetailExternalName")?.value || "").trim();
+  const email = String(document.getElementById("calendarEventDetailExternalEmail")?.value || "").trim();
+  if (!name) {
+    void uiAlert("외부 참석자 이름을 입력해 주세요.");
+    return;
+  }
+  if (calendarDetailPendingAttendees.length >= 50) {
+    void uiAlert("참석자는 최대 50명까지 등록할 수 있습니다.");
+    return;
+  }
+  calendarDetailPendingAttendees.push({
+    attendeeType: "EXTERNAL",
+    employeeNo: "",
+    displayName: name,
+    email,
+  });
+  document.getElementById("calendarEventDetailExternalName").value = "";
+  document.getElementById("calendarEventDetailExternalEmail").value = "";
+  renderCalendarDetailAttendeeChips();
+}
+
+function ensureCalendarEventDetailBindings() {
+  if (calendarDetailModalUIBound) return;
+  calendarDetailModalUIBound = true;
+  document.getElementById("btnCalendarEventDetailSave")?.addEventListener("click", () => void saveCalendarEventDetail());
+  document.getElementById("btnCalendarEventDetailDelete")?.addEventListener("click", () => void deleteCalendarEventFromDetail());
+  document.getElementById("calendarEventDetailAttendeeSearch")?.addEventListener("input", () => {
+    clearTimeout(calendarDetailAttendeeSearchTimer);
+    calendarDetailAttendeeSearchTimer = setTimeout(() => void runCalendarDetailUserSearch(), 280);
+  });
+  document.getElementById("btnCalendarEventDetailAddExternal")?.addEventListener("click", () => calendarDetailAddExternalAttendee());
+  document.getElementById("calendarEventDetailAttendeeChips")?.addEventListener("click", (e) => {
+    const rm = e.target.closest("button.calendar-detail-chip-remove");
+    if (!rm) return;
+    const idx = Number(rm.getAttribute("data-cal-att-idx"));
+    if (!Number.isFinite(idx)) return;
+    calendarDetailPendingAttendees.splice(idx, 1);
+    renderCalendarDetailAttendeeChips();
+  });
+  document.addEventListener("click", (e) => {
+    const modal = document.getElementById("modalCalendarEventDetail");
+    if (!modal || modal.classList.contains("hidden")) return;
+    const sug = document.getElementById("calendarEventDetailAttendeeSuggest");
+    const inp = document.getElementById("calendarEventDetailAttendeeSearch");
+    if (sug && inp && !sug.contains(e.target) && e.target !== inp && !inp.contains(e.target)) {
+      sug.classList.add("hidden");
+    }
+  });
 }
 
 /** 좌측 하단 프레즌스 메뉴 이벤트(재로그인 시 중복 바인딩 방지) */
@@ -10331,6 +10581,14 @@ function calendarHubPad2(n) {
   return String(n).padStart(2, "0");
 }
 
+/** API ISO 문자열 → `datetime-local` 입력값 (브라우저 로컬 타임존). */
+function isoToDatetimeLocalValue(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${calendarHubPad2(d.getMonth() + 1)}-${calendarHubPad2(d.getDate())}T${calendarHubPad2(d.getHours())}:${calendarHubPad2(d.getMinutes())}`;
+}
+
 function calendarHubLocalDateKeyFromDate(d) {
   return `${d.getFullYear()}-${calendarHubPad2(d.getMonth() + 1)}-${calendarHubPad2(d.getDate())}`;
 }
@@ -10700,21 +10958,24 @@ function renderCalendarHubMonthGrid(year, monthIndex, events) {
       const dayEvts = muted ? [] : calendarHubEventsOverlappingLocalDay(events, cellDate);
       const linesHtml = dayEvts.slice(0, 8).map((ev) => {
         const titleRaw = String(ev.title || "");
+        const evId = Number(ev.id);
         const hmLabel = calendarHubIsAllDayEvent(ev) ? "종일" : calendarHubFormatSeoulTimeHm(ev.startsAt);
         const inner =
           hmLabel === "종일"
             ? `(종일) ${escHtml(titleRaw)}`
             : `(${hmLabel}) ${escHtml(titleRaw)}`;
-        return `<div class="calendar-hub-cell-event-line">${inner}</div>`;
+        const ariaEv = `일정 상세: ${escHtml(titleRaw)}`;
+        return `<button type="button" class="calendar-hub-cell-event-line" data-cal-ev-id="${evId}" aria-label="${ariaEv}">${inner}</button>`;
       });
       const moreHtml =
         dayEvts.length > 8
           ? `<div class="calendar-hub-cell-more">+${dayEvts.length - 8}건 · 목록보기에서 확인</div>`
           : "";
-      return `<button type="button" class="calendar-hub-cell${mutedCls}${sunCls}${satCls}${todayCls}${selCls}" data-cal-date="${key}" data-cal-muted="${muted ? "1" : "0"}" aria-label="${muted ? "다른 달 " : ""}${dayNum}일${dayEvts.length ? `, 일정 ${dayEvts.length}건` : ""}">
-        <span class="calendar-hub-cell-num">${dayNum}</span>
+      const ariaCell = `${muted ? "다른 달 " : ""}${dayNum}일${dayEvts.length ? `, 일정 ${dayEvts.length}건` : ""}`;
+      return `<div class="calendar-hub-cell${mutedCls}${sunCls}${satCls}${todayCls}${selCls}" data-cal-date="${key}" data-cal-muted="${muted ? "1" : "0"}" role="group" aria-label="${ariaCell}">
+        <button type="button" class="calendar-hub-cell-date-hit calendar-hub-cell-num" data-cal-date="${key}" aria-label="${ariaCell} — 새 일정 등록">${dayNum}</button>
         <div class="calendar-hub-cell-events-block">${linesHtml.join("")}${moreHtml}</div>
-      </button>`;
+      </div>`;
     })
     .join("");
 }
@@ -10974,9 +11235,20 @@ function ensureCalendarHubBindings() {
     void loadCalendarHubPanel();
   });
   document.getElementById(ids.gridCells)?.addEventListener("click", (e) => {
-    const btn = e.target.closest(".calendar-hub-cell[data-cal-date]");
-    if (!btn || btn.dataset.calMuted === "1") return;
-    const key = btn.dataset.calDate;
+    const evBtn = e.target.closest(".calendar-hub-cell-event-line[data-cal-ev-id]");
+    if (evBtn) {
+      const evId = Number(evBtn.dataset.calEvId);
+      if (evId) {
+        e.preventDefault();
+        void openCalendarEventDetailModal(evId);
+      }
+      return;
+    }
+    const dateHit = e.target.closest(".calendar-hub-cell-date-hit[data-cal-date]");
+    if (!dateHit) return;
+    const cell = dateHit.closest(".calendar-hub-cell");
+    if (!cell || cell.dataset.calMuted === "1") return;
+    const key = dateHit.dataset.calDate;
     if (!key) return;
     calendarHubSelectedDateKey = key;
     const d = calendarHubParseLocalDateKey(key);
@@ -10984,6 +11256,12 @@ function ensureCalendarHubBindings() {
     const anchor = getCalendarHubDisplayAnchor();
     renderCalendarHubMonthGrid(anchor.year, anchor.month, calendarHubCachedEventsForGrid);
     openCalendarHubQuickModal(d);
+  });
+  document.getElementById(ids.eventTableBody)?.addEventListener("click", (e) => {
+    if (e.target.closest(".calendar-hub-delete")) return;
+    const tr = e.target.closest("tr[data-calendar-event-id]");
+    const rid = Number(tr?.dataset.calendarEventId);
+    if (rid) void openCalendarEventDetailModal(rid);
   });
   const qids = CALENDAR_HUB_QUICK_IDS;
   document.getElementById(qids.allDay)?.addEventListener("change", () => {
@@ -12585,6 +12863,11 @@ function openModal(id) {
 }
 function closeModal(id) {
   document.getElementById(id)?.classList.add("hidden");
+  if (id === "modalCalendarEventDetail") {
+    calendarDetailEditingEventId = null;
+    calendarDetailPendingAttendees = [];
+    clearCalendarDetailAttendeeSuggest();
+  }
   if (id === "modalImageDownloadChoice") {
     if (typeof imageDownloadChoiceResolve === "function") {
       const r = imageDownloadChoiceResolve;

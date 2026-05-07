@@ -2,7 +2,9 @@ package com.ech.backend.api.calendar;
 
 import com.ech.backend.api.aiassistant.AiAssistantService;
 import com.ech.backend.api.auditlog.AuditLogService;
+import com.ech.backend.api.calendar.dto.CalendarAttendeeInput;
 import com.ech.backend.api.calendar.dto.CalendarConflictCheckResponse;
+import com.ech.backend.api.calendar.dto.CalendarEventAttendeeResponse;
 import com.ech.backend.api.calendar.dto.CalendarEventOverlapRow;
 import com.ech.backend.api.calendar.dto.CalendarEventResponse;
 import com.ech.backend.api.calendar.dto.CalendarImportResponse;
@@ -11,11 +13,15 @@ import com.ech.backend.api.calendar.dto.CalendarSuggestionResponse;
 import com.ech.backend.api.calendar.dto.CreateCalendarEventRequest;
 import com.ech.backend.api.calendar.dto.CreateCalendarShareRequest;
 import com.ech.backend.api.calendar.dto.CreateCalendarSuggestionRequest;
+import com.ech.backend.api.calendar.dto.ReplaceCalendarEventAttendeesRequest;
 import com.ech.backend.api.calendar.dto.UpdateCalendarEventRequest;
 import com.ech.backend.common.exception.ForbiddenException;
 import com.ech.backend.common.security.UserPrincipal;
 import com.ech.backend.domain.audit.AuditEventType;
+import com.ech.backend.domain.calendar.CalendarAttendeeType;
 import com.ech.backend.domain.calendar.CalendarEvent;
+import com.ech.backend.domain.calendar.CalendarEventAttendee;
+import com.ech.backend.domain.calendar.CalendarEventAttendeeRepository;
 import com.ech.backend.domain.calendar.CalendarEventRepository;
 import com.ech.backend.domain.calendar.CalendarShareRequest;
 import com.ech.backend.domain.calendar.CalendarShareRequestRepository;
@@ -30,9 +36,12 @@ import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,8 +53,10 @@ public class CalendarService {
     private static final int DESCRIPTION_MAX = 8000;
     private static final int ICS_IMPORT_MAX_BYTES = 512 * 1024;
     private static final int ICS_IMPORT_MAX_EVENTS = 64;
+    private static final int ATTENDEES_MAX = 50;
 
     private final CalendarEventRepository calendarEventRepository;
+    private final CalendarEventAttendeeRepository calendarEventAttendeeRepository;
     private final CalendarShareRequestRepository calendarShareRequestRepository;
     private final CalendarSuggestionRepository calendarSuggestionRepository;
     private final ChannelRepository channelRepository;
@@ -56,6 +67,7 @@ public class CalendarService {
 
     public CalendarService(
             CalendarEventRepository calendarEventRepository,
+            CalendarEventAttendeeRepository calendarEventAttendeeRepository,
             CalendarShareRequestRepository calendarShareRequestRepository,
             CalendarSuggestionRepository calendarSuggestionRepository,
             ChannelRepository channelRepository,
@@ -65,6 +77,7 @@ public class CalendarService {
             AiAssistantService aiAssistantService
     ) {
         this.calendarEventRepository = calendarEventRepository;
+        this.calendarEventAttendeeRepository = calendarEventAttendeeRepository;
         this.calendarShareRequestRepository = calendarShareRequestRepository;
         this.calendarSuggestionRepository = calendarSuggestionRepository;
         this.channelRepository = channelRepository;
@@ -88,8 +101,85 @@ public class CalendarService {
             throw new IllegalArgumentException("조회 종료 시각은 시작 시각보다 이후여야 합니다.");
         }
         return calendarEventRepository.findActiveForOwnerInRange(owner, rangeStart, rangeEnd).stream()
-                .map(this::toEventResponse)
+                .map(e -> toEventResponse(e, List.of()))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public CalendarEventResponse getEvent(UserPrincipal principal, Long eventId, String employeeNo) {
+        String owner = resolveSelfEmployeeNo(principal, employeeNo);
+        CalendarEvent e = calendarEventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
+        if (!e.getOwnerEmployeeNo().equals(owner)) {
+            throw new IllegalArgumentException("본인 일정만 조회할 수 있습니다.");
+        }
+        if (!e.isInUse()) {
+            throw new IllegalArgumentException("삭제된 일정입니다.");
+        }
+        return toEventResponse(e, loadAttendeeResponses(eventId));
+    }
+
+    @Transactional
+    public CalendarEventResponse replaceAttendees(
+            UserPrincipal principal,
+            Long eventId,
+            String employeeNo,
+            ReplaceCalendarEventAttendeesRequest request
+    ) {
+        String owner = resolveSelfEmployeeNo(principal, employeeNo);
+        CalendarEvent event = calendarEventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
+        if (!event.getOwnerEmployeeNo().equals(owner)) {
+            throw new IllegalArgumentException("본인 일정만 수정할 수 있습니다.");
+        }
+        if (!event.isInUse()) {
+            throw new IllegalArgumentException("삭제된 일정입니다.");
+        }
+        List<CalendarAttendeeInput> inputs = request != null && request.attendees() != null
+                ? request.attendees()
+                : List.of();
+        if (inputs.size() > ATTENDEES_MAX) {
+            throw new IllegalArgumentException("참석자는 최대 " + ATTENDEES_MAX + "명까지 등록할 수 있습니다.");
+        }
+
+        Set<String> internalSeen = new HashSet<>();
+        List<CalendarEventAttendee> next = new ArrayList<>();
+        int sort = 0;
+        for (CalendarAttendeeInput in : inputs) {
+            String rawType = in.attendeeType() == null ? "" : in.attendeeType().trim().toUpperCase(Locale.ROOT);
+            if ("INTERNAL".equals(rawType)) {
+                String emp = in.employeeNo() == null ? "" : in.employeeNo().trim();
+                if (emp.isBlank()) {
+                    throw new IllegalArgumentException("내부 참석자는 사번(employeeNo)이 필요합니다.");
+                }
+                if (!internalSeen.add(emp)) {
+                    throw new IllegalArgumentException("동일한 내부 참석자가 중복되었습니다: " + emp);
+                }
+                User u = userRepository.findByEmployeeNo(emp)
+                        .orElseThrow(() -> new IllegalArgumentException("참석자 사용자를 찾을 수 없습니다: " + emp));
+                String dn = in.displayName() != null && !in.displayName().isBlank()
+                        ? trimAttendeeDisplayName(in.displayName())
+                        : u.getName();
+                String em = trimNullableEmail(in.email());
+                next.add(new CalendarEventAttendee(event, CalendarAttendeeType.INTERNAL, emp, dn, em, sort++));
+            } else if ("EXTERNAL".equals(rawType)) {
+                if (in.employeeNo() != null && !in.employeeNo().isBlank()) {
+                    throw new IllegalArgumentException("외부 참석자에는 사번을 지정할 수 없습니다.");
+                }
+                String dn = trimAttendeeDisplayName(in.displayName());
+                String em = trimNullableEmail(in.email());
+                next.add(new CalendarEventAttendee(event, CalendarAttendeeType.EXTERNAL, null, dn, em, sort++));
+            } else {
+                throw new IllegalArgumentException("참석자 유형은 INTERNAL 또는 EXTERNAL 이어야 합니다.");
+            }
+        }
+
+        calendarEventAttendeeRepository.deleteByCalendarEventId(event.getId());
+        calendarEventAttendeeRepository.flush();
+        if (!next.isEmpty()) {
+            calendarEventAttendeeRepository.saveAll(next);
+        }
+        return toEventResponse(event, loadAttendeeResponses(event.getId()));
     }
 
     @Transactional(readOnly = true)
@@ -233,7 +323,7 @@ public class CalendarService {
                 "owner=" + actor,
                 null
         );
-        return toEventResponse(event);
+        return toEventResponse(event, loadAttendeeResponses(event.getId()));
     }
 
     @Transactional
@@ -727,7 +817,23 @@ public class CalendarService {
         return a;
     }
 
+    private List<CalendarEventAttendeeResponse> loadAttendeeResponses(Long eventId) {
+        return calendarEventAttendeeRepository.findByCalendarEventIdOrderBySortOrderAsc(eventId).stream()
+                .map(a -> new CalendarEventAttendeeResponse(
+                        a.getId(),
+                        a.getAttendeeType().name(),
+                        a.getEmployeeNo(),
+                        a.getDisplayName(),
+                        a.getEmail(),
+                        a.getSortOrder()))
+                .toList();
+    }
+
     private CalendarEventResponse toEventResponse(CalendarEvent e) {
+        return toEventResponse(e, List.of());
+    }
+
+    private CalendarEventResponse toEventResponse(CalendarEvent e, List<CalendarEventAttendeeResponse> attendees) {
         Long originChannelId = null;
         String originChannelName = null;
         String originChannelType = null;
@@ -747,6 +853,7 @@ public class CalendarService {
             originDmChannelType = e.getOriginDmChannel().getChannelType().name();
         }
         Long shareId = e.getSharedFromShare() != null ? e.getSharedFromShare().getId() : null;
+        List<CalendarEventAttendeeResponse> att = attendees != null ? attendees : List.of();
         return new CalendarEventResponse(
                 e.getId(),
                 e.getOwnerEmployeeNo(),
@@ -765,8 +872,31 @@ public class CalendarService {
                 e.getCreatedByActor(),
                 e.isInUse(),
                 e.getCreatedAt(),
-                e.getUpdatedAt()
+                e.getUpdatedAt(),
+                att
         );
+    }
+
+    private static String trimAttendeeDisplayName(String raw) {
+        if (raw == null || raw.isBlank()) {
+            throw new IllegalArgumentException("참석자 표시 이름이 필요합니다.");
+        }
+        String s = raw.trim();
+        if (s.length() > 200) {
+            throw new IllegalArgumentException("참석자 이름은 200자 이하여야 합니다.");
+        }
+        return s;
+    }
+
+    private static String trimNullableEmail(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String e = raw.trim();
+        if (e.length() > 320) {
+            throw new IllegalArgumentException("이메일은 320자 이하여야 합니다.");
+        }
+        return e;
     }
 
     private CalendarSuggestionResponse toSuggestionResponse(CalendarSuggestion s) {

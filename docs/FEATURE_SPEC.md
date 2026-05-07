@@ -69,7 +69,7 @@
 ## 개인 캘린더·공유 (Phase 6 MVP)
 - 목적: 사용자당 **하나의 논리 캘린더**에 직접 일정을 두고, **채널·DM** 맥락에서 다른 멤버에게 일정을 **공유 요청**한 뒤 수신자가 **수락**하면 본인 달력에 **복사본**이 생기며 **출처(채널/DM)** 를 표시한다. AI 비서·외부 연동 전에도 동작하도록 하며, `created_by_actor` 등 **확장 메타**를 남긴다.
 - 사용자: 로그인한 모든 멤버(채널/DM 멤버십에 따름)
-- 관련 화면/경로: `frontend/index.html` — 전역 **내 일정** `#modalCalendarHub`. **월간** 탭: 격자 칸에 `(Asia/Seoul 시각) 제목` 형태로 일정 표시, **목록보기** 탭: 표 **`#calendarHubEventTableBody`**(유형 뱃지·제목·시작/종료 GMT+9 `MM.DD HH:mm`·등록·출처·삭제). 상단 **일정 추가**·달 이동·`#calendarHubViewMonth`/`#calendarHubViewList`. 날짜 클릭 → `#modalCalendarHubQuickAdd`. `frontend/app.js`: `calendarHubFormatSeoulMdHm`, `renderCalendarHubEventTable`, `calendarHubViewMode`. 워크플로(`#modalWorkHub`)에는 캘린더 없음. **iCal**·제안·공유 UI 동일.
+- 관련 화면/경로: `frontend/index.html` — 전역 **내 일정** `#modalCalendarHub`. **월간** 탭: 격자 칸에 `(Asia/Seoul 시각) 제목` 형태로 일정 표시. 칸은 **`div.calendar-hub-cell`**: **날짜 숫자** 버튼(`.calendar-hub-cell-date-hit`) 클릭 → 해당 일 기준 `#modalCalendarHubQuickAdd`, **일정 줄** 버튼(`.calendar-hub-cell-event-line`) 클릭 → **`#modalCalendarEventDetail`**(제목·설명·시작/종료·저장·삭제·참석자). **목록보기** 탭: 표 **`#calendarHubEventTableBody`**에서 행 클릭(삭제 버튼 제외) 시 동일 상세 모달. 참석자: 전사 `GET /api/users/search?q=` 자동완성으로 **INTERNAL** 추가, 이름(+선택 이메일)로 **EXTERNAL** 추가 후 `PUT /api/calendar/events/{id}/attendees`로 치환 저장. 상단 **일정 추가**·달 이동·`#calendarHubViewMonth`/`#calendarHubViewList`. 허브를 닫을 때 `#modalCalendarEventDetail`도 정리(`closeCalendarHubToMain`). `frontend/app.js`: `openCalendarEventDetailModal`, `renderCalendarHubMonthGrid`, `calendarHubFormatSeoulMdHm`, `renderCalendarHubEventTable`, `calendarHubViewMode`. 워크플로(`#modalWorkHub`)에는 캘린더 없음. **iCal**·제안·공유 UI 동일.
 - 관련 API:
   - `GET /api/calendar/events?employeeNo=&from=&to=` — 본인 일정 목록(기간 겹침, `in_use=true`)
   - `POST /api/calendar/events` — 직접 일정 생성(JSON: `ownerEmployeeNo` 생략 시 JWT, `title`, `description`, `startsAt`, `endsAt`, 선택 `originChannelId`·`originDmChannelId`(각각 채널 멤버 검증), 선택 `originMessageIds`(최대 20·중복 제거 후 JSON 저장), `createdByActor`는 **USER만** 허용·`AI_ASSISTANT` 요청 시 400 — AI 출처는 제안 API 사용)
@@ -78,7 +78,9 @@
   - `POST /api/calendar/suggestions` — 제안 생성(`createdByActor`: `USER`|`AI_ASSISTANT`, 출처 채널·DM·메시지 ID 선택)
   - `POST /api/calendar/suggestions/{id}/confirm?employeeNo=` — **본인 제안만** 확정: `CalendarEvent`를 직접 생성과 동일하게 저장(`created_by_actor=USER`, 출처·메시지 ID 복사), 제안은 `CONFIRMED`
   - `POST /api/calendar/suggestions/{id}/dismiss?employeeNo=` — `DISMISSED`
+  - `GET /api/calendar/events/{eventId}?employeeNo=` — **본인 일정 단건**(본문 필드 + `attendees[]`: `attendeeType`, `employeeNo`, `displayName`, `email`, `sortOrder`)
   - `PUT /api/calendar/events/{eventId}?employeeNo=` — 수정
+  - `PUT /api/calendar/events/{eventId}/attendees?employeeNo=` — 참석자 **전체 치환**(본문 `{ attendees: [{ attendeeType: INTERNAL|EXTERNAL, employeeNo?, displayName, email? }] }`, INTERNAL은 등록 사용자 사번 필수·중복 불가, EXTERNAL은 표시명 필수·사번 불가, 최대 50명)
   - `DELETE /api/calendar/events/{eventId}?employeeNo=` — 소프트 삭제(`in_use=false`)
   - `POST /api/channels/{channelId}/calendar/shares` — 공유 요청(발신·수신 모두 해당 채널 멤버; `sourceEventId` 있으면 발신자 본인 활성 일정에서 스냅샷)
   - `GET /api/calendar/shares/incoming?employeeNo=` — 받은 **PENDING**·만료 전만
