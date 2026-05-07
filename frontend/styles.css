@@ -5854,6 +5854,169 @@ html[data-theme="cream"] .ech-workflow-scope {
   font-size: 11px;
   color: var(--text-muted);
 }
+
+/* ── 내 일정 허브: 월간 그리드 ── */
+.calendar-hub-main {
+  margin-bottom: 16px;
+}
+.calendar-hub-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-bottom: 8px;
+}
+.calendar-hub-btn-add {
+  min-width: 118px;
+}
+.calendar-hub-toolbar-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.calendar-hub-nav-btn {
+  min-width: 34px;
+  font-weight: 700;
+}
+.calendar-hub-month-label {
+  font-weight: 600;
+  font-size: 15px;
+  margin-left: 6px;
+}
+.calendar-hub-toolbar-secondary {
+  margin-left: auto;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.calendar-hub-grid-hint {
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+.calendar-hub-grid {
+  border: 1px solid rgba(128, 128, 128, 0.28);
+  border-radius: 12px;
+  padding: 8px 8px 10px;
+  background: color-mix(in srgb, var(--panel-bg, #1a1d23) 94%, transparent);
+}
+.calendar-hub-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.22);
+  margin-bottom: 4px;
+}
+.calendar-hub-wd--sun {
+  color: #e53935;
+}
+.calendar-hub-cells {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  min-height: 300px;
+}
+.calendar-hub-cell {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  padding: 6px 6px 8px;
+  min-height: 76px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  color: inherit;
+  font: inherit;
+  box-sizing: border-box;
+}
+.calendar-hub-cell:hover:not(.calendar-hub-cell--muted) {
+  background: rgba(78, 69, 228, 0.07);
+}
+.calendar-hub-cell:focus-visible {
+  outline: 2px solid rgba(78, 69, 228, 0.55);
+  outline-offset: 1px;
+}
+.calendar-hub-cell--muted {
+  opacity: 0.42;
+  cursor: default;
+  pointer-events: none;
+}
+.calendar-hub-cell-num {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.calendar-hub-cell--today:not(.calendar-hub-cell--muted) {
+  border-color: rgba(78, 69, 228, 0.35);
+}
+.calendar-hub-cell--selected:not(.calendar-hub-cell--muted) {
+  border-color: var(--accent, #5c6bc0);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent, #5c6bc0) 70%, transparent);
+}
+.calendar-hub-cell--sun:not(.calendar-hub-cell--muted) .calendar-hub-cell-num {
+  color: #e57373;
+}
+.calendar-hub-cell--sat:not(.calendar-hub-cell--muted) .calendar-hub-cell-num {
+  color: #64b5f6;
+}
+.calendar-hub-cell-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+.calendar-hub-chip {
+  font-size: 10px;
+  line-height: 1.25;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: rgba(78, 69, 228, 0.14);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.calendar-hub-chip--more {
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+/* 빠른 일정 등록 모달 */
+.calendar-hub-quick-modal .calendar-hub-quick-datetime-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.calendar-hub-quick-modal .calendar-hub-quick-inline label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.calendar-hub-quick-footer {
+  justify-content: flex-end;
+  gap: 10px;
+}
+.calendar-hub-quick-row--title-extra {
+  margin-top: -6px;
+}
+.calendar-hub-quick-allday-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
 .channel-work-item--with-actions {
   display: flex;
   align-items: flex-start;

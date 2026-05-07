@@ -1321,7 +1321,7 @@
           <div class="ech-workhub-modal-header-text">
             <h3 id="calendarHubPageTitle">내 일정</h3>
             <p class="ech-workhub-modal-subtitle">
-              개인 일정·제안·받은 공유를 관리합니다. 채널/DM으로 일정을 보내려면 아래에서 공유 출처 방을 선택한 뒤 수신 멤버를 고르세요.
+              월간 달력에서 일정을 확인하고, 날짜를 눌러 추가할 수 있습니다. 채널/DM 공유는 아래에서 출처 방을 선택한 뒤 보내세요.
             </p>
           </div>
           <button type="button" class="modal-close" id="btnCloseCalendarHub" aria-label="닫기">✕</button>
@@ -1329,27 +1329,42 @@
         <div class="modal-body work-hub-body">
           <div class="work-hub-panel work-hub-panel--workflow ech-workflow-shell" id="calendarHubPanelRoot">
             <div class="workflow-section workflow-section--calendar-only">
-              <div class="workflow-section-head">
-                <span class="workflow-section-kicker">Calendar</span>
-                <h5 class="workflow-section-title">내 일정</h5>
+              <div class="calendar-hub-main">
+                <div class="calendar-hub-toolbar">
+                  <button type="button" class="btn-primary calendar-hub-btn-add" id="calendarHubBtnToolbarAdd">일정 추가</button>
+                  <div class="calendar-hub-toolbar-nav" role="group" aria-label="달 이동">
+                    <button type="button" class="btn-cancel btn-sm calendar-hub-nav-btn" id="calendarHubBtnPrevMonth" aria-label="이전 달">‹</button>
+                    <button type="button" class="btn-cancel btn-sm" id="calendarHubBtnToday">오늘</button>
+                    <button type="button" class="btn-cancel btn-sm calendar-hub-nav-btn" id="calendarHubBtnNextMonth" aria-label="다음 달">›</button>
+                    <span id="calendarHubMonthLabel" class="calendar-hub-month-label" aria-live="polite"></span>
+                  </div>
+                  <div class="calendar-hub-toolbar-secondary">
+                    <button type="button" class="btn-cancel btn-sm" id="calendarHubBtnIcsExport">iCal 내보내기 (.ics)</button>
+                    <button type="button" class="btn-cancel btn-sm" id="calendarHubBtnIcsImport">iCal 가져오기</button>
+                    <input type="file" id="calendarHubIcsFileInput" accept=".ics,text/calendar,.ical" class="hidden" aria-label="iCal 파일 선택" />
+                  </div>
+                </div>
+                <p class="work-hub-hint workflow-section-hint calendar-hub-grid-hint">
+                  칸을 선택하면 해당 날짜로 <strong>일정 추가</strong> 창이 열립니다. 직접 등록·수락한 공유 일정이 달력에 표시됩니다.
+                </p>
+                <div class="calendar-hub-grid" role="application" aria-label="월간 일정 달력">
+                  <div class="calendar-hub-weekdays" aria-hidden="true">
+                    <span class="calendar-hub-wd calendar-hub-wd--sun">일</span>
+                    <span class="calendar-hub-wd">월</span>
+                    <span class="calendar-hub-wd">화</span>
+                    <span class="calendar-hub-wd">수</span>
+                    <span class="calendar-hub-wd">목</span>
+                    <span class="calendar-hub-wd">금</span>
+                    <span class="calendar-hub-wd">토</span>
+                  </div>
+                  <div id="calendarHubGridCells" class="calendar-hub-cells"></div>
+                </div>
               </div>
-              <p class="work-hub-hint workflow-section-hint">
-                직접 추가한 일정과, 채널·DM에서 <strong>수락한</strong> 공유 일정이 표시됩니다. 출처는 공유된 채널/DM 이름으로 표시됩니다.
-              </p>
-              <div class="calendar-hub-ics-row work-item-create-row">
-                <button type="button" class="btn-cancel btn-sm" id="calendarHubBtnIcsExport">iCal 내보내기 (.ics)</button>
-                <button type="button" class="btn-cancel btn-sm" id="calendarHubBtnIcsImport">iCal 가져오기</button>
-                <input type="file" id="calendarHubIcsFileInput" accept=".ics,text/calendar,.ical" class="hidden" aria-label="iCal 파일 선택" />
+              <div class="workflow-section-head workflow-section-head--nested">
+                <span class="workflow-section-kicker">List</span>
+                <h6 class="workflow-section-title">이번 달·주변 구간 일정 목록</h6>
               </div>
               <div class="work-hub-panel-body">
-                <form id="calendarHubEventCreateForm" class="work-item-create-form" onsubmit="return false;">
-                  <input id="calendarHubEventTitleInput" type="text" maxlength="500" placeholder="새 일정 제목" />
-                  <div class="work-item-create-row">
-                    <input id="calendarHubEventStartInput" type="datetime-local" aria-label="시작 시각" />
-                    <input id="calendarHubEventEndInput" type="datetime-local" aria-label="종료 시각" />
-                    <button type="button" class="btn-primary btn-sm btn-work-add" id="calendarHubBtnEventAdd">일정 추가</button>
-                  </div>
-                </form>
                 <ul id="calendarHubEventsList" class="channel-work-item-list"></ul>
                 <div class="workflow-section-head workflow-section-head--nested">
                   <span class="workflow-section-kicker">Suggestions</span>
@@ -1609,6 +1624,51 @@
             </label>
             <p class="theme-ai-master-hint">끄면 채팅·스레드·검색·워크플로의 AI 버튼, 제안함, 캘린더 AI 일정 제안 등 모든 AI 관련 기능을 사용할 수 없습니다.</p>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="modalCalendarHubQuickAdd" class="modal-overlay hidden modal-stacked" aria-modal="true" role="dialog" aria-labelledby="calendarHubQuickModalTitle">
+      <div class="modal modal-wide calendar-hub-quick-modal">
+        <div class="modal-header">
+          <h3 id="calendarHubQuickModalTitle">일정 등록</h3>
+          <button type="button" class="modal-close" data-modal="modalCalendarHubQuickAdd" aria-label="닫기">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="calendarHubQuickTitle">제목</label>
+            <input id="calendarHubQuickTitle" type="text" maxlength="500" placeholder="일정명을 입력하세요." autocomplete="off" />
+          </div>
+          <div class="form-group calendar-hub-quick-row calendar-hub-quick-row--title-extra">
+            <label class="calendar-hub-quick-allday-label">
+              <input type="checkbox" id="calendarHubQuickAllDay" />
+              <span>종일</span>
+            </label>
+          </div>
+          <div id="calendarHubQuickDatetimeRow" class="calendar-hub-quick-datetime-block">
+            <div class="form-group calendar-hub-quick-inline">
+              <label for="calendarHubQuickStart">시작</label>
+              <input id="calendarHubQuickStart" type="datetime-local" aria-label="시작 일시" />
+            </div>
+            <div class="form-group calendar-hub-quick-inline">
+              <label for="calendarHubQuickEnd">종료</label>
+              <input id="calendarHubQuickEnd" type="datetime-local" aria-label="종료 일시" />
+            </div>
+          </div>
+          <div id="calendarHubQuickDateOnlyRow" class="calendar-hub-quick-datetime-block hidden">
+            <div class="form-group">
+              <label for="calendarHubQuickDateSingle">날짜</label>
+              <input id="calendarHubQuickDateSingle" type="date" aria-label="종일 일정 날짜" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="calendarHubQuickDesc">설명 (선택)</label>
+            <textarea id="calendarHubQuickDesc" rows="4" maxlength="8000" placeholder="메모·장소 등"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer calendar-hub-quick-footer">
+          <button type="button" class="btn-cancel" data-modal="modalCalendarHubQuickAdd">취소</button>
+          <button type="button" class="btn-primary" id="calendarHubQuickSubmit">등록</button>
         </div>
       </div>
     </div>

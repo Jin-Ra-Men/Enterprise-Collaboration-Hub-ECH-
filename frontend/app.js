@@ -448,6 +448,12 @@ let workHubPendingCardAssigneeAdd = new Map();
 let workHubPendingCardAssigneeRemove = new Map();
 let workHubWorkListDeleteBound = false;
 let calendarHubUIBound = false;
+/** 내 일정 허브에 표시할 월 (`openCalendarHubPage`에서 초기화) */
+let calendarHubViewAnchor = null;
+/** 달력에서 선택된 날짜 키 `YYYY-MM-DD` */
+let calendarHubSelectedDateKey = null;
+/** 마지막으로 그린 월간 그리드용 일정 스냅샷(선택 강조만 다시 그릴 때 사용) */
+let calendarHubCachedEventsForGrid = [];
 /** 내 일정 허브「공유 보내기」에서 선택한 채널/DM의 멤버 목록 */
 let standaloneCalendarShareMembers = [];
 let workHubSelectedWorkItemMeta = null;
@@ -583,6 +589,9 @@ async function openCalendarHubPage() {
   ensureCalendarHubMountedInChatArea();
   ensureCalendarHubBindings();
   populateCalendarHubShareChannelSelect();
+  const now = new Date();
+  calendarHubViewAnchor = { year: now.getFullYear(), month: now.getMonth() };
+  calendarHubSelectedDateKey = calendarHubLocalDateKeyFromDate(now);
   try {
     await loadCalendarHubPanel();
   } catch (e) {
@@ -593,6 +602,7 @@ async function openCalendarHubPage() {
 }
 
 function closeCalendarHubToMain() {
+  closeCalendarHubQuickModal();
   if (activeChannelId) showView("viewChat");
   else showView("viewWelcome");
 }
@@ -10314,15 +10324,164 @@ function formatCalendarRangeIso(daysBack, daysForward) {
   return { from: from.toISOString(), to: to.toISOString() };
 }
 
+function calendarHubPad2(n) {
+  return String(n).padStart(2, "0");
+}
+
+function calendarHubLocalDateKeyFromDate(d) {
+  return `${d.getFullYear()}-${calendarHubPad2(d.getMonth() + 1)}-${calendarHubPad2(d.getDate())}`;
+}
+
+function calendarHubParseLocalDateKey(key) {
+  if (!key || typeof key !== "string") return null;
+  const p = key.split("-").map(Number);
+  if (p.length !== 3 || !p.every((x) => Number.isFinite(x))) return null;
+  const dt = new Date(p[0], p[1] - 1, p[2]);
+  if (dt.getFullYear() !== p[0] || dt.getMonth() !== p[1] - 1 || dt.getDate() !== p[2]) return null;
+  return dt;
+}
+
+function calendarHubVisibleMonthRangeIso(year, monthIndex) {
+  const start = new Date(year, monthIndex, 1);
+  start.setDate(start.getDate() - 7);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(year, monthIndex + 1, 0);
+  end.setDate(end.getDate() + 7);
+  end.setHours(23, 59, 59, 999);
+  return { from: start.toISOString(), to: end.toISOString() };
+}
+
+function getCalendarHubDisplayAnchor() {
+  if (calendarHubViewAnchor && Number.isFinite(calendarHubViewAnchor.year) && Number.isFinite(calendarHubViewAnchor.month)) {
+    return calendarHubViewAnchor;
+  }
+  const n = new Date();
+  return { year: n.getFullYear(), month: n.getMonth() };
+}
+
+function localDatetimeLocalFromDateAndHM(d, hour, minute) {
+  const y = d.getFullYear();
+  const mo = d.getMonth();
+  const da = d.getDate();
+  return `${y}-${calendarHubPad2(mo + 1)}-${calendarHubPad2(da)}T${calendarHubPad2(hour)}:${calendarHubPad2(minute)}`;
+}
+
+function calendarHubEventsOverlappingLocalDay(events, dayStart) {
+  const dayEnd = new Date(dayStart.getFullYear(), dayStart.getMonth(), dayStart.getDate(), 23, 59, 59, 999);
+  const list = [];
+  for (const ev of events || []) {
+    if (!ev || ev.inUse === false) continue;
+    const s = new Date(ev.startsAt);
+    const e = new Date(ev.endsAt);
+    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) continue;
+    if (s <= dayEnd && e >= dayStart) list.push(ev);
+  }
+  return list.sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
+}
+
+/** 빠른 일정 등록 모달 DOM id */
+const CALENDAR_HUB_QUICK_IDS = Object.freeze({
+  modal: "modalCalendarHubQuickAdd",
+  title: "calendarHubQuickTitle",
+  allDay: "calendarHubQuickAllDay",
+  start: "calendarHubQuickStart",
+  end: "calendarHubQuickEnd",
+  dateSingle: "calendarHubQuickDateSingle",
+  desc: "calendarHubQuickDesc",
+  datetimeRow: "calendarHubQuickDatetimeRow",
+  dateOnlyRow: "calendarHubQuickDateOnlyRow",
+  submit: "calendarHubQuickSubmit",
+});
+
+function syncCalendarHubQuickDatetimeRows() {
+  const q = CALENDAR_HUB_QUICK_IDS;
+  const allDay = Boolean(document.getElementById(q.allDay)?.checked);
+  document.getElementById(q.datetimeRow)?.classList.toggle("hidden", allDay);
+  document.getElementById(q.dateOnlyRow)?.classList.toggle("hidden", !allDay);
+}
+
+function openCalendarHubQuickModal(forDay) {
+  const modal = document.getElementById(CALENDAR_HUB_QUICK_IDS.modal);
+  const q = CALENDAR_HUB_QUICK_IDS;
+  const d = forDay instanceof Date && !Number.isNaN(forDay.getTime()) ? forDay : new Date();
+  document.getElementById(q.title).value = "";
+  document.getElementById(q.desc).value = "";
+  document.getElementById(q.allDay).checked = false;
+  document.getElementById(q.dateSingle).value = `${d.getFullYear()}-${calendarHubPad2(d.getMonth() + 1)}-${calendarHubPad2(d.getDate())}`;
+  document.getElementById(q.start).value = localDatetimeLocalFromDateAndHM(d, 10, 0);
+  document.getElementById(q.end).value = localDatetimeLocalFromDateAndHM(d, 11, 0);
+  syncCalendarHubQuickDatetimeRows();
+  modal?.classList.remove("hidden");
+}
+
+function closeCalendarHubQuickModal() {
+  document.getElementById(CALENDAR_HUB_QUICK_IDS.modal)?.classList.add("hidden");
+}
+
+async function submitCalendarHubQuickEvent() {
+  if (!currentUser) return;
+  const q = CALENDAR_HUB_QUICK_IDS;
+  const title = String(document.getElementById(q.title)?.value || "").trim();
+  const allDay = Boolean(document.getElementById(q.allDay)?.checked);
+  let startsAt;
+  let endsAt;
+  if (allDay) {
+    const ds = String(document.getElementById(q.dateSingle)?.value || "").trim();
+    if (!ds) {
+      await uiAlert("날짜를 선택해 주세요.");
+      return;
+    }
+    const parts = ds.split("-").map(Number);
+    if (parts.length !== 3 || !parts.every((x) => Number.isFinite(x))) {
+      await uiAlert("날짜 형식이 올바르지 않습니다.");
+      return;
+    }
+    const [yy, mm, dd] = parts;
+    const s = new Date(yy, mm - 1, dd, 0, 0, 0, 0);
+    const e = new Date(yy, mm - 1, dd, 23, 59, 59, 999);
+    startsAt = s.toISOString();
+    endsAt = e.toISOString();
+  } else {
+    startsAt = localDatetimeInputToIsoOffset(document.getElementById(q.start)?.value);
+    endsAt = localDatetimeInputToIsoOffset(document.getElementById(q.end)?.value);
+  }
+  const descriptionRaw = String(document.getElementById(q.desc)?.value || "").trim();
+  const description = descriptionRaw ? descriptionRaw : null;
+  if (!title || !startsAt || !endsAt) {
+    await uiAlert("제목·시작·종료를 모두 입력해 주세요.");
+    return;
+  }
+  try {
+    const res = await apiFetch("/api/calendar/events", {
+      method: "POST",
+      body: JSON.stringify({
+        ownerEmployeeNo: currentUser.employeeNo,
+        title,
+        description,
+        startsAt,
+        endsAt,
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error?.message || "일정 추가 실패");
+    closeCalendarHubQuickModal();
+    await loadCalendarHubPanel();
+  } catch (e) {
+    await uiAlert(e?.message || "일정 추가 실패");
+  }
+}
+
 /** 전역「내 일정」허브 DOM id 묶음 */
 const CALENDAR_HUB_IDS = Object.freeze({
+  btnToolbarAdd: "calendarHubBtnToolbarAdd",
+  btnPrevMonth: "calendarHubBtnPrevMonth",
+  btnNextMonth: "calendarHubBtnNextMonth",
+  btnToday: "calendarHubBtnToday",
+  monthLabel: "calendarHubMonthLabel",
+  gridCells: "calendarHubGridCells",
   btnIcsExport: "calendarHubBtnIcsExport",
   btnIcsImport: "calendarHubBtnIcsImport",
   icsFileInput: "calendarHubIcsFileInput",
-  eventTitle: "calendarHubEventTitleInput",
-  eventStart: "calendarHubEventStartInput",
-  eventEnd: "calendarHubEventEndInput",
-  btnEventAdd: "calendarHubBtnEventAdd",
   eventsList: "calendarHubEventsList",
   suggestionsList: "calendarHubSuggestionsList",
   incomingList: "calendarHubIncomingSharesList",
@@ -10333,6 +10492,70 @@ const CALENDAR_HUB_IDS = Object.freeze({
   shareEnd: "calendarHubShareEndInput",
   btnShareSend: "calendarHubBtnShareSend",
 });
+
+function renderCalendarHubMonthGrid(year, monthIndex, events) {
+  const ids = CALENDAR_HUB_IDS;
+  const root = document.getElementById(ids.gridCells);
+  const labelEl = document.getElementById(ids.monthLabel);
+  if (labelEl) labelEl.textContent = `${year}년 ${monthIndex + 1}월`;
+  if (!root) return;
+
+  const first = new Date(year, monthIndex, 1);
+  const startWeekday = first.getDay();
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+  const prevMonthLast = new Date(year, monthIndex, 0).getDate();
+
+  const cells = [];
+  for (let i = 0; i < startWeekday; i++) {
+    const dayNum = prevMonthLast - startWeekday + i + 1;
+    const cellDate = new Date(year, monthIndex - 1, dayNum);
+    cells.push({ dayNum, muted: true, cellDate });
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    cells.push({ dayNum: d, muted: false, cellDate: new Date(year, monthIndex, d) });
+  }
+  let pad = 1;
+  while (cells.length % 7 !== 0) {
+    cells.push({ dayNum: pad, muted: true, cellDate: new Date(year, monthIndex + 1, pad) });
+    pad++;
+  }
+
+  const now = new Date();
+
+  root.innerHTML = cells
+    .map(({ dayNum, muted, cellDate }) => {
+      const key = calendarHubLocalDateKeyFromDate(cellDate);
+      const dow = cellDate.getDay();
+      const isTodayCell =
+        cellDate.getFullYear() === now.getFullYear() &&
+        cellDate.getMonth() === now.getMonth() &&
+        cellDate.getDate() === now.getDate();
+      const selected = calendarHubSelectedDateKey && key === calendarHubSelectedDateKey;
+      const mutedCls = muted ? " calendar-hub-cell--muted" : "";
+      const sunCls = dow === 0 ? " calendar-hub-cell--sun" : "";
+      const satCls = dow === 6 ? " calendar-hub-cell--sat" : "";
+      const todayCls = isTodayCell ? " calendar-hub-cell--today" : "";
+      const selCls = selected ? " calendar-hub-cell--selected" : "";
+      const dayEvts = muted ? [] : calendarHubEventsOverlappingLocalDay(events, cellDate);
+      const chips = dayEvts
+        .slice(0, 3)
+        .map((ev) => {
+          const t = escHtml(String(ev.title || "").slice(0, 22));
+          const suf = String(ev.title || "").length > 22 ? "…" : "";
+          return `<span class="calendar-hub-chip">${t}${suf}</span>`;
+        })
+        .join("");
+      const more =
+        dayEvts.length > 3 ? `<span class="calendar-hub-chip calendar-hub-chip--more">+${dayEvts.length - 3}</span>` : "";
+      return `<button type="button" class="calendar-hub-cell${mutedCls}${sunCls}${satCls}${todayCls}${selCls}" data-cal-date="${escHtml(
+        key
+      )}" data-cal-muted="${muted ? "1" : "0"}" aria-label="${muted ? "다른 달 " : ""}${dayNum}일${dayEvts.length ? `, 일정 ${dayEvts.length}건` : ""}">
+        <span class="calendar-hub-cell-num">${dayNum}</span>
+        <div class="calendar-hub-cell-chips">${chips}${more}</div>
+      </button>`;
+    })
+    .join("");
+}
 
 function populateCalendarHubShareChannelSelect() {
   const sel = document.getElementById(CALENDAR_HUB_IDS.shareChannelSelect);
@@ -10404,7 +10627,8 @@ async function fetchCalendarBundleData() {
     return { events: [], incoming: [], suggestions: [] };
   }
   const emp = encodeURIComponent(currentUser.employeeNo);
-  const range = formatCalendarRangeIso(30, 180);
+  const anchor = getCalendarHubDisplayAnchor();
+  const range = calendarHubVisibleMonthRangeIso(anchor.year, anchor.month);
   const fromQ = encodeURIComponent(range.from);
   const toQ = encodeURIComponent(range.to);
   const [evRes, inRes, sugRes] = await Promise.all([
@@ -10460,6 +10684,7 @@ async function downloadCalendarHubIcsExport() {
 }
 
 function renderCalendarHubLists(events, incoming, suggestions) {
+  calendarHubCachedEventsForGrid = Array.isArray(events) ? events : [];
   const ids = CALENDAR_HUB_IDS;
   const listEl = document.getElementById(ids.eventsList);
   const inEl = document.getElementById(ids.incomingList);
@@ -10546,6 +10771,8 @@ function renderCalendarHubLists(events, incoming, suggestions) {
         .join("");
     }
   }
+  const anchor = getCalendarHubDisplayAnchor();
+  renderCalendarHubMonthGrid(anchor.year, anchor.month, calendarHubCachedEventsForGrid);
 }
 
 function ensureCalendarHubBindings() {
@@ -10581,37 +10808,59 @@ function ensureCalendarHubBindings() {
       await uiAlert(err?.message || "iCal 가져오기 실패");
     }
   });
-  document.getElementById(ids.btnEventAdd)?.addEventListener("click", async () => {
-    if (!currentUser) return;
-    const title = String(document.getElementById(ids.eventTitle)?.value || "").trim();
-    const startRaw = document.getElementById(ids.eventStart)?.value;
-    const endRaw = document.getElementById(ids.eventEnd)?.value;
-    const startsAt = localDatetimeInputToIsoOffset(startRaw);
-    const endsAt = localDatetimeInputToIsoOffset(endRaw);
-    if (!title || !startsAt || !endsAt) {
-      await uiAlert("제목·시작·종료를 모두 입력해 주세요.");
-      return;
+  document.getElementById(ids.btnToolbarAdd)?.addEventListener("click", () => {
+    let d = calendarHubSelectedDateKey ? calendarHubParseLocalDateKey(calendarHubSelectedDateKey) : null;
+    if (!d) d = new Date();
+    openCalendarHubQuickModal(d);
+  });
+  document.getElementById(ids.btnPrevMonth)?.addEventListener("click", () => {
+    const a = getCalendarHubDisplayAnchor();
+    let y = a.year;
+    let m = a.month - 1;
+    if (m < 0) {
+      m = 11;
+      y--;
     }
-    try {
-      const res = await apiFetch("/api/calendar/events", {
-        method: "POST",
-        body: JSON.stringify({
-          ownerEmployeeNo: currentUser.employeeNo,
-          title,
-          description: null,
-          startsAt,
-          endsAt,
-        }),
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error?.message || "일정 추가 실패");
-      document.getElementById(ids.eventTitle).value = "";
-      document.getElementById(ids.eventStart).value = "";
-      document.getElementById(ids.eventEnd).value = "";
-      await loadCalendarHubPanel();
-    } catch (e) {
-      await uiAlert(e?.message || "일정 추가 실패");
+    calendarHubViewAnchor = { year: y, month: m };
+    calendarHubSelectedDateKey = null;
+    void loadCalendarHubPanel();
+  });
+  document.getElementById(ids.btnNextMonth)?.addEventListener("click", () => {
+    const a = getCalendarHubDisplayAnchor();
+    let y = a.year;
+    let m = a.month + 1;
+    if (m > 11) {
+      m = 0;
+      y++;
     }
+    calendarHubViewAnchor = { year: y, month: m };
+    calendarHubSelectedDateKey = null;
+    void loadCalendarHubPanel();
+  });
+  document.getElementById(ids.btnToday)?.addEventListener("click", () => {
+    const n = new Date();
+    calendarHubViewAnchor = { year: n.getFullYear(), month: n.getMonth() };
+    calendarHubSelectedDateKey = calendarHubLocalDateKeyFromDate(n);
+    void loadCalendarHubPanel();
+  });
+  document.getElementById(ids.gridCells)?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".calendar-hub-cell[data-cal-date]");
+    if (!btn || btn.dataset.calMuted === "1") return;
+    const key = btn.dataset.calDate;
+    if (!key) return;
+    calendarHubSelectedDateKey = key;
+    const d = calendarHubParseLocalDateKey(key);
+    if (!d) return;
+    const anchor = getCalendarHubDisplayAnchor();
+    renderCalendarHubMonthGrid(anchor.year, anchor.month, calendarHubCachedEventsForGrid);
+    openCalendarHubQuickModal(d);
+  });
+  const qids = CALENDAR_HUB_QUICK_IDS;
+  document.getElementById(qids.allDay)?.addEventListener("change", () => {
+    syncCalendarHubQuickDatetimeRows();
+  });
+  document.getElementById(qids.submit)?.addEventListener("click", () => {
+    void submitCalendarHubQuickEvent();
   });
   document.getElementById(ids.btnShareSend)?.addEventListener("click", async () => {
     if (!currentUser) return;
