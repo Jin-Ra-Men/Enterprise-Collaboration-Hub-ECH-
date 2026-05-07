@@ -103,7 +103,7 @@ graph LR
   `./sql/migrate_org_group_members_user_id_to_employee_no.sql`, `./sql/migrate_users_drop_org_columns.sql`,
   `./sql/migrate_org_duty_title_to_job_title.sql`  
   (레거시 `users` 컬럼 기반 백필: `backfill_org_groups_from_users.sql`, `backfill_org_group_members_from_users.sql` — 신규 스키마에서는 사용 중단 안내 참고)
-- AI 프로액티브/개인 마스터 스위치 이관: `./sql/migrate_ai_phase_7_3.sql`, `./sql/migrate_user_ai_assistant_master_toggle.sql` (기존 설치 DB는 후자 추가 적용 필요)
+- 캘린더 제안·AI 프로액티브 로컬 백필(묶음): `./sql/migrate_bundle_local_ai_calendar.sql` — 또는 개별 `./sql/migrate_calendar_phase_6_4.sql`, `./sql/migrate_ai_phase_7_3.sql`, `./sql/migrate_user_ai_assistant_master_toggle.sql`
 - 변경 이력: `../.cursor/rules/CHANGELOG.md`
 - 에러 이력: `../.cursor/rules/ERRORS.md`
 

@@ -5,6 +5,7 @@
 ## 2026-05-07
 
 ### Added
+- **로컬 DB 백필 묶음 SQL**: `docs/sql/migrate_bundle_local_ai_calendar.sql` — `migrate_calendar_phase_6_4` + `migrate_ai_phase_7_3` + `migrate_user_ai_assistant_master_toggle` 순서·전제(`calendar_events` 존재 등) 주석·검증 SELECT. `HANDOVER.md`·`DEVELOPER_README.md` 안내.
 - **프로액티브 LLM 대화 인사이트**: `ProactiveConversationInsightScheduler`(매시 `:23`) — 옵트인 채널 최근 루트 텍스트 메시지를 PII 마스킹 후 LLM 분류, JSON 파싱(`ConversationInsightJsonSupport`)·서버 검증(모호 플래그·confidence·`+09:00` 일정 구간·중복 방지) 후 `CalendarService.createAiAssistantSuggestionFromProactivePipeline` 또는 `WORK_ITEM_HINT` 적재. JVM 내 채널별 롤링 1시간 LLM 호출 상한. 기초설정 시드 `ai.proactive.llm-conversation-insight-enabled`(기본 false)·`ai.proactive.llm-conversation-confidence-min`·`ai.proactive.llm-conversation-max-llm-calls-per-channel-hour`. 테스트 `ConversationInsightJsonSupportTest`.
 
 ### Changed
