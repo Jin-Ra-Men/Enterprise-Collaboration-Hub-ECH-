@@ -3,6 +3,7 @@ package com.ech.backend.api.calendar;
 import com.ech.backend.api.calendar.dto.CalendarConflictCheckResponse;
 import com.ech.backend.api.calendar.dto.CalendarEventResponse;
 import com.ech.backend.api.calendar.dto.CalendarImportResponse;
+import com.ech.backend.api.calendar.dto.CalendarShareDispatchResponse;
 import com.ech.backend.api.calendar.dto.CalendarShareResponse;
 import com.ech.backend.api.calendar.dto.CalendarSuggestionResponse;
 import com.ech.backend.api.calendar.dto.ReplaceCalendarEventAttendeesRequest;
@@ -177,6 +178,16 @@ public class CalendarController {
     ) {
         requireAuth(principal);
         return ApiResponse.success(calendarService.updateEvent(principal, eventId, employeeNo, request));
+    }
+
+    @PostMapping("/api/calendar/events/{eventId}/share-attendees")
+    public ApiResponse<CalendarShareDispatchResponse> shareEventToAttendees(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long eventId,
+            @RequestParam String employeeNo
+    ) {
+        requireAuth(principal);
+        return ApiResponse.success(calendarService.shareEventToAttendees(principal, eventId, employeeNo));
     }
 
     @DeleteMapping("/api/calendar/events/{eventId}")

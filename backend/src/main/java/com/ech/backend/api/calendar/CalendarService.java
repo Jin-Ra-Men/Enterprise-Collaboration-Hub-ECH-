@@ -8,6 +8,7 @@ import com.ech.backend.api.calendar.dto.CalendarEventAttendeeResponse;
 import com.ech.backend.api.calendar.dto.CalendarEventOverlapRow;
 import com.ech.backend.api.calendar.dto.CalendarEventResponse;
 import com.ech.backend.api.calendar.dto.CalendarImportResponse;
+import com.ech.backend.api.calendar.dto.CalendarShareDispatchResponse;
 import com.ech.backend.api.calendar.dto.CalendarShareResponse;
 import com.ech.backend.api.calendar.dto.CalendarSuggestionResponse;
 import com.ech.backend.api.calendar.dto.CreateCalendarEventRequest;
@@ -30,16 +31,22 @@ import com.ech.backend.domain.calendar.CalendarSuggestion;
 import com.ech.backend.domain.calendar.CalendarSuggestionRepository;
 import com.ech.backend.domain.calendar.CalendarSuggestionStatus;
 import com.ech.backend.domain.channel.Channel;
+import com.ech.backend.domain.channel.ChannelMember;
+import com.ech.backend.domain.channel.ChannelMemberRole;
 import com.ech.backend.domain.channel.ChannelMemberRepository;
+import com.ech.backend.domain.channel.ChannelType;
 import com.ech.backend.domain.channel.ChannelRepository;
 import com.ech.backend.domain.user.User;
 import com.ech.backend.domain.user.UserRepository;
+import com.ech.backend.integration.realtime.RealtimeBroadcastClient;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.hibernate.Hibernate;
@@ -54,6 +61,7 @@ public class CalendarService {
     private static final int ICS_IMPORT_MAX_BYTES = 512 * 1024;
     private static final int ICS_IMPORT_MAX_EVENTS = 64;
     private static final int ATTENDEES_MAX = 50;
+    private static final String DEFAULT_WORKSPACE_KEY = "WS1";
 
     private final CalendarEventRepository calendarEventRepository;
     private final CalendarEventAttendeeRepository calendarEventAttendeeRepository;
@@ -64,6 +72,7 @@ public class CalendarService {
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
     private final AiAssistantService aiAssistantService;
+    private final RealtimeBroadcastClient realtimeBroadcastClient;
 
     public CalendarService(
             CalendarEventRepository calendarEventRepository,
@@ -74,7 +83,8 @@ public class CalendarService {
             ChannelMemberRepository channelMemberRepository,
             UserRepository userRepository,
             AuditLogService auditLogService,
-            AiAssistantService aiAssistantService
+            AiAssistantService aiAssistantService,
+            RealtimeBroadcastClient realtimeBroadcastClient
     ) {
         this.calendarEventRepository = calendarEventRepository;
         this.calendarEventAttendeeRepository = calendarEventAttendeeRepository;
@@ -85,6 +95,7 @@ public class CalendarService {
         this.userRepository = userRepository;
         this.auditLogService = auditLogService;
         this.aiAssistantService = aiAssistantService;
+        this.realtimeBroadcastClient = realtimeBroadcastClient;
     }
 
     @Transactional(readOnly = true)
@@ -135,6 +146,7 @@ public class CalendarService {
         if (!event.isInUse()) {
             throw new IllegalArgumentException("삭제된 일정입니다.");
         }
+        Set<String> previousInternalAttendees = collectInternalAttendeeEmployeeNos(event.getId());
         List<CalendarAttendeeInput> inputs = request != null && request.attendees() != null
                 ? request.attendees()
                 : List.of();
@@ -179,7 +191,31 @@ public class CalendarService {
         if (!next.isEmpty()) {
             calendarEventAttendeeRepository.saveAll(next);
         }
+        Set<String> requestedInternalAttendees = new HashSet<>(internalSeen);
+        requestedInternalAttendees.remove(owner);
+        requestedInternalAttendees.removeAll(previousInternalAttendees);
+        dispatchSharesForRecipients(owner, event, requestedInternalAttendees, true);
         return toEventResponse(event, loadAttendeeResponses(event.getId()));
+    }
+
+    @Transactional
+    public CalendarShareDispatchResponse shareEventToAttendees(
+            UserPrincipal principal,
+            Long eventId,
+            String employeeNo
+    ) {
+        String owner = resolveSelfEmployeeNo(principal, employeeNo);
+        CalendarEvent event = calendarEventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalArgumentException("일정을 찾을 수 없습니다."));
+        if (!event.getOwnerEmployeeNo().equals(owner)) {
+            throw new IllegalArgumentException("본인 일정만 공유할 수 있습니다.");
+        }
+        if (!event.isInUse()) {
+            throw new IllegalArgumentException("삭제된 일정입니다.");
+        }
+        Set<String> recipients = collectInternalAttendeeEmployeeNos(eventId);
+        recipients.remove(owner);
+        return dispatchSharesForRecipients(owner, event, recipients, false);
     }
 
     @Transactional(readOnly = true)
@@ -897,6 +933,139 @@ public class CalendarService {
             throw new IllegalArgumentException("이메일은 320자 이하여야 합니다.");
         }
         return e;
+    }
+
+    private Set<String> collectInternalAttendeeEmployeeNos(Long eventId) {
+        Set<String> out = new HashSet<>();
+        for (CalendarEventAttendee a : calendarEventAttendeeRepository.findByCalendarEventIdOrderBySortOrderAsc(eventId)) {
+            if (a.getAttendeeType() != CalendarAttendeeType.INTERNAL) {
+                continue;
+            }
+            String emp = a.getEmployeeNo() == null ? "" : a.getEmployeeNo().trim();
+            if (!emp.isBlank()) {
+                out.add(emp);
+            }
+        }
+        return out;
+    }
+
+    private CalendarShareDispatchResponse dispatchSharesForRecipients(
+            String senderEmployeeNo,
+            CalendarEvent sourceEvent,
+            Set<String> recipientEmployeeNos,
+            boolean skipIfPendingExists
+    ) {
+        if (recipientEmployeeNos == null || recipientEmployeeNos.isEmpty()) {
+            return new CalendarShareDispatchResponse(0, 0, 0);
+        }
+        User senderUser = userRepository.findByEmployeeNo(senderEmployeeNo)
+                .orElseThrow(() -> new IllegalArgumentException("발신 사용자를 찾을 수 없습니다."));
+        int requested = 0;
+        int created = 0;
+        int skipped = 0;
+        OffsetDateTime now = OffsetDateTime.now();
+        for (String recipientRaw : recipientEmployeeNos) {
+            String recipient = recipientRaw == null ? "" : recipientRaw.trim();
+            if (recipient.isBlank() || recipient.equals(senderEmployeeNo)) {
+                continue;
+            }
+            requested++;
+            Optional<User> recipientUserOpt = userRepository.findByEmployeeNo(recipient);
+            if (recipientUserOpt.isEmpty()) {
+                skipped++;
+                continue;
+            }
+            if (skipIfPendingExists && hasPendingShare(senderEmployeeNo, recipient, sourceEvent.getId(), now)) {
+                skipped++;
+                continue;
+            }
+            Channel originDm = ensureOneToOneDmChannel(senderUser, recipientUserOpt.get());
+            CalendarShareRequest saved = calendarShareRequestRepository.save(new CalendarShareRequest(
+                    senderEmployeeNo,
+                    recipient,
+                    originDm,
+                    sourceEvent.getTitle(),
+                    sourceEvent.getDescription(),
+                    sourceEvent.getStartsAt(),
+                    sourceEvent.getEndsAt(),
+                    now.plusDays(7),
+                    sourceEvent.getId()
+            ));
+            notifyCalendarShareRequested(saved, senderUser);
+            created++;
+        }
+        return new CalendarShareDispatchResponse(requested, created, skipped);
+    }
+
+    private boolean hasPendingShare(String senderEmployeeNo, String recipientEmployeeNo, Long sourceEventId, OffsetDateTime now) {
+        return calendarShareRequestRepository
+                .findByRecipientEmployeeNoAndStatusAndExpiresAtAfterOrderByCreatedAtDesc(
+                        recipientEmployeeNo, CalendarShareStatus.PENDING, now)
+                .stream()
+                .anyMatch(s -> senderEmployeeNo.equals(s.getSenderEmployeeNo())
+                        && sourceEventId != null
+                        && sourceEventId.equals(s.getSourceEventId()));
+    }
+
+    private Channel ensureOneToOneDmChannel(User sender, User recipient) {
+        String senderEmp = sender.getEmployeeNo();
+        String recipientEmp = recipient.getEmployeeNo();
+        String workspaceKey = resolveWorkspaceKeyForShare(senderEmp);
+        List<String> pair = List.of(senderEmp, recipientEmp).stream().distinct().sorted().toList();
+        if (pair.size() != 2) {
+            throw new IllegalArgumentException("유효한 수신자가 아닙니다.");
+        }
+        List<Channel> existing = channelRepository.findOneToOneDmByWorkspaceAndParticipants(workspaceKey, pair);
+        if (!existing.isEmpty()) {
+            return existing.get(0);
+        }
+        String canonicalName = "__dm__" + pair.get(0) + "_" + pair.get(1);
+        Optional<Channel> existingByName = channelRepository.findByWorkspaceKeyAndName(workspaceKey, canonicalName);
+        if (existingByName.isPresent()) {
+            return existingByName.get();
+        }
+        String displayLabel = recipient.getName() != null && !recipient.getName().isBlank()
+                ? recipient.getName()
+                : recipientEmp;
+        Channel dm = channelRepository.save(new Channel(
+                workspaceKey,
+                canonicalName,
+                displayLabel,
+                ChannelType.DM,
+                sender
+        ));
+        channelMemberRepository.save(new ChannelMember(dm, sender, ChannelMemberRole.MANAGER));
+        channelMemberRepository.save(new ChannelMember(dm, recipient, ChannelMemberRole.MEMBER));
+        return dm;
+    }
+
+    private String resolveWorkspaceKeyForShare(String employeeNo) {
+        List<Channel> joined = channelRepository.findByMemberEmployeeNo(employeeNo);
+        if (!joined.isEmpty() && joined.get(0).getWorkspaceKey() != null && !joined.get(0).getWorkspaceKey().isBlank()) {
+            return joined.get(0).getWorkspaceKey();
+        }
+        return DEFAULT_WORKSPACE_KEY;
+    }
+
+    private void notifyCalendarShareRequested(CalendarShareRequest saved, User senderUser) {
+        String senderName = senderUser.getName() != null && !senderUser.getName().isBlank()
+                ? senderUser.getName()
+                : senderUser.getEmployeeNo();
+        Map<String, Object> item = new HashMap<>();
+        item.put("targetEmployeeNo", saved.getRecipientEmployeeNo());
+        item.put("shareId", saved.getId());
+        item.put("senderEmployeeNo", saved.getSenderEmployeeNo());
+        item.put("senderName", senderName);
+        item.put("title", saved.getTitle());
+        item.put("startsAt", String.valueOf(saved.getStartsAt()));
+        item.put("endsAt", String.valueOf(saved.getEndsAt()));
+        item.put("originChannelId", saved.getOriginChannel() != null ? saved.getOriginChannel().getId() : null);
+        item.put("originChannelName", saved.getOriginChannel() != null ? saved.getOriginChannel().getName() : "");
+        item.put("originChannelType",
+                saved.getOriginChannel() != null && saved.getOriginChannel().getChannelType() != null
+                        ? saved.getOriginChannel().getChannelType().name()
+                        : "DM");
+        realtimeBroadcastClient.notifyCalendarShareRequests(List.of(item));
     }
 
     private CalendarSuggestionResponse toSuggestionResponse(CalendarSuggestion s) {

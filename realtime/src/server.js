@@ -195,6 +195,47 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (req.url === "/internal/notify-calendar-shares" && req.method === "POST") {
+    const expected = process.env.REALTIME_INTERNAL_TOKEN;
+    const given = req.headers["x-internal-token"];
+    if (expected && String(expected).trim() && String(given || "").trim() !== String(expected).trim()) {
+      res.writeHead(401, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: false, message: "Unauthorized" }));
+      return;
+    }
+    let buf = "";
+    req.on("data", (c) => {
+      buf += c;
+    });
+    req.on("end", () => {
+      try {
+        const body = buf ? JSON.parse(buf) : {};
+        const items = Array.isArray(body.items) ? body.items : [];
+        for (const it of items) {
+          const emp = normalizeEmployeeNo(it.targetEmployeeNo);
+          if (!emp) continue;
+          emitCalendarShareNotifyToEmployee(emp, {
+            shareId: it.shareId != null ? Number(it.shareId) : null,
+            senderEmployeeNo: String(it.senderEmployeeNo || ""),
+            senderName: String(it.senderName || ""),
+            title: String(it.title || ""),
+            startsAt: String(it.startsAt || ""),
+            endsAt: String(it.endsAt || ""),
+            originChannelId: it.originChannelId != null ? Number(it.originChannelId) : null,
+            originChannelName: String(it.originChannelName || ""),
+            originChannelType: String(it.originChannelType || "DM"),
+          });
+        }
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: true }));
+      } catch (err) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: false, message: err.message || "error" }));
+      }
+    });
+    return;
+  }
+
   res.writeHead(404, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ message: "Not Found" }));
 });
@@ -215,6 +256,17 @@ function emitMentionNotifyToEmployee(employeeNo, payload) {
   for (const sid of set) {
     const sock = io.sockets.sockets.get(sid);
     if (sock) sock.emit("mention:notify", payload);
+  }
+}
+
+function emitCalendarShareNotifyToEmployee(employeeNo, payload) {
+  const emp = normalizeEmployeeNo(employeeNo);
+  if (!emp) return;
+  const set = employeeNoToSocketIds.get(emp);
+  if (!set || set.size === 0) return;
+  for (const sid of set) {
+    const sock = io.sockets.sockets.get(sid);
+    if (sock) sock.emit("calendar:share-request", payload);
   }
 }
 

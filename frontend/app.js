@@ -740,6 +740,26 @@ async function deleteCalendarEventFromDetail() {
   }
 }
 
+async function shareCalendarEventFromDetail() {
+  if (!currentUser || !calendarDetailEditingEventId) return;
+  const evId = calendarDetailEditingEventId;
+  const emp = encodeURIComponent(currentUser.employeeNo);
+  try {
+    const res = await apiFetch(`/api/calendar/events/${evId}/share-attendees?employeeNo=${emp}`, {
+      method: "POST",
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error?.message || "공유 요청 전송 실패");
+    const requested = Number(json.data?.requestedInternalAttendees ?? 0);
+    const created = Number(json.data?.createdShareRequests ?? 0);
+    const skipped = Number(json.data?.skippedExistingPending ?? 0);
+    await uiAlert(`공유 요청 전송 완료: 대상 ${requested}명, 생성 ${created}건, 건너뜀 ${skipped}건`);
+    await loadCalendarHubPanel();
+  } catch (e) {
+    await uiAlert(e?.message || "공유 요청 전송 실패");
+  }
+}
+
 async function runCalendarDetailUserSearch() {
   const input = document.getElementById("calendarEventDetailAttendeeSearch");
   const ul = document.getElementById("calendarEventDetailAttendeeSuggest");
@@ -836,6 +856,7 @@ function ensureCalendarEventDetailBindings() {
   calendarDetailModalUIBound = true;
   document.getElementById("btnCalendarEventDetailSave")?.addEventListener("click", () => void saveCalendarEventDetail());
   document.getElementById("btnCalendarEventDetailDelete")?.addEventListener("click", () => void deleteCalendarEventFromDetail());
+  document.getElementById("btnCalendarEventDetailShare")?.addEventListener("click", () => void shareCalendarEventFromDetail());
   document.getElementById("calendarEventDetailAttendeeSearch")?.addEventListener("input", () => {
     clearTimeout(calendarDetailAttendeeSearchTimer);
     calendarDetailAttendeeSearchTimer = setTimeout(() => void runCalendarDetailUserSearch(), 280);
@@ -6884,6 +6905,9 @@ function initSocket() {
   socket.on("mention:notify", (p) => {
     pushMentionToast(p);
   });
+  socket.on("calendar:share-request", (p) => {
+    pushCalendarShareToast(p);
+  });
 }
 
 /**
@@ -7560,6 +7584,24 @@ function pushMentionToast(p) {
   setTimeout(() => {
     if (wrap.parentNode) wrap.remove();
   }, 25_000);
+}
+
+function pushCalendarShareToast(p) {
+  if (!p || !currentUser) return;
+  const senderName = String(p.senderName || p.senderEmployeeNo || "동료");
+  const title = String(p.title || "(제목 없음)");
+  const startsAt = String(p.startsAt || "");
+  const starts = startsAt ? calendarHubFormatSeoulMdHm(startsAt) : "";
+  const preview = starts ? `${title} · ${starts}` : title;
+  pushActivityToast({
+    title: "새 일정 공유 요청",
+    locationLine: `보낸 사람 · ${senderName}`,
+    preview,
+    osTag: `ech_os_calendar_share_${String(p.shareId || Date.now())}`,
+    onClick: () => {
+      void openCalendarHubPage();
+    },
+  });
 }
 
 function extractMentionEmployeeNosFromTextClient(text) {

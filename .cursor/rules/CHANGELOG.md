@@ -7,6 +7,8 @@
 ### Added
 - **내 일정 세부 모달·참석자(UI)**: `#modalCalendarEventDetail`(본문·`GET /api/calendar/events/{id}`·저장 시 `PUT` 일정 + `PUT .../attendees`). 월간 **일정 줄** 클릭·목록 **행** 클릭으로 진입. 내부 참석자 `GET /api/users/search` 자동완성, 외부는 이름·이메일(선택). 그리드 셀을 `button` 한 장으로 두지 않고 날짜 버튼 + 줄별 버튼으로 분리. 문서·초안 스키마 `docs/sql/postgresql_schema_draft.sql`에 `calendar_event_attendees` 반영.
 - **CalendarApiTest**: `GET /api/calendar/events/{eventId}` 단건 조회·`attendees` 배열 검증(`get_event_by_id_returns_detail`).
+- **일정 공유요청 실시간 알림**: 백엔드 `RealtimeBroadcastClient.notifyCalendarShareRequests` + Node `/internal/notify-calendar-shares` + 소켓 `calendar:share-request`를 추가해 수신자가 즉시 토스트/OS 알림을 받도록 연동.
+- **참석자 기반 공유 자동화**: `PUT /api/calendar/events/{eventId}/attendees` 저장 시 신규 INTERNAL 참석자에게 자동 공유요청 생성, `POST /api/calendar/events/{eventId}/share-attendees`로 기존 일정도 INTERNAL 참석자 대상 공유요청 재전송 지원.
 
 ### Changed
 - **일정 세부 모달 참석자 UI**: 검색·외부 이름·이메일을 `.form-group` + 레이블로 정렬하고, 선택된 참석자 영역에 입력 필드와 동일한 테두리·배경(`calendar-detail-attendee-chips--panel`) 적용해 입력 가능 영역 구분을 명확히 함(`frontend/index.html`, `frontend/styles.css`).
@@ -1472,3 +1474,10 @@
 ### Changed
 - 릴리즈 버전을 `1.2.11`으로 상향 (`backend/build.gradle`, `desktop/package.json`, `desktop/package-lock.json`)
 - 배포 기준 버전 표기를 `1.2.11`로 갱신 (`README.md`, `docs/DEVELOPER_README.md`, `docs/ROADMAP.md`, `docs/HANDOVER.md`)
+
+## 2026-05-07
+
+### Changed
+- 캘린더 참석자 저장 문서에 신규 INTERNAL 자동 공유요청, `POST /api/calendar/events/{eventId}/share-attendees?employeeNo=` API, `calendar:share-request` 소켓 알림을 반영 (`docs/FEATURE_SPEC.md`)
+- 개발자 API 요약에 캘린더 `share-attendees` 엔드포인트와 `PUT .../attendees`의 신규 INTERNAL 자동 공유요청 설명을 반영 (`docs/DEVELOPER_README.md`)
+- 인수인계서의 글로벌 바·업무 허브 설명에 `/share-attendees`, 신규 INTERNAL 자동 공유요청, `calendar:share-request` 수신 알림, 상세 하단 `btnCalendarEventDetailShare` 재전송 동작을 반영 (`docs/HANDOVER.md`)

@@ -107,4 +107,41 @@ public class RealtimeBroadcastClient {
             log.warn("realtime notify-mentions failed: {}", e.getMessage());
         }
     }
+
+    /** 일정 공유요청 알림을 대상 사원 소켓에 {@code calendar:share-request}로 전달한다. */
+    public void notifyCalendarShareRequests(List<Map<String, Object>> items) {
+        if (items == null || items.isEmpty()) {
+            return;
+        }
+        String base = internalBaseUrl == null ? "" : internalBaseUrl.trim();
+        if (base.isEmpty()) {
+            return;
+        }
+        String url = base.endsWith("/")
+                ? base + "internal/notify-calendar-shares"
+                : base + "/internal/notify-calendar-shares";
+        try {
+            Map<String, Object> body = Map.of("items", items);
+            byte[] json = objectMapper.writeValueAsBytes(body);
+
+            HttpRequest.Builder b = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(Duration.ofSeconds(5))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(json));
+            if (internalToken != null && !internalToken.isBlank()) {
+                b.header("X-Internal-Token", internalToken.trim());
+            }
+
+            HttpResponse<String> res = httpClient.send(b.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            if (res.statusCode() < 200 || res.statusCode() >= 300) {
+                log.warn("realtime notify-calendar-shares HTTP {}: {}", res.statusCode(), res.body());
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("realtime notify-calendar-shares interrupted: {}", e.getMessage());
+        } catch (Exception e) {
+            log.warn("realtime notify-calendar-shares failed: {}", e.getMessage());
+        }
+    }
 }
