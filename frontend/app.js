@@ -447,7 +447,9 @@ let workHubPendingNewKanbanCards = [];
 let workHubPendingCardAssigneeAdd = new Map();
 let workHubPendingCardAssigneeRemove = new Map();
 let workHubWorkListDeleteBound = false;
-let workHubCalendarBound = false;
+let calendarHubUIBound = false;
+/** 내 일정 허브「공유 보내기」에서 선택한 채널/DM의 멤버 목록 */
+let standaloneCalendarShareMembers = [];
 let workHubSelectedWorkItemMeta = null;
 let workHubSelectedKanbanCardMeta = null;
 let workHubDetailKanbanAssignees = [];
@@ -564,6 +566,35 @@ function ensureWorkflowMountedInChatArea() {
   const chatArea = document.querySelector(".chat-area");
   if (!workflowEl || !chatArea) return;
   if (workflowEl.parentElement !== chatArea) chatArea.appendChild(workflowEl);
+}
+
+function ensureCalendarHubMountedInChatArea() {
+  const el = document.getElementById("modalCalendarHub");
+  const chatArea = document.querySelector(".chat-area");
+  if (!el || !chatArea) return;
+  if (el.parentElement !== chatArea) chatArea.appendChild(el);
+}
+
+async function openCalendarHubPage() {
+  if (!currentUser) {
+    await uiAlert("로그인이 필요합니다.");
+    return;
+  }
+  ensureCalendarHubMountedInChatArea();
+  ensureCalendarHubBindings();
+  populateCalendarHubShareChannelSelect();
+  try {
+    await loadCalendarHubPanel();
+  } catch (e) {
+    await uiAlert(e?.message || "일정 정보를 불러오지 못했습니다.");
+    return;
+  }
+  showView("modalCalendarHub");
+}
+
+function closeCalendarHubToMain() {
+  if (activeChannelId) showView("viewChat");
+  else showView("viewWelcome");
 }
 
 /** 좌측 하단 프레즌스 메뉴 이벤트(재로그인 시 중복 바인딩 방지) */
@@ -973,8 +1004,11 @@ async function triggerGlobalNetworkRecovery(reason = "unknown") {
         loadWorkHubChannelMembersForAssignee(),
         loadChannelWorkItems(),
         loadChannelKanbanBoard(),
-        loadWorkHubCalendarPanel(),
       ]).catch(() => {});
+    }
+    const calendarHubView = document.getElementById("modalCalendarHub");
+    if (calendarHubView && !calendarHubView.classList.contains("hidden") && currentUser) {
+      await loadCalendarHubPanel().catch(() => {});
     }
   } finally {
     lastNetworkRecoveryAt = Date.now();
@@ -3109,6 +3143,7 @@ function showMain(user) {
 function setTopNavActive(key) {
   const pairs = [
     ["projects", "btnTopNavProjects"],
+    ["calendar", "btnTopNavCalendar"],
     ["team", "btnTopNavTeam"],
   ];
   pairs.forEach(([k, bid]) => {
@@ -3121,11 +3156,16 @@ function setTopNavActive(key) {
 
 function syncTopNavFromMainView() {
   const workflowView = document.getElementById("modalWorkHub");
+  const calendarHubView = document.getElementById("modalCalendarHub");
   if (workflowView && !workflowView.classList.contains("hidden")) {
     setTopNavActive("projects");
     return;
   }
-  ["btnTopNavProjects", "btnTopNavTeam"].forEach((bid) => {
+  if (calendarHubView && !calendarHubView.classList.contains("hidden")) {
+    setTopNavActive("calendar");
+    return;
+  }
+  ["btnTopNavProjects", "btnTopNavCalendar", "btnTopNavTeam"].forEach((bid) => {
     document.getElementById(bid)?.classList.remove("app-shell-nav-link--active");
   });
 }
@@ -3147,7 +3187,7 @@ function syncAdminSidebarActive(viewId) {
 }
 
 function showView(viewId) {
-  ["viewWelcome","viewChat","viewReleases","viewSettings","viewUserManagement","viewOrgManagement","modalWorkHub"].forEach(id => {
+  ["viewWelcome","viewChat","viewReleases","viewSettings","viewUserManagement","viewOrgManagement","modalWorkHub","modalCalendarHub"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.add("hidden");
   });
@@ -3555,9 +3595,8 @@ function getDefaultChannelForWorkHub() {
 }
 
 function focusWorkHubPanel(mode) {
-  if (mode !== "work" && mode !== "kanban" && mode !== "calendar") return;
-  const id =
-    mode === "kanban" ? "workHubPanelKanban" : mode === "calendar" ? "workHubPanelCalendar" : "workHubPanelWork";
+  if (mode !== "work" && mode !== "kanban") return;
+  const id = mode === "kanban" ? "workHubPanelKanban" : "workHubPanelWork";
   const el = document.getElementById(id);
   if (!el) return;
   el.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -3575,10 +3614,8 @@ async function openWorkHubModalForActiveChannel() {
       loadWorkHubChannelMembersForAssignee(),
       loadChannelWorkItems(),
       loadChannelKanbanBoard(),
-      loadWorkHubCalendarPanel(),
     ]);
     ensureWorkHubWorkListDeleteBound();
-    ensureWorkHubCalendarBound();
     const panelFocus = pendingWorkHubPanelFocus;
     pendingWorkHubPanelFocus = null;
     openWorkflowPage();
@@ -3678,13 +3715,8 @@ async function runMessageToWorkKanbanFlow(messageId) {
     try {
       await loadChannelKanbanBoard();
     } catch (e) {
-      await Promise.all([
-        loadWorkHubChannelMembersForAssignee(),
-        loadChannelWorkItems(),
-        loadWorkHubCalendarPanel(),
-      ]);
+      await Promise.all([loadWorkHubChannelMembersForAssignee(), loadChannelWorkItems()]);
       ensureWorkHubWorkListDeleteBound();
-      ensureWorkHubCalendarBound();
       workflowNeedsChannelPick = false;
       pendingWorkHubPanelFocus = "work";
       openWorkflowPage();
@@ -3734,10 +3766,8 @@ async function runMessageToWorkKanbanFlow(messageId) {
       loadWorkHubChannelMembersForAssignee(),
       loadChannelWorkItems(),
       loadChannelKanbanBoard(),
-      loadWorkHubCalendarPanel(),
     ]);
     ensureWorkHubWorkListDeleteBound();
-    ensureWorkHubCalendarBound();
     workflowNeedsChannelPick = false;
     pendingWorkHubPanelFocus = null;
     openWorkflowPage();
@@ -4067,10 +4097,8 @@ function appendWorkTodoRowLi(ul, row, bucket, channels, channelTypeById) {
         loadWorkHubChannelMembersForAssignee(),
         loadChannelWorkItems(),
         loadChannelKanbanBoard(),
-        loadWorkHubCalendarPanel(),
       ]);
       ensureWorkHubWorkListDeleteBound();
-      ensureWorkHubCalendarBound();
       workflowNeedsChannelPick = false;
       openWorkflowPage();
       renderWorkflowChannelPicker();
@@ -10286,11 +10314,79 @@ function formatCalendarRangeIso(daysBack, daysForward) {
   return { from: from.toISOString(), to: to.toISOString() };
 }
 
-function populateCalendarShareRecipientSelect() {
-  const sel = document.getElementById("calendarShareRecipientSelect");
+/** 전역「내 일정」허브 DOM id 묶음 */
+const CALENDAR_HUB_IDS = Object.freeze({
+  btnIcsExport: "calendarHubBtnIcsExport",
+  btnIcsImport: "calendarHubBtnIcsImport",
+  icsFileInput: "calendarHubIcsFileInput",
+  eventTitle: "calendarHubEventTitleInput",
+  eventStart: "calendarHubEventStartInput",
+  eventEnd: "calendarHubEventEndInput",
+  btnEventAdd: "calendarHubBtnEventAdd",
+  eventsList: "calendarHubEventsList",
+  suggestionsList: "calendarHubSuggestionsList",
+  incomingList: "calendarHubIncomingSharesList",
+  shareChannelSelect: "calendarHubShareChannelSelect",
+  shareRecipientSelect: "calendarHubShareRecipientSelect",
+  shareTitle: "calendarHubShareTitleInput",
+  shareStart: "calendarHubShareStartInput",
+  shareEnd: "calendarHubShareEndInput",
+  btnShareSend: "calendarHubBtnShareSend",
+});
+
+function populateCalendarHubShareChannelSelect() {
+  const sel = document.getElementById(CALENDAR_HUB_IDS.shareChannelSelect);
+  if (!sel) return;
+  const list = Array.isArray(lastSidebarChannelsSnapshot) ? [...lastSidebarChannelsSnapshot] : [];
+  list.sort((a, b) => channelActivityTimeMs(b) - channelActivityTimeMs(a));
+  if (!list.length) {
+    sel.innerHTML = `<option value="">참여 중인 채널·DM이 없습니다</option>`;
+    standaloneCalendarShareMembers = [];
+    populateCalendarHubShareRecipientSelectFromMembers();
+    return;
+  }
+  sel.innerHTML = list
+    .map((ch) => {
+      const cid = Number(ch.channelId || 0);
+      if (!cid) return "";
+      const ct = String(ch.channelType || "").toUpperCase();
+      return `<option value="${cid}" data-channel-type="${escHtml(ct)}">${escHtml(formatWorkflowChannelLabel(ch))}</option>`;
+    })
+    .filter(Boolean)
+    .join("");
+  const preferred = activeChannelId && list.some((ch) => Number(ch.channelId) === Number(activeChannelId));
+  if (preferred) sel.value = String(activeChannelId);
+  else sel.selectedIndex = 0;
+  void refreshStandaloneCalendarMembersForShare();
+}
+
+async function refreshStandaloneCalendarMembersForShare() {
+  const sel = document.getElementById(CALENDAR_HUB_IDS.shareChannelSelect);
+  const cid = Number(sel?.value || 0);
+  standaloneCalendarShareMembers = [];
+  if (!cid || !currentUser) {
+    populateCalendarHubShareRecipientSelectFromMembers();
+    return;
+  }
+  try {
+    const res = await apiFetch(`/api/channels/${cid}`);
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      populateCalendarHubShareRecipientSelectFromMembers();
+      return;
+    }
+    standaloneCalendarShareMembers = Array.isArray(json.data?.members) ? json.data.members : [];
+  } catch {
+    standaloneCalendarShareMembers = [];
+  }
+  populateCalendarHubShareRecipientSelectFromMembers();
+}
+
+function populateCalendarHubShareRecipientSelectFromMembers() {
+  const sel = document.getElementById(CALENDAR_HUB_IDS.shareRecipientSelect);
   if (!sel || !currentUser) return;
   const selfNo = String(currentUser.employeeNo || "").trim();
-  const list = Array.isArray(workHubChannelMembersForAssignee) ? workHubChannelMembersForAssignee : [];
+  const list = Array.isArray(standaloneCalendarShareMembers) ? standaloneCalendarShareMembers : [];
   const opts = list
     .map((m) => {
       const e = String(m.employeeNo || "").trim();
@@ -10303,8 +10399,10 @@ function populateCalendarShareRecipientSelect() {
   sel.innerHTML = `<option value="">수신자 선택</option>${opts}`;
 }
 
-async function loadWorkHubCalendarPanel() {
-  if (!currentUser) return;
+async function fetchCalendarBundleData() {
+  if (!currentUser) {
+    return { events: [], incoming: [], suggestions: [] };
+  }
   const emp = encodeURIComponent(currentUser.employeeNo);
   const range = formatCalendarRangeIso(30, 180);
   const fromQ = encodeURIComponent(range.from);
@@ -10320,14 +10418,20 @@ async function loadWorkHubCalendarPanel() {
   if (!evRes.ok) throw new Error(evJson.error?.message || "일정 목록 조회 실패");
   if (!inRes.ok) throw new Error(inJson.error?.message || "받은 공유 조회 실패");
   if (!sugRes.ok) throw new Error(sugJson.error?.message || "일정 제안 조회 실패");
-  const events = Array.isArray(evJson.data) ? evJson.data : [];
-  const incoming = Array.isArray(inJson.data) ? inJson.data : [];
-  const suggestions = Array.isArray(sugJson.data) ? sugJson.data : [];
-  renderWorkHubCalendarLists(events, incoming, suggestions);
-  populateCalendarShareRecipientSelect();
+  return {
+    events: Array.isArray(evJson.data) ? evJson.data : [],
+    incoming: Array.isArray(inJson.data) ? inJson.data : [],
+    suggestions: Array.isArray(sugJson.data) ? sugJson.data : [],
+  };
 }
 
-async function downloadWorkHubCalendarIcsExport() {
+async function loadCalendarHubPanel() {
+  if (!currentUser) return;
+  const bundle = await fetchCalendarBundleData();
+  renderCalendarHubLists(bundle.events, bundle.incoming, bundle.suggestions);
+}
+
+async function downloadCalendarHubIcsExport() {
   if (!currentUser) return;
   const token = getToken();
   const emp = encodeURIComponent(currentUser.employeeNo);
@@ -10355,9 +10459,10 @@ async function downloadWorkHubCalendarIcsExport() {
   }
 }
 
-function renderWorkHubCalendarLists(events, incoming, suggestions) {
-  const listEl = document.getElementById("calendarEventsList");
-  const inEl = document.getElementById("calendarIncomingSharesList");
+function renderCalendarHubLists(events, incoming, suggestions) {
+  const ids = CALENDAR_HUB_IDS;
+  const listEl = document.getElementById(ids.eventsList);
+  const inEl = document.getElementById(ids.incomingList);
   if (listEl) {
     if (!events.length) {
       listEl.innerHTML = `<li class="channel-work-item channel-work-item--muted">등록된 일정이 없습니다.</li>`;
@@ -10390,7 +10495,7 @@ function renderWorkHubCalendarLists(events, incoming, suggestions) {
         .join("");
     }
   }
-  const sugEl = document.getElementById("calendarSuggestionsList");
+  const sugEl = document.getElementById(ids.suggestionsList);
   if (sugEl) {
     const sugList = Array.isArray(suggestions) ? suggestions : [];
     if (!sugList.length) {
@@ -10443,16 +10548,20 @@ function renderWorkHubCalendarLists(events, incoming, suggestions) {
   }
 }
 
-function ensureWorkHubCalendarBound() {
-  if (workHubCalendarBound) return;
-  workHubCalendarBound = true;
-  document.getElementById("btnCalendarIcsExport")?.addEventListener("click", () => {
-    void downloadWorkHubCalendarIcsExport();
+function ensureCalendarHubBindings() {
+  if (calendarHubUIBound) return;
+  calendarHubUIBound = true;
+  const ids = CALENDAR_HUB_IDS;
+  document.getElementById(ids.btnIcsExport)?.addEventListener("click", () => {
+    void downloadCalendarHubIcsExport();
   });
-  document.getElementById("btnCalendarIcsImport")?.addEventListener("click", () => {
-    document.getElementById("calendarIcsFileInput")?.click();
+  document.getElementById(ids.btnIcsImport)?.addEventListener("click", () => {
+    document.getElementById(ids.icsFileInput)?.click();
   });
-  document.getElementById("calendarIcsFileInput")?.addEventListener("change", async (e) => {
+  document.getElementById(ids.shareChannelSelect)?.addEventListener("change", () => {
+    void refreshStandaloneCalendarMembersForShare();
+  });
+  document.getElementById(ids.icsFileInput)?.addEventListener("change", async (e) => {
     const input = e.target;
     const file = input.files?.[0];
     input.value = "";
@@ -10467,16 +10576,16 @@ function ensureWorkHubCalendarBound() {
       const imp = Number(json.data?.importedCount ?? 0);
       const skip = Number(json.data?.skippedCount ?? 0);
       await uiAlert(`가져오기 완료: ${imp}건 추가, ${skip}건 건너뜀`);
-      await loadWorkHubCalendarPanel();
+      await loadCalendarHubPanel();
     } catch (err) {
       await uiAlert(err?.message || "iCal 가져오기 실패");
     }
   });
-  document.getElementById("btnCalendarEventAdd")?.addEventListener("click", async () => {
+  document.getElementById(ids.btnEventAdd)?.addEventListener("click", async () => {
     if (!currentUser) return;
-    const title = String(document.getElementById("calendarEventTitleInput")?.value || "").trim();
-    const startRaw = document.getElementById("calendarEventStartInput")?.value;
-    const endRaw = document.getElementById("calendarEventEndInput")?.value;
+    const title = String(document.getElementById(ids.eventTitle)?.value || "").trim();
+    const startRaw = document.getElementById(ids.eventStart)?.value;
+    const endRaw = document.getElementById(ids.eventEnd)?.value;
     const startsAt = localDatetimeInputToIsoOffset(startRaw);
     const endsAt = localDatetimeInputToIsoOffset(endRaw);
     if (!title || !startsAt || !endsAt) {
@@ -10496,25 +10605,25 @@ function ensureWorkHubCalendarBound() {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error?.message || "일정 추가 실패");
-      document.getElementById("calendarEventTitleInput").value = "";
-      document.getElementById("calendarEventStartInput").value = "";
-      document.getElementById("calendarEventEndInput").value = "";
-      await loadWorkHubCalendarPanel();
+      document.getElementById(ids.eventTitle).value = "";
+      document.getElementById(ids.eventStart).value = "";
+      document.getElementById(ids.eventEnd).value = "";
+      await loadCalendarHubPanel();
     } catch (e) {
       await uiAlert(e?.message || "일정 추가 실패");
     }
   });
-  document.getElementById("btnCalendarShareSend")?.addEventListener("click", async () => {
+  document.getElementById(ids.btnShareSend)?.addEventListener("click", async () => {
     if (!currentUser) return;
-    const cid = getWorkHubChannelId();
+    const cid = Number(document.getElementById(ids.shareChannelSelect)?.value || 0);
     if (!cid) {
-      await uiAlert("채널·DM이 선택된 워크플로우에서만 공유할 수 있습니다.");
+      await uiAlert("공유를 보낼 채널 또는 DM을 먼저 선택해 주세요.");
       return;
     }
-    const recipient = String(document.getElementById("calendarShareRecipientSelect")?.value || "").trim();
-    const title = String(document.getElementById("calendarShareTitleInput")?.value || "").trim();
-    const startsAt = localDatetimeInputToIsoOffset(document.getElementById("calendarShareStartInput")?.value);
-    const endsAt = localDatetimeInputToIsoOffset(document.getElementById("calendarShareEndInput")?.value);
+    const recipient = String(document.getElementById(ids.shareRecipientSelect)?.value || "").trim();
+    const title = String(document.getElementById(ids.shareTitle)?.value || "").trim();
+    const startsAt = localDatetimeInputToIsoOffset(document.getElementById(ids.shareStart)?.value);
+    const endsAt = localDatetimeInputToIsoOffset(document.getElementById(ids.shareEnd)?.value);
     if (!recipient || !title || !startsAt || !endsAt) {
       await uiAlert("수신자·제목·시작·종료를 모두 입력해 주세요.");
       return;
@@ -10536,14 +10645,14 @@ function ensureWorkHubCalendarBound() {
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error?.message || "공유 전송 실패");
       await uiAlert("공유 요청을 보냈습니다.");
-      document.getElementById("calendarShareTitleInput").value = "";
-      document.getElementById("calendarShareStartInput").value = "";
-      document.getElementById("calendarShareEndInput").value = "";
+      document.getElementById(ids.shareTitle).value = "";
+      document.getElementById(ids.shareStart).value = "";
+      document.getElementById(ids.shareEnd).value = "";
     } catch (e) {
       await uiAlert(e?.message || "공유 전송 실패");
     }
   });
-  document.getElementById("calendarEventsList")?.addEventListener("click", async (e) => {
+  document.getElementById(ids.eventsList)?.addEventListener("click", async (e) => {
     const del = e.target.closest(".calendar-hub-delete");
     if (!del || !currentUser) return;
     e.preventDefault();
@@ -10555,12 +10664,12 @@ function ensureWorkHubCalendarBound() {
       const res = await apiFetch(`/api/calendar/events/${id}?employeeNo=${emp}`, { method: "DELETE" });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.error?.message || "삭제 실패");
-      await loadWorkHubCalendarPanel();
+      await loadCalendarHubPanel();
     } catch (err) {
       await uiAlert(err?.message || "삭제 실패");
     }
   });
-  document.getElementById("calendarSuggestionsList")?.addEventListener("click", async (e) => {
+  document.getElementById(ids.suggestionsList)?.addEventListener("click", async (e) => {
     if (!currentUser) return;
     const conf = e.target.closest(".calendar-suggestion-confirm");
     const dis = e.target.closest(".calendar-suggestion-dismiss");
@@ -10580,12 +10689,12 @@ function ensureWorkHubCalendarBound() {
         const json = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(json.error?.message || "제안 해제 실패");
       }
-      await loadWorkHubCalendarPanel();
+      await loadCalendarHubPanel();
     } catch (err) {
       await uiAlert(err?.message || "처리 실패");
     }
   });
-  document.getElementById("calendarIncomingSharesList")?.addEventListener("click", async (e) => {
+  document.getElementById(ids.incomingList)?.addEventListener("click", async (e) => {
     if (!currentUser) return;
     const acc = e.target.closest(".calendar-share-accept");
     const dec = e.target.closest(".calendar-share-decline");
@@ -10605,7 +10714,7 @@ function ensureWorkHubCalendarBound() {
         const json = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(json.error?.message || "거절 실패");
       }
-      await loadWorkHubCalendarPanel();
+      await loadCalendarHubPanel();
     } catch (err) {
       await uiAlert(err?.message || "처리 실패");
     }
@@ -11610,6 +11719,9 @@ document.getElementById("btnTopNavProjects")?.addEventListener("click", () => {
 document.getElementById("btnTopNavTeam")?.addEventListener("click", () => {
   openOrgChartModal();
 });
+document.getElementById("btnTopNavCalendar")?.addEventListener("click", () => {
+  void openCalendarHubPage();
+});
 function closeWorkflowPageToMain() {
   clearWorkHubScopedChannel();
   if (activeChannelId) showView("viewChat");
@@ -11617,6 +11729,9 @@ function closeWorkflowPageToMain() {
 }
 document.getElementById("btnSidebarWorkflow")?.addEventListener("click", () => {
   void openWorkflowPickerFromSidebar();
+});
+document.getElementById("btnSidebarCalendar")?.addEventListener("click", () => {
+  void openCalendarHubPage();
 });
 document.getElementById("btnWorkflowOpenChannel")?.addEventListener("click", async () => {
   const sel = document.getElementById("workflowChannelSelect");
@@ -11633,6 +11748,8 @@ document.getElementById("btnWorkflowOpenChannel")?.addEventListener("click", asy
 });
 document.getElementById("btnCloseWorkflowPage")?.addEventListener("click", closeWorkflowPageToMain);
 document.getElementById("btnCloseWorkflowPageFooter")?.addEventListener("click", closeWorkflowPageToMain);
+document.getElementById("btnCloseCalendarHub")?.addEventListener("click", closeCalendarHubToMain);
+document.getElementById("btnCloseCalendarHubFooter")?.addEventListener("click", closeCalendarHubToMain);
 document.getElementById("btnWorkflowNewTask")?.addEventListener("click", () => {
   const titleEl = document.getElementById("workItemTitleInput");
   if (titleEl) {

@@ -89,6 +89,7 @@
         </div>
         <nav class="app-shell-topbar-nav" aria-label="메인 메뉴">
           <button type="button" id="btnTopNavProjects" class="app-shell-nav-link">워크플로우</button>
+          <button type="button" id="btnTopNavCalendar" class="app-shell-nav-link">내 일정</button>
           <button type="button" id="btnTopNavTeam" class="app-shell-nav-link">조직도</button>
         </nav>
         <div class="app-shell-topbar-right">
@@ -121,6 +122,10 @@
           <button type="button" class="sidebar-item sidebar-item--hub-shortcut" id="btnSidebarWorkflow">
             <span class="material-symbols-outlined sidebar-hub-icon" aria-hidden="true">account_tree</span>
             <span class="item-label">워크플로우</span>
+          </button>
+          <button type="button" class="sidebar-item sidebar-item--hub-shortcut" id="btnSidebarCalendar">
+            <span class="material-symbols-outlined sidebar-hub-icon" aria-hidden="true">calendar_month</span>
+            <span class="item-label">내 일정</span>
           </button>
         </div>
 
@@ -1196,7 +1201,7 @@
         <div class="modal-header ech-workhub-modal-header">
           <div class="ech-workhub-modal-header-text">
             <h3 id="workHubTitle">워크플로우</h3>
-            <p class="ech-workhub-modal-subtitle">선택한 채널·DM에 연결된 업무와 칸반 보드로 진행 상황을 관리합니다.</p>
+            <p class="ech-workhub-modal-subtitle">선택한 채널·DM에 연결된 업무와 칸반 보드로 진행 상황을 관리합니다. 개인 일정은 상단「내 일정」에서 다룹니다.</p>
           </div>
           <button class="modal-close" id="btnCloseWorkflowPage">✕</button>
         </div>
@@ -1300,27 +1305,52 @@
                 <div id="channelKanbanBoard" class="channel-kanban-board"></div>
               </div>
             </div>
-            <div class="workflow-section" id="workHubPanelCalendar">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer work-hub-footer">
+          <button type="button" class="btn-primary" id="btnWorkHubSave">저장</button>
+          <button type="button" class="btn-cancel" id="btnCloseWorkflowPageFooter">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modalCalendarHub" class="view-workflow hidden" data-ech-design-ref="screen-calendar-hub">
+      <div class="workflow-page modal-work-hub ech-workhub-shell">
+        <div class="modal-header ech-workhub-modal-header">
+          <div class="ech-workhub-modal-header-text">
+            <h3 id="calendarHubPageTitle">내 일정</h3>
+            <p class="ech-workhub-modal-subtitle">
+              개인 일정·제안·받은 공유를 관리합니다. 채널/DM으로 일정을 보내려면 아래에서 공유 출처 방을 선택한 뒤 수신 멤버를 고르세요.
+            </p>
+          </div>
+          <button type="button" class="modal-close" id="btnCloseCalendarHub" aria-label="닫기">✕</button>
+        </div>
+        <div class="modal-body work-hub-body">
+          <div class="work-hub-panel work-hub-panel--workflow ech-workflow-shell" id="calendarHubPanelRoot">
+            <div class="workflow-section workflow-section--calendar-only">
               <div class="workflow-section-head">
                 <span class="workflow-section-kicker">Calendar</span>
                 <h5 class="workflow-section-title">내 일정</h5>
               </div>
-              <p class="work-hub-hint workflow-section-hint">직접 추가한 일정과, 채널·DM에서 <strong>수락한</strong> 공유 일정이 표시됩니다. 출처는 공유된 채널/DM 이름으로 표시됩니다.</p>
+              <p class="work-hub-hint workflow-section-hint">
+                직접 추가한 일정과, 채널·DM에서 <strong>수락한</strong> 공유 일정이 표시됩니다. 출처는 공유된 채널/DM 이름으로 표시됩니다.
+              </p>
               <div class="calendar-hub-ics-row work-item-create-row">
-                <button type="button" class="btn-cancel btn-sm" id="btnCalendarIcsExport">iCal 내보내기 (.ics)</button>
-                <button type="button" class="btn-cancel btn-sm" id="btnCalendarIcsImport">iCal 가져오기</button>
-                <input type="file" id="calendarIcsFileInput" accept=".ics,text/calendar,.ical" class="hidden" aria-label="iCal 파일 선택" />
+                <button type="button" class="btn-cancel btn-sm" id="calendarHubBtnIcsExport">iCal 내보내기 (.ics)</button>
+                <button type="button" class="btn-cancel btn-sm" id="calendarHubBtnIcsImport">iCal 가져오기</button>
+                <input type="file" id="calendarHubIcsFileInput" accept=".ics,text/calendar,.ical" class="hidden" aria-label="iCal 파일 선택" />
               </div>
               <div class="work-hub-panel-body">
-                <form id="calendarEventCreateForm" class="work-item-create-form" onsubmit="return false;">
-                  <input id="calendarEventTitleInput" type="text" maxlength="500" placeholder="새 일정 제목" />
+                <form id="calendarHubEventCreateForm" class="work-item-create-form" onsubmit="return false;">
+                  <input id="calendarHubEventTitleInput" type="text" maxlength="500" placeholder="새 일정 제목" />
                   <div class="work-item-create-row">
-                    <input id="calendarEventStartInput" type="datetime-local" aria-label="시작 시각" />
-                    <input id="calendarEventEndInput" type="datetime-local" aria-label="종료 시각" />
-                    <button type="button" class="btn-primary btn-sm btn-work-add" id="btnCalendarEventAdd">일정 추가</button>
+                    <input id="calendarHubEventStartInput" type="datetime-local" aria-label="시작 시각" />
+                    <input id="calendarHubEventEndInput" type="datetime-local" aria-label="종료 시각" />
+                    <button type="button" class="btn-primary btn-sm btn-work-add" id="calendarHubBtnEventAdd">일정 추가</button>
                   </div>
                 </form>
-                <ul id="calendarEventsList" class="channel-work-item-list"></ul>
+                <ul id="calendarHubEventsList" class="channel-work-item-list"></ul>
                 <div class="workflow-section-head workflow-section-head--nested">
                   <span class="workflow-section-kicker">Suggestions</span>
                   <h6 class="workflow-section-title">일정 제안 (대기)</h6>
@@ -1328,36 +1358,39 @@
                 <p class="work-hub-hint workflow-section-hint">
                   사용자 또는 AI가 등록한 <strong>미확정</strong> 제안입니다. 확정하면 내 달력에 직접 일정과 동일하게 반영됩니다.
                 </p>
-                <ul id="calendarSuggestionsList" class="channel-work-item-list"></ul>
+                <ul id="calendarHubSuggestionsList" class="channel-work-item-list"></ul>
                 <div class="workflow-section-head workflow-section-head--nested">
                   <span class="workflow-section-kicker">Inbox</span>
                   <h6 class="workflow-section-title">받은 일정(수락 대기)</h6>
                 </div>
-                <ul id="calendarIncomingSharesList" class="channel-work-item-list"></ul>
+                <ul id="calendarHubIncomingSharesList" class="channel-work-item-list"></ul>
                 <div class="workflow-section-head workflow-section-head--nested">
                   <span class="workflow-section-kicker">Share</span>
-                  <h6 class="workflow-section-title">이 채널에서 공유 보내기</h6>
+                  <h6 class="workflow-section-title">채널/DM에서 공유 보내기</h6>
                 </div>
-                <p class="work-hub-hint workflow-section-hint">현재 워크플로우 채널·DM 맥락에서만 전송됩니다. 수신자는 멤버 목록에서 선택합니다.</p>
-                <form id="calendarShareForm" class="work-item-create-form" onsubmit="return false;">
-                  <select id="calendarShareRecipientSelect" aria-label="공유 수신자">
+                <p class="work-hub-hint workflow-section-hint">
+                  공유가 나갈 <strong>채널 또는 DM</strong>을 선택하면 해당 방 멤버가 수신 후보로 표시됩니다.
+                </p>
+                <form id="calendarHubShareForm" class="work-item-create-form" onsubmit="return false;">
+                  <label class="kanban-new-card-work-item-label" for="calendarHubShareChannelSelect">공유 출처 방</label>
+                  <select id="calendarHubShareChannelSelect" aria-label="공유 출처 채널 또는 DM"></select>
+                  <label class="kanban-new-card-work-item-label" for="calendarHubShareRecipientSelect">수신자</label>
+                  <select id="calendarHubShareRecipientSelect" aria-label="공유 수신자">
                     <option value="">수신자 선택</option>
                   </select>
-                  <input id="calendarShareTitleInput" type="text" maxlength="500" placeholder="공유 일정 제목" />
+                  <input id="calendarHubShareTitleInput" type="text" maxlength="500" placeholder="공유 일정 제목" />
                   <div class="work-item-create-row">
-                    <input id="calendarShareStartInput" type="datetime-local" aria-label="공유 시작" />
-                    <input id="calendarShareEndInput" type="datetime-local" aria-label="공유 종료" />
-                    <button type="button" class="btn-primary btn-sm" id="btnCalendarShareSend">공유 보내기</button>
+                    <input id="calendarHubShareStartInput" type="datetime-local" aria-label="공유 시작" />
+                    <input id="calendarHubShareEndInput" type="datetime-local" aria-label="공유 종료" />
+                    <button type="button" class="btn-primary btn-sm" id="calendarHubBtnShareSend">공유 보내기</button>
                   </div>
                 </form>
               </div>
             </div>
-            </div>
           </div>
         </div>
         <div class="modal-footer work-hub-footer">
-          <button type="button" class="btn-primary" id="btnWorkHubSave">저장</button>
-          <button type="button" class="btn-cancel" id="btnCloseWorkflowPageFooter">닫기</button>
+          <button type="button" class="btn-cancel" id="btnCloseCalendarHubFooter">닫기</button>
         </div>
       </div>
     </div>

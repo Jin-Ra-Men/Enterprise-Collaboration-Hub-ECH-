@@ -158,7 +158,7 @@
 - [v] 6-5. (선택) iCal 가져오기/보내기 — 외부 연동 Phase 이전 단계로 가치 있음
   - [v] 6-5-1. 활성 일정 RFC 5545 서브셋 **내보내기** (`GET /api/calendar/export.ics`, UTC `Z`, 첨부 파일명 `cstalk-calendar.ics`)
   - [v] 6-5-2. ICS **가져오기** (`POST /api/calendar/import`, multipart `file` + `employeeNo`; 반복·종일·부분 TZ 미지원 건은 건너뜀; 크기·건수 상한)
-  - [v] 6-5-3. 워크 허브 캘린더 패널에 **iCal 버튼** 및 **제안 목록**(확정·해제) UI 연동
+  - [v] 6-5-3. 전역 **내 일정** 허브(`modalCalendarHub`)에 **iCal 버튼** 및 **제안 목록**(확정·해제) UI 연동
 
 ## Phase 7 - AI 비서 (게이트웨이·프로액티브·비용)
 
