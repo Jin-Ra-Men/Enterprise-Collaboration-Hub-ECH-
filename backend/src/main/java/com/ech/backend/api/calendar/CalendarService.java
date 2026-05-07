@@ -393,6 +393,8 @@ public class CalendarService {
     ) {
         expireStalePendingShares();
         String sender = resolveSelfEmployeeNo(principal, request.senderEmployeeNo());
+        User senderUser = userRepository.findByEmployeeNo(sender)
+                .orElseThrow(() -> new IllegalArgumentException("발신 사용자를 찾을 수 없습니다."));
         if (sender.equals(request.recipientEmployeeNo())) {
             throw new IllegalArgumentException("본인에게는 일정을 공유할 수 없습니다.");
         }
@@ -463,6 +465,7 @@ public class CalendarService {
                 "originChannelId=" + channelId + ",recipient=" + request.recipientEmployeeNo(),
                 null
         );
+        notifyCalendarShareRequested(saved, senderUser);
         return toShareResponse(saved);
     }
 

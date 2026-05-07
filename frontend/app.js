@@ -326,8 +326,10 @@ let mySidebarWorkTodos = {
   mentionLinked: [],
   kanbanAssigned: [],
 };
+let sidebarIncomingCalendarShares = [];
 /** `loadMyChannels` 간 내 업무 사이드바 스냅샷 비교용(변경 시 토스트). */
 let lastWorkSidebarSig = null;
+let lastSidebarIncomingShareCount = 0;
 /** 이전 마감 배지 집계(증가 시 전용 토스트; 미읽음 멘션과 별도 정책) */
 let lastWorkTodoBadgeCounts = null;
 /** Last loaded channel work items for work hub (new card parent select + labels). */
@@ -900,6 +902,7 @@ const sidebarAvatar  = document.getElementById("sidebarAvatar");
 const sidebarUserName = document.getElementById("sidebarUserName");
 const channelListEl  = document.getElementById("channelList");
 const dmListEl       = document.getElementById("dmList");
+const calendarShareInboxListEl = document.getElementById("calendarShareInboxList");
 const myKanbanListEl = document.getElementById("myKanbanList");
 const messagesEl     = document.getElementById("messages");
 const messageInputEl = document.getElementById("messageInput");
@@ -3645,14 +3648,16 @@ function maybeToastWorkTodoDueIncreases(next, prev) {
 async function loadMyChannels() {
   if (!currentUser) return;
   try {
-    const [channelRes, workTodosRes] = await Promise.all([
+    const [channelRes, workTodosRes, incomingSharesRes] = await Promise.all([
       apiFetch(`/api/channels?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`),
       apiFetch(
         `/api/work-items/me/todos?employeeNo=${encodeURIComponent(currentUser.employeeNo)}&limitPerBucket=25`
       ),
+      apiFetch(`/api/calendar/shares/incoming?employeeNo=${encodeURIComponent(currentUser.employeeNo)}`),
     ]);
     const channelJson = await channelRes.json().catch(() => ({}));
     const workTodosJson = await workTodosRes.json().catch(() => ({}));
+    const incomingSharesJson = await incomingSharesRes.json().catch(() => ({}));
     if (!channelRes.ok) return;
     const rawChannelRows = Array.isArray(channelJson.data) ? channelJson.data : [];
     const channels = normalizeSidebarChannels(rawChannelRows);
@@ -3700,8 +3705,13 @@ async function loadMyChannels() {
       });
     }
     lastWorkSidebarSig = nextWorkSig;
+    const nextIncomingShares = incomingSharesRes.ok && Array.isArray(incomingSharesJson.data)
+      ? incomingSharesJson.data
+      : [];
+    sidebarIncomingCalendarShares = nextIncomingShares;
+    lastSidebarIncomingShareCount = nextIncomingShares.length;
     lastSidebarChannelsSnapshot = channels;
-    renderChannelList(channels);
+    renderChannelList(channels, nextIncomingShares);
   } catch (err) {
     console.error("채널 목록 로드 실패", err);
   }
@@ -4265,7 +4275,7 @@ function renderQuickUnreadList(channels) {
   });
 }
 
-function renderChannelList(channels) {
+function renderChannelList(channels, incomingShares = sidebarIncomingCalendarShares) {
   channelListEl.innerHTML = "";
   dmListEl.innerHTML      = "";
 
@@ -4304,7 +4314,45 @@ function renderChannelList(channels) {
 
   renderQuickUnreadList(channels);
   renderMyWorkItemsSidebar(channels);
+  renderSidebarCalendarShareInbox(incomingShares);
   refreshPresenceDots();
+}
+
+function renderSidebarCalendarShareInbox(incomingShares) {
+  if (!calendarShareInboxListEl) return;
+  const rows = Array.isArray(incomingShares) ? incomingShares : [];
+  if (!rows.length) {
+    calendarShareInboxListEl.innerHTML = `<li class="sidebar-item sidebar-item-empty">대기 중인 공유가 없습니다</li>`;
+    return;
+  }
+  calendarShareInboxListEl.innerHTML = "";
+  rows.slice(0, 20).forEach((s) => {
+    const id = Number(s.id);
+    if (!id) return;
+    const li = document.createElement("li");
+    li.className = "sidebar-item sidebar-share-item";
+    li.dataset.calendarShareId = String(id);
+    const sender = escHtml(String(s.senderEmployeeNo || ""));
+    const title = escHtml(String(s.title || "(제목 없음)"));
+    const when = s.startsAt ? escHtml(calendarHubFormatSeoulMdHm(s.startsAt)) : "";
+    li.innerHTML = `<span class="item-icon">📆</span><span class="item-label">${title}</span><span class="sidebar-share-meta">from ${sender}${when ? ` · ${when}` : ""}</span>`;
+    li.addEventListener("click", () => {
+      void openCalendarHubAndFocusIncomingShare(id);
+    });
+    calendarShareInboxListEl.appendChild(li);
+  });
+}
+
+async function openCalendarHubAndFocusIncomingShare(shareId = null) {
+  await openCalendarHubPage();
+  const inEl = document.getElementById(CALENDAR_HUB_IDS.incomingList);
+  if (!inEl) return;
+  inEl.scrollIntoView({ behavior: "smooth", block: "center" });
+  if (!shareId) return;
+  const target = inEl.querySelector(`[data-calendar-share-id="${Number(shareId)}"]`);
+  if (!target) return;
+  target.classList.add("channel-work-item--flash");
+  setTimeout(() => target.classList.remove("channel-work-item--flash"), 1800);
 }
 
 /**
@@ -6907,6 +6955,10 @@ function initSocket() {
   });
   socket.on("calendar:share-request", (p) => {
     pushCalendarShareToast(p);
+    scheduleRefreshMyChannels();
+    if (!document.getElementById("modalCalendarHub")?.classList.contains("hidden")) {
+      void loadCalendarHubPanel();
+    }
   });
 }
 
@@ -7599,7 +7651,7 @@ function pushCalendarShareToast(p) {
     preview,
     osTag: `ech_os_calendar_share_${String(p.shareId || Date.now())}`,
     onClick: () => {
-      void openCalendarHubPage();
+      void openCalendarHubAndFocusIncomingShare(p.shareId != null ? Number(p.shareId) : null);
     },
   });
 }
